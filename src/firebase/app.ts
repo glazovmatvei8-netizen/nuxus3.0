@@ -1,17 +1,15 @@
-
 'use client';
 
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
-import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, Firestore } from 'firebase/firestore';
+import { getFirestore, initializeFirestore, persistentLocalCache, Firestore } from 'firebase/firestore';
 
 /**
  * Изолированная инициализация инстансов Firebase (Nodes).
- * УЛУЧШЕНО V7.7.1: Использование глобального синглтона для исключения Assertion Failed при HMR.
+ * ОПТИМИЗИРОВАНО V8.5.0: Отключен MultipleTabManager для устранения ASSERTION FAILED (ID: ca9).
  */
 
-// Глобальное хранилище для инстансов
 const _global = (typeof window !== 'undefined' ? window : {}) as any;
 _global.__NUXUS_NODES__ = _global.__NUXUS_NODES__ || {};
 
@@ -22,7 +20,6 @@ export function initializeFirebase(instanceName?: string) {
 
   const name = instanceName || '[DEFAULT]';
   
-  // Если инстанс уже в глобальном хранилище, возвращаем его
   if (_global.__NUXUS_NODES__[name]) {
     return _global.__NUXUS_NODES__[name];
   }
@@ -32,15 +29,11 @@ export function initializeFirebase(instanceName?: string) {
   
   let db: Firestore;
   try {
-    // В Next.js 15 при горячей перезагрузке могут возникать конфликты TabManager.
-    // Мы используем максимально упрощенный конфиг для исключения ASSERTION FAILED.
+    // Используем упрощенный кэш без мульти-таб менеджера для стабильности в Next.js 15
     db = initializeFirestore(app, {
-      localCache: persistentLocalCache({
-        tabManager: persistentMultipleTabManager()
-      })
+      localCache: persistentLocalCache({})
     });
   } catch (e: any) {
-    // Если firestore уже инициализирован для этого app
     db = getFirestore(app);
   }
 
@@ -52,7 +45,6 @@ export function initializeFirebase(instanceName?: string) {
     firestore: db
   };
 
-  // Сохраняем в синглтон
   _global.__NUXUS_NODES__[name] = result;
 
   return result;

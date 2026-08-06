@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
@@ -7,18 +6,19 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { 
   Sparkles, Loader2, Send, 
-  BrainCircuit, RotateCcw, Mic, ShieldCheck, Globe, Cpu
+  BrainCircuit, RotateCcw, Mic, ShieldCheck, Globe, Cpu, Wrench
 } from 'lucide-react';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase/provider';
-import { collection, query, orderBy, addDoc, serverTimestamp, limit, getDocs, writeBatch } from 'firebase/firestore';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase/provider';
+import { collection, query, orderBy, addDoc, serverTimestamp, limit, getDocs, writeBatch, doc } from 'firebase/firestore';
 import { askNexusAI } from '@/ai/flows/nuxus-intelligence-flow';
-import { cn } from '@/lib/utils';
+import { cn, isGlobalAdmin } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { NuxusLogo } from './nuxus-logo';
+import type { User } from '@/lib/types';
 
 /**
- * NEXUS AI TERMINAL V8.4.0 «NEURAL MEMORY»
- * ТЕПЕРЬ С ПОДДЕРЖКОЙ ОБЛАЧНОЙ ИСТОРИИ СООБЩЕНИЙ.
+ * NEXUS AI TERMINAL V8.5.0 «MAINTENANCE MODE»
+ * Доступ только для Администраторов.
  */
 export default function NuxusAiView() {
   const { user } = useUser();
@@ -29,15 +29,18 @@ export default function NuxusAiView() {
   const [isThinking, setIsThinking] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Ссылка на коллекцию истории конкретного пользователя
+  const userProfileRef = useMemo(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user?.uid]);
+  const { data: profile } = useDoc<User>(userProfileRef);
+  const isAdmin = isGlobalAdmin(profile);
+
   const historyQuery = useMemoFirebase(() => {
-    if (!db || !user) return null;
+    if (!db || !user || !isAdmin) return null;
     return query(
       collection(db, 'users', user.uid, 'ai_history'),
       orderBy('createdAt', 'asc'),
       limit(100)
     );
-  }, [db, user]);
+  }, [db, user, isAdmin]);
 
   const { data: messages, isLoading: isHistoryLoading } = useCollection<{role: 'user' | 'model', content: string}>(historyQuery);
 
@@ -55,7 +58,6 @@ export default function NuxusAiView() {
     setIsThinking(true);
 
     try {
-      // 1. Сохраняем запрос пользователя в облако
       const historyRef = collection(db, 'users', user.uid, 'ai_history');
       await addDoc(historyRef, {
         role: 'user',
@@ -63,16 +65,13 @@ export default function NuxusAiView() {
         createdAt: serverTimestamp()
       });
 
-      // 2. Формируем историю для модели
       const flowHistory = (messages || []).map(m => ({
         role: m.role,
         content: m.content
       }));
 
-      // 3. Запрос к NX-AI
       const { response } = await askNexusAI(userMsg, flowHistory);
 
-      // 4. Сохраняем ответ модели в облако
       await addDoc(historyRef, {
         role: 'model',
         content: response,
@@ -80,7 +79,7 @@ export default function NuxusAiView() {
       });
 
     } catch (e: any) {
-      toast({ title: "Сбой нейронной сети", description: "Сигнал потерян, попробуйте снова.", variant: "destructive" });
+      toast({ title: "Сбой нейронной сети", variant: "destructive" });
     } finally {
       setIsThinking(false);
     }
@@ -99,6 +98,23 @@ export default function NuxusAiView() {
     }
   };
 
+  if (!isAdmin) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full bg-[#020205] p-10 text-center space-y-8 animate-in fade-in duration-700">
+        <div className="relative">
+          <div className="absolute -inset-10 bg-primary/20 blur-[60px] rounded-full animate-pulse" />
+          <Wrench className="w-20 h-20 text-primary relative z-10" />
+        </div>
+        <div className="space-y-4 max-w-sm">
+          <h2 className="text-3xl font-black text-white uppercase italic tracking-tighter">NODE MAINTENANCE</h2>
+          <p className="text-[10px] text-white/40 font-bold uppercase tracking-[0.3em] leading-relaxed">
+            Узел «Nexus AI» находится на плановом обслуживании. <br/>Доступ будет восстановлен после завершения синхронизации Ядра.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-full bg-[#020205] overflow-hidden relative">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(168,85,247,0.1)_0%,transparent_60%)] pointer-events-none" />
@@ -110,7 +126,7 @@ export default function NuxusAiView() {
             </div>
             <div className="flex flex-col text-left">
                <h1 className="text-xl font-black text-white italic tracking-tighter uppercase">Nexus AI</h1>
-               <span className="text-[7px] font-black text-primary/40 uppercase tracking-[0.4em]">Neural Memory v8.4.0</span>
+               <span className="text-[7px] font-black text-primary/40 uppercase tracking-[0.4em]">ADMIN ACCESS ACTIVE</span>
             </div>
          </div>
          {messages && messages.length > 0 && (
@@ -138,11 +154,6 @@ export default function NuxusAiView() {
                     Чем я могу <br/><span className="text-primary">помочь</span> сегодня?
                   </h3>
                </div>
-               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-2xl px-4">
-                  <QuickCommand icon={Globe} text="Мировые новости" onClick={setInput} />
-                  <QuickCommand icon={Cpu} text="Помощь с кодом" onClick={setInput} />
-                  <QuickCommand icon={Sparkles} text="Идеи для контента" onClick={setInput} />
-               </div>
             </div>
           ) : (
             <div className="space-y-12 pb-20">
@@ -160,7 +171,6 @@ export default function NuxusAiView() {
                       <span className="text-[8px] font-black uppercase text-white/20 tracking-[0.2em]">
                         {msg.role === 'user' ? 'Узел' : 'Nexus AI'}
                       </span>
-                      {msg.role === 'model' && <ShieldCheck className="w-3 h-3 text-primary opacity-40" />}
                    </div>
                 </div>
               ))}

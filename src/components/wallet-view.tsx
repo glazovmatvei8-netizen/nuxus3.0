@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState } from 'react';
@@ -25,8 +24,8 @@ import { ru } from 'date-fns/locale';
 const MAX_TOP_UP_AMOUNT = 500000;
 
 /**
- * WALLET VIEW V8.4.0 «ABSOLUTE STABILITY»
- * FIXED: Removed 28 runtime errors by securing destructuring and data access.
+ * WALLET VIEW V8.5.0 «STABILITY CORE»
+ * FIXED: Removed Assertion Error by simplifying query execution.
  */
 export default function WalletView() {
   const { user } = useUser();
@@ -45,8 +44,7 @@ export default function WalletView() {
 
   // СТАБИЛЬНЫЙ ПРОФИЛЬ
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user?.uid]);
-  const profileData = useDoc<User>(userRef);
-  const profile = profileData?.data;
+  const { data: profile } = useDoc<User>(userRef);
 
   // СТАБИЛЬНЫЕ ТРАНЗАКЦИИ
   const transactionsQuery = useMemoFirebase(() => {
@@ -54,13 +52,11 @@ export default function WalletView() {
     return query(
       collection(db, 'users', user.uid, 'transactions'),
       orderBy('createdAt', 'desc'),
-      limit(50)
+      limit(20)
     );
   }, [db, user?.uid]);
 
-  const txData = useCollection<Transaction>(transactionsQuery);
-  const transactions = txData?.data;
-  const isTxLoading = txData?.isLoading;
+  const { data: transactions, isLoading: isTxLoading } = useCollection<Transaction>(transactionsQuery);
 
   const handleSearchUser = async () => {
     if (!transferTarget || !db) return;
@@ -98,7 +94,7 @@ export default function WalletView() {
         status: 'pending',
         createdAt: new Date().toISOString()
       });
-      toast({ title: "Заявка передана", description: `Администратор рассмотрит запрос на ${amount} NX.` });
+      toast({ title: "Заявка передана" });
       setIsTopUpOpen(false);
     } catch (e) { toast({ title: "Ошибка системы", variant: "destructive" }); }
     finally { setIsProcessing(false); }
@@ -145,8 +141,8 @@ export default function WalletView() {
       });
       
       await batch.commit();
-      toast({ title: "Сигнал передан", description: `${amount} NX отправлено ${foundUser.name}` });
-      setIsTransferOpen(false); setFoundUser(null); setTransferTarget(''); setTransferAmount('');
+      toast({ title: "Сигнал передан" });
+      setIsTransferOpen(false); setFoundUser(null);
     } catch (e) { toast({ title: "Сбой передачи", variant: "destructive" }); }
     finally { setIsProcessing(false); }
   };
@@ -166,30 +162,27 @@ export default function WalletView() {
             </div>
           </div>
           
-          <div className="relative group">
-            <div className="absolute -inset-1 bg-gradient-to-tr from-primary/40 to-accent/40 rounded-[2.5rem] blur-[8px] opacity-30" />
-            <div className="relative bg-[#1c1c1e]/60 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-8 overflow-hidden">
-              <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60 mb-2">Node Balance</p>
-              <div className="flex items-baseline gap-2">
-                <span className="text-5xl font-black text-white italic tracking-tighter tabular-nums">
-                  {currentBalance.toFixed(2)}
-                </span>
-                <span className="text-xl font-bold text-primary italic">NX</span>
-              </div>
-              <div className="flex gap-3 mt-8">
-                <Button onClick={() => setIsTopUpOpen(true)} className="flex-1 bg-primary text-white rounded-2xl h-14 font-black uppercase text-[10px] tracking-widest gap-2 shadow-xl hover:scale-105 transition-all">
-                  <Plus className="w-4 h-4" /> Пополнить
-                </Button>
-                <Button onClick={() => setIsTransferOpen(true)} variant="outline" className="flex-1 border-white/10 bg-white/5 rounded-2xl h-14 font-black uppercase text-[10px] tracking-widest gap-2 hover:bg-white/10">
-                  <ArrowUpRight className="w-4 h-4" /> Перевести
-                </Button>
-              </div>
+          <div className="relative bg-[#1c1c1e]/60 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-8 overflow-hidden shadow-2xl">
+            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60 mb-2">Node Balance</p>
+            <div className="flex items-baseline gap-2">
+              <span className="text-5xl font-black text-white italic tracking-tighter tabular-nums">
+                {currentBalance.toFixed(2)}
+              </span>
+              <span className="text-xl font-bold text-primary italic">NX</span>
+            </div>
+            <div className="flex gap-3 mt-8">
+              <Button onClick={() => setIsTopUpOpen(true)} className="flex-1 bg-primary text-white rounded-2xl h-14 font-black uppercase text-[10px] tracking-widest gap-2 shadow-xl hover:scale-105 transition-all">
+                <Plus className="w-4 h-4" /> Пополнить
+              </Button>
+              <Button onClick={() => setIsTransferOpen(true)} variant="outline" className="flex-1 border-white/10 bg-white/5 rounded-2xl h-14 font-black uppercase text-[10px] tracking-widest gap-2 hover:bg-white/10">
+                <ArrowUpRight className="w-4 h-4" /> Перевести
+              </Button>
             </div>
           </div>
 
           <div className="space-y-4">
             <div className="flex items-center justify-between px-2">
-               <h3 className="text-[10px] font-black uppercase tracking-widest text-white/40">Логи транзакций</h3>
+               <h3 className="text-[10px] font-black uppercase tracking-widest text-white/40 italic">Последние сигналы</h3>
                <Activity className="w-3.5 h-3.5 text-primary animate-pulse" />
             </div>
             <div className="space-y-2">
@@ -200,7 +193,7 @@ export default function WalletView() {
                 </div>
               ) : transactions && transactions.length > 0 ? (
                 transactions.map(tx => (
-                  <div key={tx.id} className="flex items-center justify-between p-5 obsidian-glass border-white/5 rounded-3xl hover:bg-white/[0.05] transition-all">
+                  <div key={tx.id} className="flex items-center justify-between p-5 bg-white/[0.03] border border-white/5 rounded-3xl hover:bg-white/[0.05] transition-all">
                     <div className="flex items-center gap-4 text-left">
                       <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center border", tx.amount > 0 ? "bg-green-500/10 text-green-500 border-green-500/20" : "bg-red-500/10 text-red-500 border-red-500/20")}>
                         {tx.amount > 0 ? <ArrowDownLeft className="w-6 h-6" /> : <ArrowUpRight className="w-6 h-6" />}
@@ -238,7 +231,7 @@ export default function WalletView() {
               <Input type="number" value={topUpAmount} onChange={e => setTopUpAmount(e.target.value)} className="bg-white/5 border-white/10 h-16 rounded-2xl text-center text-3xl font-black italic text-primary" />
               <span className="absolute right-4 top-1/2 -translate-y-1/2 font-black text-white/20 italic">NX</span>
             </div>
-            <p className="text-[9px] text-muted-foreground uppercase font-bold leading-relaxed">Лимит запроса: {MAX_TOP_UP_AMOUNT} NX.</p>
+            <p className="text-[9px] text-muted-foreground uppercase font-bold leading-relaxed italic">Лимит запроса: {MAX_TOP_UP_AMOUNT} NX.</p>
           </div>
           <DialogFooter><Button disabled={isProcessing} onClick={handleTopUpRequest} className="w-full h-14 bg-primary rounded-2xl font-black uppercase italic tracking-widest shadow-xl">{isProcessing ? <Loader2 className="animate-spin" /> : "Отправить запрос"}</Button></DialogFooter>
         </DialogContent>
