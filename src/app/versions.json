@@ -1,14 +1,12 @@
-
 {
-  "latestVersion": "6.5.8",
+  "latestVersion": "6.5.9",
   "qesVersion": "25.2",
-  "build": "Aegis-Neural-Audit-2.0-Interactive",
+  "build": "Aegis-Intelligence-Stabilization",
   "sizeMb": 114,
   "changelog": [
-    "Added: Interactive suspicious node profiles (Click to inspect)",
-    "Improved: Neural Audit logic with Phone Integrity check",
-    "Added: Detailed suspicion reasons (Invalid Phone, Ghost, Low Resonance)",
-    "Fixed: Loader2 missing import causing Admin Panel crash",
-    "Improved: Audit UI responsiveness and animations"
+    "Fixed: AI pre-emptive block on simple messages (Prompt Optimization)",
+    "Improved: NX-AI system protocols for better freedom without API triggers",
+    "Verified: Aegis Neural Audit 2.0 stability and interactivity",
+    "Confirmed: Fixed Share2 and Loader2 missing icons"
   ]
 }
