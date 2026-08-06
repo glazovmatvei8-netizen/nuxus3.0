@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useMemo, memo, useRef, useEffect } from 'react';
@@ -152,7 +151,7 @@ const ChatListItem = memo(({
   const resetSwipe = () => { setOffsetX(0); setIsDragging(false); };
 
   return (
-    <div className="relative overflow-hidden touch-pan-y select-none px-4 py-1.5 max-w-full virtual-list-item">
+    <div className="relative overflow-hidden touch-pan-y select-none px-4 py-1.5 max-w-full virtual-list-item no-ios-select">
       {/* Swipe Actions Background */}
       <div className={cn("absolute inset-y-1.5 left-4 flex h-[calc(100%-12px)] z-0 transition-opacity duration-300 rounded-[2.2rem] overflow-hidden", offsetX > 20 ? "opacity-100" : "opacity-0 pointer-events-none")}>
         <button onClick={(e) => { e.stopPropagation(); onMarkUnread(chat.id); resetSwipe(); }} className="w-[70px] bg-blue-600 flex flex-col items-center justify-center text-white gap-1.5 active:brightness-125 transition-all">
@@ -190,7 +189,7 @@ const ChatListItem = memo(({
       >
         <ContextMenu>
           <ContextMenuTrigger disabled={Math.abs(offsetX) > 10 || isDragging}>
-            <div className="flex items-center gap-4 px-5 py-4 cursor-pointer relative h-[96px] overflow-hidden">
+            <div className="flex items-center gap-4 px-5 py-4 cursor-pointer relative h-[96px] overflow-hidden no-ios-select">
               <div className="relative shrink-0">
                 {isSavedMessages ? (
                   <div className="h-16 w-14 rounded-[1.8rem] bg-primary/20 border border-primary/30 flex items-center justify-center text-primary shadow-lg shadow-primary/10">

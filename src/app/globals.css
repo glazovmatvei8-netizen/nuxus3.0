@@ -62,3 +62,10 @@
   box-shadow: 0 0 20px hsl(var(--primary) / 0.15);
   border-color: hsl(var(--primary) / 0.3) !important;
 }
+
+/* ANTI-SELECTION FOR IOS LONG PRESS */
+.no-ios-select {
+  -webkit-touch-callout: none !important;
+  -webkit-user-select: none !important;
+  user-select: none !important;
+}
