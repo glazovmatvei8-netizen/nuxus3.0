@@ -24,10 +24,10 @@ import { ru } from 'date-fns/locale';
 import { useAppState } from '@/lib/store.tsx';
 
 /**
- * MISSION CONTROL V7.0.0 «NEURAL AEGIS 3.0»
- * UPDATED: Responsive audit list (No overflow).
- * UPDATED: Robust phone integrity verification.
- * UPDATED: Improved detection algorithms.
+ * MISSION CONTROL V7.0.1 «NEURAL AEGIS PRECISION»
+ * FIXED: 50% false positive rate by supporting Email-based identities.
+ * FIXED: Responsive list and button layouts.
+ * UPDATED: Precise audit algorithms for new vs old nodes.
  */
 export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const db = useFirestore();
@@ -36,7 +36,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   
   const [activeTab, setActiveTab] = useState('requests');
   const [userSearch, setUserSearch] = useState('');
-  const [terminalLines, setTerminalLines] = useState<string[]>(["Nuxus Aegis Console v7.0.0", "Security Protocol: ACTIVE"]);
+  const [terminalLines, setTerminalLines] = useState<string[]>(["Nuxus Aegis Console v7.0.1", "Security Protocol: ACTIVE"]);
   const [terminalInput, setTerminalInput] = useState('');
   const [isShieldActive, setIsShieldActive] = useState(false);
   
@@ -81,7 +81,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     if (cmd === 'status') res = "Kernel: STABLE | Aegis: ACTIVE | Nodes: " + stats.valid + "/" + stats.total;
     else if (cmd === 'audit') { handleStartAudit(); return; }
     else if (cmd === 'nodes') res = `Valid: ${stats.valid}, Premium: ${stats.premium}, Ghost: ${stats.total - stats.valid}`;
-    else if (cmd === 'version') res = "Nuxus Kernel v7.0.0 (Neural Aegis 3.0)";
+    else if (cmd === 'version') res = "Nuxus Kernel v7.0.1 (Neural Aegis Precision)";
     else if (cmd === 'clear') { setTerminalLines([]); setTerminalInput(''); return; }
     else res = `Signal not recognized: ${cmd}`;
     setTerminalLines(prev => [...prev, `$ ${terminalInput}`, res]);
@@ -96,52 +96,64 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     
     let p = 0;
     const interval = setInterval(() => {
-      p += 4;
+      p += 5;
       setUpdateAuditProgress(p);
       if (p >= 100) {
         clearInterval(interval);
         
         const suspicious: {user: User, reason: string}[] = [];
+        const now = new Date();
 
         allUsers.forEach(u => {
-          // 1. Проверка номера (Enhanced Integrity Check)
-          const phoneRaw = u.phone;
-          const phoneClean = phoneRaw?.replace(/\D/g, '') || '';
+          // 1. Проверка идентификатора (Phone or Email)
+          const phoneRaw = u.phone || '';
+          const isEmail = phoneRaw.includes('@');
+          const phoneClean = phoneRaw.replace(/\D/g, '');
           
           if (!phoneRaw || phoneRaw.trim() === '') {
-            suspicious.push({ user: u, reason: 'MISSING SIGNAL (PHONE)' });
+            suspicious.push({ user: u, reason: 'MISSING IDENTITY' });
             return;
           }
           
-          if (phoneClean.length < 8) {
-            suspicious.push({ user: u, reason: 'INVALID SIGNAL (PHONE)' });
+          // Если это не почта, проверяем длину номера
+          if (!isEmail && phoneClean.length < 8) {
+            suspicious.push({ user: u, reason: 'INVALID PHONE SIGNAL' });
             return;
           }
 
-          // 2. Анонимный профиль (Ghost Profile)
-          const isGhost = !u.avatarUrl && (!u.bio || u.bio.length < 5) && (u.name === 'User' || !u.name);
-          if (isGhost) {
-            suspicious.push({ user: u, reason: 'ANONYMOUS PROFILE' });
+          // 2. Анонимный профиль (Ghost Profile) - Сделано точнее
+          const hasNoAvatar = !u.avatarUrl;
+          const hasNoBio = !u.bio || u.bio.trim().length === 0;
+          const hasDefaultName = !u.name || u.name === 'User' || u.name === '??';
+          
+          if (hasNoAvatar && hasNoBio && hasDefaultName) {
+            suspicious.push({ user: u, reason: 'ANONYMOUS GHOST' });
             return;
           }
 
-          // 3. Низкий резонанс (Low Engagement)
-          const isInactive = u.lastSeen ? differenceInDays(new Date(), new Date(u.lastSeen)) > 7 : true;
-          const zeroConnections = (u.referralCount || 0) === 0;
-          if (isInactive && zeroConnections) {
-            suspicious.push({ user: u, reason: 'LOW RESONANCE' });
+          // 3. Низкий резонанс (Low Engagement) - С учетом даты создания
+          const creationDate = u.createdAt ? new Date(u.createdAt) : now;
+          const nodeAgeDays = differenceInDays(now, creationDate);
+          
+          // Проверяем на "мертвые души" только если узлу больше 3 дней
+          if (nodeAgeDays > 3) {
+            const isInactive = u.lastSeen ? differenceInDays(now, new Date(u.lastSeen)) > 10 : true;
+            const zeroConnections = (u.referralCount || 0) === 0;
+            if (isInactive && zeroConnections) {
+              suspicious.push({ user: u, reason: 'ZERO RESONANCE' });
+            }
           }
         });
 
         setAuditResults({ 
-          suspiciousNodes: suspicious.slice(0, 20), 
-          safeNodesCount: stats.total - suspicious.length 
+          suspiciousNodes: suspicious, 
+          safeNodesCount: allUsers.length - suspicious.length 
         });
         
         setIsAuditing(false);
-        toast({ title: "Аудит завершен", description: "Нейронный щит Aegis 3.0 завершил сканирование." });
+        toast({ title: "Аудит завершен", description: `Проверено ${allUsers.length} узлов. Точность повышена.` });
       }
-    }, 60);
+    }, 50);
   };
 
   const handleApprove = async (req: TopUpRequest) => {
@@ -171,7 +183,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               </div>
               <div className="flex flex-col text-left">
                 <DialogTitle className="text-3xl font-black uppercase italic text-white tracking-tighter">MISSION CONTROL</DialogTitle>
-                <DialogDescription className="text-[10px] font-black uppercase text-primary/60 mt-1">Kernel V7.0.0 Aegis Shield 3.0</DialogDescription>
+                <DialogDescription className="text-[10px] font-black uppercase text-primary/60 mt-1">Kernel V7.0.1 Aegis Precision</DialogDescription>
               </div>
             </div>
             <div className="hidden sm:flex bg-black/40 border border-white/5 px-6 py-3 rounded-2xl items-center gap-4">
@@ -305,13 +317,13 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                                     onClick={() => setInspectedUserId(item.user.id)}
                                     className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white/5 border border-white/5 rounded-2xl hover:bg-white/10 transition-all cursor-pointer group gap-4"
                                   >
-                                     <div className="flex items-center gap-4 min-w-0">
+                                     <div className="flex items-center gap-4 min-w-0 flex-1">
                                         <UserAvatar userId={item.user.id} className="h-10 w-10 shrink-0 opacity-60 grayscale group-hover:grayscale-0 group-hover:opacity-100 transition-all" />
-                                        <div className="flex flex-col text-left min-w-0 overflow-hidden">
+                                        <div className="flex flex-col text-left min-w-0 overflow-hidden flex-1">
                                            <span className="text-sm font-bold text-white uppercase italic truncate group-hover:text-primary">{formatDisplayName(item.user.name, item.user.username)}</span>
                                            <div className="flex flex-wrap items-center gap-2">
                                               <span className="text-[9px] text-white/30 font-black uppercase tracking-widest truncate">{item.user.username}</span>
-                                              <span className="text-[7px] text-red-500/60 font-bold uppercase tracking-tighter bg-red-500/10 px-1.5 rounded shrink-0">{item.user.phone || 'NO SIGNAL'}</span>
+                                              <span className="text-[7px] text-red-500/60 font-bold uppercase tracking-tighter bg-red-500/10 px-1.5 rounded shrink-0 truncate max-w-[120px]">{item.user.phone || 'NO ID'}</span>
                                            </div>
                                         </div>
                                      </div>

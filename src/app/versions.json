@@ -1,13 +1,13 @@
 
 {
-  "latestVersion": "7.0.0",
+  "latestVersion": "7.0.1",
   "qesVersion": "25.4",
-  "build": "Aegis-3.0-Neural-Stability",
+  "build": "Aegis-3.1-Precision-Fix",
   "sizeMb": 118,
   "changelog": [
-    "Aegis 3.0: Robust phone signal detection logic",
-    "Aegis 3.0: Fully responsive audit result layout (no overflow)",
-    "Improved: Detection categories for missing node identities",
-    "Stabilized: Critical UI elements for ultra-small mobile screens"
+    "Aegis 3.1: Fixed false positives for Email registrations",
+    "Aegis 3.1: Precise Resonance detection logic",
+    "Improved: Detection criteria for ghost vs new accounts",
+    "Stabilized: Admin Panel button and list layout responsiveness"
   ]
 }
