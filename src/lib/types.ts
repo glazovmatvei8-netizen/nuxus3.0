@@ -211,6 +211,8 @@ export interface UserSettings {
   biometricEnabled?: boolean;
   pwaNotificationsEnabled?: boolean;
   cloudPasswordEnabled?: boolean;
+  totpEnabled?: boolean;
+  totpSecret?: string;
 }
 
 export interface UserStats {
@@ -246,6 +248,8 @@ export interface User {
   premiumUntil?: string | null;
   twoFactorEnabled?: boolean;
   twoFactorPin?: string;
+  totpEnabled?: boolean;
+  totpSecret?: string;
   cloudPassword?: string;
   cloudPasswordEnabled?: boolean;
   statusEmoji?: string;
