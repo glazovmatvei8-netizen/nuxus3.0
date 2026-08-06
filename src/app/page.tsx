@@ -1,9 +1,8 @@
-
 "use client"
 
 import React, { useEffect, useState, useMemo } from 'react';
 import { useUser, useFirestore, useAuth, useDoc } from '@/firebase/provider';
-import { useAppState } from '@/lib/store';
+import { useAppState } from '@/lib/store.tsx';
 import AuthScreen from '@/components/auth-screen';
 import ChatMain from '@/components/chat-main';
 import { ShieldAlert, Fingerprint, ShieldCheck, Loader2, LogOut, Key } from 'lucide-react';
@@ -19,8 +18,8 @@ import { IosInstaller } from '@/components/ios-installer';
 import { authenticator } from 'otplib';
 
 /**
- * HOME GATE V6.4.0
- * ОБНОВЛЕНО: Поддержка TOTP валидации при входе.
+ * HOME GATE V6.5.0
+ * ИСПРАВЛЕНО: Прямые импорты из провайдера для устранения ошибки 'call'.
  */
 export default function Home() {
   const { user, isUserLoading } = useUser();

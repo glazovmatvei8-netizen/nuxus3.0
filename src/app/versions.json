@@ -1,12 +1,12 @@
 {
-  "latestVersion": "6.3.2",
+  "latestVersion": "6.5.0",
   "qesVersion": "25.2",
   "build": "Absolute-Core-Stability",
   "sizeMb": 112,
   "changelog": [
-    "Fixed: ChunkLoadError and originalFactory.call issue by decoupling barrel imports",
-    "Fixed: iOS long-press text selection in chat sidebar",
-    "Fixed: ReferenceError: ScrollArea in specific mobile views",
-    "Improved: Direct import strategy for Firebase providers"
+    "Fixed: Critical originalFactory.call error in PWA mode",
+    "Fixed: White screen on iPhone and Android mobile browsers",
+    "Fixed: Circular dependencies in Firebase providers",
+    "Improved: Direct hook injection system V6.5.0"
   ]
 }

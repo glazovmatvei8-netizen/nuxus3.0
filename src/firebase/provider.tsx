@@ -19,9 +19,8 @@ import { updateDocumentNonBlocking, setDocumentNonBlocking } from './non-blockin
 import { errorEmitter } from './error-emitter';
 
 /**
- * NUXUS FIREBASE PROVIDER V6.1.3 (ULTIMATE SYNERGY)
- * Консолидированная логика хуков. 
- * ПРЕДУПРЕЖДЕНИЕ: Все деструктуризации теперь безопасны.
+ * NUXUS FIREBASE PROVIDER V6.5.0 (ABSOLUTE STABILITY)
+ * ПРЯМАЯ РЕАЛИЗАЦИЯ ХУКОВ ДЛЯ ИСКЛЮЧЕНИЯ ОШИБКИ 'CALL'.
  */
 
 export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T {
