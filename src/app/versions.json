@@ -1,12 +1,13 @@
 {
-  "latestVersion": "6.5.0",
+  "latestVersion": "6.5.1",
   "qesVersion": "25.2",
-  "build": "Absolute-Core-Stability",
-  "sizeMb": 112,
+  "build": "Neural-Unrestricted-Custom",
+  "sizeMb": 114,
   "changelog": [
-    "Fixed: Critical originalFactory.call error in PWA mode",
-    "Fixed: White screen on iPhone and Android mobile browsers",
-    "Fixed: Circular dependencies in Firebase providers",
-    "Improved: Direct hook injection system V6.5.0"
+    "Fixed: Wallet scroll issues and data rendering stability",
+    "Improved: NX-AI removed safety filters for unrestricted content",
+    "Restored: Full elite settings for Style and Security tabs",
+    "Added: Multi-category safety bypass for Sovereign Mind",
+    "Fixed: iOS PWA originalFactory.call final stabilization"
   ]
 }

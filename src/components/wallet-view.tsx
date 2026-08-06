@@ -1,13 +1,12 @@
-
 "use client"
 
 import React, { useState } from 'react';
-import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
+import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase/provider';
 import { doc, collection, query, orderBy, limit, writeBatch, increment, getDocs, where, addDoc } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Wallet, ArrowUpRight, ArrowDownLeft, Plus, Zap, History, ShieldCheck, Loader2, Search, CheckCircle2, XCircle, Clock, AlertTriangle, Gift } from 'lucide-react';
+import { Wallet, ArrowUpRight, ArrowDownLeft, Plus, Zap, History, ShieldCheck, Loader2, Search, CheckCircle2, XCircle, Clock, AlertTriangle, Gift, Activity } from 'lucide-react';
 import { cn, formatDisplayName } from '@/lib/utils';
 import type { User, Transaction } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -25,8 +24,8 @@ import { ru } from 'date-fns/locale';
 const MAX_TOP_UP_AMOUNT = 500000;
 
 /**
- * WALLET VIEW V6.4.0 «INFINITE FLOW»
- * ИСПРАВЛЕНО: Баланс теперь прокручивается вместе с логами.
+ * WALLET VIEW V6.5.1 «STABLE FLOW»
+ * ФИКС: Устранение ошибок рендеринга и улучшенная прокрутка.
  */
 export default function WalletView() {
   const { user } = useUser();
@@ -43,8 +42,8 @@ export default function WalletView() {
   const [foundUser, setFoundUser] = useState<User | null>(null);
   const [isSearchingUser, setIsSearchingUser] = useState(false);
 
-  const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
-  const { data: profile } = useDoc<User>(userRef);
+  const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user?.uid]);
+  const { data: profile, isLoading: isProfileLoading } = useDoc<User>(userRef);
 
   const transactionsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
@@ -53,7 +52,7 @@ export default function WalletView() {
       orderBy('createdAt', 'desc'),
       limit(50)
     );
-  }, [db, user]);
+  }, [db, user?.uid]);
 
   const { data: transactions, isLoading: isTxLoading } = useCollection<Transaction>(transactionsQuery);
 
@@ -113,10 +112,32 @@ export default function WalletView() {
       const receiverRef = doc(db, 'users', foundUser.id);
       const senderTxRef = doc(collection(db, 'users', user.uid, 'transactions'));
       const receiverTxRef = doc(collection(db, 'users', foundUser.id, 'transactions'));
+      
       batch.update(senderRef, { balance: increment(-amount) });
       batch.update(receiverRef, { balance: increment(amount) });
-      batch.set(senderTxRef, { id: senderTxRef.id, userId: user.uid, amount: -amount, type: 'transfer_out', status: 'completed', otherPartyId: foundUser.id, otherPartyName: foundUser.name, createdAt: new Date().toISOString() });
-      batch.set(receiverTxRef, { id: receiverTxRef.id, userId: foundUser.id, amount: amount, type: 'transfer_in', status: 'completed', otherPartyId: user.uid, otherPartyName: profile.name, createdAt: new Date().toISOString() });
+      
+      batch.set(senderTxRef, { 
+        id: senderTxRef.id, 
+        userId: user.uid, 
+        amount: -amount, 
+        type: 'transfer_out', 
+        status: 'completed', 
+        otherPartyId: foundUser.id, 
+        otherPartyName: foundUser.name, 
+        createdAt: new Date().toISOString() 
+      });
+      
+      batch.set(receiverTxRef, { 
+        id: receiverTxRef.id, 
+        userId: foundUser.id, 
+        amount: amount, 
+        type: 'transfer_in', 
+        status: 'completed', 
+        otherPartyId: user.uid, 
+        otherPartyName: profile.name, 
+        createdAt: new Date().toISOString() 
+      });
+      
       await batch.commit();
       toast({ title: "Сигнал передан", description: `${amount} NX отправлено ${foundUser.name}` });
       setIsTransferOpen(false); setFoundUser(null); setTransferTarget(''); setTransferAmount('');
@@ -130,14 +151,21 @@ export default function WalletView() {
       
       <ScrollArea className="flex-1">
         <div className="px-6 pt-10 pb-40 space-y-8">
-          <h1 className="text-4xl font-black text-white italic tracking-tighter uppercase">Банк Ядра</h1>
+          <div className="flex items-center justify-between">
+            <h1 className="text-4xl font-black text-white italic tracking-tighter uppercase">Банк Ядра</h1>
+            <div className="bg-primary/10 p-2.5 rounded-xl border border-primary/20">
+               <Wallet className="w-6 h-6 text-primary" />
+            </div>
+          </div>
           
           <div className="relative group">
             <div className="absolute -inset-1 bg-gradient-to-tr from-primary/40 to-accent/40 rounded-[2.5rem] blur-[8px] opacity-30" />
             <div className="relative bg-[#1c1c1e]/60 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-8 overflow-hidden">
               <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60 mb-2">Node Balance</p>
               <div className="flex items-baseline gap-2">
-                <span className="text-5xl font-black text-white italic tracking-tighter tabular-nums">{profile?.balance?.toFixed(2) || '0.00'}</span>
+                <span className="text-5xl font-black text-white italic tracking-tighter tabular-nums">
+                  {profile?.balance !== undefined ? profile.balance.toFixed(2) : '0.00'}
+                </span>
                 <span className="text-xl font-bold text-primary italic">NX</span>
               </div>
               <div className="flex gap-3 mt-8">
@@ -158,7 +186,10 @@ export default function WalletView() {
             </div>
             <div className="space-y-2">
               {isTxLoading ? (
-                <div className="flex justify-center p-20"><Loader2 className="animate-spin text-primary" /></div>
+                <div className="flex flex-col items-center justify-center p-20 gap-4 opacity-40">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                  <p className="text-[10px] font-black uppercase tracking-widest">Синхронизация...</p>
+                </div>
               ) : transactions && transactions.length > 0 ? (
                 transactions.map(tx => (
                   <div key={tx.id} className="flex items-center justify-between p-5 obsidian-glass border-white/5 rounded-3xl hover:bg-white/[0.05] transition-all">
@@ -167,8 +198,12 @@ export default function WalletView() {
                         {tx.amount > 0 ? <ArrowDownLeft className="w-6 h-6" /> : <ArrowUpRight className="w-6 h-6" />}
                       </div>
                       <div className="flex flex-col min-w-0">
-                        <span className="text-[14px] font-black text-white truncate w-32 uppercase italic">{tx.type === 'deposit' ? 'Система' : tx.otherPartyName}</span>
-                        <span className="text-[8px] text-white/30 uppercase font-black tracking-widest">{format(new Date(tx.createdAt), 'dd MMM, HH:mm', { locale: ru })}</span>
+                        <span className="text-[14px] font-black text-white truncate w-32 uppercase italic">
+                          {tx.type === 'deposit' ? 'Система' : (tx.otherPartyName || 'Транзакция')}
+                        </span>
+                        <span className="text-[8px] text-white/30 uppercase font-black tracking-widest">
+                          {tx.createdAt ? format(new Date(tx.createdAt), 'dd MMM, HH:mm', { locale: ru }) : 'Недавно'}
+                        </span>
                       </div>
                     </div>
                     <span className={cn("font-black text-lg italic tabular-nums", tx.amount > 0 ? "text-green-500" : "text-white")}>
@@ -187,7 +222,6 @@ export default function WalletView() {
         </div>
       </ScrollArea>
 
-      {/* Dialogs... */}
       <Dialog open={isTopUpOpen} onOpenChange={setIsTopUpOpen}>
         <DialogContent className="max-w-xs bg-[#0a0a0c] border-white/10 rounded-[2.5rem] p-8 text-center shadow-2xl">
           <DialogHeader><DialogTitle className="text-2xl font-black uppercase italic text-white">Top Up</DialogTitle></DialogHeader>
@@ -208,14 +242,19 @@ export default function WalletView() {
           <div className="py-6 space-y-6">
             {!foundUser ? (
               <div className="flex gap-2">
-                <Input placeholder="@node_id" value={transferTarget} onChange={e => setTransferTarget(e.target.value)} className="bg-white/5 border-white/10 h-14 rounded-2xl pl-6" />
-                <Button size="icon" onClick={handleSearchUser} disabled={isSearchingUser} className="h-14 w-14 rounded-2xl shrink-0 bg-accent text-black">{isSearchingUser ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}</Button>
+                <Input placeholder="@node_id" value={transferTarget} onChange={e => setTransferTarget(e.target.value)} className="bg-white/5 border-white/10 h-14 rounded-2xl pl-6 font-bold" />
+                <Button size="icon" onClick={handleSearchUser} disabled={isSearchingUser} className="h-14 w-14 rounded-2xl shrink-0 bg-accent text-black">
+                  {isSearchingUser ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
+                </Button>
               </div>
             ) : (
-              <div className="space-y-6">
+              <div className="space-y-6 animate-in zoom-in-95">
                 <div className="flex items-center gap-4 bg-white/5 p-4 rounded-3xl border border-accent/20 relative">
                   <div className="w-12 h-12 rounded-2xl bg-accent/10 flex items-center justify-center border border-accent/30 text-accent font-black">{foundUser.name[0]}</div>
-                  <div className="flex flex-col text-left"><span className="font-bold text-white uppercase italic">{foundUser.name}</span><span className="text-[10px] text-accent uppercase font-black">{foundUser.username}</span></div>
+                  <div className="flex flex-col text-left">
+                    <span className="font-bold text-white uppercase italic">{foundUser.name}</span>
+                    <span className="text-[10px] text-accent uppercase font-black">{foundUser.username}</span>
+                  </div>
                   <button onClick={() => setFoundUser(null)} className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1 shadow-lg"><XCircle className="w-5 h-5 text-white" /></button>
                 </div>
                 <div className="relative">
@@ -224,7 +263,15 @@ export default function WalletView() {
               </div>
             )}
           </div>
-          <DialogFooter><Button disabled={isProcessing || !foundUser || !transferAmount} onClick={handleTransferAction} className="w-full h-16 bg-accent text-black rounded-2xl font-black uppercase italic tracking-widest shadow-xl">{isProcessing ? <Loader2 className="animate-spin" /> : "Передать Сигнал"}</Button></DialogFooter>
+          <DialogFooter>
+            <Button 
+              disabled={isProcessing || !foundUser || !transferAmount} 
+              onClick={handleTransferAction} 
+              className="w-full h-16 bg-accent text-black rounded-2xl font-black uppercase italic tracking-widest shadow-xl active:scale-95 transition-all"
+            >
+              {isProcessing ? <Loader2 className="animate-spin w-5 h-5" /> : "Передать Сигнал"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
