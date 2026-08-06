@@ -8,15 +8,15 @@ import { Input } from '@/components/ui/input';
 import { 
   Code2, Zap, Rocket, ShieldCheck, Cpu, Globe, ArrowRight, 
   MessageSquare, Bot, Sparkles, Terminal, Key, Webhook, 
-  Layers, Copy, Check, Info, FileCode
+  Layers, Copy, Check, Info, FileCode, Server, Cloud
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NuxusLogo } from './nuxus-logo';
 import { useToast } from '@/hooks/use-toast';
 
 /**
- * PARTNER HUB V2.0 «DEVELOPER NODE»
- * Добавлен технический раздел API для интеграции ботов (Spirit of the Elements).
+ * PARTNER HUB V2.1 «CLOUD INFRASTRUCTURE»
+ * Добавлена информация о 24/7 доступности и API каталоге.
  */
 export default function PartnerView() {
   const { toast } = useToast();
@@ -39,7 +39,7 @@ export default function PartnerView() {
 
   return (
     <div className="flex flex-col h-full bg-[#020205] overflow-hidden relative">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(168,85,247,0.1)_0%,transparent_60%)] pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.1)_0%,transparent_60%)] pointer-events-none" />
       
       <header className="px-6 pt-12 pb-6 shrink-0 z-20 flex items-center justify-between">
          <div className="flex items-center gap-3">
@@ -48,7 +48,7 @@ export default function PartnerView() {
             </div>
             <div className="flex flex-col text-left">
                <h1 className="text-xl font-black text-white italic tracking-tighter uppercase leading-none">Partner Hub</h1>
-               <span className="text-[7px] font-black text-primary/40 uppercase tracking-[0.4em] mt-1">Nuxus Dev Engine v2.0</span>
+               <span className="text-[7px] font-black text-primary/40 uppercase tracking-[0.4em] mt-1">Nuxus Dev Engine v2.1</span>
             </div>
          </div>
       </header>
@@ -67,8 +67,22 @@ export default function PartnerView() {
                Build on <span className="text-primary">NUXUS</span>
              </h2>
              <p className="text-[10px] text-white/40 font-bold uppercase tracking-[0.3em] max-w-xs mx-auto leading-relaxed">
-               Ваш бот заслуживает работы на протоколе квантового шифрования.
+               Облачная инфраструктура с гарантией аптайма 24/7.
              </p>
+          </div>
+
+          {/* Infrastructure Guarantee */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+             <div className="p-5 bg-white/[0.03] border border-white/10 rounded-[1.8rem] flex flex-col gap-3 shadow-lg">
+                <Server className="w-6 h-6 text-primary" />
+                <h4 className="text-[10px] font-black uppercase text-white tracking-widest">24/7 Availability</h4>
+                <p className="text-[8px] text-white/40 font-bold uppercase leading-relaxed">Наши шлюзы работают на Serverless технологии — бот всегда в сети.</p>
+             </div>
+             <div className="p-5 bg-white/[0.03] border border-white/10 rounded-[1.8rem] flex flex-col gap-3 shadow-lg">
+                <Cloud className="w-6 h-6 text-accent" />
+                <h4 className="text-[10px] font-black uppercase text-white tracking-widest">Global Edge</h4>
+                <p className="text-[8px] text-white/40 font-bold uppercase leading-relaxed">Сигнал доставляется через ближайшие узлы Vercel и Firebase CDN.</p>
+             </div>
           </div>
 
           {/* API Token Section */}
@@ -131,7 +145,7 @@ export default function PartnerView() {
              <div className="space-y-2 relative z-10 text-left">
                 <h3 className="text-xl font-black text-white uppercase italic tracking-tighter leading-tight">Special Offer: <br/>Spirit of the Elements</h3>
                 <p className="text-[10px] text-primary/60 font-black uppercase tracking-widest leading-relaxed">
-                   Мы подготовили выделенные мощности для вашего проекта. Прямая интеграция за 5 минут.
+                   Ваш проект заслуживает элитного хостинга. Мы гарантируем 24/7 работу игровых серверов через наш API шлюз.
                 </p>
              </div>
              <div className="bg-black/40 p-5 rounded-2xl border border-white/5 space-y-3 relative z-10">
@@ -152,7 +166,7 @@ export default function PartnerView() {
                 <Zap className="w-4 h-4" />
                 <Rocket className="w-4 h-4" />
              </div>
-             <span className="text-[7px] font-black uppercase tracking-[0.8em]">Nuxus Kernel Partners v2.0</span>
+             <span className="text-[7px] font-black uppercase tracking-[0.8em]">Nuxus Kernel Infrastructure v2.1</span>
           </div>
 
         </div>

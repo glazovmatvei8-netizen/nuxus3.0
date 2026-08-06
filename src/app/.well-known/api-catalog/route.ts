@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 
 /**
  * NUXUS API CATALOG v1.0 (RFC 9727)
- * Обеспечивает автоматическое обнаружение API для AI-агентов.
+ * Обеспечивает автоматическое обнаружение API для AI-агентов и ботов.
  */
 export async function GET() {
   const catalog = {
