@@ -1,13 +1,13 @@
 
 {
-  "latestVersion": "7.1.0",
+  "latestVersion": "7.8.0",
   "qesVersion": "25.4",
-  "build": "Aegis-Minimalist-Update",
+  "build": "Bot-Master-Console-Update",
   "sizeMb": 118,
   "changelog": [
-    "Aegis 7.1: Removed all activity-based audit noise (Low/Zero Resonance)",
-    "Aegis 7.1: Focused strictly on Identity Integrity and empty profiles",
-    "Improved: Detection precision, reduced false positives by 90%",
-    "Stabilized: Admin Panel responsiveness and terminal feedback"
+    "Partner Hub 7.8: Added Bot Identity management (Name, ID, Avatar)",
+    "Console 7.8: Implemented real-time User Discovery (Bot Audience)",
+    "Fixed: Icon imports for 'Users' and 'Loader2' in developer views",
+    "Improved: Bot Webhook documentation and JSON templates"
   ]
 }
