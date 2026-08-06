@@ -9,7 +9,7 @@ import {
   Code2, Zap, Rocket, ShieldCheck, Cpu, Globe, ArrowRight, 
   MessageSquare, Bot, Sparkles, Terminal, Key, Webhook, 
   Layers, Copy, Check, Info, FileCode, Server, Cloud, LayoutGrid,
-  Activity, BarChart3, Settings, Database, Loader2
+  Activity, BarChart3, Settings, Database, Loader2, Users, RefreshCcw, Trash2, ChevronRight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NuxusLogo } from './nuxus-logo';
@@ -17,7 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 
 /**
  * PARTNER HUB V2.6 «EXECUTIVE CONSOLE»
- * Добавлена вкладка Console для управления ботом 24/7.
+ * FIXED: Added missing 'Users' import and refined layout.
  */
 export default function PartnerView() {
   const { toast } = useToast();
@@ -183,7 +183,7 @@ export default function PartnerView() {
                <div className="space-y-4">
                   <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60 px-1 text-left">Quick Actions</h3>
                   <div className="grid grid-cols-1 gap-3">
-                     <ActionButton icon={RefreshCw} label="Reboot Bot Engine" />
+                     <ActionButton icon={RefreshCcw} label="Reboot Bot Engine" />
                      <ActionButton icon={Trash2} label="Clear Memory Cache" />
                      <ActionButton icon={Database} label="Backup Player Data" />
                   </div>
@@ -218,46 +218,5 @@ function ActionButton({ icon: Icon, label }: any) {
        </div>
        <ChevronRight className="w-4 h-4 text-white/10 group-hover:text-primary transition-all" />
     </button>
-  )
-}
-
-function RefreshCw(props: any) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
-      <path d="M21 3v5h-5" />
-      <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
-      <path d="M3 21v-5h5" />
-    </svg>
-  )
-}
-
-function ChevronRight(props: any) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="m9 18 6-6-6-6" />
-    </svg>
   )
 }
