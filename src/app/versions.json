@@ -1,14 +1,12 @@
-
 {
-  "latestVersion": "6.0.2",
+  "latestVersion": "6.1.2",
   "qesVersion": "25.2",
   "build": "Neural-Nexus-Absolute",
   "sizeMb": 112,
   "changelog": [
-    "Fixed: originalFactory.call circular dependency error",
-    "Improved: Country selector now active on Login tab",
-    "Fixed: Country list scrolling on mobile devices",
-    "Fixed: Privacy policy links functionality",
-    "Improved: NX-AI Internet search precision"
+    "Fixed: useUser is not a function (Barrel exports restored)",
+    "Added: Achievement system data structure",
+    "Improved: NX-AI interface stability",
+    "Fixed: originalFactory.call circular dependency"
   ]
 }
