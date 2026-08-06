@@ -16,8 +16,8 @@ import type { Chat, User } from '@/lib/types';
 const ADMIN_ID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
 /**
- * НАВИГАТОР V12.5 «Mission Control & Dev Access»
- * ФИКС: Исправлена ошибка ScrollArea и улучшена видимость Partner Hub.
+ * НАВИГАТОР V13.0 (Minimalist Hub)
+ * ФИКС: Убраны дублирующие баннеры Partner Hub, так как он вынесен в меню.
  */
 export default function DiscoveryView() {
   const db = useFirestore();
@@ -92,32 +92,6 @@ export default function DiscoveryView() {
       <ScrollArea className="flex-1 px-0.5">
         <div className="space-y-8 pb-32 px-6 max-w-full overflow-x-hidden animate-in fade-in duration-700">
           
-          {/* КРИТИЧЕСКИЙ БАННЕР: PARTNER HUB */}
-          <div 
-            onClick={() => setActiveView('partner')}
-            className="bg-gradient-to-br from-primary/20 to-accent/5 border border-primary/30 p-5 rounded-[2.5rem] shadow-2xl relative overflow-hidden group cursor-pointer active:scale-95 transition-all"
-          >
-             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:rotate-12 transition-transform">
-                <Terminal className="w-20 h-20 text-white" />
-             </div>
-             <div className="relative z-10 space-y-3 text-left">
-                <div className="flex items-center gap-2">
-                   <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shadow-lg">
-                      <Code2 className="w-5 h-5 text-white" />
-                   </div>
-                   <span className="text-[10px] font-black text-white uppercase tracking-widest">Dev Terminal</span>
-                </div>
-                <div className="space-y-1">
-                   <h3 className="text-xl font-black text-white uppercase italic tracking-tighter">Partner Program</h3>
-                   <p className="text-[9px] text-white/50 font-bold uppercase tracking-widest leading-relaxed">Инструменты для ботов и игровых серверов</p>
-                </div>
-                <div className="flex items-center gap-2 pt-2 text-primary">
-                   <span className="text-[9px] font-black uppercase tracking-widest">Активировать шлюз</span>
-                   <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                </div>
-             </div>
-          </div>
-
           <div className="relative overflow-hidden rounded-[2.5rem] p-[1px] bg-gradient-to-br from-white/10 to-transparent">
              <div className="bg-[#05050a]/95 backdrop-blur-3xl p-5 sm:p-6 rounded-[2.5rem] text-center space-y-5 relative overflow-hidden shadow-xl">
                 <div className="relative z-10 flex flex-col items-center gap-3">

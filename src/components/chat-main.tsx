@@ -29,7 +29,7 @@ import { MusicPlayer } from './music-player';
 import { UserAvatar } from './user-avatar';
 import { CreateStoryModal } from './modals/create-story-modal';
 import type { Call, User as UserType } from '@/lib/types';
-import { Phone, MessageCircle, Settings, Search, Archive, Music, Wallet, Gamepad2, Layers, Compass, Plus, Sparkles, ShieldCheck, Cpu, BrainCircuit, Code2 } from 'lucide-react';
+import { Phone, MessageCircle, Settings, Search, Archive, Music, Wallet, Gamepad2, Layers, Compass, Plus, Sparkles, ShieldCheck, Cpu, BrainCircuit, Code2, Terminal } from 'lucide-react';
 import { useTranslations } from '@/hooks/use-translations';
 
 export default function ChatMain() {
@@ -71,7 +71,7 @@ export default function ChatMain() {
       <UpdateNotifier />
       
       <div className="flex-1 flex overflow-hidden w-full relative max-w-full">
-        {/* Desktop Navigation Rail V12.0 (Elite Rail) */}
+        {/* Desktop Navigation Rail V13.0 (Absolute Sync) */}
         <div className="hidden md:flex w-[88px] h-full flex-col items-center py-10 bg-black/40 backdrop-blur-3xl border-r border-white/[0.03] shrink-0 z-40 relative">
           <div className="mb-12 cursor-pointer active:scale-90 transition-all relative group" onClick={() => { setActiveView('chats'); setCurrentChatId(null); }}>
             <div className="absolute -inset-4 bg-primary/20 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -80,9 +80,10 @@ export default function ChatMain() {
             </div>
           </div>
           
-          <div className="flex flex-col gap-8 flex-1 overflow-y-auto scrollbar-hide py-2">
+          <div className="flex flex-col gap-7 flex-1 overflow-y-auto scrollbar-hide py-2">
             <RailButton icon={MessageCircle} active={activeView === 'chats'} onClick={() => { setActiveView('chats'); setCurrentChatId(null); }} label="СЕТЬ" />
             <RailButton icon={BrainCircuit} active={activeView === 'ai'} onClick={() => { setActiveView('ai'); setCurrentChatId(null); }} label="РАЗУМ" />
+            <RailButton icon={Terminal} active={activeView === 'partner'} onClick={() => { setActiveView('partner'); setCurrentChatId(null); }} label="DEV" />
             <RailButton icon={Compass} active={activeView === 'discovery'} onClick={() => { setActiveView('discovery'); setCurrentChatId(null); }} label="ХАБ" />
             <RailButton icon={Phone} active={activeView === 'calls'} onClick={() => { setActiveView('calls'); setCurrentChatId(null); }} label="ЗВОНКИ" />
             <RailButton icon={Gamepad2} active={activeView === 'games'} onClick={() => { setActiveView('games'); setCurrentChatId(null); }} label="ИГРЫ" />
@@ -96,7 +97,7 @@ export default function ChatMain() {
           </div>
         </div>
 
-        {/* Sidebar Container V12.0 (Elite Panel) */}
+        {/* Sidebar Container V13.0 */}
         <div className={cn(
           "w-full md:w-[380px] lg:w-[420px] h-full flex-shrink-0 z-30 bg-black/5 backdrop-blur-3xl relative overflow-hidden min-w-0 transition-all duration-500", 
           (currentChatId && !['profile', 'contacts', 'calls', 'archive', 'music', 'wallet', 'discovery', 'games', 'ai', 'partner'].includes(activeView)) ? "hidden md:block" : "block"
@@ -116,7 +117,7 @@ export default function ChatMain() {
           </div>
         </div>
         
-        {/* Main Viewport V12.0 (Elite Area) */}
+        {/* Main Viewport V13.0 */}
         <div className={cn(
           "flex-1 h-full flex flex-col min-w-0 bg-transparent relative z-20 chat-pattern-bg overflow-hidden max-w-full transition-all duration-700 md:ml-4 my-2 md:my-4 md:mr-4 md:rounded-[3rem] md:border md:border-white/5 md:shadow-2xl", 
           (!currentChatId || ['profile', 'music', 'wallet', 'games', 'discovery', 'ai', 'partner'].includes(activeView)) ? "hidden md:flex" : "flex"
@@ -129,12 +130,12 @@ export default function ChatMain() {
 
       <MusicPlayer />
 
-      {/* Floating Bottom Navigation (Mobile Only) V5.0 - Elite Sync */}
+      {/* Floating Bottom Navigation (Mobile Only) V6.0 - Elite Sync */}
       {!currentChatId && (
         <div className="md:hidden floating-nav">
           <div className="flex flex-1 justify-around items-center gap-1 z-10">
+            <NavButton icon={Terminal} label="DEV" active={activeView === 'partner'} onClick={() => setActiveView('partner')} />
             <NavButton icon={BrainCircuit} label="РАЗУМ" active={activeView === 'ai'} onClick={() => setActiveView('ai')} />
-            <NavButton icon={Phone} label="ЗВОНКИ" active={activeView === 'calls'} onClick={() => setActiveView('calls')} />
             
             <div className="relative -top-3">
               <div className="absolute -inset-4 bg-primary/30 blur-2xl animate-pulse" />
@@ -168,15 +169,15 @@ export default function ChatMain() {
 
 function RailButton({ icon: Icon, active, onClick, label }: { icon: any, active?: boolean, onClick: () => void, label: string }) {
   return (
-    <button onClick={onClick} className={cn("group flex flex-col items-center gap-2 transition-all outline-none", active ? "text-primary" : "text-muted-foreground hover:text-white")}>
+    <button onClick={onClick} className={cn("group flex flex-col items-center gap-1.5 transition-all outline-none", active ? "text-primary" : "text-muted-foreground hover:text-white")}>
       <div className={cn(
-        "w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-500 relative border border-transparent", 
+        "w-13 h-13 rounded-2xl flex items-center justify-center transition-all duration-500 relative border border-transparent", 
         active ? "bg-primary/10 border-primary/30 shadow-[0_0_25px_rgba(168,85,247,0.2)]" : "group-hover:bg-white/5"
       )}>
         <Icon className={cn("w-6 h-6 transition-all duration-700", active ? "fill-current scale-110" : "scale-100 group-hover:scale-110")} />
         {active && <div className="absolute -left-[30px] top-1/2 -translate-y-1/2 w-1.5 h-10 bg-primary rounded-r-full shadow-[0_0_15px_rgba(168,85,247,1)]" />}
       </div>
-      <span className="text-[8px] font-black uppercase tracking-[0.2em]">{label}</span>
+      <span className="text-[7px] font-black uppercase tracking-[0.2em]">{label}</span>
     </button>
   );
 }

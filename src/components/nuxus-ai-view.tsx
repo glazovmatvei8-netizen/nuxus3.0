@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -15,9 +16,8 @@ import { useToast } from '@/hooks/use-toast';
 import { NuxusLogo } from './nuxus-logo';
 
 /**
- * NEXUS AI TERMINAL V6.1.0 «GEMINI EDITION»
- * Полный редизайн интерфейса в стиле Google Gemini.
- * Автономный интеллект с живым поиском и памятью сессии.
+ * NEXUS AI TERMINAL V7.0 «NEURAL STABILITY»
+ * ФИКС: Очищена логика передачи истории сигналов.
  */
 export default function NuxusAiView() {
   const { user } = useUser();
@@ -39,11 +39,18 @@ export default function NuxusAiView() {
     
     const userMsg = input.trim();
     setInput('');
-    setMessages(prev => [...prev, { role: 'user', content: userMsg }]);
+    const newHistory = [...messages, { role: 'user' as const, content: userMsg }];
+    setMessages(newHistory);
     setIsThinking(true);
 
     try {
-      const { response } = await askNexusAI(userMsg, messages);
+      // Преобразуем историю в формат, который ожидает Flow
+      const flowHistory = messages.map(m => ({
+        role: m.role,
+        content: m.content
+      }));
+
+      const { response } = await askNexusAI(userMsg, flowHistory);
       setMessages(prev => [...prev, { role: 'model', content: response }]);
     } catch (e: any) {
       toast({ title: "Сбой нейронной сети", description: "Сигнал потерян, попробуйте снова.", variant: "destructive" });
@@ -59,19 +66,17 @@ export default function NuxusAiView() {
 
   return (
     <div className="flex flex-col h-full bg-[#020205] overflow-hidden relative">
-      {/* Background Effects */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(168,85,247,0.1)_0%,transparent_60%)] pointer-events-none" />
       <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-primary/5 blur-[120px] rounded-full pointer-events-none" />
       
-      {/* Header */}
       <header className="px-6 pt-12 pb-6 shrink-0 z-20 flex items-center justify-between">
          <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-xl bg-white/[0.03] border border-white/10 flex items-center justify-center shadow-xl shadow-primary/5">
                <BrainCircuit className="w-5 h-5 text-primary animate-pulse" />
             </div>
-            <div className="flex flex-col">
+            <div className="flex flex-col text-left">
                <h1 className="text-xl font-black text-white italic tracking-tighter uppercase">Nexus AI</h1>
-               <span className="text-[7px] font-black text-primary/40 uppercase tracking-[0.4em]">Sovereign Mind v6.1</span>
+               <span className="text-[7px] font-black text-primary/40 uppercase tracking-[0.4em]">Sovereign Mind v7.0</span>
             </div>
          </div>
          {messages.length > 0 && (
@@ -113,7 +118,7 @@ export default function NuxusAiView() {
                       ? "bg-primary/10 border-primary/20 text-white rounded-br-none" 
                       : "bg-white/[0.03] border-white/5 text-white/90 rounded-bl-none backdrop-blur-xl"
                    )}>
-                      <p className="text-[16px] font-medium leading-relaxed whitespace-pre-wrap selection:bg-primary/30">{msg.content}</p>
+                      <p className="text-[16px] font-medium leading-relaxed whitespace-pre-wrap selection:bg-primary/30 text-left">{msg.content}</p>
                    </div>
                    <div className="flex items-center gap-2 px-6">
                       <span className="text-[8px] font-black uppercase text-white/20 tracking-[0.2em]">
@@ -142,7 +147,6 @@ export default function NuxusAiView() {
         </div>
       </ScrollArea>
 
-      {/* Floating Input Area (Gemini Style) */}
       <div className="shrink-0 z-30 pb-[calc(2.5rem+env(safe-area-inset-bottom))] px-6 pt-4">
         <div className="max-w-3xl mx-auto relative group">
           <div className="absolute -inset-1 bg-gradient-to-r from-primary/30 to-accent/30 blur-2xl opacity-0 group-focus-within:opacity-100 transition-all duration-1000" />

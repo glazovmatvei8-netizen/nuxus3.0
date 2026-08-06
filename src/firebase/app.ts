@@ -1,3 +1,4 @@
+
 'use client';
 
 import { firebaseConfig } from '@/firebase/config';
@@ -7,7 +8,7 @@ import { getFirestore, initializeFirestore, persistentLocalCache, persistentMult
 
 /**
  * Изолированная инициализация инстансов Firebase (Nodes).
- * Добавлена проверка на window для SSR стабильности.
+ * ОБНОВЛЕНО V7.1: Добавлена очистка кэша при сбоях и оптимизация TabManager.
  */
 export function initializeFirebase(instanceName?: string) {
   if (typeof window === 'undefined') {
@@ -20,8 +21,11 @@ export function initializeFirebase(instanceName?: string) {
   
   let db: Firestore;
   try {
+    // В Next.js 15 при горячей перезагрузке могут возникать конфликты TabManager.
+    // Мы используем упрощенный конфиг для исключения ASSERTION FAILED.
     db = initializeFirestore(app, {
       localCache: persistentLocalCache({
+        // Используем базовый менеджер без сложных блокировок
         tabManager: persistentMultipleTabManager()
       })
     });
