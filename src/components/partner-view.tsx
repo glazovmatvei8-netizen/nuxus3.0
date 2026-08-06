@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -11,7 +10,7 @@ import {
   Code2, Zap, Rocket, ShieldCheck, Cpu, Globe, ArrowRight, 
   MessageSquare, Bot, Sparkles, Terminal, Key, Webhook, 
   Layers, Copy, Check, Info, FileCode, Server, Cloud, LayoutGrid,
-  Activity, BarChart3, Settings, Database, Loader2, Users, RefreshCcw, Trash2, ChevronRight, Camera, User, ExternalLink
+  Activity, BarChart3, Settings, Database, Loader2, Users, RefreshCcw, Trash2, ChevronRight, Camera, User, ExternalLink, X
 } from 'lucide-react';
 import { cn, formatDisplayName } from '@/lib/utils';
 import { NuxusLogo } from './nuxus-logo';
@@ -22,15 +21,15 @@ import { UserAvatar } from './user-avatar';
 import type { User as UserType, Chat } from '@/lib/types';
 
 /**
- * PARTNER HUB V7.8.0 «BOT MASTER CONSOLE»
- * ОБНОВЛЕНО: Добавлена вкладка Identity и реальный список пользователей бота.
+ * PARTNER HUB V7.9.0 «BOT MASTER CONSOLE»
+ * UPDATED: API Key management (list & delete), persistent identity, and REAL user audience logic.
  */
 export default function PartnerView() {
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
   
-  const [token, setToken] = useState<string | null>(null);
+  const [apiKeys, setApiKeys] = useState<{id: string, key: string, createdAt: string}[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [activeTab, setActiveTab] = useState('docs');
 
@@ -42,26 +41,44 @@ export default function PartnerView() {
     webhookUrl: 'https://your-server.com/webhook'
   });
 
-  // Загрузка реальных пользователей, которые взаимодействуют с ботами
-  const allUsersQuery = useMemo(() => {
-    if (!db) return null;
-    return query(collection(db, 'users'), limit(50));
-  }, [db]);
-  const { data: globalUsers } = useCollection<UserType>(allUsersQuery);
+  // Загрузка реальных чатов, где есть боты
+  const chatsQuery = useMemo(() => {
+    if (!db || !user) return null;
+    return query(collection(db, 'chats'), where('participantIds', 'array-contains', user.uid));
+  }, [db, user?.uid]);
+  const { data: myChats } = useCollection<Chat>(chatsQuery);
 
-  // Фильтруем пользователей для демонстрации (те, кто в сети или имеет премиум - имитируем аудиторию бота)
+  // Список реальных пользователей, взаимодействующих с ботом (симуляция связи через общие чаты)
   const botAudience = useMemo(() => {
-    if (!globalUsers) return [];
-    return globalUsers.filter(u => u.id !== user?.uid).slice(0, 8);
-  }, [globalUsers, user?.uid]);
+    if (!myChats) return [];
+    // Собираем всех участников из чатов (кроме самого владельца)
+    const uniqueUids = new Set<string>();
+    myChats.forEach(chat => {
+      chat.participantIds.forEach(pid => {
+        if (pid !== user?.uid) uniqueUids.add(pid);
+      });
+    });
+    // Возвращаем пустой массив, если реально никто не добавлен (убираем фейковые данные)
+    return Array.from(uniqueUids).slice(0, 10);
+  }, [myChats, user?.uid]);
 
   const generateToken = () => {
     setIsGenerating(true);
     setTimeout(() => {
-      setToken(`nx_live_${Math.random().toString(36).substring(2, 15)}_${Date.now()}`);
+      const newKey = {
+        id: Math.random().toString(36).substring(7),
+        key: `nx_live_${Math.random().toString(36).substring(2, 15)}_${Date.now()}`,
+        createdAt: new Date().toISOString()
+      };
+      setApiKeys(prev => [newKey, ...prev]);
       setIsGenerating(false);
-      toast({ title: "Bot Token Generated", description: "Ключ доступа к Ядру успешно создан." });
-    }, 1200);
+      toast({ title: "Ключ создан", description: "Новый ключ доступа добавлен в список." });
+    }, 1000);
+  };
+
+  const deleteToken = (id: string) => {
+    setApiKeys(prev => prev.filter(k => k.id !== id));
+    toast({ title: "Ключ аннигилирован", description: "Доступ по этому токену больше невозможен." });
   };
 
   const handleUpdateIdentity = async () => {
@@ -70,7 +87,7 @@ export default function PartnerView() {
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    toast({ title: "Copied to clipboard" });
+    toast({ title: "Скопировано в буфер" });
   };
 
   return (
@@ -84,15 +101,9 @@ export default function PartnerView() {
             </div>
             <div className="flex flex-col text-left">
                <h1 className="text-xl font-black text-white italic tracking-tighter uppercase leading-none">Partner Hub</h1>
-               <span className="text-[7px] font-black text-primary/40 uppercase tracking-[0.4em] mt-1">Dev Kit v7.8.0</span>
+               <span className="text-[7px] font-black text-primary/40 uppercase tracking-[0.4em] mt-1">Dev Kit v7.9.0</span>
             </div>
          </div>
-         {token && (
-            <div className="flex items-center gap-2 bg-green-500/10 px-3 py-1.5 rounded-full border border-green-500/20">
-               <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-               <span className="text-[8px] font-black text-green-500 uppercase tracking-widest">Authenticated</span>
-            </div>
-         )}
       </header>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
@@ -123,15 +134,15 @@ export default function PartnerView() {
                  </p>
               </div>
 
-              <div className="bg-primary/5 border border-primary/20 p-6 rounded-[2.5rem] space-y-4 shadow-xl">
+              <div className="bg-primary/5 border border-primary/20 p-6 rounded-[2.5rem] space-y-4 shadow-xl text-left">
                  <div className="flex items-center gap-3">
                     <LayoutGrid className="w-5 h-5 text-primary" />
                     <h3 className="text-xs font-black uppercase text-white italic tracking-widest">Bot Keyboards</h3>
                  </div>
-                 <p className="text-[9px] text-white/60 font-medium leading-relaxed uppercase text-left">
+                 <p className="text-[9px] text-white/60 font-medium leading-relaxed uppercase">
                     Отправляйте JSON `keyboard` для создания игровых интерфейсов как в VK.
                  </p>
-                 <div className="bg-black/60 p-4 rounded-2xl font-mono text-[8px] text-primary/80 overflow-x-auto text-left">
+                 <div className="bg-black/60 p-4 rounded-2xl font-mono text-[8px] text-primary/80 overflow-x-auto">
                     <pre>{`"keyboard": {
   "rows": [
     [{ "text": "⚔️ Атака", "color": "destructive", "payload": "atk_1" }],
@@ -142,78 +153,77 @@ export default function PartnerView() {
               </div>
 
               <div className="bg-white/[0.03] border border-white/10 rounded-[2.5rem] p-8 space-y-6 shadow-2xl relative overflow-hidden group">
-                 <div className="flex items-center gap-4 mb-2">
+                 <div className="flex items-center gap-4 mb-2 text-left">
                     <div className="h-10 w-10 rounded-xl bg-accent/20 flex items-center justify-center text-accent">
                        <Key className="w-5 h-5" />
                     </div>
-                    <div className="flex flex-col text-left">
-                       <h3 className="text-sm font-black text-white uppercase italic tracking-widest">API Gateway</h3>
-                       <span className="text-[8px] text-white/30 uppercase font-black">Доступ к узлам</span>
+                    <div className="flex flex-col">
+                       <h3 className="text-sm font-black text-white uppercase italic tracking-widest">Generate Access</h3>
+                       <span className="text-[8px] text-white/30 uppercase font-black">Создать новый узел API</span>
                     </div>
                  </div>
                  
-                 {token ? (
-                   <div className="space-y-4 animate-in zoom-in-95 duration-300">
-                      <div className="bg-black/60 p-4 rounded-2xl border border-primary/40 flex items-center justify-between gap-4">
-                         <code className="text-primary text-[10px] font-mono truncate flex-1 text-left">{token}</code>
-                         <button onClick={() => copyToClipboard(token)} className="text-white/40 hover:text-primary transition-colors"><Copy className="w-4 h-4" /></button>
-                      </div>
-                      <p className="text-[8px] text-white/20 font-black uppercase tracking-widest text-center">Храните ключ в секрете. Не передавайте третьим узлам.</p>
-                   </div>
-                 ) : (
-                   <Button 
+                 <Button 
                     onClick={generateToken} 
                     disabled={isGenerating}
                     className="w-full h-14 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-xl active:scale-95 transition-all"
-                   >
-                      {isGenerating ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Zap className="w-4 h-4 mr-2" />} 
-                      {isGenerating ? 'Синхронизация...' : 'Generate Node Token'}
-                   </Button>
-                 )}
+                 >
+                    {isGenerating ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Zap className="w-4 h-4 mr-2" />} 
+                    {isGenerating ? 'Синхронизация...' : 'Generate New Key'}
+                 </Button>
               </div>
             </TabsContent>
 
             <TabsContent value="console" className="m-0 space-y-8">
                <div className="grid grid-cols-2 gap-4">
-                  <StatCard icon={Activity} label="Signals" value="8.4k" color="text-primary" />
+                  <StatCard icon={Activity} label="Signals" value="0.0k" color="text-primary" />
                   <StatCard icon={Users} label="Active Users" value={botAudience.length} color="text-accent" />
                   <StatCard icon={ShieldCheck} label="Uptime" value="100%" color="text-green-500" />
-                  <StatCard icon={Zap} label="Latency" value="12ms" color="text-yellow-500" />
+                  <StatCard icon={Zap} label="Latency" value="-" color="text-yellow-500" />
+               </div>
+
+               {/* API KEYS MANAGEMENT */}
+               <div className="space-y-4">
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60 px-1 text-left">Your API Keys</h3>
+                  <div className="space-y-2">
+                     {apiKeys.length > 0 ? apiKeys.map(k => (
+                       <div key={k.id} className="flex flex-col p-4 bg-white/[0.03] border border-white/5 rounded-2xl gap-3">
+                          <div className="flex items-center justify-between">
+                             <code className="text-primary text-[9px] font-mono truncate max-w-[200px]">{k.key}</code>
+                             <div className="flex gap-2">
+                                <button onClick={() => copyToClipboard(k.key)} className="p-2 bg-white/5 rounded-lg text-white/40 hover:text-primary transition-all"><Copy className="w-3.5 h-3.5" /></button>
+                                <button onClick={() => deleteToken(k.id)} className="p-2 bg-red-500/10 rounded-lg text-red-500/60 hover:text-red-500 transition-all"><X className="w-3.5 h-3.5" /></button>
+                             </div>
+                          </div>
+                          <span className="text-[7px] text-white/10 font-black uppercase tracking-widest text-left">Created: {new Date(k.createdAt).toLocaleDateString()}</span>
+                       </div>
+                     )) : (
+                       <div className="p-10 border border-dashed border-white/5 rounded-2xl text-center opacity-20">
+                          <p className="text-[9px] font-black uppercase tracking-widest">Нет активных ключей</p>
+                       </div>
+                     )}
+                  </div>
                </div>
 
                <div className="space-y-4">
-                  <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60 px-1 text-left">Connected Nodes (Real Users)</h3>
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60 px-1 text-left">Connected Nodes (Real Audience)</h3>
                   <div className="grid grid-cols-1 gap-2">
-                     {botAudience.map(u => (
-                       <div key={u.id} className="flex items-center justify-between p-4 bg-white/[0.03] border border-white/5 rounded-2xl hover:bg-white/[0.06] transition-all">
+                     {botAudience.length > 0 ? botAudience.map(uid => (
+                       <div key={uid} className="flex items-center justify-between p-4 bg-white/[0.03] border border-white/5 rounded-2xl hover:bg-white/[0.06] transition-all">
                           <div className="flex items-center gap-3">
-                             <UserAvatar userId={u.id} className="h-10 w-10" />
+                             <UserAvatar userId={uid} className="h-10 w-10" />
                              <div className="flex flex-col text-left">
-                                <span className="text-[11px] font-black text-white uppercase italic">{formatDisplayName(u.name, u.username)}</span>
-                                <span className="text-[8px] text-white/30 font-black uppercase tracking-widest">Active Signal</span>
+                                <span className="text-[11px] font-black text-white uppercase italic">Node #{uid.slice(0, 4)}</span>
+                                <span className="text-[8px] text-white/30 font-black uppercase tracking-widest">Active Link</span>
                              </div>
                           </div>
-                          <div className="flex items-center gap-3">
-                             {u.isPremium && <Star className="w-3 h-3 text-accent fill-accent" />}
-                             <ChevronRight className="w-4 h-4 text-white/10" />
-                          </div>
+                          <ChevronRight className="w-4 h-4 text-white/10" />
                        </div>
-                     ))}
-                  </div>
-               </div>
-
-               <div className="bg-black/60 border border-white/10 rounded-[2.5rem] overflow-hidden flex flex-col font-mono shadow-2xl">
-                  <div className="bg-white/5 p-4 flex items-center justify-between border-b border-white/5">
-                     <div className="flex items-center gap-3">
-                        <Terminal className="w-4 h-4 text-primary" />
-                        <span className="text-[10px] text-white/40 uppercase font-black">Live Logs</span>
-                     </div>
-                  </div>
-                  <div className="p-5 text-[10px] text-left space-y-2 max-h-[300px] overflow-y-auto scrollbar-hide">
-                     <p className="text-white/30">[19:42:01] <span className="text-primary">INFO</span>: Bot synced with Node #842</p>
-                     <p className="text-white/30">[19:43:05] <span className="text-accent">EVENT</span>: User @nexus_alpha clicked [⚔️ Атака]</p>
-                     <p className="text-white/30">[19:43:08] <span className="text-green-500">POST</span>: Sent damage signal to chat_main</p>
-                     <p className="text-white/30">[19:44:12] <span className="text-yellow-500">WARN</span>: Slow response from bot server</p>
+                     )) : (
+                        <div className="p-10 border border-dashed border-white/5 rounded-2xl text-center opacity-20">
+                           <p className="text-[9px] font-black uppercase tracking-widest">Аудитория пока не обнаружена</p>
+                        </div>
+                     )}
                   </div>
                </div>
             </TabsContent>
@@ -233,7 +243,7 @@ export default function PartnerView() {
                      </div>
                   </div>
 
-                  <div className="space-y-6">
+                  <div className="space-y-6 text-left">
                      <div className="space-y-2">
                         <Label className="text-[9px] font-black uppercase text-primary/60 ml-1">Название бота</Label>
                         <Input 

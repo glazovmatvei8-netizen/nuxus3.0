@@ -14,31 +14,24 @@ import { signOut } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { isUserActuallyBanned } from '@/lib/utils';
 import { NuxusLogo } from '@/components/nuxus-logo';
-import { IosInstaller } from '@/components/ios-installer';
 import { authenticator } from 'otplib';
 
 /**
- * HOME GATE V6.5.2
- * FIXED: Direct imports from provider to eliminate 'call' error.
+ * HOME GATE V7.9.0
+ * REMOVED: IosInstaller (Fake App Store) screen as requested.
  */
 export default function Home() {
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
   const auth = useAuth();
-  const { is2FAVerified, setIs2FAVerified, setInspectedUserId, setActiveCallId } = useAppState();
+  const { is2FAVerified, setIs2FAVerified } = useAppState();
   const { toast } = useToast();
   
   const [mounted, setMounted] = useState(false);
   const [twoFactorInput, setTwoFactorInput] = useState('');
-  const [showIosInstaller, setShowIosInstaller] = useState(false);
   
   useEffect(() => {
     setMounted(true);
-    const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-    const isStandalone = (window.navigator as any).standalone || window.matchMedia('(display-mode: standalone)').matches;
-    if (isIos && !isStandalone && !localStorage.getItem('ios_installer_dismissed')) {
-      setShowIosInstaller(true);
-    }
   }, []);
 
   const userProfileRef = useMemo(() => {
@@ -49,15 +42,6 @@ export default function Home() {
   const { data: profile, isLoading: isProfileLoading } = useDoc<UserType>(userProfileRef);
   
   const isBanned = isUserActuallyBanned(profile);
-
-  useEffect(() => {
-    if (!mounted || !db || !user || !profile) return;
-    const isProtected = profile.twoFactorEnabled || profile.totpEnabled;
-    if (isProtected && !is2FAVerified) return;
-
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('action') === 'call') { /* logic */ }
-  }, [mounted, db, user, profile, is2FAVerified]);
 
   const handleVerify2FA = () => {
     if (!profile) return;
@@ -89,7 +73,6 @@ export default function Home() {
     );
   }
 
-  if (showIosInstaller) return <IosInstaller onDismiss={() => setShowIosInstaller(false)} />;
   if (!user) return <AuthScreen />;
   if (isBanned) return <div className="h-screen flex flex-col items-center justify-center bg-[#050505] p-6 text-center text-white"><ShieldAlert className="w-20 h-20 text-destructive mb-6" /><h1 className="text-4xl font-black">УЗЕЛ ОТКЛЮЧЕН</h1></div>;
 
