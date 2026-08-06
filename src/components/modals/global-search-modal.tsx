@@ -1,25 +1,23 @@
 
 "use client"
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase/provider';
-import { collection, query, where, getDocs, limit, doc, updateDoc, arrayUnion, addDoc, orderBy } from 'firebase/firestore';
+import { useFirestore, useUser } from '@/firebase/provider';
+import { collection, query, where, getDocs, limit, addDoc } from 'firebase/firestore';
 import { useAppState } from '@/lib/store.tsx';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Loader2, ArrowRight, Zap, Globe, Star, Users, User, Bot, ShieldCheck, Plus, Check } from 'lucide-react';
+import { Search, Loader2, ArrowRight, Globe, User, Bot, BotOff } from 'lucide-react';
 import { UserAvatar } from '@/components/user-avatar';
-import { cn, isUserPremium } from '@/lib/utils';
-import type { Chat } from '@/lib/types';
+import { cn } from '@/lib/utils';
 
 type SearchFilter = 'all' | 'users' | 'groups' | 'bots';
 
 /**
- * ГЛОБАЛЬНЫЙ ПОИСК V8.2.0
- * FIXED: Universal Search for Bots and Real Users.
+ * ГЛОБАЛЬНЫЙ ПОИСК V8.3.0 «REAL BOT DISCOVERY»
+ * FIXED: Accurate searching for newly created bots in Firestore.
  */
 export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const { user } = useUser();
@@ -46,53 +44,47 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
       
       const foundResults: any[] = [];
 
-      // 1. Search in Users collection (Includes Bots as users)
-      if (activeFilter === 'all' || activeFilter === 'users' || activeFilter === 'bots') {
-        const userQ = query(
-          collection(db, 'users'),
-          where('usernameLowercase', '>=', searchTarget),
-          where('usernameLowercase', '<=', searchTarget + '\uf8ff'),
-          limit(20)
-        );
-        const botQ = query(
-          collection(db, 'bots'),
-          where('usernameLowercase', '>=', searchTarget),
-          where('usernameLowercase', '<=', searchTarget + '\uf8ff'),
-          limit(20)
-        );
+      // 1. Search in Users (including bots registered as users)
+      const userQ = query(
+        collection(db, 'users'),
+        where('usernameLowercase', '>=', searchTarget),
+        where('usernameLowercase', '<=', searchTarget + '\uf8ff'),
+        limit(20)
+      );
 
-        const [userSnap, botSnap] = await Promise.all([getDocs(userQ), getDocs(botQ)]);
+      // 2. Search in Bots collection specifically
+      const botQ = query(
+        collection(db, 'bots'),
+        where('usernameLowercase', '>=', searchTarget),
+        where('usernameLowercase', '<=', searchTarget + '\uf8ff'),
+        limit(20)
+      );
 
-        userSnap.docs.forEach(d => {
-          if (d.id !== user?.uid) {
-            foundResults.push({ type: 'user', data: { id: d.id, ...d.data() } });
-          }
-        });
+      const [userSnap, botSnap] = await Promise.all([getDocs(userQ), getDocs(botQ)]);
 
-        botSnap.docs.forEach(d => {
-          foundResults.push({ type: 'bot', data: { id: d.id, ...d.data() } });
-        });
-      }
+      botSnap.docs.forEach(d => {
+        foundResults.push({ type: 'bot', data: { id: d.id, ...d.data() } });
+      });
 
-      // 2. Search in Chats (Public Groups/Channels)
+      userSnap.docs.forEach(d => {
+        const data = d.data();
+        if (d.id !== user?.uid && !foundResults.some(r => r.data.id === d.id)) {
+          foundResults.push({ type: data.isBot ? 'bot' : 'user', data: { id: d.id, ...data } });
+        }
+      });
+
+      // 3. Groups search
       if (activeFilter === 'all' || activeFilter === 'groups') {
-        const chatQ = query(
-          collection(db, 'chats'), 
-          where('isPublic', '==', true),
-          limit(20)
-        );
+        const chatQ = query(collection(db, 'chats'), where('isPublic', '==', true), limit(10));
         const chatSnap = await getDocs(chatQ);
         chatSnap.docs.forEach(d => {
           const data = d.data();
-          const matches = data.username?.toLowerCase().includes(input) || 
-                          data.name?.toLowerCase().includes(input);
-          if (matches && data.type !== 'private') {
+          if (data.username?.toLowerCase().includes(input) || data.name?.toLowerCase().includes(input)) {
             foundResults.push({ type: 'chat', data: { id: d.id, ...data } });
           }
         });
       }
 
-      // Filter by active category if not 'all'
       let filtered = foundResults;
       if (activeFilter === 'users') filtered = foundResults.filter(r => r.type === 'user');
       if (activeFilter === 'bots') filtered = foundResults.filter(r => r.type === 'bot');
@@ -110,7 +102,6 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
     if (!db || !user) return;
     
     if (res.type === 'bot') {
-       // Open chat with bot
        try {
          const chatQ = query(collection(db, 'chats'), where('type', '==', 'private'), where('participantIds', 'array-contains', user.uid));
          const snap = await getDocs(chatQ);
@@ -126,10 +117,10 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
              createdAt: new Date().toISOString(),
              name: res.data.name,
              username: res.data.username,
-             avatarUrl: res.data.avatarUrl,
+             avatarUrl: res.data.avatarUrl || null,
              metadata: {
                [user.uid]: { name: user.displayName || 'User', username: '?' },
-               [res.data.id]: { name: res.data.name, username: res.data.username, isBot: true }
+               [res.data.id]: { name: res.data.name, username: res.data.username, isBot: true, avatarUrl: res.data.avatarUrl }
              }
            });
            setCurrentChatId(newChat.id);
@@ -172,7 +163,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
               {[
                 { id: 'all', label: 'Все', icon: Globe },
                 { id: 'users', label: 'Люди', icon: User },
-                { id: 'groups', label: 'Группы', icon: Users },
+                { id: 'groups', label: 'Группы', icon: LayoutGrid },
                 { id: 'bots', label: 'Боты', icon: Bot }
               ].map(f => (
                 <button 
@@ -224,4 +215,10 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
       </DialogContent>
     </Dialog>
   );
+}
+
+function LayoutGrid(props: any) {
+  return (
+    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-layout-grid"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+  )
 }
