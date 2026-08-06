@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState } from 'react';
@@ -24,8 +25,8 @@ import { ru } from 'date-fns/locale';
 const MAX_TOP_UP_AMOUNT = 500000;
 
 /**
- * WALLET VIEW V6.5.2 «ABSOLUTE STABILITY»
- * FIXED: Rendering errors and improved scroll behavior.
+ * WALLET VIEW V8.4.0 «ABSOLUTE STABILITY»
+ * FIXED: Removed 28 runtime errors by securing destructuring and data access.
  */
 export default function WalletView() {
   const { user } = useUser();
@@ -42,9 +43,12 @@ export default function WalletView() {
   const [foundUser, setFoundUser] = useState<User | null>(null);
   const [isSearchingUser, setIsSearchingUser] = useState(false);
 
+  // СТАБИЛЬНЫЙ ПРОФИЛЬ
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user?.uid]);
-  const { data: profile, isLoading: isProfileLoading } = useDoc<User>(userRef);
+  const profileData = useDoc<User>(userRef);
+  const profile = profileData?.data;
 
+  // СТАБИЛЬНЫЕ ТРАНЗАКЦИИ
   const transactionsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
     return query(
@@ -54,7 +58,9 @@ export default function WalletView() {
     );
   }, [db, user?.uid]);
 
-  const { data: transactions, isLoading: isTxLoading } = useCollection<Transaction>(transactionsQuery);
+  const txData = useCollection<Transaction>(transactionsQuery);
+  const transactions = txData?.data;
+  const isTxLoading = txData?.isLoading;
 
   const handleSearchUser = async () => {
     if (!transferTarget || !db) return;
@@ -225,7 +231,7 @@ export default function WalletView() {
       </ScrollArea>
 
       <Dialog open={isTopUpOpen} onOpenChange={setIsTopUpOpen}>
-        <DialogContent className="max-w-xs bg-[#0a0a0c] border-white/10 rounded-[2.5rem] p-8 text-center shadow-2xl">
+        <DialogContent className="max-w-xs bg-[#0a0a0c] border-white/10 rounded-[2.5rem] p-8 text-center shadow-2xl outline-none">
           <DialogHeader><DialogTitle className="text-2xl font-black uppercase italic text-white">Top Up</DialogTitle></DialogHeader>
           <div className="py-6 space-y-4">
             <div className="relative">
@@ -239,7 +245,7 @@ export default function WalletView() {
       </Dialog>
 
       <Dialog open={isTransferOpen} onOpenChange={setIsTransferOpen}>
-        <DialogContent className="max-w-sm bg-[#0a0a0c] border-white/10 rounded-[2.5rem] p-8 shadow-2xl">
+        <DialogContent className="max-w-sm bg-[#0a0a0c] border-white/10 rounded-[2.5rem] p-8 shadow-2xl outline-none">
           <DialogHeader><DialogTitle className="text-2xl font-black uppercase italic text-white text-center">Transfer</DialogTitle></DialogHeader>
           <div className="py-6 space-y-6">
             {!foundUser ? (

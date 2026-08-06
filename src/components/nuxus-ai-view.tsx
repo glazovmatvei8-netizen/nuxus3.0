@@ -1,32 +1,45 @@
 
 "use client"
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { 
-  Sparkles, Zap, Globe, ShieldCheck, Loader2, Send, 
-  Cpu, Activity, Terminal, Wand2, Mic, Ghost, Search, ArrowUpRight, BrainCircuit, RotateCcw
+  Sparkles, Loader2, Send, 
+  BrainCircuit, RotateCcw, Mic, ShieldCheck, Globe, Cpu
 } from 'lucide-react';
-import { useUser } from '@/firebase/provider';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase/provider';
+import { collection, query, orderBy, addDoc, serverTimestamp, limit, getDocs, writeBatch } from 'firebase/firestore';
 import { askNexusAI } from '@/ai/flows/nuxus-intelligence-flow';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { NuxusLogo } from './nuxus-logo';
 
 /**
- * NEXUS AI TERMINAL V7.0 «NEURAL STABILITY»
- * ФИКС: Очищена логика передачи истории сигналов.
+ * NEXUS AI TERMINAL V8.4.0 «NEURAL MEMORY»
+ * ТЕПЕРЬ С ПОДДЕРЖКОЙ ОБЛАЧНОЙ ИСТОРИИ СООБЩЕНИЙ.
  */
 export default function NuxusAiView() {
   const { user } = useUser();
+  const db = useFirestore();
   const { toast } = useToast();
   
   const [input, setInput] = useState('');
-  const [messages, setMessages] = useState<{role: 'user' | 'model', content: string}[]>([]);
   const [isThinking, setIsThinking] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Ссылка на коллекцию истории конкретного пользователя
+  const historyQuery = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    return query(
+      collection(db, 'users', user.uid, 'ai_history'),
+      orderBy('createdAt', 'asc'),
+      limit(100)
+    );
+  }, [db, user]);
+
+  const { data: messages, isLoading: isHistoryLoading } = useCollection<{role: 'user' | 'model', content: string}>(historyQuery);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -35,23 +48,37 @@ export default function NuxusAiView() {
   }, [messages, isThinking]);
 
   const handleSend = async () => {
-    if (!input.trim() || isThinking) return;
+    if (!input.trim() || isThinking || !db || !user) return;
     
     const userMsg = input.trim();
     setInput('');
-    const newHistory = [...messages, { role: 'user' as const, content: userMsg }];
-    setMessages(newHistory);
     setIsThinking(true);
 
     try {
-      // Преобразуем историю в формат, который ожидает Flow
-      const flowHistory = messages.map(m => ({
+      // 1. Сохраняем запрос пользователя в облако
+      const historyRef = collection(db, 'users', user.uid, 'ai_history');
+      await addDoc(historyRef, {
+        role: 'user',
+        content: userMsg,
+        createdAt: serverTimestamp()
+      });
+
+      // 2. Формируем историю для модели
+      const flowHistory = (messages || []).map(m => ({
         role: m.role,
         content: m.content
       }));
 
+      // 3. Запрос к NX-AI
       const { response } = await askNexusAI(userMsg, flowHistory);
-      setMessages(prev => [...prev, { role: 'model', content: response }]);
+
+      // 4. Сохраняем ответ модели в облако
+      await addDoc(historyRef, {
+        role: 'model',
+        content: response,
+        createdAt: serverTimestamp()
+      });
+
     } catch (e: any) {
       toast({ title: "Сбой нейронной сети", description: "Сигнал потерян, попробуйте снова.", variant: "destructive" });
     } finally {
@@ -59,27 +86,34 @@ export default function NuxusAiView() {
     }
   };
 
-  const clearHistory = () => {
-    setMessages([]);
-    toast({ title: "Память очищена" });
+  const clearHistory = async () => {
+    if (!db || !user) return;
+    try {
+      const snap = await getDocs(collection(db, 'users', user.uid, 'ai_history'));
+      const batch = writeBatch(db);
+      snap.docs.forEach(d => batch.delete(d.ref));
+      await batch.commit();
+      toast({ title: "Память очищена" });
+    } catch (e) {
+      toast({ title: "Сбой очистки", variant: "destructive" });
+    }
   };
 
   return (
     <div className="flex flex-col h-full bg-[#020205] overflow-hidden relative">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(168,85,247,0.1)_0%,transparent_60%)] pointer-events-none" />
-      <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-primary/5 blur-[120px] rounded-full pointer-events-none" />
       
       <header className="px-6 pt-12 pb-6 shrink-0 z-20 flex items-center justify-between">
          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-white/[0.03] border border-white/10 flex items-center justify-center shadow-xl shadow-primary/5">
+            <div className="h-10 w-10 rounded-xl bg-white/[0.03] border border-white/10 flex items-center justify-center">
                <BrainCircuit className="w-5 h-5 text-primary animate-pulse" />
             </div>
             <div className="flex flex-col text-left">
                <h1 className="text-xl font-black text-white italic tracking-tighter uppercase">Nexus AI</h1>
-               <span className="text-[7px] font-black text-primary/40 uppercase tracking-[0.4em]">Sovereign Mind v7.0</span>
+               <span className="text-[7px] font-black text-primary/40 uppercase tracking-[0.4em]">Neural Memory v8.4.0</span>
             </div>
          </div>
-         {messages.length > 0 && (
+         {messages && messages.length > 0 && (
            <Button variant="ghost" size="icon" onClick={clearHistory} className="h-10 w-10 rounded-xl text-white/20 hover:text-red-500 hover:bg-red-500/10 transition-all">
              <RotateCcw className="w-4 h-4" />
            </Button>
@@ -88,7 +122,12 @@ export default function NuxusAiView() {
 
       <ScrollArea className="flex-1">
         <div className="max-w-4xl mx-auto py-10 px-4 md:px-8 space-y-12 min-h-full flex flex-col">
-          {messages.length === 0 ? (
+          {isHistoryLoading && !messages ? (
+            <div className="flex-1 flex flex-col items-center justify-center gap-4 opacity-40">
+               <Loader2 className="w-8 h-8 animate-spin text-primary" />
+               <p className="text-[10px] font-black uppercase tracking-widest">Загрузка памяти...</p>
+            </div>
+          ) : messages && messages.length === 0 ? (
             <div className="flex-1 flex flex-col items-center justify-center text-center space-y-16 animate-in fade-in zoom-in-95 duration-1000 my-auto">
                <div className="relative">
                   <div className="absolute -inset-16 bg-primary/20 blur-[100px] rounded-full animate-pulse" />
@@ -98,9 +137,6 @@ export default function NuxusAiView() {
                   <h3 className="text-4xl md:text-5xl font-black text-white uppercase italic tracking-tighter leading-tight drop-shadow-2xl">
                     Чем я могу <br/><span className="text-primary">помочь</span> сегодня?
                   </h3>
-                  <p className="text-[10px] md:text-xs text-white/40 font-bold uppercase tracking-[0.3em] leading-relaxed max-w-xs mx-auto">
-                    Автономный разум Ядра Nuxus. <br/> Анализ сигналов, кодинг и поиск в сети.
-                  </p>
                </div>
                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-2xl px-4">
                   <QuickCommand icon={Globe} text="Мировые новости" onClick={setInput} />
@@ -110,7 +146,7 @@ export default function NuxusAiView() {
             </div>
           ) : (
             <div className="space-y-12 pb-20">
-              {messages.map((msg, i) => (
+              {messages?.map((msg, i) => (
                 <div key={i} className={cn("flex w-full flex-col gap-4 animate-in slide-in-from-bottom-4 duration-500", msg.role === 'user' ? "items-end" : "items-start")}>
                    <div className={cn(
                      "p-6 rounded-[2.5rem] shadow-2xl relative border-2 max-w-[90%] md:max-w-[80%]",
@@ -118,7 +154,7 @@ export default function NuxusAiView() {
                       ? "bg-primary/10 border-primary/20 text-white rounded-br-none" 
                       : "bg-white/[0.03] border-white/5 text-white/90 rounded-bl-none backdrop-blur-xl"
                    )}>
-                      <p className="text-[16px] font-medium leading-relaxed whitespace-pre-wrap selection:bg-primary/30 text-left">{msg.content}</p>
+                      <p className="text-[16px] font-medium leading-relaxed whitespace-pre-wrap text-left">{msg.content}</p>
                    </div>
                    <div className="flex items-center gap-2 px-6">
                       <span className="text-[8px] font-black uppercase text-white/20 tracking-[0.2em]">
@@ -172,9 +208,6 @@ export default function NuxusAiView() {
                {isThinking ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
              </Button>
           </div>
-          <p className="mt-5 text-center text-[8px] font-black uppercase text-white/10 tracking-[0.5em] ml-[0.5em]">
-            ИИ может допускать ошибки. Проверяйте критические сигналы.
-          </p>
         </div>
       </div>
     </div>
