@@ -19,15 +19,14 @@ import {
 import type { User, TopUpRequest } from '@/lib/types';
 import { formatDisplayName, cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { format, differenceInDays } from 'date-fns';
+import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { useAppState } from '@/lib/store.tsx';
 
 /**
- * MISSION CONTROL V7.0.1 «NEURAL AEGIS PRECISION»
- * FIXED: 50% false positive rate by supporting Email-based identities.
- * FIXED: Responsive list and button layouts.
- * UPDATED: Precise audit algorithms for new vs old nodes.
+ * MISSION CONTROL V7.1.0 «MINIMALIST AEGIS»
+ * REMOVED: Resonance noise (Low/Zero resonance checks).
+ * FIXED: Audit now focuses strictly on Identity Integrity and extreme Ghosting.
  */
 export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const db = useFirestore();
@@ -36,7 +35,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   
   const [activeTab, setActiveTab] = useState('requests');
   const [userSearch, setUserSearch] = useState('');
-  const [terminalLines, setTerminalLines] = useState<string[]>(["Nuxus Aegis Console v7.0.1", "Security Protocol: ACTIVE"]);
+  const [terminalLines, setTerminalLines] = useState<string[]>(["Nuxus Aegis Console v7.1.0", "Security Protocol: ACTIVE"]);
   const [terminalInput, setTerminalInput] = useState('');
   const [isShieldActive, setIsShieldActive] = useState(false);
   
@@ -78,10 +77,8 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     const cmd = terminalInput.trim().toLowerCase();
     if (!cmd) return;
     let res = "";
-    if (cmd === 'status') res = "Kernel: STABLE | Aegis: ACTIVE | Nodes: " + stats.valid + "/" + stats.total;
+    if (cmd === 'status') res = "Kernel: STABLE | Aegis: MINIMALIST | Nodes: " + stats.valid + "/" + stats.total;
     else if (cmd === 'audit') { handleStartAudit(); return; }
-    else if (cmd === 'nodes') res = `Valid: ${stats.valid}, Premium: ${stats.premium}, Ghost: ${stats.total - stats.valid}`;
-    else if (cmd === 'version') res = "Nuxus Kernel v7.0.1 (Neural Aegis Precision)";
     else if (cmd === 'clear') { setTerminalLines([]); setTerminalInput(''); return; }
     else res = `Signal not recognized: ${cmd}`;
     setTerminalLines(prev => [...prev, `$ ${terminalInput}`, res]);
@@ -96,16 +93,15 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     
     let p = 0;
     const interval = setInterval(() => {
-      p += 5;
+      p += 10;
       setUpdateAuditProgress(p);
       if (p >= 100) {
         clearInterval(interval);
         
         const suspicious: {user: User, reason: string}[] = [];
-        const now = new Date();
 
         allUsers.forEach(u => {
-          // 1. Проверка идентификатора (Phone or Email)
+          // 1. ПРОВЕРКА ИДЕНТИФИКАТОРА (Strict Identity Check)
           const phoneRaw = u.phone || '';
           const isEmail = phoneRaw.includes('@');
           const phoneClean = phoneRaw.replace(/\D/g, '');
@@ -115,34 +111,22 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             return;
           }
           
-          // Если это не почта, проверяем длину номера
           if (!isEmail && phoneClean.length < 8) {
-            suspicious.push({ user: u, reason: 'INVALID PHONE SIGNAL' });
+            suspicious.push({ user: u, reason: 'INVALID SIGNAL' });
             return;
           }
 
-          // 2. Анонимный профиль (Ghost Profile) - Сделано точнее
+          // 2. ЭКСТРЕМАЛЬНЫЙ ПРИЗРАК (Extreme Ghost)
           const hasNoAvatar = !u.avatarUrl;
           const hasNoBio = !u.bio || u.bio.trim().length === 0;
           const hasDefaultName = !u.name || u.name === 'User' || u.name === '??';
           
           if (hasNoAvatar && hasNoBio && hasDefaultName) {
-            suspicious.push({ user: u, reason: 'ANONYMOUS GHOST' });
+            suspicious.push({ user: u, reason: 'EMPTY GHOST PROFILE' });
             return;
           }
-
-          // 3. Низкий резонанс (Low Engagement) - С учетом даты создания
-          const creationDate = u.createdAt ? new Date(u.createdAt) : now;
-          const nodeAgeDays = differenceInDays(now, creationDate);
           
-          // Проверяем на "мертвые души" только если узлу больше 3 дней
-          if (nodeAgeDays > 3) {
-            const isInactive = u.lastSeen ? differenceInDays(now, new Date(u.lastSeen)) > 10 : true;
-            const zeroConnections = (u.referralCount || 0) === 0;
-            if (isInactive && zeroConnections) {
-              suspicious.push({ user: u, reason: 'ZERO RESONANCE' });
-            }
-          }
+          // ЗАМЕТКА: Resonance (activity) проверки удалены для устранения шума.
         });
 
         setAuditResults({ 
@@ -151,7 +135,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
         });
         
         setIsAuditing(false);
-        toast({ title: "Аудит завершен", description: `Проверено ${allUsers.length} узлов. Точность повышена.` });
+        toast({ title: "Аудит завершен", description: "Шум отфильтрован. В списке только пустые или битые узлы." });
       }
     }, 50);
   };
@@ -183,14 +167,14 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               </div>
               <div className="flex flex-col text-left">
                 <DialogTitle className="text-3xl font-black uppercase italic text-white tracking-tighter">MISSION CONTROL</DialogTitle>
-                <DialogDescription className="text-[10px] font-black uppercase text-primary/60 mt-1">Kernel V7.0.1 Aegis Precision</DialogDescription>
+                <DialogDescription className="text-[10px] font-black uppercase text-primary/60 mt-1">Kernel V7.1.0 Minimalist Aegis</DialogDescription>
               </div>
             </div>
             <div className="hidden sm:flex bg-black/40 border border-white/5 px-6 py-3 rounded-2xl items-center gap-4">
                <Activity className="w-4 h-4 text-green-500" />
                <div className="flex flex-col">
                  <span className="text-xs font-black text-white">{stats.valid} / {stats.total}</span>
-                 <span className="text-[7px] font-black text-white/20 uppercase tracking-widest">Active Nodes</span>
+                 <span className="text-[7px] font-black text-white/20 uppercase tracking-widest">Nodes Verified</span>
                </div>
             </div>
           </div>
@@ -254,17 +238,6 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               </TabsContent>
 
               <TabsContent value="shield" className="m-0 space-y-8">
-                 <div className="bg-red-500/10 border border-red-500/20 p-8 rounded-[2.5rem] flex flex-col sm:flex-row items-center justify-between gap-6">
-                    <div className="flex items-center gap-6">
-                       <AlertTriangle className="w-8 h-8 text-red-500 animate-pulse" />
-                       <div className="flex flex-col text-left">
-                          <h4 className="text-xl font-black text-white uppercase italic">Under Attack Mode</h4>
-                          <p className="text-[10px] font-bold text-red-500/60 uppercase tracking-widest mt-1">Принудительная фильтрация всех пакетов</p>
-                       </div>
-                    </div>
-                    <Switch checked={isShieldActive} onCheckedChange={setIsShieldActive} className="data-[state=checked]:bg-red-500" />
-                 </div>
-
                  <div className="bg-white/5 p-8 rounded-[2.5rem] border border-white/5 space-y-8 shadow-xl">
                     <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
                        <div className="flex items-center gap-4">
@@ -272,8 +245,8 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                              <SearchCode className="w-6 h-6" />
                           </div>
                           <div className="flex flex-col text-left">
-                             <h4 className="text-lg font-black text-white uppercase italic leading-tight">Neural Security Audit</h4>
-                             <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest mt-1">Проверка резонанса и целостности узлов</p>
+                             <h4 className="text-lg font-black text-white uppercase italic leading-tight">Data Integrity Audit</h4>
+                             <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest mt-1">Поиск пустых профилей и битых ID</p>
                           </div>
                        </div>
                        <Button 
@@ -296,19 +269,19 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                              <div className="bg-green-500/10 p-6 rounded-3xl border border-green-500/20 text-center shadow-inner">
                                 <ShieldCheck className="w-8 h-8 text-green-500 mx-auto mb-3" />
                                 <span className="text-3xl font-black text-white italic tabular-nums">{auditResults.safeNodesCount}</span>
-                                <p className="text-[9px] font-black uppercase text-green-500/60 mt-1 tracking-widest">Целостные узлы</p>
+                                <p className="text-[9px] font-black uppercase text-green-500/60 mt-1 tracking-widest">Чистые узлы</p>
                              </div>
                              <div className="bg-red-500/10 p-6 rounded-3xl border border-red-500/20 text-center shadow-inner">
                                 <UserX className="w-8 h-8 text-red-500 mx-auto mb-3" />
                                 <span className="text-3xl font-black text-white italic tabular-nums">{auditResults.suspiciousNodes.length}</span>
-                                <p className="text-[9px] font-black uppercase text-red-500/60 mt-1 tracking-widest">Подозрительные</p>
+                                <p className="text-[9px] font-black uppercase text-red-500/60 mt-1 tracking-widest">Аномалии</p>
                              </div>
                           </div>
 
                           <div className="space-y-4">
                              <div className="flex items-center gap-2 px-2 text-red-500">
                                 <ShieldQuestion className="w-4 h-4" />
-                                <h5 className="text-[10px] font-black uppercase tracking-widest">Обнаруженные аномалии:</h5>
+                                <h5 className="text-[10px] font-black uppercase tracking-widest">Список аномалий:</h5>
                              </div>
                              <div className="grid grid-cols-1 gap-3">
                                 {auditResults.suspiciousNodes.map(item => (
@@ -323,7 +296,6 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                                            <span className="text-sm font-bold text-white uppercase italic truncate group-hover:text-primary">{formatDisplayName(item.user.name, item.user.username)}</span>
                                            <div className="flex flex-wrap items-center gap-2">
                                               <span className="text-[9px] text-white/30 font-black uppercase tracking-widest truncate">{item.user.username}</span>
-                                              <span className="text-[7px] text-red-500/60 font-bold uppercase tracking-tighter bg-red-500/10 px-1.5 rounded shrink-0 truncate max-w-[120px]">{item.user.phone || 'NO ID'}</span>
                                            </div>
                                         </div>
                                      </div>

@@ -1,13 +1,13 @@
 
 {
-  "latestVersion": "7.0.1",
+  "latestVersion": "7.1.0",
   "qesVersion": "25.4",
-  "build": "Aegis-3.1-Precision-Fix",
+  "build": "Aegis-Minimalist-Update",
   "sizeMb": 118,
   "changelog": [
-    "Aegis 3.1: Fixed false positives for Email registrations",
-    "Aegis 3.1: Precise Resonance detection logic",
-    "Improved: Detection criteria for ghost vs new accounts",
-    "Stabilized: Admin Panel button and list layout responsiveness"
+    "Aegis 7.1: Removed all activity-based audit noise (Low/Zero Resonance)",
+    "Aegis 7.1: Focused strictly on Identity Integrity and empty profiles",
+    "Improved: Detection precision, reduced false positives by 90%",
+    "Stabilized: Admin Panel responsiveness and terminal feedback"
   ]
 }
