@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -8,9 +7,9 @@ import { RefreshCw, Zap, Download, ArrowUpCircle, Loader2 } from 'lucide-react';
 import nuxusVersions from '@/app/versions.json';
 
 /**
- * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V5.8.0
+ * КВАНТОВЫЙ ОБНОВЛЯТОР ЯДРА V6.1.4
  */
-const CURRENT_VERSION = "5.8.0"; 
+const CURRENT_VERSION = "6.1.4"; 
 
 export function UpdateNotifier() {
   const [isOpen, setIsOpen] = useState(false);
@@ -27,14 +26,14 @@ export function UpdateNotifier() {
         setServerVersion(data.latestVersion);
         setChangelog(data.changelog);
         
-        if (data.latestVersion === CURRENT_VERSION) {
+        // Если текущая версия не совпадает с серверной, предлагаем патч
+        if (data.latestVersion !== CURRENT_VERSION) {
+          const lastInstalled = localStorage.getItem('nuxus_last_installed_version');
+          if (lastInstalled !== data.latestVersion) {
+            setIsOpen(true);
+          }
+        } else {
           setIsOpen(false);
-          return;
-        }
-
-        const lastInstalled = localStorage.getItem('nuxus_last_installed_version');
-        if (data.latestVersion !== CURRENT_VERSION && lastInstalled !== data.latestVersion) {
-          setIsOpen(true);
         }
       }
     } catch (e) {
@@ -46,8 +45,6 @@ export function UpdateNotifier() {
     if (typeof window === 'undefined') return;
     const timer = setTimeout(checkVersion, 3000);
     const interval = setInterval(checkVersion, 300000); // 5 mins check
-    
-    window.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && checkVersion());
     
     return () => {
       clearTimeout(timer);
@@ -64,7 +61,13 @@ export function UpdateNotifier() {
         setUpdateProgress(100);
         clearInterval(interval);
         localStorage.setItem('nuxus_last_installed_version', serverVersion);
-        setTimeout(() => window.location.reload(), 500);
+        // Принудительная очистка кэша перед перезагрузкой
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then(regs => {
+            for(let reg of regs) reg.unregister();
+          });
+        }
+        setTimeout(() => window.location.href = window.location.origin, 500);
       } else {
         setUpdateProgress(p);
       }
@@ -93,7 +96,7 @@ export function UpdateNotifier() {
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="max-w-[440px] bg-[#0a0a0c]/98 backdrop-blur-3xl border-primary/30 rounded-[3rem] p-0 overflow-hidden shadow-[0_0_100px_rgba(168,85,247,0.3)] outline-none">
+      <DialogContent className="max-w-[440px] bg-[#0a0a0c]/98 backdrop-blur-3xl border-primary/30 rounded-[3rem] p-0 overflow-hidden shadow-[0_0_100px_rgba(168,85,247,0.3)] outline-none z-[10000]">
         <div className="relative h-48 bg-gradient-to-br from-primary/30 to-transparent flex flex-col items-center justify-center overflow-hidden">
           <Zap className="w-20 h-20 text-primary animate-pulse relative z-10" />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.2)_0%,transparent_70%)]" />

@@ -1,12 +1,12 @@
 {
-  "latestVersion": "6.1.3",
+  "latestVersion": "6.1.4",
   "qesVersion": "25.2",
-  "build": "Neural-Nexus-Synergy",
+  "build": "Absolute-Core-Stability",
   "sizeMb": 112,
   "changelog": [
-    "Fixed: Cannot destructure property 'data' (Redirected old imports)",
-    "Fixed: Restore customPrimaryColor application in ThemeApplier",
-    "Added: Stable synergy for profile-view and user-avatar",
-    "Improved: CSS Variable persistence for Elite Nodes"
+    "Fixed: TypeError originalFactory.call (Import Cycle broken)",
+    "Fixed: White Screen issue (Restored useDoc/useCollection logic)",
+    "Fixed: Custom Primary Color application (HEX to HSL converter added)",
+    "Improved: Update Notifier reliability and cache cleaning"
   ]
 }

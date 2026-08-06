@@ -6,8 +6,8 @@ import { doc } from 'firebase/firestore';
 import type { User } from '@/lib/types';
 
 /**
- * ПРИМЕНИТЕЛЬ ТЕМЫ V6.1.3 «COLOR RESTORATION»
- * Восстановлена поддержка customPrimaryColor и стабильные импорты.
+ * ПРИМЕНИТЕЛЬ ТЕМЫ V6.1.4 «ULTIMATE COLOR SYNERGY»
+ * ИСПРАВЛЕНО: Теперь HEX-цвет корректно конвертируется в HSL компоненты для Tailwind.
  */
 export function ThemeApplier() {
   const { user } = useUser();
@@ -40,13 +40,42 @@ export function ThemeApplier() {
       document.documentElement.classList.add('dark');
     }
 
-    // 3. Восстановление кастомного цвета (КРИТИЧЕСКИЙ ФИКС)
+    // 3. Обработка кастомного цвета (HEX to HSL Components)
+    const applyColor = (hex: string) => {
+      // Если это уже формат "270 95% 65%", применяем как есть
+      if (hex.includes(' ')) {
+        document.documentElement.style.setProperty('--primary', hex);
+        document.documentElement.style.setProperty('--ring', hex);
+        return;
+      }
+
+      // Если это HEX (#ffffff), конвертируем
+      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      if (result) {
+        let r = parseInt(result[1], 16) / 255;
+        let g = parseInt(result[2], 16) / 255;
+        let b = parseInt(result[3], 16) / 255;
+        const max = Math.max(r, g, b), min = Math.min(r, g, b);
+        let h = 0, s, l = (max + min) / 2;
+        if (max === min) { h = s = 0; } else {
+          const d = max - min;
+          s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+          switch (max) {
+            case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+            case g: h = (b - r) / d + 2; break;
+            case b: h = (r - g) / d + 4; break;
+          }
+          h /= 6;
+        }
+        const hslString = `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
+        document.documentElement.style.setProperty('--primary', hslString);
+        document.documentElement.style.setProperty('--ring', hslString);
+      }
+    };
+
     if (profile?.settings?.customPrimaryColor) {
-      document.documentElement.style.setProperty('--primary', profile.settings.customPrimaryColor);
-      // Также обновляем ring для фокуса
-      document.documentElement.style.setProperty('--ring', profile.settings.customPrimaryColor);
+      applyColor(profile.settings.customPrimaryColor);
     } else {
-      // Сброс к дефолту, если кастомный цвет удален (270 95% 65%)
       document.documentElement.style.removeProperty('--primary');
       document.documentElement.style.removeProperty('--ring');
     }
