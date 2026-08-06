@@ -14,7 +14,7 @@ import { collection, query, doc, limit, updateDoc, writeBatch, increment, orderB
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   ShieldAlert, Users, Star, Ban, Check, Activity, Terminal as TerminalIcon, 
-  Zap, ShieldCheck, Search, Crown, Shield, AlertTriangle, SearchCode, ShieldQuestion, XCircle, UserX, Ghost
+  Zap, ShieldCheck, Search, Crown, Shield, AlertTriangle, SearchCode, ShieldQuestion, XCircle, UserX, Ghost, Loader2
 } from 'lucide-react';
 import type { User, TopUpRequest } from '@/lib/types';
 import { formatDisplayName, cn } from '@/lib/utils';
@@ -23,7 +23,8 @@ import { format, differenceInDays } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 /**
- * MISSION CONTROL V6.5.6 «NEURAL AEGIS»
+ * MISSION CONTROL V6.5.7 «NEURAL AEGIS»
+ * FIXED: Missing Loader2 import.
  * FIXED: Audit button overflow and layout.
  * ADDED: Real-time suspicious node detection and listing.
  */
@@ -32,7 +33,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('requests');
   const [userSearch, setUserSearch] = useState('');
-  const [terminalLines, setTerminalLines] = useState<string[]>(["Nuxus Aegis Console v6.5.6", "Security Protocol: ACTIVE"]);
+  const [terminalLines, setTerminalLines] = useState<string[]>(["Nuxus Aegis Console v6.5.7", "Security Protocol: ACTIVE"]);
   const [terminalInput, setTerminalInput] = useState('');
   const [isShieldActive, setIsShieldActive] = useState(false);
   
@@ -77,7 +78,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     if (cmd === 'status') res = "Kernel: STABLE | Aegis: ACTIVE | Nodes: " + stats.valid + "/" + stats.total;
     else if (cmd === 'audit') { handleStartAudit(); return; }
     else if (cmd === 'nodes') res = `Valid: ${stats.valid}, Premium: ${stats.premium}, Ghost: ${stats.total - stats.valid}`;
-    else if (cmd === 'version') res = "Nuxus Kernel v6.5.6 (Neural Aegis)";
+    else if (cmd === 'version') res = "Nuxus Kernel v6.5.7 (Neural Aegis)";
     else if (cmd === 'clear') { setTerminalLines([]); setTerminalInput(''); return; }
     else res = `Signal not recognized: ${cmd}`;
     setTerminalLines(prev => [...prev, `$ ${terminalInput}`, res]);
@@ -144,7 +145,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               </div>
               <div className="flex flex-col text-left">
                 <DialogTitle className="text-3xl font-black uppercase italic text-white tracking-tighter">MISSION CONTROL</DialogTitle>
-                <DialogDescription className="text-[10px] font-black uppercase text-primary/60 mt-1">Kernel V6.5.6 Aegis Shield</DialogDescription>
+                <DialogDescription className="text-[10px] font-black uppercase text-primary/60 mt-1">Kernel V6.5.7 Aegis Shield</DialogDescription>
               </div>
             </div>
             <div className="hidden sm:flex bg-black/40 border border-white/5 px-6 py-3 rounded-2xl items-center gap-4">

@@ -1,12 +1,12 @@
 
 {
-  "latestVersion": "6.5.6",
+  "latestVersion": "6.5.7",
   "qesVersion": "25.2",
   "build": "Aegis-Neural-Audit-UI-Fixed",
   "sizeMb": 114,
   "changelog": [
-    "Fixed: Admin Panel audit button overflow and layout issues",
-    "Added: Neural Node Audit logic based on activity and metadata resonance",
+    "Fixed: Runtime ReferenceError (Loader2 not found) in Admin Panel",
+    "Improved: Node Security Audit reliability",
     "Added: Detailed suspicious node list in Mission Control",
     "Improved: NX-AI unrestricted response protocols"
   ]
