@@ -19,9 +19,9 @@ import { updateDocumentNonBlocking, setDocumentNonBlocking } from './non-blockin
 import { errorEmitter } from './error-emitter';
 
 /**
- * NUXUS FIREBASE PROVIDER V6.1.1 (ULTIMATE STABILITY)
- * Консолидированная логика хуков для предотвращения циклических зависимостей.
- * Логика FirebaseErrorListener интегрирована напрямую для разрыва цикла 'originalFactory.call'.
+ * NUXUS FIREBASE PROVIDER V6.1.3 (ULTIMATE SYNERGY)
+ * Консолидированная логика хуков. 
+ * ПРЕДУПРЕЖДЕНИЕ: Все деструктуризации теперь безопасны.
  */
 
 export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T {
@@ -64,7 +64,6 @@ export const FirebaseProvider: React.FC<{
     userError: null,
   });
 
-  // Auth State Listener
   useEffect(() => {
     if (!auth) return;
     const unsubscribe = onAuthStateChanged(
@@ -79,20 +78,16 @@ export const FirebaseProvider: React.FC<{
     return () => unsubscribe();
   }, [auth]);
 
-  // Firebase Error Listener (Integrated directly to break circular dependency)
   useEffect(() => {
     const handleError = (error: any) => {
-      // Логируем критические сбои только для админов или в дев-режиме
       if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
         console.error("Nuxus Security Signal:", error.message);
       }
     };
-
     errorEmitter.on('permission-error', handleError);
     return () => errorEmitter.off('permission-error', handleError);
   }, []);
 
-  // Session & Online Status Logic
   useEffect(() => {
     if (!userAuthState.user || !firestore || !auth) return;
 

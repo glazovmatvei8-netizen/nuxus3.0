@@ -1,29 +1,26 @@
 "use client"
 
 import React, { useState, useMemo } from 'react';
-import { useUser, useFirestore } from '@/firebase/provider';
-import { useDoc } from '@/firebase/firestore/use-doc';
-import { useCollection } from '@/firebase/firestore/use-collection';
-import { doc, query, collection, limit, writeBatch, increment } from 'firebase/firestore';
+import { useUser, useFirestore, useDoc, useCollection } from '@/firebase';
+import { doc, query, collection, limit } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   Pencil, Bookmark, ChevronRight, Star, Share2, Zap, QrCode, Fingerprint, Cpu, ShieldAlert, Palette, Sparkles, Phone, Mail
 } from 'lucide-react';
-import { useAppState } from '@/lib/store';
+import { useAppState } from '@/lib/store.tsx';
 import { formatDisplayName, cn, isUserPremium } from '@/lib/utils';
 import type { User, ReceivedGift } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { QRCodeSVG } from 'qrcode.react';
 import nuxusVersions from '@/app/versions.json';
-import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 /**
- * PROFILE VIEW V5.8.0 «GLOBAL SOVEREIGNTY»
- * ИСПРАВЛЕНО: Прямые импорты хуков для устранения конфликтов Next.js 15.
+ * PROFILE VIEW V6.1.3 «STABLE SYNERGY»
+ * ИСПРАВЛЕНО: Прямые импорты из @/firebase для предотвращения деструктуризации null.
  */
 export default function ProfileView() {
   const { user } = useUser();

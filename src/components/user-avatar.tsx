@@ -1,17 +1,19 @@
 "use client"
 
 import React, { useState, memo, useMemo } from 'react';
-import { useFirestore } from '@/firebase/provider';
-import { useDoc } from '@/firebase/firestore/use-doc';
+import { useFirestore, useDoc } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn, formatDisplayName, isUserPremium } from '@/lib/utils';
-import { Star } from 'lucide-react';
 import type { User } from '@/lib/types';
 import { differenceInMinutes, parseISO } from 'date-fns';
 import Image from 'next/image';
 
-export const UserAvatar = memo(({ userId, className, fallbackName, fallbackClassName, manualAvatarUrl, showOnlineStatus = false, onClick }: any) => {
+/**
+ * USER AVATAR V6.1.3 «STABLE FRAME»
+ * ИСПРАВЛЕНО: Безопасное получение данных профиля.
+ */
+export const UserAvatar = memo(({ userId, className, fallbackName, manualAvatarUrl, showOnlineStatus = false, onClick }: any) => {
   const db = useFirestore();
   const [imgError, setImgError] = useState(false);
   

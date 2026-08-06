@@ -1,12 +1,12 @@
 {
-  "latestVersion": "6.1.2",
+  "latestVersion": "6.1.3",
   "qesVersion": "25.2",
-  "build": "Neural-Nexus-Absolute",
+  "build": "Neural-Nexus-Synergy",
   "sizeMb": 112,
   "changelog": [
-    "Fixed: useUser is not a function (Barrel exports restored)",
-    "Added: Achievement system data structure",
-    "Improved: NX-AI interface stability",
-    "Fixed: originalFactory.call circular dependency"
+    "Fixed: Cannot destructure property 'data' (Redirected old imports)",
+    "Fixed: Restore customPrimaryColor application in ThemeApplier",
+    "Added: Stable synergy for profile-view and user-avatar",
+    "Improved: CSS Variable persistence for Elite Nodes"
   ]
 }
