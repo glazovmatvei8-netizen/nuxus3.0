@@ -14,32 +14,35 @@ import { collection, query, doc, limit, updateDoc, writeBatch, increment, orderB
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   ShieldAlert, Users, Star, Ban, Check, Activity, Terminal as TerminalIcon, 
-  Zap, ShieldCheck, Search, Crown, Shield, AlertTriangle, SearchCode, ShieldQuestion, XCircle, UserX, Ghost, Loader2
+  Zap, ShieldCheck, Search, Crown, Shield, AlertTriangle, SearchCode, ShieldQuestion, XCircle, UserX, Ghost, Loader2, Phone
 } from 'lucide-react';
 import type { User, TopUpRequest } from '@/lib/types';
 import { formatDisplayName, cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { format, differenceInDays } from 'date-fns';
 import { ru } from 'date-fns/locale';
+import { useAppState } from '@/lib/store.tsx';
 
 /**
- * MISSION CONTROL V6.5.7 «NEURAL AEGIS»
- * FIXED: Missing Loader2 import.
- * FIXED: Audit button overflow and layout.
- * ADDED: Real-time suspicious node detection and listing.
+ * MISSION CONTROL V6.5.8 «NEURAL AEGIS 2.0»
+ * UPDATED: Added interactive profiles for suspicious nodes.
+ * UPDATED: Advanced phone integrity validation.
+ * UPDATED: Detailed suspicion reasons.
  */
 export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const db = useFirestore();
   const { toast } = useToast();
+  const { setInspectedUserId } = useAppState();
+  
   const [activeTab, setActiveTab] = useState('requests');
   const [userSearch, setUserSearch] = useState('');
-  const [terminalLines, setTerminalLines] = useState<string[]>(["Nuxus Aegis Console v6.5.7", "Security Protocol: ACTIVE"]);
+  const [terminalLines, setTerminalLines] = useState<string[]>(["Nuxus Aegis Console v6.5.8", "Security Protocol: ACTIVE"]);
   const [terminalInput, setTerminalInput] = useState('');
   const [isShieldActive, setIsShieldActive] = useState(false);
   
   const [isAuditing, setIsAuditing] = useState(false);
   const [auditProgress, setUpdateAuditProgress] = useState(0);
-  const [auditResults, setAuditResults] = useState<{suspiciousNodes: User[], safeNodesCount: number} | null>(null);
+  const [auditResults, setAuditResults] = useState<{suspiciousNodes: {user: User, reason: string}[], safeNodesCount: number} | null>(null);
 
   const topUpRequestsQuery = useMemo(() => {
     if (!db) return null;
@@ -78,7 +81,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     if (cmd === 'status') res = "Kernel: STABLE | Aegis: ACTIVE | Nodes: " + stats.valid + "/" + stats.total;
     else if (cmd === 'audit') { handleStartAudit(); return; }
     else if (cmd === 'nodes') res = `Valid: ${stats.valid}, Premium: ${stats.premium}, Ghost: ${stats.total - stats.valid}`;
-    else if (cmd === 'version') res = "Nuxus Kernel v6.5.7 (Neural Aegis)";
+    else if (cmd === 'version') res = "Nuxus Kernel v6.5.8 (Neural Aegis 2.0)";
     else if (cmd === 'clear') { setTerminalLines([]); setTerminalInput(''); return; }
     else res = `Signal not recognized: ${cmd}`;
     setTerminalLines(prev => [...prev, `$ ${terminalInput}`, res]);
@@ -98,24 +101,40 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
       if (p >= 100) {
         clearInterval(interval);
         
-        // Логика обнаружения подозрительных узлов
-        const suspicious = allUsers.filter(u => {
+        const suspicious: {user: User, reason: string}[] = [];
+
+        allUsers.forEach(u => {
+          // 1. Проверка номера (Integrity Check)
+          const phoneClean = u.phone?.replace(/\D/g, '') || '';
+          if (phoneClean.length < 8) {
+            suspicious.push({ user: u, reason: 'INVALID SIGNAL (PHONE)' });
+            return;
+          }
+
+          // 2. Анонимный профиль (Ghost Profile)
           const isGhost = !u.avatarUrl && (!u.bio || u.bio.length < 5) && (u.name === 'User' || !u.name);
+          if (isGhost) {
+            suspicious.push({ user: u, reason: 'ANONYMOUS PROFILE' });
+            return;
+          }
+
+          // 3. Низкий резонанс (Low Engagement)
           const isInactive = u.lastSeen ? differenceInDays(new Date(), new Date(u.lastSeen)) > 7 : true;
-          const lowEngagement = (u.referralCount || 0) === 0;
-          
-          return isGhost || (isInactive && lowEngagement);
-        }).slice(0, 10); // Показываем топ 10 подозрительных
+          const zeroConnections = (u.referralCount || 0) === 0;
+          if (isInactive && zeroConnections) {
+            suspicious.push({ user: u, reason: 'LOW RESONANCE' });
+          }
+        });
 
         setAuditResults({ 
-          suspiciousNodes: suspicious, 
+          suspiciousNodes: suspicious.slice(0, 15), 
           safeNodesCount: stats.total - suspicious.length 
         });
         
         setIsAuditing(false);
-        toast({ title: "Аудит завершен", description: "Нейронный щит просканировал все узлы." });
+        toast({ title: "Аудит завершен", description: "Нейронный щит Aegis просканировал все узлы." });
       }
-    }, 100);
+    }, 80);
   };
 
   const handleApprove = async (req: TopUpRequest) => {
@@ -133,6 +152,11 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     toast({ title: "Заявка отклонена" });
   };
 
+  const inspectNode = (userId: string) => {
+    setInspectedUserId(userId);
+    // Мы не закрываем админ-панель, чтобы можно было быстро просмотреть нескольких
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl bg-[#020205] border-white/10 rounded-[3rem] p-0 overflow-hidden h-[90vh] flex flex-col shadow-2xl outline-none">
@@ -145,7 +169,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               </div>
               <div className="flex flex-col text-left">
                 <DialogTitle className="text-3xl font-black uppercase italic text-white tracking-tighter">MISSION CONTROL</DialogTitle>
-                <DialogDescription className="text-[10px] font-black uppercase text-primary/60 mt-1">Kernel V6.5.7 Aegis Shield</DialogDescription>
+                <DialogDescription className="text-[10px] font-black uppercase text-primary/60 mt-1">Kernel V6.5.8 Aegis Shield 2.0</DialogDescription>
               </div>
             </div>
             <div className="hidden sm:flex bg-black/40 border border-white/5 px-6 py-3 rounded-2xl items-center gap-4">
@@ -198,11 +222,11 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                  </div>
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {filteredUsers.map(u => (
-                      <div key={u.id} className="bg-white/[0.03] p-5 rounded-[2rem] border border-white/5 flex items-center justify-between">
+                      <div key={u.id} onClick={() => inspectNode(u.id)} className="bg-white/[0.03] p-5 rounded-[2rem] border border-white/5 flex items-center justify-between cursor-pointer hover:bg-white/[0.08] transition-all group">
                          <div className="flex items-center gap-4">
                             <UserAvatar userId={u.id} className="h-12 w-12 border border-white/5" manualAvatarUrl={u.avatarUrl} />
                             <div className="flex flex-col text-left">
-                               <span className="text-sm font-black text-white uppercase italic">{formatDisplayName(u.name, u.username)}</span>
+                               <span className="text-sm font-black text-white uppercase italic group-hover:text-primary transition-colors">{formatDisplayName(u.name, u.username)}</span>
                                <span className="text-[10px] text-primary/60 font-black uppercase tracking-widest">{u.username}</span>
                             </div>
                          </div>
@@ -273,18 +297,25 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                                 <h5 className="text-[10px] font-black uppercase tracking-widest">Обнаруженные аномалии:</h5>
                              </div>
                              <div className="grid grid-cols-1 gap-3">
-                                {auditResults.suspiciousNodes.map(node => (
-                                  <div key={node.id} className="flex items-center justify-between p-4 bg-white/5 border border-white/5 rounded-2xl hover:bg-white/10 transition-all">
+                                {auditResults.suspiciousNodes.map(item => (
+                                  <div 
+                                    key={item.user.id} 
+                                    onClick={() => inspectNode(item.user.id)}
+                                    className="flex items-center justify-between p-4 bg-white/5 border border-white/5 rounded-2xl hover:bg-white/10 transition-all cursor-pointer group"
+                                  >
                                      <div className="flex items-center gap-4">
-                                        <UserAvatar userId={node.id} className="h-10 w-10 opacity-60 grayscale" />
+                                        <UserAvatar userId={item.user.id} className="h-10 w-10 opacity-60 grayscale group-hover:grayscale-0 group-hover:opacity-100 transition-all" />
                                         <div className="flex flex-col text-left">
-                                           <span className="text-sm font-bold text-white uppercase italic">{formatDisplayName(node.name, node.username)}</span>
-                                           <span className="text-[9px] text-white/30 font-black uppercase tracking-widest">{node.username}</span>
+                                           <span className="text-sm font-bold text-white uppercase italic group-hover:text-primary">{formatDisplayName(item.user.name, item.user.username)}</span>
+                                           <div className="flex items-center gap-2">
+                                              <span className="text-[9px] text-white/30 font-black uppercase tracking-widest">{item.user.username}</span>
+                                              <span className="text-[7px] text-red-500/60 font-bold uppercase tracking-tighter bg-red-500/10 px-1.5 rounded">{item.user.phone || 'NO PHONE'}</span>
+                                           </div>
                                         </div>
                                      </div>
-                                     <div className="px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20">
+                                     <div className="px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 shadow-lg">
                                         <span className="text-[8px] font-black text-red-500 uppercase tracking-tighter">
-                                           {!node.avatarUrl ? 'АНОНИМНЫЙ ПРОФИЛЬ' : 'НИЗКИЙ РЕЗОНАНС'}
+                                           {item.reason}
                                         </span>
                                      </div>
                                   </div>

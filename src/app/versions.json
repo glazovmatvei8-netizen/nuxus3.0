@@ -1,13 +1,14 @@
 
 {
-  "latestVersion": "6.5.7",
+  "latestVersion": "6.5.8",
   "qesVersion": "25.2",
-  "build": "Aegis-Neural-Audit-UI-Fixed",
+  "build": "Aegis-Neural-Audit-2.0-Interactive",
   "sizeMb": 114,
   "changelog": [
-    "Fixed: Runtime ReferenceError (Loader2 not found) in Admin Panel",
-    "Improved: Node Security Audit reliability",
-    "Added: Detailed suspicious node list in Mission Control",
-    "Improved: NX-AI unrestricted response protocols"
+    "Added: Interactive suspicious node profiles (Click to inspect)",
+    "Improved: Neural Audit logic with Phone Integrity check",
+    "Added: Detailed suspicion reasons (Invalid Phone, Ghost, Low Resonance)",
+    "Fixed: Loader2 missing import causing Admin Panel crash",
+    "Improved: Audit UI responsiveness and animations"
   ]
 }
