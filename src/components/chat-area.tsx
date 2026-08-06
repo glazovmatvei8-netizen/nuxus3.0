@@ -16,12 +16,13 @@ import { ChatInfoModal } from './modals/chat-info-modal';
 import { CreatePollModal } from './modals/create-poll-modal';
 import { EmojiPicker } from './emoji-picker';
 import { useUser, useFirestore, useCollection, useDoc } from '@/firebase/provider';
-import { collection, query, orderBy, doc, addDoc, updateDoc, limit, getDocs, where, getDoc, writeBatch } from 'firebase/firestore';
+import { collection, query, orderBy, doc, addDoc, updateDoc, limit, getDocs, where, getDoc, writeBatch, onSnapshot } from 'firebase/firestore';
 import { formatDisplayName, cn, compressImage, encryptSignal, isGlobalAdmin, decryptSignal, formatLastSeen, isUserPremium } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { askNexusAI } from '@/ai/flows/nuxus-intelligence-flow';
 
 const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, isPremium, replyTo, onCancelReply }: any) => {
   const { localDrafts, setLocalDrafts } = useAppState();
@@ -192,6 +193,7 @@ export default function ChatArea() {
   const { user: firebaseUser } = useUser();
   const db = useFirestore();
   const { currentChatId, setCurrentChatId, setForwardingMessage } = useAppState();
+  const { toast } = useToast();
   
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
   const [isPollModalOpen, setIsPollModalOpen] = useState(false);
@@ -214,6 +216,39 @@ export default function ChatArea() {
   }, []);
 
   useEffect(() => { scrollToBottom('auto'); }, [currentChatId, messages?.length, scrollToBottom]);
+
+  // NEURAL BOT ENGINE (Simulated)
+  useEffect(() => {
+    if (!db || !currentChatId || !chat || !messages || messages.length === 0) return;
+    const lastMsg = messages[messages.length - 1];
+    
+    // Check if the recipient of the chat is a bot OR if it's a private chat with one of OUR factory bots
+    const isBotRecipient = chat.participantIds.some(pid => pid.startsWith('bot_') && pid !== lastMsg.senderId);
+    
+    if (isBotRecipient && lastMsg.senderId === firebaseUser?.uid && lastMsg.contentType === 'text') {
+      const botId = chat.participantIds.find(pid => pid.startsWith('bot_'));
+      if (!botId) return;
+
+      const triggerBotResponse = async () => {
+        try {
+          const { response } = await askNexusAI(`You are acting as a bot with ID ${botId}. Reply to: ${decryptSignal(lastMsg.content)}`);
+          
+          await addDoc(collection(db, 'chats', currentChatId, 'messages'), {
+            chatId: currentChatId,
+            senderId: botId,
+            senderName: chat.name || 'Bot',
+            content: encryptSignal(response),
+            contentType: 'text',
+            sentAt: new Date().toISOString(),
+            isRead: false
+          });
+        } catch (e) { console.warn("Bot Brain failed"); }
+      };
+
+      const timer = setTimeout(triggerBotResponse, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [messages?.length, chat?.id, db, firebaseUser?.uid]);
 
   const handleSendMessage = useCallback(async (content_msg: string, type_msg: Message['contentType'] = 'text', meta: any = null) => {
     if (!content_msg || !currentChatId || !firebaseUser || !db) return;
@@ -238,10 +273,7 @@ export default function ChatArea() {
   }, [currentChatId, firebaseUser?.uid, db, userProfile, replyTo]);
 
   const handleBotAction = useCallback((btnText: string, payload?: string) => {
-    // В Nuxus нажатие на кнопку бота отправляет текстовый ответ боту
     handleSendMessage(btnText, 'text');
-    
-    // Имитация виброотклика
     if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(15);
   }, [handleSendMessage]);
 
@@ -258,7 +290,7 @@ export default function ChatArea() {
         <div className="flex items-center gap-3 flex-1 min-w-0">
           <Button variant="ghost" size="icon" className="md:hidden rounded-xl text-white/50 h-10 w-10" onClick={() => setCurrentChatId(null)}><ChevronLeft className="w-6 h-6" /></Button>
           <div className="flex items-center gap-3 cursor-pointer min-w-0 flex-1 group" onClick={() => setIsChatInfoOpen(true)}>
-            <UserAvatar userId={chat?.type === 'private' ? chat.participantIds.find(id => id !== firebaseUser?.uid) : null} className="h-10 w-10 border border-white/10" manualAvatarUrl={chat?.type !== 'private' ? chat?.avatarUrl : null} fallbackName={formatDisplayName(chat?.name)} showOnlineStatus />
+            <UserAvatar userId={chat?.type === 'private' ? chat.participantIds.find(id => id !== firebaseUser?.uid) : null} className="h-10 w-10 border border-white/10" manualAvatarUrl={chat?.avatarUrl} fallbackName={formatDisplayName(chat?.name)} showOnlineStatus />
             <div className="flex flex-col min-w-0 text-left">
               <span className="font-black text-[16px] truncate text-white italic tracking-tighter uppercase group-hover:text-primary transition-colors">{formatDisplayName(chat?.name, chat?.username)}</span>
               <span className="text-[9px] font-black uppercase text-primary/40 mt-0.5">Сигнал активен</span>
