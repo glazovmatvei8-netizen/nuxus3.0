@@ -6,7 +6,7 @@ import { useAppState } from '@/lib/store.tsx';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  Plus, Search, Star, Pin, PinOff, Archive, Lock, Trash2, MessageCircle, Activity, LayoutGrid, Users, User, ChevronRight, Zap, Shield, ChevronDown, UserPlus, LogOut, Check, X
+  Plus, Search, Star, Pin, PinOff, Archive, Lock, Trash2, MessageCircle, Activity, LayoutGrid, Users, User, ChevronRight, Zap, Shield, ChevronDown, UserPlus, LogOut, Check, X, MessageSquare
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CreateChatModal } from './modals/create-chat-modal';
@@ -151,9 +151,10 @@ const ChatListItem = memo(({
 
   return (
     <div className="relative overflow-hidden touch-pan-y select-none px-4 py-1.5 max-w-full virtual-list-item">
+      {/* Swipe Actions Background */}
       <div className={cn("absolute inset-y-1.5 left-4 flex h-[calc(100%-12px)] z-0 transition-opacity duration-300 rounded-[2.2rem] overflow-hidden", offsetX > 20 ? "opacity-100" : "opacity-0 pointer-events-none")}>
         <button onClick={(e) => { e.stopPropagation(); onMarkUnread(chat.id); resetSwipe(); }} className="w-[70px] bg-blue-600 flex flex-col items-center justify-center text-white gap-1.5 active:brightness-125 transition-all">
-          <MessageCircle className="w-5 h-5" />
+          <MessageSquare className="w-5 h-5" />
           <span className="text-[7px] font-black uppercase tracking-widest">ИНФО</span>
         </button>
         <button onClick={(e) => { e.stopPropagation(); onPinToggle(chat.id); resetSwipe(); }} className="w-[70px] bg-green-600 flex flex-col items-center justify-center text-white gap-1.5 active:brightness-125 transition-all border-l border-white/10">
@@ -226,7 +227,7 @@ const ChatListItem = memo(({
           <ContextMenuContent className="w-64 bg-[#0a0a0c]/95 backdrop-blur-[60px] border-white/10 rounded-[2rem] p-2 shadow-2xl animate-in zoom-in-95 duration-300">
             {!isSavedMessages && (
               <ContextMenuItem onClick={() => onMarkUnread(chat.id)} className="gap-3 py-3.5 font-black uppercase text-[10px] tracking-widest rounded-xl hover:bg-primary/10 transition-all">
-                <MessageCircle className="w-5 h-5 text-primary" /> {chat.isManualUnread ? 'ПРОЧИТАНО' : 'НЕ ПРОЧИТАНО'}
+                <MessageSquare className="w-5 h-5 text-primary" /> {chat.isManualUnread ? 'ПРОЧИТАНО' : 'НЕ ПРОЧИТАНО'}
               </ContextMenuItem>
             )}
             <ContextMenuItem onClick={() => onPinToggle(chat.id)} className="gap-3 py-3.5 font-black uppercase text-[10px] tracking-widest rounded-xl hover:bg-primary/10 transition-all">

@@ -5,9 +5,9 @@ import React, { useState } from 'react';
 import { useAppState } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
-import { Phone, Link as LinkIcon, PhoneOff, Loader2, ArrowUpRight, ArrowDownLeft, ShieldCheck, Activity, UserPlus } from 'lucide-react';
+import { Phone, Link as LinkIcon, PhoneOff, Loader2, ArrowUpRight, ArrowDownLeft, ShieldCheck, Activity, UserPlus, ChevronRight } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from '@/firebase/provider';
 import { collection, query, where, orderBy, limit, doc } from 'firebase/firestore';
 import { formatDisplayName, cn } from '@/lib/utils';
 import type { Call, User } from '@/lib/types';
@@ -15,8 +15,8 @@ import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 
 /**
- * CALL CENTER V44.0.0 «MULTIPLEX»
- * ОБНОВЛЕНО: Интеграция прямых ссылок на вызов и выбор узлов.
+ * CALL CENTER V45.0.0 «INFINITE FLOW»
+ * ИСПРАВЛЕНО: Теперь вся верхняя панель прокручивается вместе со списком.
  */
 export default function CallsView() {
   const { user } = useUser();
@@ -45,7 +45,6 @@ export default function CallsView() {
 
   const handleCreateCallLink = () => {
     if (!user) return;
-    // Ссылка-приглашение на звонок: при переходе вызывается создатель ссылки
     const link = `${window.location.origin}/?action=call&to=${user.uid}`;
     navigator.clipboard.writeText(link);
     toast({ 
@@ -58,76 +57,76 @@ export default function CallsView() {
     <div className="flex flex-col h-full bg-[#0a0a0c] overflow-hidden relative">
       <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 blur-[120px] pointer-events-none -z-10" />
       
-      <div className="px-6 pt-10 pb-6 shrink-0 space-y-8">
-        <div className="flex items-center justify-between">
-          <div className="flex flex-col text-left">
-            <h1 className="text-3xl font-black text-white italic tracking-tighter uppercase flex items-center gap-3">
-              Центр <span className="text-[8px] bg-primary/20 text-primary px-2 py-0.5 rounded-full border border-primary/20 tracking-widest font-black">CALL CENTER</span>
-            </h1>
-            <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.4em] ml-1 mt-1">Quantum Encryption Signal</p>
-          </div>
-          <div className="obsidian-glass p-3 rounded-2xl border-white/5 shadow-xl">
-             <Activity className="w-6 h-6 text-primary animate-pulse" />
-          </div>
-        </div>
-        
-        <div className="grid grid-cols-2 gap-4">
-           <button 
-             onClick={() => setIsSearchOpen(true)}
-             className="flex flex-col items-center gap-3 p-6 obsidian-glass rounded-[2.2rem] border-white/5 hover:bg-primary/5 hover:border-primary/40 transition-all group shadow-2xl active:scale-95"
-           >
-              <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 group-hover:bg-primary/20 transition-all">
-                <UserPlus className="w-6 h-6 text-primary" />
-              </div>
-              <span className="text-[10px] font-black uppercase text-white tracking-widest italic">Позвонить</span>
-           </button>
-           
-           <button 
-             onClick={handleCreateCallLink}
-             className="flex flex-col items-center gap-3 p-6 obsidian-glass rounded-[2.2rem] border-white/5 hover:bg-accent/5 hover:border-accent/40 transition-all group shadow-2xl active:scale-95"
-           >
-              <div className="w-12 h-12 rounded-2xl bg-accent/10 flex items-center justify-center border border-accent/20 group-hover:bg-accent/20 transition-all">
-                <LinkIcon className="w-6 h-6 text-accent" />
-              </div>
-              <span className="text-[10px] font-black uppercase text-white tracking-widest italic">Call Link</span>
-           </button>
-        </div>
-
-        <div className="flex gap-2 bg-white/5 p-1 rounded-2xl border border-white/5 shadow-inner">
-           <button 
-             onClick={() => setActiveTab('all')} 
-             className={cn("flex-1 h-11 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all", activeTab === 'all' ? "bg-primary text-white shadow-lg" : "text-white/40 hover:bg-white/5")}
-           >
-             Все вызовы
-           </button>
-           <button 
-             onClick={() => setActiveTab('missed')} 
-             className={cn("flex-1 h-11 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all", activeTab === 'missed' ? "bg-red-500 text-white shadow-lg" : "text-white/40 hover:bg-white/5")}
-           >
-             Пропущенные
-           </button>
-        </div>
-      </div>
-
-      <ScrollArea className="flex-1 px-1">
-        <div className="px-5 space-y-3 pb-40 animate-in fade-in duration-700">
-          {isLoading ? (
-            <div className="flex flex-col items-center justify-center p-20 gap-4 opacity-40">
-              <Loader2 className="w-10 h-10 animate-spin text-primary" />
-              <p className="text-[10px] font-black uppercase tracking-widest">Синхронизация истории...</p>
+      <ScrollArea className="flex-1">
+        <div className="px-6 pt-10 pb-40 space-y-8">
+          <div className="flex items-center justify-between">
+            <div className="flex flex-col text-left">
+              <h1 className="text-3xl font-black text-white italic tracking-tighter uppercase flex items-center gap-3">
+                Центр <span className="text-[8px] bg-primary/20 text-primary px-2 py-0.5 rounded-full border border-primary/20 tracking-widest font-black">CALL CENTER</span>
+              </h1>
+              <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.4em] ml-1 mt-1">Quantum Encryption Signal</p>
             </div>
-          ) : filteredCalls.length > 0 ? (
-            filteredCalls.map(call => (
-              <CallItem key={call.id} call={call} currentUserId={user?.uid} />
-            ))
-          ) : (
-            <div className="flex flex-col items-center justify-center p-20 text-center space-y-6 opacity-20">
-              <div className="w-24 h-24 rounded-full border-2 border-dashed border-white/20 flex items-center justify-center animate-pulse">
-                <PhoneOff className="w-10 h-10" />
-              </div>
-              <p className="text-[11px] font-black uppercase tracking-[0.5em]">Журнал пуст</p>
+            <div className="obsidian-glass p-3 rounded-2xl border-white/5 shadow-xl">
+               <Activity className="w-6 h-6 text-primary animate-pulse" />
             </div>
-          )}
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+             <button 
+               onClick={() => setIsSearchOpen(true)}
+               className="flex flex-col items-center gap-3 p-6 obsidian-glass rounded-[2.2rem] border-white/5 hover:bg-primary/5 hover:border-primary/40 transition-all group shadow-2xl active:scale-95"
+             >
+                <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 group-hover:bg-primary/20 transition-all">
+                  <UserPlus className="w-6 h-6 text-primary" />
+                </div>
+                <span className="text-[10px] font-black uppercase text-white tracking-widest italic">Позвонить</span>
+             </button>
+             
+             <button 
+               onClick={handleCreateCallLink}
+               className="flex flex-col items-center gap-3 p-6 obsidian-glass rounded-[2.2rem] border-white/5 hover:bg-accent/5 hover:border-accent/40 transition-all group shadow-2xl active:scale-95"
+             >
+                <div className="w-12 h-12 rounded-2xl bg-accent/10 flex items-center justify-center border border-accent/20 group-hover:bg-accent/20 transition-all">
+                  <LinkIcon className="w-6 h-6 text-accent" />
+                </div>
+                <span className="text-[10px] font-black uppercase text-white tracking-widest italic">Call Link</span>
+             </button>
+          </div>
+
+          <div className="flex gap-2 bg-white/5 p-1 rounded-2xl border border-white/5 shadow-inner">
+             <button 
+               onClick={() => setActiveTab('all')} 
+               className={cn("flex-1 h-11 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all", activeTab === 'all' ? "bg-primary text-white shadow-lg" : "text-white/40 hover:bg-white/5")}
+             >
+               Все вызовы
+             </button>
+             <button 
+               onClick={() => setActiveTab('missed')} 
+               className={cn("flex-1 h-11 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all", activeTab === 'missed' ? "bg-red-500 text-white shadow-lg" : "text-white/40 hover:bg-white/5")}
+             >
+               Пропущенные
+             </button>
+          </div>
+
+          <div className="space-y-3 animate-in fade-in duration-700">
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center p-20 gap-4 opacity-40">
+                <Loader2 className="w-10 h-10 animate-spin text-primary" />
+                <p className="text-[10px] font-black uppercase tracking-widest">Синхронизация истории...</p>
+              </div>
+            ) : filteredCalls.length > 0 ? (
+              filteredCalls.map(call => (
+                <CallItem key={call.id} call={call} currentUserId={user?.uid} />
+              ))
+            ) : (
+              <div className="flex flex-col items-center justify-center p-20 text-center space-y-6 opacity-20">
+                <div className="w-24 h-24 rounded-full border-2 border-dashed border-white/20 flex items-center justify-center animate-pulse">
+                  <PhoneOff className="w-10 h-10" />
+                </div>
+                <p className="text-[11px] font-black uppercase tracking-[0.5em]">Журнал пуст</p>
+              </div>
+            )}
+          </div>
         </div>
       </ScrollArea>
     </div>

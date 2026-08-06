@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/popover";
 import { format } from 'date-fns';
 import { 
-  CornerUpLeft, Trash2, Check, CheckCheck, Play, Share2, Copy, MoreHorizontal, ShieldCheck, Wand2, Loader2, RotateCcw, EyeOff, Eye, Heart, Smile
+  CornerUpLeft, Trash2, Check, CheckCheck, Play, Share2, Copy, MoreHorizontal, ShieldCheck, Wand2, Loader2, RotateCcw, EyeOff, Eye, Heart, Smile, Zap, Star, Ghost, Bot, Trophy, Rocket, Sparkles
 } from 'lucide-react';
 import { cn, decryptSignal, isUserPremium } from '@/lib/utils';
 import { doc, updateDoc, deleteDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
@@ -20,11 +20,14 @@ import { useToast } from '@/hooks/use-toast';
 import { useAppState } from '@/lib/store';
 import { transcribeVoice } from '@/ai/flows/voice-to-text-flow';
 
-const COMMON_REACTIONS = ['❤️', '🔥', '👍', '😂', '😮', '😢', '💯'];
+/**
+ * РАСШИРЕННЫЙ СПИСОК РЕАКЦИЙ V6.2.0
+ */
+const COMMON_REACTIONS = ['❤️', '🔥', '👍', '😂', '😮', '😢', '💯', '⚡', '💎', '🎉', '🤖', '👑', '👻', '👾'];
 
 /**
- * MESSAGE ITEM V78.2.0 «NEURAL PRECISION»
- * Фикс кнопок: Скрыть/Показать больше не вызывают повторный сигнал.
+ * MESSAGE ITEM V79.0.0 «REACTION PULSE»
+ * ДОБАВЛЕНО: Расширенные анимированные реакции.
  */
 export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, isAdmin = false, isGroup = false, highlight = false, viewerProfile }: any) => {
   const { user } = useUser();
@@ -152,7 +155,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
                   isMe ? "right-2" : "left-2"
                 )}>
                   {Object.entries(message.reactions || {}).map(([emoji, uids]: any) => uids.length > 0 && (
-                    <div key={emoji} className="flex items-center gap-1 px-1.5 py-0.5 rounded-full">
+                    <div key={emoji} className="flex items-center gap-1 px-1.5 py-0.5 rounded-full animate-in zoom-in-50 duration-300">
                       <span className="text-xs">{emoji}</span>
                       <span className="text-[9px] font-black text-white/60">{uids.length}</span>
                     </div>
@@ -165,31 +168,41 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
               <PopoverTrigger asChild>
                 <button className="p-2 rounded-full hover:bg-white/5 text-white/20 opacity-0 group-hover:opacity-100 transition-all"><MoreHorizontal className="w-5 h-5" /></button>
               </PopoverTrigger>
-              <PopoverContent side="top" align={isMe ? "end" : "start"} className="w-64 bg-[#0a0a0c]/95 backdrop-blur-xl border-white/10 rounded-[2rem] p-2 shadow-2xl z-[1000] outline-none">
-                 <div className="flex justify-around p-2 mb-2 bg-white/5 rounded-2xl">
-                    {COMMON_REACTIONS.map(emoji => (
-                      <button key={emoji} onClick={() => handleReaction(emoji)} className="text-xl hover:scale-150 active:scale-90 transition-transform p-1.5">{emoji}</button>
-                    ))}
-                 </div>
+              <PopoverContent side="top" align={isMe ? "end" : "start"} className="w-[320px] bg-[#0a0a0c]/95 backdrop-blur-xl border-white/10 rounded-[2.5rem] p-3 shadow-2xl z-[1000] outline-none overflow-hidden">
+                 <ScrollArea className="w-full pb-2">
+                    <div className="flex gap-2 p-1">
+                       {COMMON_REACTIONS.map(emoji => (
+                         <button 
+                           key={emoji} 
+                           onClick={() => handleReaction(emoji)} 
+                           className="text-2xl hover:scale-150 active:scale-90 transition-transform p-2 bg-white/5 rounded-2xl hover:bg-primary/20 shrink-0 animate-in fade-in slide-in-from-bottom-2 duration-300"
+                         >
+                           {emoji}
+                         </button>
+                       ))}
+                    </div>
+                 </ScrollArea>
                  
-                 <button onClick={() => { onReply(message); setIsMenuOpen(false); }} className="w-full flex items-center justify-between p-3.5 rounded-xl hover:bg-white/5 transition-all text-white">
-                   <span className="text-[11px] font-black uppercase tracking-widest">Ответить</span>
-                   <CornerUpLeft className="w-4 h-4 opacity-40" />
-                 </button>
-                 <button onClick={() => { onForward(message); setIsMenuOpen(false); }} className="w-full flex items-center justify-between p-3.5 rounded-xl hover:bg-white/5 transition-all text-white">
-                   <span className="text-[11px] font-black uppercase tracking-widest">Переслать</span>
-                   <Share2 className="w-4 h-4 opacity-40" />
-                 </button>
-                 <button onClick={copyToClipboard} className="w-full flex items-center justify-between p-3.5 rounded-xl hover:bg-white/5 transition-all text-white">
-                   <span className="text-[11px] font-black uppercase tracking-widest">Копировать</span>
-                   <Copy className="w-4 h-4 opacity-40" />
-                 </button>
-                 {isMe && (
-                   <button onClick={handleDeleteMessage} className="w-full flex items-center justify-between p-3.5 rounded-xl hover:bg-red-500/10 transition-all text-red-500">
-                     <span className="text-[11px] font-black uppercase tracking-widest">Удалить</span>
-                     <Trash2 className="w-4 h-4 opacity-40" />
-                   </button>
-                 )}
+                 <div className="mt-2 space-y-1">
+                    <button onClick={() => { onReply(message); setIsMenuOpen(false); }} className="w-full flex items-center justify-between p-3.5 rounded-2xl hover:bg-white/5 transition-all text-white group/btn">
+                      <span className="text-[11px] font-black uppercase tracking-widest group-hover/btn:text-primary transition-colors">Ответить</span>
+                      <CornerUpLeft className="w-4 h-4 opacity-40 group-hover/btn:opacity-100 group-hover/btn:text-primary" />
+                    </button>
+                    <button onClick={() => { onForward(message); setIsMenuOpen(false); }} className="w-full flex items-center justify-between p-3.5 rounded-2xl hover:bg-white/5 transition-all text-white group/btn">
+                      <span className="text-[11px] font-black uppercase tracking-widest group-hover/btn:text-primary transition-colors">Переслать</span>
+                      <Share2 className="w-4 h-4 opacity-40 group-hover/btn:opacity-100 group-hover/btn:text-primary" />
+                    </button>
+                    <button onClick={copyToClipboard} className="w-full flex items-center justify-between p-3.5 rounded-2xl hover:bg-white/5 transition-all text-white group/btn">
+                      <span className="text-[11px] font-black uppercase tracking-widest group-hover/btn:text-primary transition-colors">Копировать</span>
+                      <Copy className="w-4 h-4 opacity-40 group-hover/btn:opacity-100 group-hover/btn:text-primary" />
+                    </button>
+                    {isMe && (
+                      <button onClick={handleDeleteMessage} className="w-full flex items-center justify-between p-3.5 rounded-2xl hover:bg-red-500/10 transition-all text-red-500 group/btn">
+                        <span className="text-[11px] font-black uppercase tracking-widest">Удалить</span>
+                        <Trash2 className="w-4 h-4 opacity-40 group-hover/btn:opacity-100" />
+                      </button>
+                    )}
+                 </div>
               </PopoverContent>
             </Popover>
           </div>
