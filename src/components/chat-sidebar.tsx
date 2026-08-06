@@ -6,7 +6,7 @@ import { useAppState } from '@/lib/store.tsx';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  Plus, Search, Star, Pin, PinOff, Archive, Lock, Trash2, MessageCircle, Activity, LayoutGrid, Users, User, ChevronRight, Zap, Shield, ChevronDown, UserPlus, LogOut, Check, X, MessageSquare
+  Plus, Search, Star, Pin, PinOff, Archive, Lock, Trash2, MessageCircle, Activity, LayoutGrid, Users, User, ChevronRight, Zap, Shield, ChevronDown, UserPlus, LogOut, Check, X, MessageSquare, Bell, BellOff, Eraser, Edit3
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CreateChatModal } from './modals/create-chat-modal';
@@ -14,7 +14,7 @@ import { AdminPanelModal } from './modals/admin-panel-modal';
 import { StoriesBar } from './stories-bar';
 import type { User as UserType, Message, Chat } from '@/lib/types';
 import { useFirestore, useUser, useCollection, useDoc } from '@/firebase/provider';
-import { collection, query, where, doc, limit, orderBy, updateDoc, arrayUnion, arrayRemove, deleteDoc, setDoc, getDoc } from 'firebase/firestore';
+import { collection, query, where, doc, limit, orderBy, updateDoc, arrayUnion, arrayRemove, deleteDoc, setDoc, getDoc, getDocs, writeBatch } from 'firebase/firestore';
 import { formatDisplayName, cn, isGlobalAdmin, decryptSignal, isUserPremium } from '@/lib/utils';
 import { format } from 'date-fns';
 import { 
@@ -25,6 +25,7 @@ import {
   ContextMenuSeparator,
 } from "@/components/ui/context-menu";
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { useToast } from '@/hooks/use-toast';
 
 const AccountItem = memo(({ account, isActive, index, onSwitch, onRemove }: any) => (
   <div className={cn(
@@ -49,7 +50,7 @@ const AccountItem = memo(({ account, isActive, index, onSwitch, onRemove }: any)
 AccountItem.displayName = 'AccountItem';
 
 const ChatListItem = memo(({ 
-  chat, isActive, otherId, isPinned, onPinToggle, onClick, onMarkUnread, onDelete, onArchive, currentUserId
+  chat, isActive, otherId, isPinned, onPinToggle, onClick, onMarkUnread, onDelete, onArchive, onClearHistory, onMuteToggle, onRename, currentUserId
 }: any) => {
   const db = useFirestore();
   const [offsetX, setOffsetX] = useState(0);
@@ -94,6 +95,7 @@ const ChatListItem = memo(({
 
   const isUnread = (lastMsg && !lastMsg.isRead && lastMsg.senderId !== currentUserId) || chat.isManualUnread;
   const isPremium = useMemo(() => isUserPremium(otherProfile), [otherProfile]);
+  const isMuted = chat.mutedUntil && new Date(chat.mutedUntil) > new Date();
 
   const decryptedPreview = useMemo(() => {
     if (!lastMsg) return isSavedMessages ? 'Ваше личное хранилище' : 'Сигнал отсутствует';
@@ -208,6 +210,7 @@ const ChatListItem = memo(({
                     </span>
                     {isPremium && !isSavedMessages && <Star className="w-3.5 h-3.5 text-accent fill-accent shrink-0" />}
                     {isPinned && <Pin className="w-3.5 h-3.5 text-primary rotate-45 shrink-0" />}
+                    {isMuted && <BellOff className="w-3 h-3 text-white/20 shrink-0" />}
                   </div>
                   <span className="text-[10px] text-white/30 font-black tabular-nums tracking-widest">{displayTime}</span>
                 </div>
@@ -226,21 +229,38 @@ const ChatListItem = memo(({
           </ContextMenuTrigger>
           <ContextMenuContent className="w-64 bg-[#0a0a0c]/95 backdrop-blur-[60px] border-white/10 rounded-[2rem] p-2 shadow-2xl animate-in zoom-in-95 duration-300">
             {!isSavedMessages && (
-              <ContextMenuItem onClick={() => onMarkUnread(chat.id)} className="gap-3 py-3.5 font-black uppercase text-[10px] tracking-widest rounded-xl hover:bg-primary/10 transition-all">
-                <MessageSquare className="w-5 h-5 text-primary" /> {chat.isManualUnread ? 'ПРОЧИТАНО' : 'НЕ ПРОЧИТАНО'}
+              <ContextMenuItem onClick={() => onMarkUnread(chat.id)} className="gap-3 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-primary/10 transition-all">
+                <MessageSquare className="w-4 h-4 text-primary" /> {chat.isManualUnread ? 'ПРОЧИТАНО' : 'НЕ ПРОЧИТАНО'}
               </ContextMenuItem>
             )}
-            <ContextMenuItem onClick={() => onPinToggle(chat.id)} className="gap-3 py-3.5 font-black uppercase text-[10px] tracking-widest rounded-xl hover:bg-primary/10 transition-all">
-              {isPinned ? <><PinOff className="w-5 h-5 text-green-400" /> ОТКРЕПИТЬ</> : <><Pin className="w-5 h-5 text-green-400" /> ЗАКРЕПИТЬ</>}
+            <ContextMenuItem onClick={() => onPinToggle(chat.id)} className="gap-3 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-primary/10 transition-all">
+              {isPinned ? <><PinOff className="w-4 h-4 text-green-400" /> ОТКРЕПИТЬ</> : <><Pin className="w-4 h-4 text-green-400" /> ЗАКРЕПИТЬ</>}
             </ContextMenuItem>
+            
+            <ContextMenuSeparator className="bg-white/5 mx-3 my-1" />
+            
             {!isSavedMessages && (
-              <ContextMenuItem onClick={() => onArchive(chat.id, !!chat.isArchived)} className="gap-3 py-3.5 font-black uppercase text-[10px] tracking-widest rounded-xl hover:bg-primary/10 transition-all">
-                <Archive className="w-5 h-5 text-orange-400" /> {chat.isArchived ? 'ВЕРНУТЬ' : 'В АРХИВ'}
-              </ContextMenuItem>
+              <>
+                <ContextMenuItem onClick={() => onMuteToggle(chat.id, isMuted)} className="gap-3 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-primary/10 transition-all">
+                  {isMuted ? <><Bell className="w-4 h-4 text-blue-400" /> ВКЛ. УВЕДОМЛЕНИЯ</> : <><BellOff className="w-4 h-4 text-white/40" /> ВЫКЛ. УВЕДОМЛЕНИЯ</>}
+                </ContextMenuItem>
+                <ContextMenuItem onClick={() => onRename(chat.id)} className="gap-3 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-primary/10 transition-all">
+                  <Edit3 className="w-4 h-4 text-cyan-400" /> ПЕРЕИМЕНОВАТЬ
+                </ContextMenuItem>
+              </>
             )}
-            <ContextMenuSeparator className="bg-white/5 mx-3 my-2" />
-            <ContextMenuItem onClick={() => onDelete(chat.id)} className="gap-3 py-3.5 font-black uppercase text-[10px] tracking-widest rounded-xl text-red-500 hover:bg-red-500/10 transition-all">
-              <Trash2 className="w-5 h-5" /> УДАЛИТЬ УЗЕЛ
+
+            <ContextMenuItem onClick={() => onArchive(chat.id, !!chat.isArchived)} className="gap-3 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-primary/10 transition-all">
+              <Archive className="w-4 h-4 text-orange-400" /> {chat.isArchived ? 'ВЕРНУТЬ' : 'В АРХИВ'}
+            </ContextMenuItem>
+            
+            <ContextMenuSeparator className="bg-white/5 mx-3 my-1" />
+            
+            <ContextMenuItem onClick={() => onClearHistory(chat.id)} className="gap-3 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-yellow-500/10 text-yellow-500 transition-all">
+              <Eraser className="w-4 h-4" /> ОЧИСТИТЬ ИСТОРИЮ
+            </ContextMenuItem>
+            <ContextMenuItem onClick={() => onDelete(chat.id)} className="gap-3 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest text-red-500 hover:bg-red-500/10 transition-all">
+              <Trash2 className="w-4 h-4" /> УДАЛИТЬ УЗЕЛ
             </ContextMenuItem>
           </ContextMenuContent>
         </ContextMenu>
@@ -253,6 +273,7 @@ ChatListItem.displayName = 'ChatListItem';
 export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?: boolean }) {
   const { user } = useUser();
   const db = useFirestore();
+  const { toast } = useToast();
   const { currentChatId, setCurrentChatId, setIsSearchOpen, activeAccountIndex, setActiveAccountIndex } = useAppState();
   
   const [activeTab, setActiveTab] = useState('all');
@@ -330,6 +351,32 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
     await updateDoc(doc(db, 'chats', chatId), { isArchived: !currentStatus });
   };
 
+  const handleMuteToggle = async (chatId: string, isCurrentlyMuted: boolean) => {
+    if (!db) return;
+    const muteUntil = isCurrentlyMuted ? null : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
+    await updateDoc(doc(db, 'chats', chatId), { mutedUntil: muteUntil });
+    toast({ title: isCurrentlyMuted ? "Звук включен" : "Уведомления отключены" });
+  };
+
+  const handleClearHistory = async (chatId: string) => {
+    if (!db) return;
+    if (confirm('Очистить историю сигналов в этом узле?')) {
+      const msgsSnap = await getDocs(collection(db, 'chats', chatId, 'messages'));
+      const batch = writeBatch(db);
+      msgsSnap.docs.forEach(d => batch.delete(d.ref));
+      await batch.commit();
+      toast({ title: "История очищена" });
+    }
+  };
+
+  const handleRename = async (chatId: string) => {
+    const newName = prompt('Введите новое имя узла:');
+    if (newName && db && user) {
+      await updateDoc(doc(db, 'chats', chatId), { [`metadata.${user.uid}.customName`]: newName.trim() });
+      toast({ title: "Узел переименован" });
+    }
+  };
+
   const handleDelete = async (chatId: string) => {
     if (!db) return;
     if (confirm('Аннигилировать этот узел связи?')) {
@@ -378,78 +425,80 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
 
   return (
     <div className="flex flex-col h-full bg-transparent overflow-hidden relative max-w-full">
-      <div className="px-6 pt-12 pb-6 shrink-0 bg-transparent z-20 space-y-8">
-        <div className="flex items-center justify-between w-full relative">
-          <div className="flex flex-col items-center gap-1.5 opacity-40">
-             <Activity className="w-5 h-5 text-green-500" />
-             <span className="text-[8px] font-black uppercase tabular-nums">SYNCED</span>
+      <ScrollArea className="flex-1">
+        {/* Infinite Layout: Header and Search now scroll away */}
+        <div className="px-6 pt-12 pb-6 bg-transparent z-20 space-y-8 animate-in fade-in slide-in-from-top-2 duration-500">
+          <div className="flex items-center justify-between w-full relative">
+            <div className="flex flex-col items-center gap-1.5 opacity-40">
+               <Activity className="w-5 h-5 text-green-500" />
+               <span className="text-[8px] font-black uppercase tabular-nums">SYNCED</span>
+            </div>
+            <div className="absolute left-1/2 -translate-x-1/2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <div className="flex items-center gap-2 cursor-pointer group active:scale-95 transition-all">
+                     <h1 className="text-3xl font-black italic tracking-tighter text-white uppercase group-hover:text-primary transition-colors">
+                       {isArchiveView ? 'Архив' : 'Сигналы'}
+                     </h1>
+                     <ChevronDown className="w-5 h-5 text-white/20 group-hover:text-primary transition-all" />
+                  </div>
+                </PopoverTrigger>
+                <PopoverContent align="center" className="w-72 bg-[#0a0a0c]/95 backdrop-blur-3xl border-white/10 rounded-[2.2rem] p-3 shadow-2xl z-[1000] outline-none">
+                   <div className="space-y-1.5 mb-4">
+                      <span className="text-[9px] font-black uppercase tracking-[0.3em] text-white/20 px-2">Узлы в сети ({accsList.length}/{accLimit})</span>
+                      <ScrollArea className="max-h-64">
+                         <div className="space-y-1">
+                            {accsList.map(acc => (
+                              <AccountItem 
+                                key={acc.index} account={acc} index={acc.index} isActive={acc.index === activeAccountIndex} 
+                                onSwitch={handleSwitchAccount} onRemove={handleRemoveAccount} 
+                              />
+                            ))}
+                         </div>
+                      </ScrollArea>
+                   </div>
+                   <div className="pt-2 border-t border-white/5 space-y-1">
+                      {accsList.length < accLimit && (
+                        <button onClick={handleAddAccount} className="w-full flex items-center gap-3 p-3.5 rounded-xl hover:bg-primary/10 transition-all group text-left">
+                          <div className="h-9 w-9 rounded-xl bg-primary/20 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                            <UserPlus className="w-5 h-5" />
+                          </div>
+                          <span className="text-[11px] font-black uppercase text-white tracking-widest">Добавить узел</span>
+                        </button>
+                      )}
+                      {isGlobalAdmin(currentUserProfile) && (
+                        <button onClick={() => setIsAdminPanelOpen(true)} className="w-full flex items-center gap-3 p-3.5 rounded-xl hover:bg-primary/10 transition-all group text-left">
+                          <div className="h-9 w-9 rounded-xl bg-primary/20 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                            <Shield className="w-5 h-5" />
+                          </div>
+                          <span className="text-[11px] font-black uppercase text-white tracking-widest">Админ-панель</span>
+                        </button>
+                      )}
+                   </div>
+                </PopoverContent>
+              </Popover>
+            </div>
+            <Button variant="ghost" size="icon" className="h-12 w-12 rounded-2xl obsidian-glass border-white/5 hover:border-primary/40 transition-all group shadow-xl" onClick={() => setIsCreateModalOpen(true)}>
+              <Plus className="w-6 h-6 group-hover:rotate-90 transition-transform duration-700" />
+            </Button>
           </div>
-          <div className="absolute left-1/2 -translate-x-1/2">
-            <Popover>
-              <PopoverTrigger asChild>
-                <div className="flex items-center gap-2 cursor-pointer group active:scale-95 transition-all">
-                   <h1 className="text-3xl font-black italic tracking-tighter text-white uppercase group-hover:text-primary transition-colors">
-                     {isArchiveView ? 'Архив' : 'Сигналы'}
-                   </h1>
-                   <ChevronDown className="w-5 h-5 text-white/20 group-hover:text-primary transition-all" />
-                </div>
-              </PopoverTrigger>
-              <PopoverContent align="center" className="w-72 bg-[#0a0a0c]/95 backdrop-blur-3xl border-white/10 rounded-[2.2rem] p-3 shadow-2xl z-[1000] outline-none">
-                 <div className="space-y-1.5 mb-4">
-                    <span className="text-[9px] font-black uppercase tracking-[0.3em] text-white/20 px-2">Узлы в сети ({accsList.length}/{accLimit})</span>
-                    <ScrollArea className="max-h-64">
-                       <div className="space-y-1">
-                          {accsList.map(acc => (
-                            <AccountItem 
-                              key={acc.index} account={acc} index={acc.index} isActive={acc.index === activeAccountIndex} 
-                              onSwitch={handleSwitchAccount} onRemove={handleRemoveAccount} 
-                            />
-                          ))}
-                       </div>
-                    </ScrollArea>
-                 </div>
-                 <div className="pt-2 border-t border-white/5 space-y-1">
-                    {accsList.length < accLimit && (
-                      <button onClick={handleAddAccount} className="w-full flex items-center gap-3 p-3.5 rounded-xl hover:bg-primary/10 transition-all group text-left">
-                        <div className="h-9 w-9 rounded-xl bg-primary/20 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-                          <UserPlus className="w-5 h-5" />
-                        </div>
-                        <span className="text-[11px] font-black uppercase text-white tracking-widest">Добавить узел</span>
-                      </button>
-                    )}
-                    {isGlobalAdmin(currentUserProfile) && (
-                      <button onClick={() => setIsAdminPanelOpen(true)} className="w-full flex items-center gap-3 p-3.5 rounded-xl hover:bg-primary/10 transition-all group text-left">
-                        <div className="h-9 w-9 rounded-xl bg-primary/20 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-                          <Shield className="w-5 h-5" />
-                        </div>
-                        <span className="text-[11px] font-black uppercase text-white tracking-widest">Админ-панель</span>
-                      </button>
-                    )}
-                 </div>
-              </PopoverContent>
-            </Popover>
+          <div className="relative group px-1">
+            <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-accent/20 rounded-2xl blur-lg opacity-0 group-focus-within:opacity-100 transition-opacity" />
+            <div className="relative flex items-center">
+              <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/30 group-focus-within:text-primary transition-colors" />
+              <input 
+                placeholder="Сканировать пространство..." 
+                className="w-full h-14 bg-white/[0.03] border border-white/5 rounded-2xl pl-12 text-xs font-black uppercase tracking-[0.2em] placeholder:text-muted-foreground/20 focus:outline-none focus:border-primary/40 transition-all shadow-inner"
+                onClick={() => setIsSearchOpen(true)}
+                readOnly
+              />
+            </div>
           </div>
-          <Button variant="ghost" size="icon" className="h-12 w-12 rounded-2xl obsidian-glass border-white/5 hover:border-primary/40 transition-all group shadow-xl" onClick={() => setIsCreateModalOpen(true)}>
-            <Plus className="w-6 h-6 group-hover:rotate-90 transition-transform duration-700" />
-          </Button>
         </div>
-        <div className="relative group px-1">
-          <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-accent/20 rounded-2xl blur-lg opacity-0 group-focus-within:opacity-100 transition-opacity" />
-          <div className="relative flex items-center">
-            <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/30 group-focus-within:text-primary transition-colors" />
-            <input 
-              placeholder="Сканировать пространство..." 
-              className="w-full h-14 bg-white/[0.03] border border-white/5 rounded-2xl pl-12 text-xs font-black uppercase tracking-[0.2em] placeholder:text-muted-foreground/20 focus:outline-none focus:border-primary/40 transition-all shadow-inner"
-              onClick={() => setIsSearchOpen(true)}
-              readOnly
-            />
-          </div>
-        </div>
-      </div>
-      <ScrollArea className="flex-1 px-1">
+
         <div className="flex flex-col max-w-full overflow-x-hidden">
           {!isArchiveView && (
-            <div className="animate-in fade-in slide-in-from-top-4 duration-700 px-1">
+            <div className="px-1">
               <StoriesBar />
               <div className="px-5 pt-6">
                 <button 
@@ -497,6 +546,7 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
                   key={chat.id} chat={chat} isActive={currentChatId === chat.id} 
                   isPinned={currentUserProfile?.pinnedChatIds?.includes(chat.id)}
                   onPinToggle={handlePinToggle} onMarkUnread={handleMarkUnread} onArchive={handleArchive}
+                  onMuteToggle={handleMuteToggle} onClearHistory={handleClearHistory} onRename={handleRename}
                   onDelete={handleDelete} onClick={() => { setCurrentChatId(chat.id); }}
                   currentUserId={user?.uid} otherId={chat.type === 'private' && user ? chat.participantIds?.find((id: string) => id !== user.uid) : null} 
                 />
