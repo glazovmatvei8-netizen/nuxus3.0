@@ -8,15 +8,15 @@ import { Input } from '@/components/ui/input';
 import { 
   Code2, Zap, Rocket, ShieldCheck, Cpu, Globe, ArrowRight, 
   MessageSquare, Bot, Sparkles, Terminal, Key, Webhook, 
-  Layers, Copy, Check, Info, FileCode, Server, Cloud
+  Layers, Copy, Check, Info, FileCode, Server, Cloud, LayoutGrid
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NuxusLogo } from './nuxus-logo';
 import { useToast } from '@/hooks/use-toast';
 
 /**
- * PARTNER HUB V2.1 «CLOUD INFRASTRUCTURE»
- * Добавлена информация о 24/7 доступности и API каталоге.
+ * PARTNER HUB V2.5 «BOT INTERACTIVITY»
+ * Добавлены спецификации клавиатур и интерактивных кнопок.
  */
 export default function PartnerView() {
   const { toast } = useToast();
@@ -48,7 +48,7 @@ export default function PartnerView() {
             </div>
             <div className="flex flex-col text-left">
                <h1 className="text-xl font-black text-white italic tracking-tighter uppercase leading-none">Partner Hub</h1>
-               <span className="text-[7px] font-black text-primary/40 uppercase tracking-[0.4em] mt-1">Nuxus Dev Engine v2.1</span>
+               <span className="text-[7px] font-black text-primary/40 uppercase tracking-[0.4em] mt-1">Nuxus Dev Engine v2.5</span>
             </div>
          </div>
       </header>
@@ -67,7 +67,7 @@ export default function PartnerView() {
                Build on <span className="text-primary">NUXUS</span>
              </h2>
              <p className="text-[10px] text-white/40 font-bold uppercase tracking-[0.3em] max-w-xs mx-auto leading-relaxed">
-               Облачная инфраструктура с гарантией аптайма 24/7.
+               Облачная инфраструктура с поддержкой интерактивных ботов.
              </p>
           </div>
 
@@ -82,6 +82,25 @@ export default function PartnerView() {
                 <Cloud className="w-6 h-6 text-accent" />
                 <h4 className="text-[10px] font-black uppercase text-white tracking-widest">Global Edge</h4>
                 <p className="text-[8px] text-white/40 font-bold uppercase leading-relaxed">Сигнал доставляется через ближайшие узлы Vercel и Firebase CDN.</p>
+             </div>
+          </div>
+
+          {/* Bot Keyboards Showcase */}
+          <div className="bg-primary/5 border border-primary/20 p-6 rounded-[2.5rem] space-y-4 shadow-xl">
+             <div className="flex items-center gap-3">
+                <LayoutGrid className="w-5 h-5 text-primary" />
+                <h3 className="text-xs font-black uppercase text-white italic tracking-widest">Bot Keyboards</h3>
+             </div>
+             <p className="text-[9px] text-white/60 font-medium leading-relaxed uppercase">
+                Поддержка интерактивных кнопок прямо в чате. Отправляйте JSON-структуру `keyboard` для взаимодействия с игроками.
+             </p>
+             <div className="bg-black/60 p-4 rounded-2xl font-mono text-[8px] text-primary/80 overflow-x-auto">
+                <pre>{`"keyboard": {
+  "rows": [
+    [{ "text": "⚔️ Атака", "color": "destructive" }],
+    [{ "text": "🎒 Инвентарь" }, { "text": "✨ Магия" }]
+  ]
+}`}</pre>
              </div>
           </div>
 
@@ -126,7 +145,7 @@ export default function PartnerView() {
              <div className="space-y-4">
                 <DocItem 
                   title="Webhooks" 
-                  desc="Nuxus отправляет POST запрос на ваш сервер при каждом новом сообщении в формате JSON."
+                  desc="Nuxus отправляет POST запрос на ваш сервер при каждом новом сообщении или нажатии кнопки."
                   icon={Webhook}
                 />
                 <DocItem 
@@ -166,7 +185,7 @@ export default function PartnerView() {
                 <Zap className="w-4 h-4" />
                 <Rocket className="w-4 h-4" />
              </div>
-             <span className="text-[7px] font-black uppercase tracking-[0.8em]">Nuxus Kernel Infrastructure v2.1</span>
+             <span className="text-[7px] font-black uppercase tracking-[0.8em]">Nuxus Kernel Infrastructure v2.5</span>
           </div>
 
         </div>

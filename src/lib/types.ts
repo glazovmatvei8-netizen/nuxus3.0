@@ -1,6 +1,17 @@
 
 export type MessageType = 'text' | 'image' | 'audio' | 'video' | 'video_note' | 'service' | 'gift' | 'payment_request' | 'album' | 'poll' | 'broadcast' | 'sticker' | 'music' | 'ai_video';
 
+export interface BotButton {
+  text: string;
+  payload?: string;
+  color?: 'default' | 'primary' | 'destructive' | 'success';
+}
+
+export interface BotKeyboard {
+  rows: BotButton[][];
+  oneTime?: boolean;
+}
+
 export interface Session {
   id: string;
   userId: string;
@@ -98,6 +109,7 @@ export interface Message {
   selfDestructAt?: string | null;
   forwardFrom?: string;
   reactions?: Record<string, string[]>;
+  keyboard?: BotKeyboard;
   pollData?: {
     question: string;
     options: PollOption[];

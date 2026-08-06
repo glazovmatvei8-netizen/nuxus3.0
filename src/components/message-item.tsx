@@ -19,6 +19,7 @@ import { Button } from './ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useAppState } from '@/lib/store';
 import { transcribeVoice } from '@/ai/flows/voice-to-text-flow';
+import type { Message, BotButton } from '@/lib/types';
 
 /**
  * РАСШИРЕННЫЙ СПИСОК РЕАКЦИЙ V6.2.0
@@ -26,10 +27,10 @@ import { transcribeVoice } from '@/ai/flows/voice-to-text-flow';
 const COMMON_REACTIONS = ['❤️', '🔥', '👍', '😂', '😮', '😢', '💯', '⚡', '💎', '🎉', '🤖', '👑', '👻', '👾'];
 
 /**
- * MESSAGE ITEM V79.0.0 «REACTION PULSE»
- * FIXED: Direct imports from provider. Added missing Share2 icon import.
+ * MESSAGE ITEM V80.0.0 «BOT KEYBOARD SUPPORT»
+ * FIXED: Added support for Bot Buttons rendering.
  */
-export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, isAdmin = false, isGroup = false, highlight = false, viewerProfile }: any) => {
+export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, onBotAction, isAdmin = false, isGroup = false, highlight = false, viewerProfile }: any) => {
   const { user } = useUser();
   const db = useFirestore();
   const { setInspectedUserId } = useAppState();
@@ -100,7 +101,7 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
   }, [message.reactions]);
 
   return (
-    <div className={cn("w-full flex mb-2", isMe ? "justify-end" : "justify-start")}>
+    <div className={cn("w-full flex flex-col mb-4 animate-in fade-in slide-in-from-bottom-2 duration-300", isMe ? "items-end" : "items-start")}>
       <div className={cn("flex gap-3 max-w-[90%] items-end", isMe ? "flex-row-reverse" : "flex-row")}>
         {!isMe && <UserAvatar userId={message.senderId} className="h-10 w-10 cursor-pointer" onClick={() => setInspectedUserId(message.senderId)} />}
         <div className={cn("flex flex-col", isMe ? "items-end" : "items-start")}>
@@ -208,6 +209,31 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, is
           </div>
         </div>
       </div>
+
+      {/* BOT KEYBOARD V7.5.0 */}
+      {message.keyboard && message.keyboard.rows && message.keyboard.rows.length > 0 && (
+        <div className={cn("mt-3 w-full max-w-[320px] space-y-2 px-13", isMe ? "items-end" : "items-start")}>
+           {message.keyboard.rows.map((row: BotButton[], rIdx: number) => (
+             <div key={rIdx} className="flex gap-2 w-full">
+                {row.map((btn: BotButton, bIdx: number) => (
+                  <Button
+                    key={bIdx}
+                    onClick={() => onBotAction && onBotAction(btn.text, btn.payload)}
+                    className={cn(
+                      "flex-1 h-11 rounded-2xl font-black uppercase italic text-[10px] tracking-widest shadow-lg transition-all active:scale-95 border",
+                      btn.color === 'primary' ? "bg-primary text-white border-primary/20" :
+                      btn.color === 'success' ? "bg-green-500 text-white border-green-500/20" :
+                      btn.color === 'destructive' ? "bg-red-500 text-white border-red-500/20" :
+                      "bg-white/5 text-white/80 border-white/10 hover:bg-white/10"
+                    )}
+                  >
+                    {btn.text}
+                  </Button>
+                ))}
+             </div>
+           ))}
+        </div>
+      )}
     </div>
   );
 });
