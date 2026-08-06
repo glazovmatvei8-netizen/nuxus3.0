@@ -7,17 +7,17 @@ import { collection, query, where, limit, orderBy } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, Zap, Users, Radio, Star, Globe, Sparkles, Activity, Target, ShieldCheck, ArrowRight, CheckCircle2, Code2 } from 'lucide-react';
+import { Search, Zap, Users, Radio, Star, Globe, Sparkles, Activity, Target, ShieldCheck, ArrowRight, CheckCircle2, Code2, Terminal } from 'lucide-react';
 import { UserAvatar } from '@/components/user-avatar';
-import { useAppState } from '@/lib/store';
+import { useAppState } from '@/lib/store.tsx';
 import { cn, formatDisplayName, isUserPremium } from '@/lib/utils';
 import type { Chat, User } from '@/lib/types';
 
 const ADMIN_ID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
 /**
- * НАВИГАТОР V12.1 «Mission Control & Partner Outreach»
- * ДОБАВЛЕНО: Призыв разработчиков в Partner Hub.
+ * НАВИГАТОР V12.5 «Mission Control & Dev Access»
+ * ФИКС: Исправлена ошибка ScrollArea и улучшена видимость Partner Hub.
  */
 export default function DiscoveryView() {
   const db = useFirestore();
@@ -46,14 +46,10 @@ export default function DiscoveryView() {
 
   const leaderboard = useMemo(() => {
     if (!rawTopUsers || !allUsers) return [];
-    
-    // Фильтруем ТОЛЬКО тех, у кого активный прайм
     let list = rawTopUsers.filter(u => isUserPremium(u));
-    
     const adminData = allUsers.find(u => u.id === ADMIN_ID);
     list = list.filter(u => u.id !== ADMIN_ID);
     if (adminData) list.unshift(adminData);
-    
     return list.slice(0, 15);
   }, [rawTopUsers, allUsers]);
 
@@ -66,10 +62,10 @@ export default function DiscoveryView() {
   );
 
   return (
-    <div className="flex flex-col h-full bg-transparent overflow-hidden max-w-full relative">
+    <div className="flex flex-col h-full bg-[#0a0a0c] overflow-hidden max-w-full relative">
       <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 blur-[100px] pointer-events-none -z-10" />
       
-      <div className="px-6 pt-10 pb-6 shrink-0 space-y-6 relative">
+      <div className="px-6 pt-10 pb-6 shrink-0 space-y-6 relative z-20 bg-[#0a0a0c]">
         <div className="flex items-center justify-between">
           <div className="flex flex-col text-left">
             <h1 className="text-3xl font-black text-white italic tracking-tighter uppercase flex items-center gap-2">
@@ -82,28 +78,10 @@ export default function DiscoveryView() {
           </div>
         </div>
 
-        {/* Developer Hub Banner */}
-        <div 
-          onClick={() => setActiveView('partner')}
-          className="bg-primary/10 border border-primary/20 p-4 rounded-[2rem] flex items-center justify-between shadow-2xl relative overflow-hidden group cursor-pointer active:scale-95 transition-all"
-        >
-           <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-           <div className="flex items-center gap-4 relative z-10">
-              <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary shadow-lg group-hover:rotate-12 transition-transform">
-                <Code2 className="w-6 h-6" />
-              </div>
-              <div className="flex flex-col text-left">
-                <span className="text-[10px] font-black text-white uppercase italic tracking-tighter">PARTNER PROGRAM</span>
-                <span className="text-[12px] font-black text-primary uppercase tracking-widest">Dev Terminal</span>
-              </div>
-           </div>
-           <ArrowRight className="w-5 h-5 text-primary group-hover:translate-x-1 transition-transform relative z-10" />
-        </div>
-
         <div className="relative group">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/30 group-focus-within:text-primary transition-colors" />
           <Input 
-            placeholder="Сканировать узлы..." 
+            placeholder="Сканировать пространство..." 
             className="bg-white/[0.02] border-white/[0.05] h-12 rounded-2xl pl-12 text-sm font-bold tracking-tight focus:border-primary/50 transition-all shadow-inner"
             value={search}
             onChange={e => setSearch(e.target.value)}
@@ -112,13 +90,38 @@ export default function DiscoveryView() {
       </div>
 
       <ScrollArea className="flex-1 px-0.5">
-        <div className="space-y-10 pb-32 px-6 max-w-full overflow-x-hidden animate-in fade-in duration-700">
+        <div className="space-y-8 pb-32 px-6 max-w-full overflow-x-hidden animate-in fade-in duration-700">
           
-          {/* Цель V12.0 */}
+          {/* КРИТИЧЕСКИЙ БАННЕР: PARTNER HUB */}
+          <div 
+            onClick={() => setActiveView('partner')}
+            className="bg-gradient-to-br from-primary/20 to-accent/5 border border-primary/30 p-5 rounded-[2.5rem] shadow-2xl relative overflow-hidden group cursor-pointer active:scale-95 transition-all"
+          >
+             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:rotate-12 transition-transform">
+                <Terminal className="w-20 h-20 text-white" />
+             </div>
+             <div className="relative z-10 space-y-3 text-left">
+                <div className="flex items-center gap-2">
+                   <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shadow-lg">
+                      <Code2 className="w-5 h-5 text-white" />
+                   </div>
+                   <span className="text-[10px] font-black text-white uppercase tracking-widest">Dev Terminal</span>
+                </div>
+                <div className="space-y-1">
+                   <h3 className="text-xl font-black text-white uppercase italic tracking-tighter">Partner Program</h3>
+                   <p className="text-[9px] text-white/50 font-bold uppercase tracking-widest leading-relaxed">Инструменты для ботов и игровых серверов</p>
+                </div>
+                <div className="flex items-center gap-2 pt-2 text-primary">
+                   <span className="text-[9px] font-black uppercase tracking-widest">Активировать шлюз</span>
+                   <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                </div>
+             </div>
+          </div>
+
           <div className="relative overflow-hidden rounded-[2.5rem] p-[1px] bg-gradient-to-br from-white/10 to-transparent">
              <div className="bg-[#05050a]/95 backdrop-blur-3xl p-5 sm:p-6 rounded-[2.5rem] text-center space-y-5 relative overflow-hidden shadow-xl">
                 <div className="relative z-10 flex flex-col items-center gap-3">
-                   <div className="bg-primary/10 p-3 rounded-2xl border border-primary/20 shadow-lg animate-pulse">
+                   <div className="bg-primary/10 p-3 rounded-2xl border border-primary/20 shadow-lg">
                      <ShieldCheck className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
                    </div>
                    <div className="space-y-1">
@@ -137,21 +140,20 @@ export default function DiscoveryView() {
                    <div className="flex justify-between items-center px-1">
                       <div className="flex items-baseline gap-1">
                         <span className="text-lg sm:text-xl font-black text-white italic tabular-nums">{totalNodes}</span>
-                        <span className="text-[7px] sm:text-[9px] font-black text-white/20 uppercase">/ 100 Узлов</span>
+                        <span className="text-[7px] sm:text-[9px] font-black text-white/20 uppercase">/ 100</span>
                       </div>
                       <div className="flex items-center gap-1.5 bg-green-500/10 px-2 py-0.5 rounded-full border border-green-500/20">
                          <div className="w-1 h-1 rounded-full bg-green-500" />
-                         <span className="text-[6px] sm:text-[7px] font-black text-green-500 uppercase">Активен</span>
+                         <span className="text-[6px] sm:text-[7px] font-black text-green-500 uppercase">Synced</span>
                       </div>
                    </div>
                 </div>
              </div>
           </div>
 
-          {/* Секция лидеров */}
           <section className="space-y-5">
             <h3 className="text-[9px] font-black uppercase tracking-[0.4em] text-primary/60 flex items-center gap-2 px-1">
-              <Sparkles className="w-3 h-3 fill-current" /> Прайм-Узлы (Active)
+              <Sparkles className="w-3 h-3 fill-current" /> Прайм-Узлы
             </h3>
             <div className="flex gap-4 overflow-x-auto scrollbar-hide py-2 px-1 -mx-4">
               {leaderboard.length > 0 ? leaderboard.map((u) => (
@@ -160,17 +162,14 @@ export default function DiscoveryView() {
                   onClick={() => setInspectedUserId(u.id)}
                   className="flex flex-col items-center gap-2.5 shrink-0 group cursor-pointer relative"
                 >
-                  <div className="relative">
-                    {u.id === ADMIN_ID && <div className="absolute -inset-2 bg-primary/20 blur-xl rounded-full animate-pulse" />}
-                    <UserAvatar 
-                      userId={u.id} 
-                      className={cn(
-                        "h-14 w-14 border border-white/5 group-hover:scale-105 transition-all relative z-10 obsidian-glass",
-                        u.id === ADMIN_ID && "border-primary/40 shadow-lg shadow-primary/20"
-                      )} 
-                      manualAvatarUrl={u.avatarUrl} 
-                    />
-                  </div>
+                  <UserAvatar 
+                    userId={u.id} 
+                    className={cn(
+                      "h-14 w-14 border border-white/5 group-hover:scale-105 transition-all relative z-10 obsidian-glass",
+                      u.id === ADMIN_ID && "border-primary/40 shadow-lg shadow-primary/20"
+                    )} 
+                    manualAvatarUrl={u.avatarUrl} 
+                  />
                   <span className={cn(
                     "text-[9px] font-black truncate w-16 text-center tracking-tight italic",
                     u.id === ADMIN_ID ? "text-primary" : "text-white/40 group-hover:text-white"
@@ -178,15 +177,10 @@ export default function DiscoveryView() {
                     {u.id === ADMIN_ID ? 'СОЗДАТЕЛЬ' : formatDisplayName(u.name).split(' ')[0]}
                   </span>
                 </div>
-              )) : (
-                <div className="flex flex-col items-center justify-center w-full py-4 opacity-20">
-                  <p className="text-[8px] font-black uppercase">Нет активных узлов</p>
-                </div>
-              )}
+              )) : null}
             </div>
           </section>
 
-          {/* Список кластеров */}
           <section className="space-y-5">
             <h3 className="text-[9px] font-black uppercase tracking-[0.4em] text-primary/60 flex items-center gap-2 px-1">
               <Users className="w-3 h-3" /> Кластеры
@@ -196,21 +190,13 @@ export default function DiscoveryView() {
                 <div 
                   key={chat.id} 
                   onClick={() => { setCurrentChatId(chat.id); setActiveView('chats'); }}
-                  className="flex items-center justify-between p-4 obsidian-glass rounded-3xl hover:bg-white/[0.04] transition-all cursor-pointer group shadow-lg relative overflow-hidden"
+                  className="flex items-center justify-between p-4 obsidian-glass rounded-3xl hover:bg-white/[0.04] transition-all cursor-pointer group shadow-lg"
                 >
-                  <div className="flex items-center gap-4 min-w-0 relative z-10 text-left">
-                    <div className="relative shrink-0">
-                       <UserAvatar userId={null} className="h-12 w-12 rounded-2xl border-white/10" manualAvatarUrl={chat.avatarUrl} fallbackName={chat.name} />
-                       <div className="absolute -top-1 -right-1 bg-primary p-1.5 rounded-lg border-2 border-[#0a0a0c]">
-                         {chat.type === 'channel' ? <Radio className="w-3 h-3 text-white" /> : <Users className="w-3 h-3 text-white" />}
-                       </div>
-                    </div>
+                  <div className="flex items-center gap-4 min-w-0 text-left">
+                    <UserAvatar userId={null} className="h-12 w-12 rounded-2xl border-white/10" manualAvatarUrl={chat.avatarUrl} fallbackName={chat.name} />
                     <div className="flex flex-col min-w-0 gap-0.5">
                       <span className="font-black text-white text-[15px] truncate italic tracking-tighter uppercase">{chat.name}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[9px] text-primary font-black tracking-widest">{chat.username}</span>
-                        <span className="text-[8px] text-white/20 font-bold uppercase">{chat.participantIds?.length || 0} Узлов</span>
-                      </div>
+                      <span className="text-[9px] text-primary font-black tracking-widest">{chat.username}</span>
                     </div>
                   </div>
                   <Button variant="ghost" size="icon" className="h-10 w-10 rounded-2xl bg-white/5 border border-white/5 group-hover:bg-primary group-hover:text-white transition-all shrink-0">
