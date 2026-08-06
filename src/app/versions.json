@@ -1,13 +1,13 @@
 
 {
-  "latestVersion": "6.5.5",
+  "latestVersion": "6.5.6",
   "qesVersion": "25.2",
-  "build": "Neural-Absolute-Decoupled-Icons-Fixed",
+  "build": "Aegis-Neural-Audit-UI-Fixed",
   "sizeMb": 114,
   "changelog": [
-    "Fixed: Share2 ReferenceError resolved via explicit icon imports",
-    "Reinforced: Total decoupling of Firebase hooks to prevent SSR/PWA runtime failures",
-    "Improved: NX-AI unrestricted mode instructions updated",
-    "Optimized: iOS PWA long-press behavior and layout stability"
+    "Fixed: Admin Panel audit button overflow and layout issues",
+    "Added: Neural Node Audit logic based on activity and metadata resonance",
+    "Added: Detailed suspicious node list in Mission Control",
+    "Improved: NX-AI unrestricted response protocols"
   ]
 }

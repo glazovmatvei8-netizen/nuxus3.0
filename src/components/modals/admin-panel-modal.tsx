@@ -14,30 +14,31 @@ import { collection, query, doc, limit, updateDoc, writeBatch, increment, orderB
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   ShieldAlert, Users, Star, Ban, Check, Activity, Terminal as TerminalIcon, 
-  Zap, ShieldCheck, Search, Crown, Shield, AlertTriangle, SearchCode, ShieldQuestion, XCircle
+  Zap, ShieldCheck, Search, Crown, Shield, AlertTriangle, SearchCode, ShieldQuestion, XCircle, UserX, Ghost
 } from 'lucide-react';
 import type { User, TopUpRequest } from '@/lib/types';
 import { formatDisplayName, cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
+import { format, differenceInDays } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 /**
- * MISSION CONTROL V5.8.0 «CLEAN NODES»
- * FIXED: Direct imports from provider.
+ * MISSION CONTROL V6.5.6 «NEURAL AEGIS»
+ * FIXED: Audit button overflow and layout.
+ * ADDED: Real-time suspicious node detection and listing.
  */
 export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const db = useFirestore();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('requests');
   const [userSearch, setUserSearch] = useState('');
-  const [terminalLines, setTerminalLines] = useState<string[]>(["Nuxus Aegis Console v5.8.0", "Security Protocol: ACTIVE"]);
+  const [terminalLines, setTerminalLines] = useState<string[]>(["Nuxus Aegis Console v6.5.6", "Security Protocol: ACTIVE"]);
   const [terminalInput, setTerminalInput] = useState('');
   const [isShieldActive, setIsShieldActive] = useState(false);
   
   const [isAuditing, setIsAuditing] = useState(false);
   const [auditProgress, setUpdateAuditProgress] = useState(0);
-  const [auditResults, setAuditResults] = useState<{suspiciousNodes: number, safeNodes: number} | null>(null);
+  const [auditResults, setAuditResults] = useState<{suspiciousNodes: User[], safeNodesCount: number} | null>(null);
 
   const topUpRequestsQuery = useMemo(() => {
     if (!db) return null;
@@ -76,7 +77,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     if (cmd === 'status') res = "Kernel: STABLE | Aegis: ACTIVE | Nodes: " + stats.valid + "/" + stats.total;
     else if (cmd === 'audit') { handleStartAudit(); return; }
     else if (cmd === 'nodes') res = `Valid: ${stats.valid}, Premium: ${stats.premium}, Ghost: ${stats.total - stats.valid}`;
-    else if (cmd === 'version') res = "Nuxus Kernel v5.8.0 (Neural Pulse)";
+    else if (cmd === 'version') res = "Nuxus Kernel v6.5.6 (Neural Aegis)";
     else if (cmd === 'clear') { setTerminalLines([]); setTerminalInput(''); return; }
     else res = `Signal not recognized: ${cmd}`;
     setTerminalLines(prev => [...prev, `$ ${terminalInput}`, res]);
@@ -84,20 +85,34 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   };
 
   const handleStartAudit = () => {
-    if (isAuditing) return;
+    if (isAuditing || !allUsers) return;
     setIsAuditing(true);
     setAuditResults(null);
     setUpdateAuditProgress(0);
     
     let p = 0;
     const interval = setInterval(() => {
-      p += 5;
+      p += 4;
       setUpdateAuditProgress(p);
       if (p >= 100) {
         clearInterval(interval);
-        setAuditResults({ suspiciousNodes: 4, safeNodes: stats.valid - 4 });
+        
+        // Логика обнаружения подозрительных узлов
+        const suspicious = allUsers.filter(u => {
+          const isGhost = !u.avatarUrl && (!u.bio || u.bio.length < 5) && (u.name === 'User' || !u.name);
+          const isInactive = u.lastSeen ? differenceInDays(new Date(), new Date(u.lastSeen)) > 7 : true;
+          const lowEngagement = (u.referralCount || 0) === 0;
+          
+          return isGhost || (isInactive && lowEngagement);
+        }).slice(0, 10); // Показываем топ 10 подозрительных
+
+        setAuditResults({ 
+          suspiciousNodes: suspicious, 
+          safeNodesCount: stats.total - suspicious.length 
+        });
+        
         setIsAuditing(false);
-        toast({ title: "Аудит завершен" });
+        toast({ title: "Аудит завершен", description: "Нейронный щит просканировал все узлы." });
       }
     }, 100);
   };
@@ -124,19 +139,19 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_50%,rgba(168,85,247,0.1)_0%,transparent_70%)]" />
           <div className="relative z-10 flex items-center justify-between">
             <div className="flex items-center gap-5">
-              <div className="h-16 w-16 rounded-[1.8rem] bg-primary/20 border border-primary/20 flex items-center justify-center">
+              <div className="h-16 w-16 rounded-[1.8rem] bg-primary/20 border border-primary/20 flex items-center justify-center shadow-[0_0_30px_rgba(168,85,247,0.2)]">
                  <ShieldAlert className="w-8 h-8 text-primary animate-pulse" />
               </div>
               <div className="flex flex-col text-left">
                 <DialogTitle className="text-3xl font-black uppercase italic text-white tracking-tighter">MISSION CONTROL</DialogTitle>
-                <DialogDescription className="text-[10px] font-black uppercase text-primary/60 mt-1">Kernel V5.8.0 Aegis Active</DialogDescription>
+                <DialogDescription className="text-[10px] font-black uppercase text-primary/60 mt-1">Kernel V6.5.6 Aegis Shield</DialogDescription>
               </div>
             </div>
-            <div className="bg-black/40 border border-white/5 px-6 py-3 rounded-2xl flex items-center gap-4">
+            <div className="hidden sm:flex bg-black/40 border border-white/5 px-6 py-3 rounded-2xl items-center gap-4">
                <Activity className="w-4 h-4 text-green-500" />
                <div className="flex flex-col">
                  <span className="text-xs font-black text-white">{stats.valid} / {stats.total}</span>
-                 <span className="text-[7px] font-black text-white/20 uppercase tracking-widest">Valid Nodes</span>
+                 <span className="text-[7px] font-black text-white/20 uppercase tracking-widest">Active Nodes</span>
                </div>
             </div>
           </div>
@@ -200,7 +215,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               </TabsContent>
 
               <TabsContent value="shield" className="m-0 space-y-8">
-                 <div className="bg-red-500/10 border border-red-500/20 p-8 rounded-[2.5rem] flex items-center justify-between">
+                 <div className="bg-red-500/10 border border-red-500/20 p-8 rounded-[2.5rem] flex flex-col sm:flex-row items-center justify-between gap-6">
                     <div className="flex items-center gap-6">
                        <AlertTriangle className="w-8 h-8 text-red-500 animate-pulse" />
                        <div className="flex flex-col text-left">
@@ -211,30 +226,69 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                     <Switch checked={isShieldActive} onCheckedChange={setIsShieldActive} className="data-[state=checked]:bg-red-500" />
                  </div>
 
-                 <div className="bg-white/5 p-8 rounded-[2.5rem] border border-white/5 space-y-6">
-                    <div className="flex items-center justify-between">
+                 <div className="bg-white/5 p-8 rounded-[2.5rem] border border-white/5 space-y-8 shadow-xl">
+                    <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
                        <div className="flex items-center gap-4">
-                          <SearchCode className="w-6 h-6 text-primary" />
+                          <div className="h-12 w-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary">
+                             <SearchCode className="w-6 h-6" />
+                          </div>
                           <div className="flex flex-col text-left">
-                             <h4 className="text-lg font-black text-white uppercase italic">Node Security Audit</h4>
-                             <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest">Проверка целостности сигналов</p>
+                             <h4 className="text-lg font-black text-white uppercase italic leading-tight">Neural Security Audit</h4>
+                             <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest mt-1">Проверка резонанса и целостности узлов</p>
                           </div>
                        </div>
-                       <Button onClick={handleStartAudit} disabled={isAuditing} className="bg-primary text-white h-12 rounded-xl font-black uppercase tracking-widest px-8">
-                         {isAuditing ? <Progress value={auditProgress} className="w-24 h-1.5" /> : "Запустить проверку"}
+                       <Button 
+                         onClick={handleStartAudit} 
+                         disabled={isAuditing} 
+                         className="bg-primary text-white h-14 rounded-2xl font-black uppercase tracking-widest px-10 shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all w-full lg:w-auto"
+                       >
+                         {isAuditing ? (
+                           <div className="flex items-center gap-3">
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              <Progress value={auditProgress} className="w-24 h-1.5 bg-white/10" />
+                           </div>
+                         ) : "Запустить анализ"}
                        </Button>
                     </div>
+
                     {auditResults && (
-                       <div className="grid grid-cols-2 gap-4 animate-in zoom-in-95">
-                          <div className="bg-green-500/10 p-5 rounded-3xl border border-green-500/20 text-center">
-                             <ShieldCheck className="w-6 h-6 text-green-500 mx-auto mb-2" />
-                             <span className="text-2xl font-black text-white italic">{auditResults.safeNodes}</span>
-                             <p className="text-[8px] font-black uppercase text-green-500/60 mt-1">Безопасные узлы</p>
+                       <div className="space-y-8 animate-in zoom-in-95 duration-500">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                             <div className="bg-green-500/10 p-6 rounded-3xl border border-green-500/20 text-center shadow-inner">
+                                <ShieldCheck className="w-8 h-8 text-green-500 mx-auto mb-3" />
+                                <span className="text-3xl font-black text-white italic tabular-nums">{auditResults.safeNodesCount}</span>
+                                <p className="text-[9px] font-black uppercase text-green-500/60 mt-1 tracking-widest">Целостные узлы</p>
+                             </div>
+                             <div className="bg-red-500/10 p-6 rounded-3xl border border-red-500/20 text-center shadow-inner">
+                                <UserX className="w-8 h-8 text-red-500 mx-auto mb-3" />
+                                <span className="text-3xl font-black text-white italic tabular-nums">{auditResults.suspiciousNodes.length}</span>
+                                <p className="text-[9px] font-black uppercase text-red-500/60 mt-1 tracking-widest">Подозрительные</p>
+                             </div>
                           </div>
-                          <div className="bg-red-500/10 p-5 rounded-3xl border border-green-500/20 text-center">
-                             <ShieldQuestion className="w-6 h-6 text-red-500 mx-auto mb-2" />
-                             <span className="text-2xl font-black text-white italic">{auditResults.suspiciousNodes}</span>
-                             <p className="text-[8px] font-black uppercase text-red-500/60 mt-1">Подозрительные</p>
+
+                          <div className="space-y-4">
+                             <div className="flex items-center gap-2 px-2 text-red-500">
+                                <ShieldQuestion className="w-4 h-4" />
+                                <h5 className="text-[10px] font-black uppercase tracking-widest">Обнаруженные аномалии:</h5>
+                             </div>
+                             <div className="grid grid-cols-1 gap-3">
+                                {auditResults.suspiciousNodes.map(node => (
+                                  <div key={node.id} className="flex items-center justify-between p-4 bg-white/5 border border-white/5 rounded-2xl hover:bg-white/10 transition-all">
+                                     <div className="flex items-center gap-4">
+                                        <UserAvatar userId={node.id} className="h-10 w-10 opacity-60 grayscale" />
+                                        <div className="flex flex-col text-left">
+                                           <span className="text-sm font-bold text-white uppercase italic">{formatDisplayName(node.name, node.username)}</span>
+                                           <span className="text-[9px] text-white/30 font-black uppercase tracking-widest">{node.username}</span>
+                                        </div>
+                                     </div>
+                                     <div className="px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20">
+                                        <span className="text-[8px] font-black text-red-500 uppercase tracking-tighter">
+                                           {!node.avatarUrl ? 'АНОНИМНЫЙ ПРОФИЛЬ' : 'НИЗКИЙ РЕЗОНАНС'}
+                                        </span>
+                                     </div>
+                                  </div>
+                                ))}
+                             </div>
                           </div>
                        </div>
                     )}
@@ -242,7 +296,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               </TabsContent>
 
               <TabsContent value="terminal" className="m-0">
-                 <div className="bg-black/60 border border-white/10 rounded-[2.5rem] overflow-hidden h-[400px] flex flex-col font-mono">
+                 <div className="bg-black/60 border border-white/10 rounded-[2.5rem] overflow-hidden h-[400px] flex flex-col font-mono shadow-2xl">
                     <div className="bg-white/5 p-4 flex items-center gap-4 border-b border-white/5">
                        <div className="flex gap-2">
                           <div className="w-3 h-3 rounded-full bg-red-500/50" />
