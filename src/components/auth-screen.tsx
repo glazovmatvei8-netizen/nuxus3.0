@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { Loader2, Eye, EyeOff, AlertCircle, Globe } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase/provider'; 
 import { 
   signInWithEmailAndPassword,
@@ -91,21 +91,34 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
       return;
     }
 
-    const manualInput = identifier.trim();
-    if (manualInput.startsWith('+7') || manualInput.startsWith('7') || manualInput.startsWith('89')) {
-       toast({ 
-         title: langSelected === 'ru' ? "Региональное ограничение" : "Regional Restriction", 
-         description: langSelected === 'ru' ? "Регистрация из РФ временно недоступна." : "Registration from RF is temporarily unavailable.", 
-         variant: "destructive" 
-       });
-       return;
-    }
-
     setIsLoading(true);
+    
+    // Constructing identification signals
     const idClean = identifier.replace(/\D/g, '');
     const isEmail = identifier.includes('@');
-    const finalPhone = isEmail ? identifier.trim() : `${countryCode.replace('+', '')}${idClean}`;
+    
+    // If user typed a full international number with +, use it directly
+    const finalPhone = isEmail 
+      ? identifier.trim() 
+      : identifier.startsWith('+') 
+        ? identifier.replace('+', '').replace(/\D/g, '') 
+        : `${countryCode.replace('+', '')}${idClean}`;
+
     const finalEmail = isEmail ? identifier.trim() : `${finalPhone}@nuxus.chat`;
+
+    // SECURITY SHIELD: Regional validation (After constructing full number)
+    if (!isEmail) {
+      // Blocking Russia (+7 but not +77 for Kazakhstan)
+      if (finalPhone.startsWith('7') && !finalPhone.startsWith('77')) {
+         toast({ 
+           title: langSelected === 'ru' ? "Региональное ограничение" : "Regional Restriction", 
+           description: langSelected === 'ru' ? "Регистрация из РФ временно недоступна." : "Registration from RF is temporarily unavailable.", 
+           variant: "destructive" 
+         });
+         setIsLoading(false);
+         return;
+      }
+    }
 
     try {
       await setPersistence(auth, browserLocalPersistence);
@@ -195,7 +208,13 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                       </Select>
                     </div>
                   )}
-                  <Input placeholder={langSelected === 'ru' ? 'Телефон или Почта' : 'Phone or Email'} value={identifier} onChange={e => setIdentifier(e.target.value)} className="h-14 rounded-2xl bg-white/5 border-white/10 flex-1 font-bold focus:border-primary/40 transition-all shadow-inner" required />
+                  <Input 
+                    placeholder={langSelected === 'ru' ? (identifier.includes('@') ? 'Электронная почта' : 'Телефон') : (identifier.includes('@') ? 'Email' : 'Phone')} 
+                    value={identifier} 
+                    onChange={e => setIdentifier(e.target.value)} 
+                    className="h-14 rounded-2xl bg-white/5 border-white/10 flex-1 font-bold focus:border-primary/40 transition-all shadow-inner" 
+                    required 
+                  />
                 </div>
 
                 <div className="relative">
