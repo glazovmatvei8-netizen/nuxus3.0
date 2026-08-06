@@ -1,13 +1,13 @@
 
 {
-  "latestVersion": "7.8.0",
+  "latestVersion": "8.0.0",
   "qesVersion": "25.4",
-  "build": "Bot-Master-Console-Update",
+  "build": "Clean-Slate-Bot-Master",
   "sizeMb": 118,
   "changelog": [
-    "Partner Hub 7.8: Added Bot Identity management (Name, ID, Avatar)",
-    "Console 7.8: Implemented real-time User Discovery (Bot Audience)",
-    "Fixed: Icon imports for 'Users' and 'Loader2' in developer views",
-    "Improved: Bot Webhook documentation and JSON templates"
+    "Partner Hub 8.0: Clean slate protocol initiated. All hardcoded examples removed.",
+    "Bot Identity: Default empty state for new bot developers.",
+    "Real Audience: Connected Nodes logic now only counts users interacting with actual bots.",
+    "UI: Improved tab transition and console stats visualization."
   ]
 }

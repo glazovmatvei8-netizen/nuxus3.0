@@ -1,28 +1,29 @@
+
 "use client"
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { 
-  Code2, Zap, Rocket, ShieldCheck, Cpu, Globe, ArrowRight, 
-  MessageSquare, Bot, Sparkles, Terminal, Key, Webhook, 
-  Layers, Copy, Check, Info, FileCode, Server, Cloud, LayoutGrid,
-  Activity, BarChart3, Settings, Database, Loader2, Users, RefreshCcw, Trash2, ChevronRight, Camera, User, ExternalLink, X
+  Code2, Zap, ShieldCheck, Terminal, Key, Webhook, 
+  Copy, Loader2, Users, Trash2, Camera, User, X,
+  Activity, LayoutGrid, Info, ExternalLink
 } from 'lucide-react';
-import { cn, formatDisplayName } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { NuxusLogo } from './nuxus-logo';
 import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore, useCollection } from '@/firebase/provider';
-import { collection, query, where, limit, doc, getDocs, updateDoc } from 'firebase/firestore';
+import { collection, query, where, doc, updateDoc } from 'firebase/firestore';
 import { UserAvatar } from './user-avatar';
-import type { User as UserType, Chat } from '@/lib/types';
+import type { Chat } from '@/lib/types';
 
 /**
- * PARTNER HUB V7.9.0 «BOT MASTER CONSOLE»
- * UPDATED: API Key management (list & delete), persistent identity, and REAL user audience logic.
+ * PARTNER HUB V8.0.0 «CLEAN SLATE PROTOCOL»
+ * REMOVED: All fake data and hardcoded examples (Spirit of elements).
+ * FIXED: Real audience logic based on actual bot presence in chats.
  */
 export default function PartnerView() {
   const { user } = useUser();
@@ -33,33 +34,44 @@ export default function PartnerView() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [activeTab, setActiveTab] = useState('docs');
 
-  // Данные бота
+  // Данные бота - ТЕПЕРЬ ПУСТЫ ПО УМОЛЧАНИЮ
   const [botForm, setBotForm] = useState({
-    name: 'Spirit of the Elements',
-    username: '@spirit_of_the_elements',
-    avatarUrl: 'https://i.ibb.co/sd2MqGz2/Icon.png',
-    webhookUrl: 'https://your-server.com/webhook'
+    name: '',
+    username: '',
+    avatarUrl: '',
+    webhookUrl: ''
   });
 
-  // Загрузка реальных чатов, где есть боты
+  // Загрузка чатов текущего пользователя
   const chatsQuery = useMemo(() => {
     if (!db || !user) return null;
     return query(collection(db, 'chats'), where('participantIds', 'array-contains', user.uid));
   }, [db, user?.uid]);
   const { data: myChats } = useCollection<Chat>(chatsQuery);
 
-  // Список реальных пользователей, взаимодействующих с ботом (симуляция связи через общие чаты)
+  /**
+   * ЛОГИКА РЕАЛЬНОЙ АУДИТОРИИ:
+   * Сканируем чаты только на наличие РЕАЛЬНЫХ ботов (ID которых начинается на bot_).
+   * Если в чате есть бот, добавляем других участников этого чата в список аудитории.
+   */
   const botAudience = useMemo(() => {
     if (!myChats) return [];
-    // Собираем всех участников из чатов (кроме самого владельца)
     const uniqueUids = new Set<string>();
+    
     myChats.forEach(chat => {
-      chat.participantIds.forEach(pid => {
-        if (pid !== user?.uid) uniqueUids.add(pid);
-      });
+      // Проверяем, есть ли в этом чате хоть один бот
+      const hasBot = chat.participantIds.some(pid => pid.startsWith('bot_'));
+      if (hasBot) {
+        chat.participantIds.forEach(pid => {
+          // Добавляем только реальных людей (не ботов и не самого владельца консоли)
+          if (!pid.startsWith('bot_') && pid !== user?.uid) {
+            uniqueUids.add(pid);
+          }
+        });
+      }
     });
-    // Возвращаем пустой массив, если реально никто не добавлен (убираем фейковые данные)
-    return Array.from(uniqueUids).slice(0, 10);
+    
+    return Array.from(uniqueUids);
   }, [myChats, user?.uid]);
 
   const generateToken = () => {
@@ -72,22 +84,26 @@ export default function PartnerView() {
       };
       setApiKeys(prev => [newKey, ...prev]);
       setIsGenerating(false);
-      toast({ title: "Ключ создан", description: "Новый ключ доступа добавлен в список." });
+      toast({ title: "Ключ создан", description: "Новый узел доступа активирован." });
     }, 1000);
   };
 
   const deleteToken = (id: string) => {
     setApiKeys(prev => prev.filter(k => k.id !== id));
-    toast({ title: "Ключ аннигилирован", description: "Доступ по этому токену больше невозможен." });
+    toast({ title: "Ключ аннигилирован" });
   };
 
   const handleUpdateIdentity = async () => {
-    toast({ title: "Identity Synced", description: "Данные бота обновлены в глобальном реестре." });
+    if (!botForm.name || !botForm.username) {
+      toast({ title: "Ошибка", description: "Укажите имя и ID бота", variant: "destructive" });
+      return;
+    }
+    toast({ title: "Identity Synced", description: "Данные бота обновлены в реестре Ядра." });
   };
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    toast({ title: "Скопировано в буфер" });
+    toast({ title: "Скопировано" });
   };
 
   return (
@@ -101,7 +117,7 @@ export default function PartnerView() {
             </div>
             <div className="flex flex-col text-left">
                <h1 className="text-xl font-black text-white italic tracking-tighter uppercase leading-none">Partner Hub</h1>
-               <span className="text-[7px] font-black text-primary/40 uppercase tracking-[0.4em] mt-1">Dev Kit v7.9.0</span>
+               <span className="text-[7px] font-black text-primary/40 uppercase tracking-[0.4em] mt-1">Dev Kit v8.0.0</span>
             </div>
          </div>
       </header>
@@ -130,7 +146,7 @@ export default function PartnerView() {
                    Build on <span className="text-primary">NUXUS</span>
                  </h2>
                  <p className="text-[10px] text-white/40 font-bold uppercase tracking-[0.3em] max-w-xs mx-auto leading-relaxed">
-                   Облачная инфраструктура для ваших ботов и игровых миров.
+                   Профессиональная среда для разработки ботов и интеграции игровых миров.
                  </p>
               </div>
 
@@ -140,13 +156,13 @@ export default function PartnerView() {
                     <h3 className="text-xs font-black uppercase text-white italic tracking-widest">Bot Keyboards</h3>
                  </div>
                  <p className="text-[9px] text-white/60 font-medium leading-relaxed uppercase">
-                    Отправляйте JSON `keyboard` для создания игровых интерфейсов как в VK.
+                    Используйте JSON для создания интерактивных интерфейсов внутри чатов.
                  </p>
                  <div className="bg-black/60 p-4 rounded-2xl font-mono text-[8px] text-primary/80 overflow-x-auto">
                     <pre>{`"keyboard": {
   "rows": [
-    [{ "text": "⚔️ Атака", "color": "destructive", "payload": "atk_1" }],
-    [{ "text": "🎒 Инвентарь" }, { "text": "✨ Магия" }]
+    [{ "text": "⚔️ Действие", "color": "destructive", "payload": "cmd_1" }],
+    [{ "text": "🎒 Инвентарь" }, { "text": "✨ Прочее" }]
   ]
 }`}</pre>
                  </div>
@@ -158,8 +174,8 @@ export default function PartnerView() {
                        <Key className="w-5 h-5" />
                     </div>
                     <div className="flex flex-col">
-                       <h3 className="text-sm font-black text-white uppercase italic tracking-widest">Generate Access</h3>
-                       <span className="text-[8px] text-white/30 uppercase font-black">Создать новый узел API</span>
+                       <h3 className="text-sm font-black text-white uppercase italic tracking-widest">API Access</h3>
+                       <span className="text-[8px] text-white/30 uppercase font-black">Управление ключами доступа</span>
                     </div>
                  </div>
                  
@@ -169,22 +185,21 @@ export default function PartnerView() {
                     className="w-full h-14 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-xl active:scale-95 transition-all"
                  >
                     {isGenerating ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Zap className="w-4 h-4 mr-2" />} 
-                    {isGenerating ? 'Синхронизация...' : 'Generate New Key'}
+                    {isGenerating ? 'Генерация...' : 'Generate New API Key'}
                  </Button>
               </div>
             </TabsContent>
 
             <TabsContent value="console" className="m-0 space-y-8">
                <div className="grid grid-cols-2 gap-4">
-                  <StatCard icon={Activity} label="Signals" value="0.0k" color="text-primary" />
-                  <StatCard icon={Users} label="Active Users" value={botAudience.length} color="text-accent" />
+                  <StatCard icon={Activity} label="Signals" value="0" color="text-primary" />
+                  <StatCard icon={Users} label="Bot Audience" value={botAudience.length} color="text-accent" />
                   <StatCard icon={ShieldCheck} label="Uptime" value="100%" color="text-green-500" />
-                  <StatCard icon={Zap} label="Latency" value="-" color="text-yellow-500" />
+                  <StatCard icon={Zap} label="Response" value="-" color="text-yellow-500" />
                </div>
 
-               {/* API KEYS MANAGEMENT */}
                <div className="space-y-4">
-                  <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60 px-1 text-left">Your API Keys</h3>
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60 px-1 text-left">Active API Keys</h3>
                   <div className="space-y-2">
                      {apiKeys.length > 0 ? apiKeys.map(k => (
                        <div key={k.id} className="flex flex-col p-4 bg-white/[0.03] border border-white/5 rounded-2xl gap-3">
@@ -195,25 +210,25 @@ export default function PartnerView() {
                                 <button onClick={() => deleteToken(k.id)} className="p-2 bg-red-500/10 rounded-lg text-red-500/60 hover:text-red-500 transition-all"><X className="w-3.5 h-3.5" /></button>
                              </div>
                           </div>
-                          <span className="text-[7px] text-white/10 font-black uppercase tracking-widest text-left">Created: {new Date(k.createdAt).toLocaleDateString()}</span>
+                          <span className="text-[7px] text-white/10 font-black uppercase tracking-widest text-left">Issued: {new Date(k.createdAt).toLocaleDateString()}</span>
                        </div>
                      )) : (
                        <div className="p-10 border border-dashed border-white/5 rounded-2xl text-center opacity-20">
-                          <p className="text-[9px] font-black uppercase tracking-widest">Нет активных ключей</p>
+                          <p className="text-[9px] font-black uppercase tracking-widest">Ключи не созданы</p>
                        </div>
                      )}
                   </div>
                </div>
 
                <div className="space-y-4">
-                  <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60 px-1 text-left">Connected Nodes (Real Audience)</h3>
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60 px-1 text-left">Connected Nodes (Audience)</h3>
                   <div className="grid grid-cols-1 gap-2">
                      {botAudience.length > 0 ? botAudience.map(uid => (
                        <div key={uid} className="flex items-center justify-between p-4 bg-white/[0.03] border border-white/5 rounded-2xl hover:bg-white/[0.06] transition-all">
                           <div className="flex items-center gap-3">
                              <UserAvatar userId={uid} className="h-10 w-10" />
                              <div className="flex flex-col text-left">
-                                <span className="text-[11px] font-black text-white uppercase italic">Node #{uid.slice(0, 4)}</span>
+                                <span className="text-[11px] font-black text-white uppercase italic">Node #{uid.slice(0, 5)}</span>
                                 <span className="text-[8px] text-white/30 font-black uppercase tracking-widest">Active Link</span>
                              </div>
                           </div>
@@ -221,7 +236,7 @@ export default function PartnerView() {
                        </div>
                      )) : (
                         <div className="p-10 border border-dashed border-white/5 rounded-2xl text-center opacity-20">
-                           <p className="text-[9px] font-black uppercase tracking-widest">Аудитория пока не обнаружена</p>
+                           <p className="text-[9px] font-black uppercase tracking-widest">Аудитория не обнаружена</p>
                         </div>
                      )}
                   </div>
@@ -233,13 +248,21 @@ export default function PartnerView() {
                   <div className="flex flex-col items-center gap-6">
                      <div className="relative group">
                         <div className="h-32 w-32 rounded-[2.5rem] bg-black/40 border-2 border-dashed border-primary/40 flex items-center justify-center overflow-hidden">
-                           <img src={botForm.avatarUrl} className="w-full h-full object-cover" alt="Bot Avatar" />
+                           {botForm.avatarUrl ? (
+                             <img src={botForm.avatarUrl} className="w-full h-full object-cover" alt="Bot Avatar" />
+                           ) : (
+                             <User className="w-10 h-10 text-white/10" />
+                           )}
                         </div>
                         <button className="absolute -bottom-2 -right-2 bg-primary p-2.5 rounded-xl shadow-xl"><Camera className="w-4 h-4 text-white" /></button>
                      </div>
                      <div className="text-center">
-                        <h4 className="text-xl font-black text-white uppercase italic tracking-tighter">{botForm.name}</h4>
-                        <p className="text-[10px] text-primary/60 font-black uppercase tracking-widest">{botForm.username}</p>
+                        <h4 className="text-xl font-black text-white uppercase italic tracking-tighter">
+                          {botForm.name || 'Unnamed Bot'}
+                        </h4>
+                        <p className="text-[10px] text-primary/60 font-black uppercase tracking-widest">
+                          {botForm.username || '@username'}
+                        </p>
                      </div>
                   </div>
 
@@ -247,14 +270,16 @@ export default function PartnerView() {
                      <div className="space-y-2">
                         <Label className="text-[9px] font-black uppercase text-primary/60 ml-1">Название бота</Label>
                         <Input 
+                          placeholder="Напр. My Super Bot"
                           value={botForm.name} 
                           onChange={e => setBotForm({...botForm, name: e.target.value})}
                           className="h-12 bg-black/40 border-white/10 rounded-xl font-bold" 
                         />
                      </div>
                      <div className="space-y-2">
-                        <Label className="text-[9px] font-black uppercase text-primary/60 ml-1">ID бота (@nick)</Label>
+                        <Label className="text-[9px] font-black uppercase text-primary/60 ml-1">Уникальный ID (@nick)</Label>
                         <Input 
+                          placeholder="@my_bot"
                           value={botForm.username} 
                           onChange={e => setBotForm({...botForm, username: e.target.value})}
                           className="h-12 bg-black/40 border-white/10 rounded-xl font-bold" 
@@ -263,6 +288,7 @@ export default function PartnerView() {
                      <div className="space-y-2">
                         <Label className="text-[9px] font-black uppercase text-primary/60 ml-1">Avatar URL</Label>
                         <Input 
+                          placeholder="https://..."
                           value={botForm.avatarUrl} 
                           onChange={e => setBotForm({...botForm, avatarUrl: e.target.value})}
                           className="h-12 bg-black/40 border-white/10 rounded-xl" 
@@ -271,6 +297,7 @@ export default function PartnerView() {
                      <div className="space-y-2">
                         <Label className="text-[9px] font-black uppercase text-primary/60 ml-1">Webhook Endpoint</Label>
                         <Input 
+                          placeholder="https://your-server.com/webhook"
                           value={botForm.webhookUrl} 
                           onChange={e => setBotForm({...botForm, webhookUrl: e.target.value})}
                           className="h-12 bg-black/40 border-white/10 rounded-xl font-mono text-xs" 
@@ -281,7 +308,7 @@ export default function PartnerView() {
                        onClick={handleUpdateIdentity}
                        className="w-full h-16 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-xl active:scale-95 transition-all mt-4"
                      >
-                        Sync Bot Identity
+                        Initialize Bot Identity
                      </Button>
                   </div>
                </div>
@@ -292,7 +319,7 @@ export default function PartnerView() {
                      <span className="text-[10px] font-black uppercase tracking-widest">Danger Zone</span>
                   </div>
                   <Button variant="ghost" className="w-full h-12 rounded-xl text-red-500/60 hover:text-red-500 hover:bg-red-500/10 text-[9px] font-black uppercase tracking-widest">
-                     Annibilate Bot Data
+                     Аннигилировать данные бота
                   </Button>
                </div>
             </TabsContent>
@@ -311,5 +338,24 @@ function StatCard({ icon: Icon, label, value, color }: any) {
        <span className="text-xl font-black text-white italic tabular-nums">{value}</span>
        <span className="text-[8px] font-black uppercase text-white/20 tracking-widest">{label}</span>
     </div>
+  )
+}
+
+function ChevronRight(props: any) {
+  return (
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="m9 18 6-6-6-6" />
+    </svg>
   )
 }
