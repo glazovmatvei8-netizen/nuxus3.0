@@ -27,7 +27,7 @@ const COMMON_REACTIONS = ['❤️', '🔥', '👍', '😂', '😮', '😢', '�
 
 /**
  * MESSAGE ITEM V79.0.0 «REACTION PULSE»
- * FIXED: Direct imports from provider.
+ * FIXED: Direct imports from provider. Added missing Share2 icon import.
  */
 export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, isAdmin = false, isGroup = false, highlight = false, viewerProfile }: any) => {
   const { user } = useUser();

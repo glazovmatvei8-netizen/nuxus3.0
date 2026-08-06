@@ -1,13 +1,13 @@
 
 {
-  "latestVersion": "6.5.4",
+  "latestVersion": "6.5.5",
   "qesVersion": "25.2",
-  "build": "Neural-Absolute-Decoupled-Stable",
+  "build": "Neural-Absolute-Decoupled-Icons-Fixed",
   "sizeMb": 114,
   "changelog": [
-    "Fixed: Critical 'useUser is not a function' error resolved via full decoupling",
-    "Improved: NX-AI unrestricted mode with forced safety bypass",
-    "Stable: All components migrated to direct provider imports",
-    "Optimized: iOS PWA initialization stability"
+    "Fixed: Share2 ReferenceError resolved via explicit icon imports",
+    "Reinforced: Total decoupling of Firebase hooks to prevent SSR/PWA runtime failures",
+    "Improved: NX-AI unrestricted mode instructions updated",
+    "Optimized: iOS PWA long-press behavior and layout stability"
   ]
 }

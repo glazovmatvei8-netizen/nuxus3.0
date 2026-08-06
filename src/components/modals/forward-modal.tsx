@@ -10,14 +10,14 @@ import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from '@
 import { collection, query, where, doc, addDoc } from 'firebase/firestore';
 import { useAppState } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Loader2, ArrowRight } from 'lucide-react';
+import { Search, Loader2, ArrowRight, Share2 } from 'lucide-react';
 import { UserAvatar } from '@/components/user-avatar';
 import { formatDisplayName } from '@/lib/utils';
 import type { Chat, Message, User } from '@/lib/types';
 
 /**
  * FORWARD MODAL V5.2.0
- * FIXED: Direct imports from provider.
+ * FIXED: Direct imports from provider. Added missing Share2 icon.
  */
 export function ForwardModal() {
   const { user } = useUser();
@@ -67,7 +67,7 @@ export function ForwardModal() {
   return (
     <Dialog open={!!forwardingMessage} onOpenChange={(o) => !o && setForwardingMessage(null)}>
       <DialogContent className="max-w-md bg-card border-white/10 rounded-[2.5rem] p-0 overflow-hidden shadow-2xl h-[70vh] flex flex-col">
-        <DialogHeader className="p-6 pb-2">
+        <DialogHeader className="p-6 pb-2 text-left">
           <DialogTitle className="text-xl font-black uppercase italic text-white flex items-center gap-2">
             <Share2 className="w-5 h-5 text-primary" /> Переслать сообщение
           </DialogTitle>
@@ -77,13 +77,13 @@ export function ForwardModal() {
         </DialogHeader>
 
         <div className="px-6 py-2">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40" />
+          <div className="relative group">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
             <Input 
               placeholder="Поиск чатов..." 
               value={search} 
               onChange={e => setSearch(e.target.value)} 
-              className="bg-white/5 border-white/10 h-10 rounded-xl pl-9"
+              className="bg-white/5 border-white/10 h-10 rounded-xl pl-9 focus:border-primary/40 transition-all"
             />
           </div>
         </div>
@@ -98,7 +98,7 @@ export function ForwardModal() {
               >
                 <div className="flex items-center gap-3">
                   <UserAvatar userId={chat.type === 'private' ? chat.participantIds.find(id => id !== user?.uid) : null} manualAvatarUrl={chat.avatarUrl} className="h-10 w-10" fallbackName={chat.name} />
-                  <div className="flex flex-col">
+                  <div className="flex flex-col text-left">
                     <span className="font-bold text-sm text-white">{formatDisplayName(chat.name)}</span>
                     <span className="text-[9px] text-muted-foreground uppercase">{chat.type}</span>
                   </div>
