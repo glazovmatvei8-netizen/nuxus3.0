@@ -1,12 +1,13 @@
+
 {
-  "latestVersion": "6.5.9",
-  "qesVersion": "25.2",
-  "build": "Aegis-Intelligence-Stabilization",
-  "sizeMb": 114,
+  "latestVersion": "7.0.0",
+  "qesVersion": "25.4",
+  "build": "Aegis-3.0-Neural-Stability",
+  "sizeMb": 118,
   "changelog": [
-    "Fixed: AI pre-emptive block on simple messages (Prompt Optimization)",
-    "Improved: NX-AI system protocols for better freedom without API triggers",
-    "Verified: Aegis Neural Audit 2.0 stability and interactivity",
-    "Confirmed: Fixed Share2 and Loader2 missing icons"
+    "Aegis 3.0: Robust phone signal detection logic",
+    "Aegis 3.0: Fully responsive audit result layout (no overflow)",
+    "Improved: Detection categories for missing node identities",
+    "Stabilized: Critical UI elements for ultra-small mobile screens"
   ]
 }

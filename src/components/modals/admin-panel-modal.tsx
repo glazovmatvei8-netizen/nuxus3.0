@@ -24,10 +24,10 @@ import { ru } from 'date-fns/locale';
 import { useAppState } from '@/lib/store.tsx';
 
 /**
- * MISSION CONTROL V6.5.8 «NEURAL AEGIS 2.0»
- * UPDATED: Added interactive profiles for suspicious nodes.
- * UPDATED: Advanced phone integrity validation.
- * UPDATED: Detailed suspicion reasons.
+ * MISSION CONTROL V7.0.0 «NEURAL AEGIS 3.0»
+ * UPDATED: Responsive audit list (No overflow).
+ * UPDATED: Robust phone integrity verification.
+ * UPDATED: Improved detection algorithms.
  */
 export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const db = useFirestore();
@@ -36,7 +36,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   
   const [activeTab, setActiveTab] = useState('requests');
   const [userSearch, setUserSearch] = useState('');
-  const [terminalLines, setTerminalLines] = useState<string[]>(["Nuxus Aegis Console v6.5.8", "Security Protocol: ACTIVE"]);
+  const [terminalLines, setTerminalLines] = useState<string[]>(["Nuxus Aegis Console v7.0.0", "Security Protocol: ACTIVE"]);
   const [terminalInput, setTerminalInput] = useState('');
   const [isShieldActive, setIsShieldActive] = useState(false);
   
@@ -81,7 +81,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     if (cmd === 'status') res = "Kernel: STABLE | Aegis: ACTIVE | Nodes: " + stats.valid + "/" + stats.total;
     else if (cmd === 'audit') { handleStartAudit(); return; }
     else if (cmd === 'nodes') res = `Valid: ${stats.valid}, Premium: ${stats.premium}, Ghost: ${stats.total - stats.valid}`;
-    else if (cmd === 'version') res = "Nuxus Kernel v6.5.8 (Neural Aegis 2.0)";
+    else if (cmd === 'version') res = "Nuxus Kernel v7.0.0 (Neural Aegis 3.0)";
     else if (cmd === 'clear') { setTerminalLines([]); setTerminalInput(''); return; }
     else res = `Signal not recognized: ${cmd}`;
     setTerminalLines(prev => [...prev, `$ ${terminalInput}`, res]);
@@ -104,8 +104,15 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
         const suspicious: {user: User, reason: string}[] = [];
 
         allUsers.forEach(u => {
-          // 1. Проверка номера (Integrity Check)
-          const phoneClean = u.phone?.replace(/\D/g, '') || '';
+          // 1. Проверка номера (Enhanced Integrity Check)
+          const phoneRaw = u.phone;
+          const phoneClean = phoneRaw?.replace(/\D/g, '') || '';
+          
+          if (!phoneRaw || phoneRaw.trim() === '') {
+            suspicious.push({ user: u, reason: 'MISSING SIGNAL (PHONE)' });
+            return;
+          }
+          
           if (phoneClean.length < 8) {
             suspicious.push({ user: u, reason: 'INVALID SIGNAL (PHONE)' });
             return;
@@ -127,14 +134,14 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
         });
 
         setAuditResults({ 
-          suspiciousNodes: suspicious.slice(0, 15), 
+          suspiciousNodes: suspicious.slice(0, 20), 
           safeNodesCount: stats.total - suspicious.length 
         });
         
         setIsAuditing(false);
-        toast({ title: "Аудит завершен", description: "Нейронный щит Aegis просканировал все узлы." });
+        toast({ title: "Аудит завершен", description: "Нейронный щит Aegis 3.0 завершил сканирование." });
       }
-    }, 80);
+    }, 60);
   };
 
   const handleApprove = async (req: TopUpRequest) => {
@@ -152,11 +159,6 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     toast({ title: "Заявка отклонена" });
   };
 
-  const inspectNode = (userId: string) => {
-    setInspectedUserId(userId);
-    // Мы не закрываем админ-панель, чтобы можно было быстро просмотреть нескольких
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl bg-[#020205] border-white/10 rounded-[3rem] p-0 overflow-hidden h-[90vh] flex flex-col shadow-2xl outline-none">
@@ -169,7 +171,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               </div>
               <div className="flex flex-col text-left">
                 <DialogTitle className="text-3xl font-black uppercase italic text-white tracking-tighter">MISSION CONTROL</DialogTitle>
-                <DialogDescription className="text-[10px] font-black uppercase text-primary/60 mt-1">Kernel V6.5.8 Aegis Shield 2.0</DialogDescription>
+                <DialogDescription className="text-[10px] font-black uppercase text-primary/60 mt-1">Kernel V7.0.0 Aegis Shield 3.0</DialogDescription>
               </div>
             </div>
             <div className="hidden sm:flex bg-black/40 border border-white/5 px-6 py-3 rounded-2xl items-center gap-4">
@@ -196,8 +198,8 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             <div className="p-8 pb-32">
               <TabsContent value="requests" className="m-0 space-y-4">
                 {requests?.filter(r => r.status === 'pending').map(req => (
-                  <div key={req.id} className="bg-white/[0.03] p-6 rounded-[2.2rem] border border-white/5 flex items-center justify-between group hover:bg-white/[0.05] transition-all">
-                    <div className="flex items-center gap-5">
+                  <div key={req.id} className="bg-white/[0.03] p-6 rounded-[2.2rem] border border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4 group hover:bg-white/[0.05] transition-all">
+                    <div className="flex items-center gap-5 w-full sm:w-auto">
                       <UserAvatar userId={req.userId} className="h-14 w-14 border border-white/10" />
                       <div className="flex flex-col text-left">
                         <span className="text-[15px] font-black text-white uppercase italic">{req.userName}</span>
@@ -207,9 +209,9 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                         </div>
                       </div>
                     </div>
-                    <div className="flex gap-3">
-                      <Button onClick={() => handleReject(req.id)} variant="ghost" className="h-10 px-4 rounded-xl border border-red-500/20 text-red-500 text-[10px] font-black uppercase tracking-widest">Отклонить</Button>
-                      <Button onClick={() => handleApprove(req)} className="h-10 px-6 rounded-xl bg-green-500 text-white text-[10px] font-black uppercase tracking-widest">Одобрить</Button>
+                    <div className="flex gap-3 w-full sm:w-auto">
+                      <Button onClick={() => handleReject(req.id)} variant="ghost" className="flex-1 sm:flex-none h-10 px-4 rounded-xl border border-red-500/20 text-red-500 text-[10px] font-black uppercase tracking-widest">Отклонить</Button>
+                      <Button onClick={() => handleApprove(req)} className="flex-1 sm:flex-none h-10 px-6 rounded-xl bg-green-500 text-white text-[10px] font-black uppercase tracking-widest">Одобрить</Button>
                     </div>
                   </div>
                 ))}
@@ -222,15 +224,15 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                  </div>
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {filteredUsers.map(u => (
-                      <div key={u.id} onClick={() => inspectNode(u.id)} className="bg-white/[0.03] p-5 rounded-[2rem] border border-white/5 flex items-center justify-between cursor-pointer hover:bg-white/[0.08] transition-all group">
-                         <div className="flex items-center gap-4">
-                            <UserAvatar userId={u.id} className="h-12 w-12 border border-white/5" manualAvatarUrl={u.avatarUrl} />
-                            <div className="flex flex-col text-left">
-                               <span className="text-sm font-black text-white uppercase italic group-hover:text-primary transition-colors">{formatDisplayName(u.name, u.username)}</span>
-                               <span className="text-[10px] text-primary/60 font-black uppercase tracking-widest">{u.username}</span>
+                      <div key={u.id} onClick={() => setInspectedUserId(u.id)} className="bg-white/[0.03] p-5 rounded-[2rem] border border-white/5 flex items-center justify-between cursor-pointer hover:bg-white/[0.08] transition-all group">
+                         <div className="flex items-center gap-4 min-w-0">
+                            <UserAvatar userId={u.id} className="h-12 w-12 border border-white/5 shrink-0" manualAvatarUrl={u.avatarUrl} />
+                            <div className="flex flex-col text-left min-w-0">
+                               <span className="text-sm font-black text-white uppercase italic group-hover:text-primary transition-colors truncate">{formatDisplayName(u.name, u.username)}</span>
+                               <span className="text-[10px] text-primary/60 font-black uppercase tracking-widest truncate">{u.username}</span>
                             </div>
                          </div>
-                         <div className="flex gap-1.5">
+                         <div className="flex gap-1.5 shrink-0">
                             {u.isPremium && <Crown className="w-4 h-4 text-accent" />}
                             {u.isAdmin && <ShieldCheck className="w-4 h-4 text-primary" />}
                          </div>
@@ -300,21 +302,21 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                                 {auditResults.suspiciousNodes.map(item => (
                                   <div 
                                     key={item.user.id} 
-                                    onClick={() => inspectNode(item.user.id)}
-                                    className="flex items-center justify-between p-4 bg-white/5 border border-white/5 rounded-2xl hover:bg-white/10 transition-all cursor-pointer group"
+                                    onClick={() => setInspectedUserId(item.user.id)}
+                                    className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white/5 border border-white/5 rounded-2xl hover:bg-white/10 transition-all cursor-pointer group gap-4"
                                   >
-                                     <div className="flex items-center gap-4">
-                                        <UserAvatar userId={item.user.id} className="h-10 w-10 opacity-60 grayscale group-hover:grayscale-0 group-hover:opacity-100 transition-all" />
-                                        <div className="flex flex-col text-left">
-                                           <span className="text-sm font-bold text-white uppercase italic group-hover:text-primary">{formatDisplayName(item.user.name, item.user.username)}</span>
-                                           <div className="flex items-center gap-2">
-                                              <span className="text-[9px] text-white/30 font-black uppercase tracking-widest">{item.user.username}</span>
-                                              <span className="text-[7px] text-red-500/60 font-bold uppercase tracking-tighter bg-red-500/10 px-1.5 rounded">{item.user.phone || 'NO PHONE'}</span>
+                                     <div className="flex items-center gap-4 min-w-0">
+                                        <UserAvatar userId={item.user.id} className="h-10 w-10 shrink-0 opacity-60 grayscale group-hover:grayscale-0 group-hover:opacity-100 transition-all" />
+                                        <div className="flex flex-col text-left min-w-0 overflow-hidden">
+                                           <span className="text-sm font-bold text-white uppercase italic truncate group-hover:text-primary">{formatDisplayName(item.user.name, item.user.username)}</span>
+                                           <div className="flex flex-wrap items-center gap-2">
+                                              <span className="text-[9px] text-white/30 font-black uppercase tracking-widest truncate">{item.user.username}</span>
+                                              <span className="text-[7px] text-red-500/60 font-bold uppercase tracking-tighter bg-red-500/10 px-1.5 rounded shrink-0">{item.user.phone || 'NO SIGNAL'}</span>
                                            </div>
                                         </div>
                                      </div>
-                                     <div className="px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 shadow-lg">
-                                        <span className="text-[8px] font-black text-red-500 uppercase tracking-tighter">
+                                     <div className="px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 shadow-lg shrink-0 self-start sm:self-center">
+                                        <span className="text-[8px] font-black text-red-500 uppercase tracking-tighter whitespace-nowrap">
                                            {item.reason}
                                         </span>
                                      </div>
