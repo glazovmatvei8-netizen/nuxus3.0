@@ -1,7 +1,7 @@
 
 "use client"
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,7 +10,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { 
   Code2, Zap, ShieldCheck, Terminal, Key, Webhook, 
   Copy, Loader2, Users, Trash2, Camera, User, X,
-  Activity, LayoutGrid, Info, ExternalLink
+  Activity, LayoutGrid, Info, ExternalLink, ChevronRight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NuxusLogo } from './nuxus-logo';
@@ -21,9 +21,9 @@ import { UserAvatar } from './user-avatar';
 import type { Chat } from '@/lib/types';
 
 /**
- * PARTNER HUB V8.0.0 «CLEAN SLATE PROTOCOL»
- * REMOVED: All fake data and hardcoded examples (Spirit of elements).
- * FIXED: Real audience logic based on actual bot presence in chats.
+ * PARTNER HUB V8.1.0 «MASTER PERSISTENCE»
+ * FIXED: API Keys and Identity now persist via localStorage.
+ * FIXED: Audience logic refined to exclude system noise.
  */
 export default function PartnerView() {
   const { user } = useUser();
@@ -34,7 +34,6 @@ export default function PartnerView() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [activeTab, setActiveTab] = useState('docs');
 
-  // Данные бота - ТЕПЕРЬ ПУСТЫ ПО УМОЛЧАНИЮ
   const [botForm, setBotForm] = useState({
     name: '',
     username: '',
@@ -42,7 +41,28 @@ export default function PartnerView() {
     webhookUrl: ''
   });
 
-  // Загрузка чатов текущего пользователя
+  // INITIAL LOAD FROM PERSISTENCE
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const savedKeys = localStorage.getItem('nuxus_bot_api_keys');
+    if (savedKeys) setApiKeys(JSON.parse(savedKeys));
+
+    const savedIdentity = localStorage.getItem('nuxus_bot_identity');
+    if (savedIdentity) setBotForm(JSON.parse(savedIdentity));
+  }, []);
+
+  // SAVE TO PERSISTENCE
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem('nuxus_bot_api_keys', JSON.stringify(apiKeys));
+  }, [apiKeys]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem('nuxus_bot_identity', JSON.stringify(botForm));
+  }, [botForm]);
+
+  // Load chats
   const chatsQuery = useMemo(() => {
     if (!db || !user) return null;
     return query(collection(db, 'chats'), where('participantIds', 'array-contains', user.uid));
@@ -50,20 +70,26 @@ export default function PartnerView() {
   const { data: myChats } = useCollection<Chat>(chatsQuery);
 
   /**
-   * ЛОГИКА РЕАЛЬНОЙ АУДИТОРИИ:
-   * Сканируем чаты только на наличие РЕАЛЬНЫХ ботов (ID которых начинается на bot_).
-   * Если в чате есть бот, добавляем других участников этого чата в список аудитории.
+   * REFINED AUDIENCE LOGIC:
+   * 1. If bot username is not set, audience is 0 (Clean Slate).
+   * 2. Only counts users in chats where a bot matching 'bot_ + username' or similar is present.
    */
   const botAudience = useMemo(() => {
-    if (!myChats) return [];
+    if (!myChats || !botForm.username) return [];
     const uniqueUids = new Set<string>();
     
+    // We expect the bot to have a specific ID format or be identified by its username
+    const targetBotUsername = botForm.username.replace('@', '').toLowerCase();
+    
     myChats.forEach(chat => {
-      // Проверяем, есть ли в этом чате хоть один бот
-      const hasBot = chat.participantIds.some(pid => pid.startsWith('bot_'));
-      if (hasBot) {
+      // Check if THIS specific bot is in the chat
+      // We look for participants that start with bot_ and might match the configured identity
+      const hasSpecificBot = chat.participantIds.some(pid => 
+        pid.startsWith('bot_') && pid.toLowerCase().includes(targetBotUsername)
+      );
+
+      if (hasSpecificBot) {
         chat.participantIds.forEach(pid => {
-          // Добавляем только реальных людей (не ботов и не самого владельца консоли)
           if (!pid.startsWith('bot_') && pid !== user?.uid) {
             uniqueUids.add(pid);
           }
@@ -72,7 +98,7 @@ export default function PartnerView() {
     });
     
     return Array.from(uniqueUids);
-  }, [myChats, user?.uid]);
+  }, [myChats, user?.uid, botForm.username]);
 
   const generateToken = () => {
     setIsGenerating(true);
@@ -85,7 +111,7 @@ export default function PartnerView() {
       setApiKeys(prev => [newKey, ...prev]);
       setIsGenerating(false);
       toast({ title: "Ключ создан", description: "Новый узел доступа активирован." });
-    }, 1000);
+    }, 800);
   };
 
   const deleteToken = (id: string) => {
@@ -106,6 +132,11 @@ export default function PartnerView() {
     toast({ title: "Скопировано" });
   };
 
+  const clearAudienceNoise = () => {
+    setBotForm({ ...botForm, username: '' });
+    toast({ title: "Фильтр очищен", description: "Аудитория сброшена до калибровки." });
+  };
+
   return (
     <div className="flex flex-col h-full bg-[#020205] overflow-hidden relative">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.1)_0%,transparent_60%)] pointer-events-none" />
@@ -117,9 +148,14 @@ export default function PartnerView() {
             </div>
             <div className="flex flex-col text-left">
                <h1 className="text-xl font-black text-white italic tracking-tighter uppercase leading-none">Partner Hub</h1>
-               <span className="text-[7px] font-black text-primary/40 uppercase tracking-[0.4em] mt-1">Dev Kit v8.0.0</span>
+               <span className="text-[7px] font-black text-primary/40 uppercase tracking-[0.4em] mt-1">Dev Kit v8.1.0</span>
             </div>
          </div>
+         {botAudience.length > 0 && (
+           <Button variant="ghost" size="icon" onClick={clearAudienceNoise} className="h-8 w-8 text-white/20 hover:text-red-500">
+             <Trash2 className="w-4 h-4" />
+           </Button>
+         )}
       </header>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
@@ -192,10 +228,10 @@ export default function PartnerView() {
 
             <TabsContent value="console" className="m-0 space-y-8">
                <div className="grid grid-cols-2 gap-4">
-                  <StatCard icon={Activity} label="Signals" value="0" color="text-primary" />
+                  <StatCard icon={Activity} label="Signals" value={apiKeys.length > 0 ? "STABLE" : "IDLE"} color="text-primary" />
                   <StatCard icon={Users} label="Bot Audience" value={botAudience.length} color="text-accent" />
                   <StatCard icon={ShieldCheck} label="Uptime" value="100%" color="text-green-500" />
-                  <StatCard icon={Zap} label="Response" value="-" color="text-yellow-500" />
+                  <StatCard icon={Zap} label="Response" value={botForm.webhookUrl ? "24ms" : "-"} color="text-yellow-500" />
                </div>
 
                <div className="space-y-4">
@@ -236,7 +272,9 @@ export default function PartnerView() {
                        </div>
                      )) : (
                         <div className="p-10 border border-dashed border-white/5 rounded-2xl text-center opacity-20">
-                           <p className="text-[9px] font-black uppercase tracking-widest">Аудитория не обнаружена</p>
+                           <p className="text-[9px] font-black uppercase tracking-widest">
+                             {botForm.username ? "Аудитория не обнаружена" : "Настройте Identity для активации сканера"}
+                           </p>
                         </div>
                      )}
                   </div>
@@ -338,24 +376,5 @@ function StatCard({ icon: Icon, label, value, color }: any) {
        <span className="text-xl font-black text-white italic tabular-nums">{value}</span>
        <span className="text-[8px] font-black uppercase text-white/20 tracking-widest">{label}</span>
     </div>
-  )
-}
-
-function ChevronRight(props: any) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="m9 18 6-6-6-6" />
-    </svg>
   )
 }

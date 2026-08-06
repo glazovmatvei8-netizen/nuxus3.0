@@ -1,13 +1,13 @@
 
 {
-  "latestVersion": "8.0.0",
+  "latestVersion": "8.1.0",
   "qesVersion": "25.4",
-  "build": "Clean-Slate-Bot-Master",
+  "build": "Master-Console-Persistence-Fix",
   "sizeMb": 118,
   "changelog": [
-    "Partner Hub 8.0: Clean slate protocol initiated. All hardcoded examples removed.",
-    "Bot Identity: Default empty state for new bot developers.",
-    "Real Audience: Connected Nodes logic now only counts users interacting with actual bots.",
-    "UI: Improved tab transition and console stats visualization."
+    "Partner Hub 8.1: API Keys now persist across sessions via localStorage.",
+    "Bot Identity: Full persistence for bot profile data (Name, Username, Avatar).",
+    "Real Audience: Refined logic - audience is 0 until a bot identity is configured.",
+    "Stability: Removed ghost users from dev console statistics."
   ]
 }
