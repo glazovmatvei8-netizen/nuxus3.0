@@ -1,8 +1,8 @@
 'use client';
 
 /**
- * NUXUS FIREBASE CORE BARREL V6.1.4
- * ОПТИМИЗИРОВАНО: Прямые реэкспорты без циклов.
+ * NUXUS FIREBASE CORE BARREL V6.3.2
+ * ОПТИМИЗИРОВАНО: Прямые реэкспорты из provider.tsx для предотвращения циклов.
  */
 
 export { initializeFirebase } from './app';
@@ -12,8 +12,8 @@ export {
   useAuth, 
   useFirestore, 
   useUser,
-  useMemoFirebase 
+  useMemoFirebase,
+  useCollection,
+  useDoc
 } from './provider';
-export { useDoc } from './firestore/use-doc';
-export { useCollection } from './firestore/use-collection';
 export { FirebaseClientProvider } from './client-provider';

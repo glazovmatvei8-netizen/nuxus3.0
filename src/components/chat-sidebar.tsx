@@ -281,8 +281,10 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
   const [savedAccounts, setSavedAccounts] = useState<Record<number, any>>({});
 
   useEffect(() => {
-    const saved = localStorage.getItem('nuxus_multi_accounts');
-    if (saved) setSavedAccounts(JSON.parse(saved));
+    const saved = localStorage.getItem('nuxus_recent_emojis');
+    // dummy check to ensure savedAccounts is initialized from local storage
+    const accs = localStorage.getItem('nuxus_multi_accounts');
+    if (accs) setSavedAccounts(JSON.parse(accs));
   }, []);
 
   const userProfileRef = useMemo(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user?.uid]);

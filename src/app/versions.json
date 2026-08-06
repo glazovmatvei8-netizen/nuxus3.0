@@ -1,12 +1,12 @@
 {
-  "latestVersion": "6.1.5",
+  "latestVersion": "6.3.2",
   "qesVersion": "25.2",
   "build": "Absolute-Core-Stability",
   "sizeMb": 112,
   "changelog": [
-    "Fixed: Registration RF-restriction bypass for international numbers (+49, +995 etc)",
-    "Fixed: Country selector scrollability on mobile devices",
-    "Improved: Smart validation (Russia blocked, Kazakhstan allowed)",
-    "Stable: Custom Primary Color application restored"
+    "Fixed: ChunkLoadError and originalFactory.call issue by decoupling barrel imports",
+    "Fixed: iOS long-press text selection in chat sidebar",
+    "Fixed: ReferenceError: ScrollArea in specific mobile views",
+    "Improved: Direct import strategy for Firebase providers"
   ]
 }
