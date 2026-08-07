@@ -2,14 +2,13 @@
 'use client';
 
 /**
- * NUXUS FIREBASE CORE V7.1.0
- * Единая точка входа для всех сервисов и хуков.
- * ОПТИМИЗИРОВАНО: Предотвращение циклических ссылок.
+ * NUXUS FIREBASE CORE V9.7.0
+ * Единая точка входа для хуков и утилит.
+ * ВНИМАНИЕ: FirebaseClientProvider исключен для предотвращения циклических ссылок.
  */
 
 export * from './app';
 export * from './provider';
-export * from './client-provider';
 export { useCollection } from './firestore/use-collection';
 export { useDoc } from './firestore/use-doc';
 export { useUser } from './provider';

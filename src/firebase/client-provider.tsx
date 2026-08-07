@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo, type ReactNode } from 'react';
@@ -11,8 +12,8 @@ interface FirebaseClientProviderProps {
 }
 
 /**
- * ГЛОБАЛЬНЫЙ МЕНЕДЖЕР ИЗОЛИРОВАННЫХ УЗЛОВ NUXUS V9.5.0
- * ОПТИМИЗИРОВАНО: Устранение ChunkLoadError путем корректного резолвинга зависимостей.
+ * ГЛОБАЛЬНЫЙ МЕНЕДЖЕР ИЗОЛИРОВАННЫХ УЗЛОВ NUXUS V9.7.0
+ * Использование прямых импортов для стабильности графа зависимостей.
  */
 export function FirebaseClientProvider({ children }: FirebaseClientProviderProps) {
   const { activeAccountIndex } = useAppState();
