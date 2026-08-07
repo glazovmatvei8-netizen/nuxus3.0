@@ -1,9 +1,9 @@
-
 'use client';
 
 /**
- * NUXUS STORE PROXY V6.1.1
- * Перенаправляет импорты на .tsx версию для предотвращения ошибки 'originalFactory.call'.
+ * NUXUS STORE PROXY V9.5.0
+ * Этот файл очищен для предотвращения конфликта с store.tsx.
+ * Все импорты перенаправлены на .tsx версию через Next.js resolver.
  */
 
 export * from './store.tsx';

@@ -3,7 +3,7 @@
 import React, { useMemo, type ReactNode } from 'react';
 import { FirebaseProvider } from './provider';
 import { initializeFirebase } from './app'; 
-import { useAppState } from '@/lib/store.tsx'; 
+import { useAppState } from '@/lib/store'; 
 import { setPersistence, browserLocalPersistence } from 'firebase/auth';
 
 interface FirebaseClientProviderProps {
@@ -11,8 +11,8 @@ interface FirebaseClientProviderProps {
 }
 
 /**
- * ГЛОБАЛЬНЫЙ МЕНЕДЖЕР ИЗОЛИРОВАННЫХ УЗЛОВ NUXUS V6.5.0
- * Использует прямые импорты для устранения ошибок originalFactory.call
+ * ГЛОБАЛЬНЫЙ МЕНЕДЖЕР ИЗОЛИРОВАННЫХ УЗЛОВ NUXUS V9.5.0
+ * ОПТИМИЗИРОВАНО: Устранение ChunkLoadError путем корректного резолвинга зависимостей.
  */
 export function FirebaseClientProvider({ children }: FirebaseClientProviderProps) {
   const { activeAccountIndex } = useAppState();
@@ -20,7 +20,7 @@ export function FirebaseClientProvider({ children }: FirebaseClientProviderProps
   const instances = useMemo(() => {
     if (typeof window === 'undefined') return [];
     return [0, 1, 2, 3, 4].map(i => {
-      const instance = initializeFirebase(`nuxus_node_v65_${i}`);
+      const instance = initializeFirebase(`nuxus_node_v95_${i}`);
       if (instance.auth) {
         setPersistence(instance.auth, browserLocalPersistence).catch(() => {});
       }
@@ -34,7 +34,7 @@ export function FirebaseClientProvider({ children }: FirebaseClientProviderProps
   }, [instances, activeAccountIndex]);
 
   if (!activeInstance.firebaseApp || !activeInstance.firestore || !activeInstance.auth) {
-    return <>{children}</>;
+    return <div className="h-screen w-full bg-[#020205]" />;
   }
 
   return (

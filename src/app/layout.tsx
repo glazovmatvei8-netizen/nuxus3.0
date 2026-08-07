@@ -1,7 +1,7 @@
 
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
-import { AppProvider } from '@/lib/store.tsx'; 
+import { AppProvider } from '@/lib/store'; 
 import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { ThemeApplier } from '@/components/theme-applier';
