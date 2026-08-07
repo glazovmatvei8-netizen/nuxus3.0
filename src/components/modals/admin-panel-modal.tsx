@@ -9,14 +9,15 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Progress } from '@/components/ui/progress';
+import { Textarea } from '@/components/ui/textarea';
 import { useFirestore, useCollection } from '@/firebase/provider';
-import { collection, query, doc, limit, updateDoc, writeBatch, increment, orderBy } from 'firebase/firestore';
+import { collection, query, doc, limit, updateDoc, writeBatch, increment, orderBy, deleteDoc } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   ShieldAlert, Users, Star, Ban, Check, Activity, Terminal as TerminalIcon, 
-  Zap, ShieldCheck, Search, Crown, Shield, AlertTriangle, SearchCode, ShieldQuestion, XCircle, UserX, Ghost, Loader2, Phone
+  Zap, ShieldCheck, Search, Crown, Shield, AlertTriangle, SearchCode, ShieldQuestion, XCircle, UserX, Ghost, Loader2, Phone, MessageSquare, Scale, CheckCircle2
 } from 'lucide-react';
-import type { User, TopUpRequest } from '@/lib/types';
+import type { User, TopUpRequest, Appeal } from '@/lib/types';
 import { formatDisplayName, cn, isUserAnomaly } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
@@ -24,22 +25,30 @@ import { ru } from 'date-fns/locale';
 import { useAppState } from '@/lib/store.tsx';
 
 /**
- * MISSION CONTROL V7.2.0 «AEGIS GHOST PURGE»
- * ADDED: Anomaly detection and Mass Ban for "User" names/empty IDs.
+ * MISSION CONTROL V8.8.0 «AEGIS JUSTICE»
+ * ADDED: Appeals management for banned users.
  */
 export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const db = useFirestore();
   const { toast } = useToast();
   const { setInspectedUserId } = useAppState();
   
-  const [activeTab, setActiveTab] = useState('requests');
+  const [activeTab, setActiveTab] = useState('appeals');
   const [userSearch, setUserSearch] = useState('');
-  const [terminalLines, setTerminalLines] = useState<string[]>(["Nuxus Aegis Console v7.2.0", "Security Protocol: ACTIVE"]);
+  const [terminalLines, setTerminalLines] = useState<string[]>(["Nuxus Aegis Console v8.8.0", "Justice Protocol: ACTIVE"]);
   const [terminalInput, setTerminalInput] = useState('');
+  const [adminComment, setAdminComment] = useState('');
   
   const [isAuditing, setIsAuditing] = useState(false);
   const [auditProgress, setUpdateAuditProgress] = useState(0);
   const [auditResults, setAuditResults] = useState<{suspiciousNodes: {user: User, reason: string}[], safeNodesCount: number} | null>(null);
+
+  // APPEALS DATA
+  const appealsQuery = useMemo(() => {
+    if (!db) return null;
+    return query(collection(db, 'appeals'), orderBy('createdAt', 'desc'), limit(50));
+  }, [db]);
+  const { data: appeals } = useCollection<Appeal>(appealsQuery);
 
   const topUpRequestsQuery = useMemo(() => {
     if (!db) return null;
@@ -75,7 +84,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     const cmd = terminalInput.trim().toLowerCase();
     if (!cmd) return;
     let res = "";
-    if (cmd === 'status') res = "Kernel: STABLE | Aegis: ACTIVE | Anomalies Detected: " + (stats.total - stats.valid);
+    if (cmd === 'status') res = "Kernel: STABLE | Aegis: ACTIVE | Pending Appeals: " + appeals?.filter(a => a.status === 'pending').length;
     else if (cmd === 'audit') { handleStartAudit(); return; }
     else if (cmd === 'clear') { setTerminalLines([]); setTerminalInput(''); return; }
     else res = `Signal not recognized: ${cmd}`;
@@ -95,9 +104,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
       setUpdateAuditProgress(p);
       if (p >= 100) {
         clearInterval(interval);
-        
         const suspicious: {user: User, reason: string}[] = [];
-
         allUsers.forEach(u => {
           if (isUserAnomaly(u)) {
              const name = (u.name || '').trim().toLowerCase();
@@ -105,12 +112,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
              suspicious.push({ user: u, reason });
           }
         });
-
-        setAuditResults({ 
-          suspiciousNodes: suspicious, 
-          safeNodesCount: allUsers.length - suspicious.length 
-        });
-        
+        setAuditResults({ suspiciousNodes: suspicious, safeNodesCount: allUsers.length - suspicious.length });
         setIsAuditing(false);
         toast({ title: "Аудит завершен", description: `Найдено ${suspicious.length} аномалий.` });
       }
@@ -120,19 +122,40 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   const handleMassBan = async () => {
     if (!db || !auditResults || auditResults.suspiciousNodes.length === 0) return;
     if (!confirm(`Аннигилировать доступ для ${auditResults.suspiciousNodes.length} узлов?`)) return;
-
     const batch = writeBatch(db);
     auditResults.suspiciousNodes.forEach(item => {
       batch.update(doc(db, 'users', item.user.id), { isBanned: true, bannedAt: new Date().toISOString() });
     });
-    
     try {
       await batch.commit();
       toast({ title: "Протокол Aegis исполнен", description: "Все аномалии заблокированы." });
       setAuditResults(null);
-    } catch (e) {
-      toast({ title: "Сбой протокола", variant: "destructive" });
+    } catch (e) { toast({ title: "Сбой протокола", variant: "destructive" }); }
+  };
+
+  // APPEAL ACTIONS
+  const handleAppealJustice = async (appeal: Appeal, action: 'accept' | 'reject' | 'comment') => {
+    if (!db) return;
+    const batch = writeBatch(db);
+    const appealRef = doc(db, 'appeals', appeal.id);
+    const userRef = doc(db, 'users', appeal.userId);
+
+    if (action === 'accept' || action === 'comment') {
+      batch.update(userRef, { isBanned: false, bannedAt: null });
+      if (action === 'comment' && adminComment.trim()) {
+        batch.update(userRef, { statusText: `[Admin]: ${adminComment}` });
+      }
+      batch.update(appealRef, { status: 'accepted', adminComment: adminComment.trim() || 'Разблокирован', resolvedAt: new Date().toISOString() });
+      toast({ title: "Узел восстановлен" });
+    } else {
+      batch.update(appealRef, { status: 'rejected', adminComment: adminComment.trim() || 'Отказано', resolvedAt: new Date().toISOString() });
+      toast({ title: "Апелляция отклонена" });
     }
+
+    try {
+      await batch.commit();
+      setAdminComment('');
+    } catch (e) { toast({ title: "Сбой правосудия", variant: "destructive" }); }
   };
 
   const handleApprove = async (req: TopUpRequest) => {
@@ -162,14 +185,14 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               </div>
               <div className="flex flex-col text-left">
                 <DialogTitle className="text-3xl font-black uppercase italic text-white tracking-tighter">MISSION CONTROL</DialogTitle>
-                <DialogDescription className="text-[10px] font-black uppercase text-primary/60 mt-1">Aegis Security Gateway</DialogDescription>
+                <DialogDescription className="text-[10px] font-black uppercase text-primary/60 mt-1">Aegis Executive Dashboard</DialogDescription>
               </div>
             </div>
             <div className="hidden sm:flex bg-black/40 border border-white/5 px-6 py-3 rounded-2xl items-center gap-4">
                <Activity className="w-4 h-4 text-green-500" />
                <div className="flex flex-col">
                  <span className="text-xs font-black text-white">{stats.valid} / {stats.total}</span>
-                 <span className="text-[7px] font-black text-white/20 uppercase tracking-widest">Nodes Verified</span>
+                 <span className="text-[7px] font-black text-white/20 uppercase tracking-widest">Integrity Secured</span>
                </div>
             </div>
           </div>
@@ -177,16 +200,82 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
           <div className="px-8 mt-6">
-            <TabsList className="grid grid-cols-4 bg-white/5 p-1.5 rounded-2xl border border-white/5">
-              <TabsTrigger value="requests" className="text-[9px] font-black uppercase tracking-widest">Заявки</TabsTrigger>
+            <TabsList className="grid grid-cols-5 bg-white/5 p-1.5 rounded-2xl border border-white/5">
+              <TabsTrigger value="appeals" className="text-[9px] font-black uppercase tracking-widest">Апелляции</TabsTrigger>
+              <TabsTrigger value="requests" className="text-[9px] font-black uppercase tracking-widest">Банк</TabsTrigger>
               <TabsTrigger value="users" className="text-[9px] font-black uppercase tracking-widest">Узлы</TabsTrigger>
-              <TabsTrigger value="shield" className="text-[9px] font-black uppercase tracking-widest">Безопасность</TabsTrigger>
+              <TabsTrigger value="shield" className="text-[9px] font-black uppercase tracking-widest">Защита</TabsTrigger>
               <TabsTrigger value="terminal" className="text-[9px] font-black uppercase tracking-widest">Консоль</TabsTrigger>
             </TabsList>
           </div>
 
           <ScrollArea className="flex-1">
             <div className="p-8 pb-32">
+              
+              <TabsContent value="appeals" className="m-0 space-y-6">
+                 {appeals?.filter(a => a.status === 'pending').length === 0 ? (
+                   <div className="text-center py-20 opacity-20">
+                      <Scale className="w-16 h-16 mx-auto mb-4" />
+                      <p className="text-[11px] font-black uppercase tracking-[0.5em]">Жалобы отсутствуют</p>
+                   </div>
+                 ) : (
+                   <div className="space-y-4">
+                      {appeals?.filter(a => a.status === 'pending').map(appeal => (
+                        <div key={appeal.id} className="bg-white/[0.03] p-6 rounded-[2.5rem] border border-white/5 space-y-6 group hover:bg-white/[0.05] transition-all shadow-xl">
+                           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                              <div className="flex items-center gap-4">
+                                 <UserAvatar userId={appeal.userId} className="h-14 w-14 border border-white/10" />
+                                 <div className="flex flex-col text-left">
+                                    <span className="text-lg font-black text-white uppercase italic">{appeal.userName}</span>
+                                    <span className="text-[9px] text-white/30 font-black uppercase tracking-widest">ID: {appeal.userId} • {appeal.userPhone}</span>
+                                 </div>
+                              </div>
+                              <div className="px-4 py-2 rounded-xl bg-primary/10 border border-primary/20">
+                                 <span className="text-[9px] font-black text-primary uppercase tracking-widest">Входящий сигнал</span>
+                              </div>
+                           </div>
+                           
+                           <div className="bg-black/40 p-5 rounded-2xl border border-white/5">
+                              <p className="text-sm text-white/90 leading-relaxed italic">"{appeal.reason}"</p>
+                           </div>
+
+                           <div className="space-y-3">
+                              <Label className="text-[8px] font-black uppercase text-white/40 ml-2">Ваш ответ / комментарий</Label>
+                              <Input 
+                                placeholder="Введите текст сообщения или обоснования..." 
+                                value={adminComment} 
+                                onChange={e => setAdminComment(e.target.value)}
+                                className="h-12 bg-white/5 border-white/5 rounded-xl font-bold"
+                              />
+                           </div>
+
+                           <div className="flex flex-wrap gap-3">
+                              <Button 
+                                onClick={() => handleAppealJustice(appeal, 'accept')}
+                                className="h-12 px-6 bg-green-500 text-white rounded-xl font-black uppercase text-[10px] tracking-widest hover:scale-105 transition-all"
+                              >
+                                 <CheckCircle2 className="w-4 h-4 mr-2" /> Принять и разбанить
+                              </Button>
+                              <Button 
+                                onClick={() => handleAppealJustice(appeal, 'comment')}
+                                className="h-12 px-6 bg-primary text-white rounded-xl font-black uppercase text-[10px] tracking-widest hover:scale-105 transition-all"
+                              >
+                                 <MessageSquare className="w-4 h-4 mr-2" /> Разбанить с комм.
+                              </Button>
+                              <Button 
+                                onClick={() => handleAppealJustice(appeal, 'reject')}
+                                variant="destructive"
+                                className="h-12 px-6 rounded-xl font-black uppercase text-[10px] tracking-widest hover:scale-105 transition-all"
+                              >
+                                 <XCircle className="w-4 h-4 mr-2" /> Отказать
+                              </Button>
+                           </div>
+                        </div>
+                      ))}
+                   </div>
+                 )}
+              </TabsContent>
+
               <TabsContent value="requests" className="m-0 space-y-4">
                 {requests?.filter(r => r.status === 'pending').map(req => (
                   <div key={req.id} className="bg-white/[0.03] p-6 rounded-[2.2rem] border border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4 group hover:bg-white/[0.05] transition-all">

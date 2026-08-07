@@ -66,6 +66,19 @@ export interface TopUpRequest {
   createdAt: string;
 }
 
+export interface Appeal {
+  id: string;
+  userId: string;
+  userName: string;
+  userPhone: string;
+  userEmail?: string;
+  reason: string;
+  status: 'pending' | 'accepted' | 'rejected';
+  adminComment?: string;
+  createdAt: string;
+  resolvedAt?: string;
+}
+
 export interface PollOption {
   id: string;
   text: string;
@@ -211,6 +224,7 @@ export interface UserSettings {
   chatBackground?: string;
   chatBackgroundFit?: 'cover' | 'contain';
   customAppIconUrl?: string;
+  customAppIconId?: string;
   customPrimaryColor?: string;
   bubbleStyle?: 'default' | 'neon' | 'gold' | 'ocean';
   messageSize: 'small' | 'medium' | 'large';
