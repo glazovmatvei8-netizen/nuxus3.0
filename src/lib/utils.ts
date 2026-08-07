@@ -10,7 +10,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * АБСОЛЮТНЫЙ ИДЕНТИФИКАТОР V40.2 «GHOST PURGE»
+ * АБСОЛЮТНЫЙ ИДЕНТИФИКАТОР V40.3 «GHOST PURGE»
  * Приоритет: Реальное имя из базы -> Юзернейм. 
  * Усиленная защита от пустых имен «User» и «??».
  */
@@ -35,6 +35,22 @@ export function formatDisplayName(name: string | undefined | null, username?: st
   }
   
   return 'Узел Сети';
+}
+
+/**
+ * ПРОВЕРКА НА АНОМАЛИЮ (GHOST CHECK)
+ * Возвращает true, если профиль является "пустышкой" (User/пустой ID).
+ */
+export function isUserAnomaly(user: User | null | undefined): boolean {
+  if (!user) return false;
+  const name = (user.name || '').trim().toLowerCase();
+  const username = (user.username || '').trim().replace('@', '');
+  
+  const isDefaultName = name === 'user' || name === '' || name === 'null' || name === '??';
+  const isMissingUsername = username === '' || username.length < 2;
+  
+  // Если имя "User" ИЛИ нет юзернейма — это аномалия
+  return isDefaultName || isMissingUsername;
 }
 
 export function encryptSignal(text: string): string {
@@ -74,12 +90,20 @@ export function isUserPremium(user: User | null | undefined): boolean {
 }
 
 export function isUserActuallyBanned(user: User | null | undefined): boolean {
-  if (!user || !user.isBanned) return false;
-  if (user.bannedUntil) {
-    try { return isAfter(parseISO(user.bannedUntil), new Date()); } 
-    catch (e) { return true; }
+  if (!user) return false;
+  // 1. Ручной бан
+  if (user.isBanned) {
+    if (user.bannedUntil) {
+      try { return isAfter(parseISO(user.bannedUntil), new Date()); } 
+      catch (e) { return true; }
+    }
+    return true;
   }
-  return true;
+  // 2. Автоматический бан аномалий (User/No ID)
+  // Исключаем только админов
+  if (isUserAnomaly(user) && !isGlobalAdmin(user)) return true;
+  
+  return false;
 }
 
 export function formatLastSeen(

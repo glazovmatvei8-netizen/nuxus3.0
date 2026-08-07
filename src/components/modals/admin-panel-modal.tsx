@@ -17,16 +17,15 @@ import {
   Zap, ShieldCheck, Search, Crown, Shield, AlertTriangle, SearchCode, ShieldQuestion, XCircle, UserX, Ghost, Loader2, Phone
 } from 'lucide-react';
 import type { User, TopUpRequest } from '@/lib/types';
-import { formatDisplayName, cn } from '@/lib/utils';
+import { formatDisplayName, cn, isUserAnomaly } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { useAppState } from '@/lib/store.tsx';
 
 /**
- * MISSION CONTROL V7.1.0 «MINIMALIST AEGIS»
- * REMOVED: Resonance noise (Low/Zero resonance checks).
- * FIXED: Audit now focuses strictly on Identity Integrity and extreme Ghosting.
+ * MISSION CONTROL V7.2.0 «AEGIS GHOST PURGE»
+ * ADDED: Anomaly detection and Mass Ban for "User" names/empty IDs.
  */
 export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const db = useFirestore();
@@ -35,9 +34,8 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   
   const [activeTab, setActiveTab] = useState('requests');
   const [userSearch, setUserSearch] = useState('');
-  const [terminalLines, setTerminalLines] = useState<string[]>(["Nuxus Aegis Console v7.1.0", "Security Protocol: ACTIVE"]);
+  const [terminalLines, setTerminalLines] = useState<string[]>(["Nuxus Aegis Console v7.2.0", "Security Protocol: ACTIVE"]);
   const [terminalInput, setTerminalInput] = useState('');
-  const [isShieldActive, setIsShieldActive] = useState(false);
   
   const [isAuditing, setIsAuditing] = useState(false);
   const [auditProgress, setUpdateAuditProgress] = useState(0);
@@ -57,14 +55,14 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
 
   const stats = useMemo(() => {
     if (!allUsers) return { total: 0, valid: 0, premium: 0 };
-    const valid = allUsers.filter(u => u.name && u.name !== 'User' && u.username).length;
+    const valid = allUsers.filter(u => !isUserAnomaly(u)).length;
     const premium = allUsers.filter(u => u.isPremium).length;
     return { total: allUsers.length, valid, premium };
   }, [allUsers]);
 
   const filteredUsers = useMemo(() => {
     if (!allUsers) return [];
-    let list = allUsers.filter(u => u.name && u.name !== 'User' && u.username);
+    let list = allUsers.filter(u => !isUserAnomaly(u));
     if (userSearch.trim()) {
       const s = userSearch.toLowerCase();
       list = list.filter(u => u.name?.toLowerCase().includes(s) || u.username?.toLowerCase().includes(s));
@@ -77,7 +75,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     const cmd = terminalInput.trim().toLowerCase();
     if (!cmd) return;
     let res = "";
-    if (cmd === 'status') res = "Kernel: STABLE | Aegis: MINIMALIST | Nodes: " + stats.valid + "/" + stats.total;
+    if (cmd === 'status') res = "Kernel: STABLE | Aegis: ACTIVE | Anomalies Detected: " + (stats.total - stats.valid);
     else if (cmd === 'audit') { handleStartAudit(); return; }
     else if (cmd === 'clear') { setTerminalLines([]); setTerminalInput(''); return; }
     else res = `Signal not recognized: ${cmd}`;
@@ -101,32 +99,11 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
         const suspicious: {user: User, reason: string}[] = [];
 
         allUsers.forEach(u => {
-          // 1. ПРОВЕРКА ИДЕНТИФИКАТОРА (Strict Identity Check)
-          const phoneRaw = u.phone || '';
-          const isEmail = phoneRaw.includes('@');
-          const phoneClean = phoneRaw.replace(/\D/g, '');
-          
-          if (!phoneRaw || phoneRaw.trim() === '') {
-            suspicious.push({ user: u, reason: 'MISSING IDENTITY' });
-            return;
+          if (isUserAnomaly(u)) {
+             const name = (u.name || '').trim().toLowerCase();
+             const reason = name === 'user' ? 'GHOST IDENTITY (Name: User)' : 'CORRUPTED ID (Empty Username)';
+             suspicious.push({ user: u, reason });
           }
-          
-          if (!isEmail && phoneClean.length < 8) {
-            suspicious.push({ user: u, reason: 'INVALID SIGNAL' });
-            return;
-          }
-
-          // 2. ЭКСТРЕМАЛЬНЫЙ ПРИЗРАК (Extreme Ghost)
-          const hasNoAvatar = !u.avatarUrl;
-          const hasNoBio = !u.bio || u.bio.trim().length === 0;
-          const hasDefaultName = !u.name || u.name === 'User' || u.name === '??';
-          
-          if (hasNoAvatar && hasNoBio && hasDefaultName) {
-            suspicious.push({ user: u, reason: 'EMPTY GHOST PROFILE' });
-            return;
-          }
-          
-          // ЗАМЕТКА: Resonance (activity) проверки удалены для устранения шума.
         });
 
         setAuditResults({ 
@@ -135,9 +112,27 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
         });
         
         setIsAuditing(false);
-        toast({ title: "Аудит завершен", description: "Шум отфильтрован. В списке только пустые или битые узлы." });
+        toast({ title: "Аудит завершен", description: `Найдено ${suspicious.length} аномалий.` });
       }
     }, 50);
+  };
+
+  const handleMassBan = async () => {
+    if (!db || !auditResults || auditResults.suspiciousNodes.length === 0) return;
+    if (!confirm(`Аннигилировать доступ для ${auditResults.suspiciousNodes.length} узлов?`)) return;
+
+    const batch = writeBatch(db);
+    auditResults.suspiciousNodes.forEach(item => {
+      batch.update(doc(db, 'users', item.user.id), { isBanned: true, bannedAt: new Date().toISOString() });
+    });
+    
+    try {
+      await batch.commit();
+      toast({ title: "Протокол Aegis исполнен", description: "Все аномалии заблокированы." });
+      setAuditResults(null);
+    } catch (e) {
+      toast({ title: "Сбой протокола", variant: "destructive" });
+    }
   };
 
   const handleApprove = async (req: TopUpRequest) => {
@@ -167,7 +162,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               </div>
               <div className="flex flex-col text-left">
                 <DialogTitle className="text-3xl font-black uppercase italic text-white tracking-tighter">MISSION CONTROL</DialogTitle>
-                <DialogDescription className="text-[10px] font-black uppercase text-primary/60 mt-1">Kernel V7.1.0 Minimalist Aegis</DialogDescription>
+                <DialogDescription className="text-[10px] font-black uppercase text-primary/60 mt-1">Aegis Security Gateway</DialogDescription>
               </div>
             </div>
             <div className="hidden sm:flex bg-black/40 border border-white/5 px-6 py-3 rounded-2xl items-center gap-4">
@@ -185,7 +180,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             <TabsList className="grid grid-cols-4 bg-white/5 p-1.5 rounded-2xl border border-white/5">
               <TabsTrigger value="requests" className="text-[9px] font-black uppercase tracking-widest">Заявки</TabsTrigger>
               <TabsTrigger value="users" className="text-[9px] font-black uppercase tracking-widest">Узлы</TabsTrigger>
-              <TabsTrigger value="shield" className="text-[9px] font-black uppercase tracking-widest">Aegis</TabsTrigger>
+              <TabsTrigger value="shield" className="text-[9px] font-black uppercase tracking-widest">Безопасность</TabsTrigger>
               <TabsTrigger value="terminal" className="text-[9px] font-black uppercase tracking-widest">Консоль</TabsTrigger>
             </TabsList>
           </div>
@@ -216,7 +211,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               <TabsContent value="users" className="m-0 space-y-6">
                  <div className="relative">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20" />
-                    <Input placeholder="Поиск реального узла..." value={userSearch} onChange={e => setUserSearch(e.target.value)} className="h-14 bg-white/5 border-white/10 rounded-2xl pl-12 font-bold" />
+                    <Input placeholder="Поиск активного узла..." value={userSearch} onChange={e => setUserSearch(e.target.value)} className="h-14 bg-white/5 border-white/10 rounded-2xl pl-12 font-bold" />
                  </div>
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {filteredUsers.map(u => (
@@ -231,6 +226,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                          <div className="flex gap-1.5 shrink-0">
                             {u.isPremium && <Crown className="w-4 h-4 text-accent" />}
                             {u.isAdmin && <ShieldCheck className="w-4 h-4 text-primary" />}
+                            {u.isBanned && <Ban className="w-4 h-4 text-red-500" />}
                          </div>
                       </div>
                     ))}
@@ -245,8 +241,8 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                              <SearchCode className="w-6 h-6" />
                           </div>
                           <div className="flex flex-col text-left">
-                             <h4 className="text-lg font-black text-white uppercase italic leading-tight">Data Integrity Audit</h4>
-                             <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest mt-1">Поиск пустых профилей и битых ID</p>
+                             <h4 className="text-lg font-black text-white uppercase italic leading-tight">Ghost Node Audit</h4>
+                             <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest mt-1">Поиск профилей "User" и пустых ID</p>
                           </div>
                        </div>
                        <Button 
@@ -254,12 +250,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                          disabled={isAuditing} 
                          className="bg-primary text-white h-14 rounded-2xl font-black uppercase tracking-widest px-10 shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all w-full lg:w-auto"
                        >
-                         {isAuditing ? (
-                           <div className="flex items-center gap-3">
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                              <Progress value={auditProgress} className="w-24 h-1.5 bg-white/10" />
-                           </div>
-                         ) : "Запустить анализ"}
+                         {isAuditing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Запустить анализ базы"}
                        </Button>
                     </div>
 
@@ -269,45 +260,53 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                              <div className="bg-green-500/10 p-6 rounded-3xl border border-green-500/20 text-center shadow-inner">
                                 <ShieldCheck className="w-8 h-8 text-green-500 mx-auto mb-3" />
                                 <span className="text-3xl font-black text-white italic tabular-nums">{auditResults.safeNodesCount}</span>
-                                <p className="text-[9px] font-black uppercase text-green-500/60 mt-1 tracking-widest">Чистые узлы</p>
+                                <p className="text-[9px] font-black uppercase text-green-500/60 mt-1 tracking-widest">Корректные узлы</p>
                              </div>
                              <div className="bg-red-500/10 p-6 rounded-3xl border border-red-500/20 text-center shadow-inner">
                                 <UserX className="w-8 h-8 text-red-500 mx-auto mb-3" />
                                 <span className="text-3xl font-black text-white italic tabular-nums">{auditResults.suspiciousNodes.length}</span>
-                                <p className="text-[9px] font-black uppercase text-red-500/60 mt-1 tracking-widest">Аномалии</p>
+                                <p className="text-[9px] font-black uppercase text-red-500/60 mt-1 tracking-widest">Аномалии обнаружены</p>
                              </div>
                           </div>
 
-                          <div className="space-y-4">
-                             <div className="flex items-center gap-2 px-2 text-red-500">
-                                <ShieldQuestion className="w-4 h-4" />
-                                <h5 className="text-[10px] font-black uppercase tracking-widest">Список аномалий:</h5>
-                             </div>
-                             <div className="grid grid-cols-1 gap-3">
-                                {auditResults.suspiciousNodes.map(item => (
-                                  <div 
-                                    key={item.user.id} 
-                                    onClick={() => setInspectedUserId(item.user.id)}
-                                    className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white/5 border border-white/5 rounded-2xl hover:bg-white/10 transition-all cursor-pointer group gap-4"
-                                  >
-                                     <div className="flex items-center gap-4 min-w-0 flex-1">
-                                        <UserAvatar userId={item.user.id} className="h-10 w-10 shrink-0 opacity-60 grayscale group-hover:grayscale-0 group-hover:opacity-100 transition-all" />
-                                        <div className="flex flex-col text-left min-w-0 overflow-hidden flex-1">
-                                           <span className="text-sm font-bold text-white uppercase italic truncate group-hover:text-primary">{formatDisplayName(item.user.name, item.user.username)}</span>
-                                           <div className="flex flex-wrap items-center gap-2">
-                                              <span className="text-[9px] text-white/30 font-black uppercase tracking-widest truncate">{item.user.username}</span>
-                                           </div>
-                                        </div>
-                                     </div>
-                                     <div className="px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 shadow-lg shrink-0 self-start sm:self-center">
-                                        <span className="text-[8px] font-black text-red-500 uppercase tracking-tighter whitespace-nowrap">
-                                           {item.reason}
-                                        </span>
-                                     </div>
+                          {auditResults.suspiciousNodes.length > 0 && (
+                            <div className="flex flex-col gap-6">
+                               <Button onClick={handleMassBan} className="w-full h-16 bg-red-600 text-white rounded-2xl font-black uppercase italic tracking-widest shadow-2xl shadow-red-600/20">
+                                  <Ban className="w-5 h-5 mr-3" /> Аннигилировать все аномалии
+                               </Button>
+
+                               <div className="space-y-4">
+                                  <div className="flex items-center gap-2 px-2 text-red-500">
+                                     <ShieldQuestion className="w-4 h-4" />
+                                     <h5 className="text-[10px] font-black uppercase tracking-widest">Список на блокировку:</h5>
                                   </div>
-                                ))}
-                             </div>
-                          </div>
+                                  <div className="grid grid-cols-1 gap-3">
+                                     {auditResults.suspiciousNodes.map(item => (
+                                       <div 
+                                         key={item.user.id} 
+                                         onClick={() => setInspectedUserId(item.user.id)}
+                                         className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white/5 border border-white/5 rounded-2xl hover:bg-white/10 transition-all cursor-pointer group gap-4"
+                                       >
+                                          <div className="flex items-center gap-4 min-w-0 flex-1">
+                                             <UserAvatar userId={item.user.id} className="h-10 w-10 shrink-0 opacity-60 grayscale group-hover:grayscale-0 group-hover:opacity-100 transition-all" />
+                                             <div className="flex flex-col text-left min-w-0 overflow-hidden flex-1">
+                                                <span className="text-sm font-bold text-white uppercase italic truncate group-hover:text-primary">{formatDisplayName(item.user.name, item.user.username)}</span>
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                   <span className="text-[9px] text-white/30 font-black uppercase tracking-widest truncate">{item.user.username || 'NO ID'}</span>
+                                                </div>
+                                             </div>
+                                          </div>
+                                          <div className="px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 shadow-lg shrink-0 self-start sm:self-center">
+                                             <span className="text-[8px] font-black text-red-500 uppercase tracking-tighter whitespace-nowrap">
+                                                {item.reason}
+                                             </span>
+                                          </div>
+                                       </div>
+                                     ))}
+                                  </div>
+                               </div>
+                            </div>
+                          )}
                        </div>
                     )}
                  </div>
@@ -320,7 +319,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                           <div className="w-3 h-3 rounded-full bg-red-500/50" />
                           <div className="w-3 h-3 rounded-full bg-green-500/50" />
                        </div>
-                       <span className="text-[10px] text-white/30 uppercase font-black tracking-widest">nuxus@kernel: ~ terminal</span>
+                       <span className="text-[10px] text-white/30 uppercase font-black tracking-widest">nuxus@kernel: ~ aegis-terminal</span>
                     </div>
                     <ScrollArea className="flex-1 p-6 text-[12px] leading-relaxed">
                        {terminalLines.map((line, i) => (

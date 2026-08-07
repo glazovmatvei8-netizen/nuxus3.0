@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useEffect, useState, useMemo } from 'react';
@@ -5,20 +6,20 @@ import { useUser, useFirestore, useAuth, useDoc } from '@/firebase/provider';
 import { useAppState } from '@/lib/store.tsx';
 import AuthScreen from '@/components/auth-screen';
 import ChatMain from '@/components/chat-main';
-import { ShieldAlert, Fingerprint, ShieldCheck, Loader2, LogOut, Key } from 'lucide-react';
-import { doc, collection, query, where, getDocs, limit, addDoc } from 'firebase/firestore';
+import { ShieldAlert, Fingerprint, ShieldCheck, Loader2, LogOut, Key, UserX } from 'lucide-react';
+import { doc } from 'firebase/firestore';
 import type { User as UserType } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { signOut } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
-import { isUserActuallyBanned } from '@/lib/utils';
+import { isUserActuallyBanned, isUserAnomaly } from '@/lib/utils';
 import { NuxusLogo } from '@/components/nuxus-logo';
 import { authenticator } from 'otplib';
 
 /**
- * HOME GATE V7.9.0
- * REMOVED: IosInstaller (Fake App Store) screen as requested.
+ * HOME GATE V8.7.0
+ * ADDED: Anomaly detection auto-blocking.
  */
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -42,6 +43,7 @@ export default function Home() {
   const { data: profile, isLoading: isProfileLoading } = useDoc<UserType>(userProfileRef);
   
   const isBanned = isUserActuallyBanned(profile);
+  const isAnomaly = isUserAnomaly(profile);
 
   const handleVerify2FA = () => {
     if (!profile) return;
@@ -74,7 +76,29 @@ export default function Home() {
   }
 
   if (!user) return <AuthScreen />;
-  if (isBanned) return <div className="h-screen flex flex-col items-center justify-center bg-[#050505] p-6 text-center text-white"><ShieldAlert className="w-20 h-20 text-destructive mb-6" /><h1 className="text-4xl font-black">УЗЕЛ ОТКЛЮЧЕН</h1></div>;
+
+  // SCREEN: BANNED OR ANOMALY
+  if (isBanned || isAnomaly) {
+    return (
+      <div className="h-screen flex flex-col items-center justify-center bg-[#050505] p-8 text-center text-white space-y-8 animate-in fade-in duration-700">
+        <div className="relative">
+          <div className="absolute -inset-10 bg-red-500/20 blur-[60px] rounded-full animate-pulse" />
+          <UserX className="w-24 h-24 text-red-500 relative z-10" />
+        </div>
+        <div className="space-y-4 max-w-sm">
+          <h1 className="text-4xl font-black uppercase italic tracking-tighter">УЗЕЛ ОТКЛЮЧЕН</h1>
+          <p className="text-[10px] text-red-500/60 font-black uppercase tracking-[0.3em] leading-relaxed">
+            {isAnomaly 
+              ? 'Обнаружена аномалия личности (имя "User" или отсутствие ID). Доступ в Ядро закрыт протоколом Aegis.' 
+              : 'Ваш доступ был аннигилирован за нарушение правил сети Nuxus.'}
+          </p>
+        </div>
+        <Button variant="ghost" onClick={() => signOut(auth!)} className="h-14 px-8 rounded-2xl border border-white/5 text-white/40 font-black uppercase text-[10px] tracking-widest hover:text-white transition-all">
+          Вернуться на шлюз
+        </Button>
+      </div>
+    );
+  }
 
   const isProtected = profile?.twoFactorEnabled || profile?.totpEnabled;
 
