@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useMemo, memo, useRef, useEffect } from 'react';
@@ -133,7 +134,8 @@ const ChatListItem = memo(({
     }
 
     if (isHorizontalSwipe.current) {
-      const newOffset = Math.max(-140, Math.min(140, deltaX));
+      const maxSwipe = 140;
+      const newOffset = Math.max(-maxSwipe, Math.min(maxSwipe, deltaX));
       setOffsetX(newOffset);
       if (e.cancelable) e.preventDefault();
     }
@@ -226,7 +228,7 @@ const ChatListItem = memo(({
               )}
             </div>
           </ContextMenuTrigger>
-          <ContextMenuContent className="w-64 bg-[#0a0a0c]/95 backdrop-blur-[60px] border-white/10 rounded-[2rem] p-2 shadow-2xl animate-in zoom-in-95 duration-300">
+          <ContextMenuContent collisionPadding={12} className="w-64 bg-[#0a0a0c]/95 backdrop-blur-[60px] border-white/10 rounded-[2rem] p-2 shadow-2xl animate-in zoom-in-95 duration-300 z-[1000]">
             {!isSavedMessages && (
               <ContextMenuItem onClick={() => onMarkUnread(chat.id)} className="gap-3 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-primary/10 transition-all">
                 <MessageSquare className="w-4 h-4 text-primary" /> {chat.isManualUnread ? 'ПРОЧИТАНО' : 'НЕ ПРОЧИТАНО'}

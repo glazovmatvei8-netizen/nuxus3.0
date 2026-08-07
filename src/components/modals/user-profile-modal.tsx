@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useMemo } from 'react';
@@ -23,8 +24,8 @@ const ADMIN_ID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 const ORIGIN_DATE = '2024-01-01T00:00:00Z'; 
 
 /**
- * USER PROFILE MODAL V5.3.1 «TRUE IDENTITY»
- * FIXED: Убрано принудительное преобразование имен в CAPS (uppercase).
+ * USER PROFILE MODAL V9.1.0 «ACCESSIBILITY SYNC»
+ * FIXED: Proper DialogTitle and description placement.
  */
 export function UserProfileModal() {
   const db = useFirestore();
@@ -145,37 +146,40 @@ export function UserProfileModal() {
     <>
     <Dialog open={!!inspectedUserId} onOpenChange={(o) => !o && setInspectedUserId(null)}>
       <DialogContent className="max-w-[420px] bg-[#030306]/95 backdrop-blur-[50px] border-white/10 p-0 overflow-hidden h-[90vh] flex flex-col rounded-[3rem] shadow-[0_0_100px_rgba(0,0,0,0.8)] outline-none">
-        <DialogHeader className="sr-only">
-          <DialogTitle>{formatDisplayName(targetUser?.name, targetUser?.username)}</DialogTitle>
-          <DialogDescription>Профиль узла Ядра Nuxus</DialogDescription>
+        <DialogHeader className="p-8 text-center flex flex-col items-center shrink-0 space-y-0 relative border-b border-white/5 bg-gradient-to-b from-primary/10 to-transparent">
+          <DialogTitle className="sr-only">Профиль: {formatDisplayName(targetUser?.name, targetUser?.username)}</DialogTitle>
+          <DialogDescription className="sr-only">Профиль узла Ядра Nuxus</DialogDescription>
+          
+          <div className="relative mb-6">
+            <div className="absolute -inset-4 bg-primary/20 blur-3xl rounded-full animate-pulse" />
+            <UserAvatar 
+              userId={inspectedUserId} 
+              className="h-32 w-32 border-[6px] border-[#030306] shadow-[0_20px_50px_rgba(0,0,0,0.5)] relative z-10" 
+              manualAvatarUrl={targetUser?.avatarUrl}
+              fallbackName={targetUser?.name}
+              showOnlineStatus
+            />
+            <div className="absolute bottom-[-20%] left-1/2 -translate-x-1/2 w-48 h-48 bg-primary/10 blur-[60px] -z-0 rounded-full" />
+          </div>
+
+          <div className="relative z-10 text-center">
+            <div className="flex items-center justify-center gap-2">
+              <h2 className="text-2xl font-black text-white italic tracking-tighter leading-tight">
+                {formatDisplayName(targetUser?.name, targetUser?.username)}
+              </h2>
+              {(targetUser?.statusEmoji || (inspectedUserId === ADMIN_ID)) && (
+                 <span className="text-2xl drop-shadow-[0_0_100px_rgba(255,255,255,0.3)]">
+                   {targetUser?.statusEmoji || '👑'}
+                 </span>
+              )}
+            </div>
+            <p className="text-[11px] text-primary/60 font-black uppercase tracking-[0.4em] mt-1 opacity-70 italic">{targetUser?.username}</p>
+          </div>
         </DialogHeader>
 
         <ScrollArea className="flex-1 w-full h-full">
           <div className="flex flex-col min-h-full pb-24">
-            <div className="relative h-48 bg-gradient-to-b from-primary/20 to-transparent flex items-center justify-center pt-10">
-              <UserAvatar 
-                userId={inspectedUserId} 
-                className="h-32 w-32 border-[6px] border-[#030306] shadow-[0_20px_50px_rgba(0,0,0,0.5)] relative z-10" 
-                manualAvatarUrl={targetUser?.avatarUrl}
-                fallbackName={targetUser?.name}
-                showOnlineStatus
-              />
-              <div className="absolute bottom-[-20%] left-1/2 -translate-x-1/2 w-48 h-48 bg-primary/10 blur-[60px] -z-0 rounded-full" />
-            </div>
-
             <div className="mt-6 px-8 text-center">
-              <div className="flex items-center justify-center gap-2">
-                <h2 className="text-2xl font-black text-white italic tracking-tighter leading-tight">
-                  {formatDisplayName(targetUser?.name, targetUser?.username)}
-                </h2>
-                {(targetUser?.statusEmoji || (inspectedUserId === ADMIN_ID)) && (
-                   <span className="text-2xl drop-shadow-[0_0_100px_rgba(255,255,255,0.3)]">
-                     {targetUser?.statusEmoji || '👑'}
-                   </span>
-                )}
-              </div>
-              <p className="text-[11px] text-primary/60 font-black uppercase tracking-[0.4em] mt-1 opacity-70 italic">{targetUser?.username}</p>
-              
               {targetUser?.statusText && (
                 <div className="mt-4 px-6 py-2.5 bg-primary/10 rounded-2xl border border-primary/20 inline-flex items-center gap-3 max-w-full shadow-lg animate-in fade-in slide-in-from-top-2">
                   <Sparkles className="w-4 h-4 text-accent shrink-0 animate-pulse" />

@@ -16,8 +16,8 @@ import { cn } from '@/lib/utils';
 type SearchFilter = 'all' | 'users' | 'groups' | 'bots';
 
 /**
- * ГЛОБАЛЬНЫЙ ПОИСК V8.3.0 «REAL BOT DISCOVERY»
- * FIXED: Accurate searching for newly created bots in Firestore.
+ * ГЛОБАЛЬНЫЙ ПОИСК V9.1.0 «ACCESSIBILITY SYNC»
+ * FIXED: Proper DialogTitle hierarchy to prevent console errors.
  */
 export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const { user } = useUser();
@@ -144,7 +144,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
   return (
     <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if(!o) { setSearchQuery(''); setResults([]); } }}>
       <DialogContent className="max-w-md bg-[#0a0a0c]/98 backdrop-blur-3xl border-white/10 rounded-[2.5rem] p-0 overflow-hidden shadow-2xl h-[80vh] flex flex-col outline-none">
-        <div className="px-6 pt-8 pb-4 shrink-0 space-y-6">
+        <DialogHeader className="px-6 pt-8 pb-4 shrink-0 space-y-6">
            <DialogTitle className="text-white font-black uppercase italic tracking-tighter text-2xl">Discovery Hub</DialogTitle>
            
            <div className="relative group">
@@ -178,7 +178,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
                 </button>
               ))}
            </div>
-        </div>
+        </DialogHeader>
 
         <ScrollArea className="flex-1">
           <div className="p-4 space-y-2">
