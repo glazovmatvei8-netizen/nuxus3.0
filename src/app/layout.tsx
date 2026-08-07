@@ -69,7 +69,6 @@ export default function RootLayout({
       <body 
         className="font-sans antialiased bg-background text-foreground overflow-hidden h-[100dvh] selection:bg-primary/30" 
         style={{ fontFamily: 'var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, sans-serif' }}
-        suppressHydrationWarning
       >
         <AppProvider>
           <FirebaseClientProvider>

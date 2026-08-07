@@ -6,31 +6,33 @@ import { getAuth, Auth } from 'firebase/auth';
 import { getFirestore, initializeFirestore, persistentLocalCache, Firestore } from 'firebase/firestore';
 
 /**
- * NUXUS KERNEL APP INITIALIZER V9.8.5
- * ОПТИМИЗИРОВАНО: Предотвращение дублирующей инициализации Firestore (ID: ca9 fix).
+ * NUXUS KERNEL APP INITIALIZER V9.9.0
+ * ОПТИМИЗИРОВАНО: Защита от каскадных ошибок инициализации.
  */
-export function initializeFirebase(instanceName?: string) {
+export function initializeFirebase(instanceName: string = '[DEFAULT]') {
   if (typeof window === 'undefined') {
-    return { firebaseApp: null as any, auth: null as any, firestore: null as any };
+    return { firebaseApp: null, auth: null, firestore: null };
   }
 
-  const name = instanceName || '[DEFAULT]';
-  
   let app: FirebaseApp;
-  try {
-    const existingApps = getApps();
-    const existing = existingApps.find(a => a.name === name);
-    app = existing || initializeApp(firebaseConfig, name);
-  } catch (e) {
-    app = getApp(name);
+  const existingApps = getApps();
+  const existing = existingApps.find(a => a.name === instanceName);
+
+  if (existing) {
+    app = existing;
+  } else {
+    try {
+      app = initializeApp(firebaseConfig, instanceName);
+    } catch (e) {
+      app = getApp(instanceName);
+    }
   }
   
   let db: Firestore;
   try {
-    // Пытаемся получить существующий инстанс
+    // Всегда сначала проверяем, нет ли уже созданного инстанса для этого приложения
     db = getFirestore(app);
   } catch (e) {
-    // Если инстанса нет, инициализируем с локальным кэшем
     try {
       db = initializeFirestore(app, {
         localCache: persistentLocalCache({})
