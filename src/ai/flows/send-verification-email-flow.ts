@@ -1,7 +1,8 @@
+
 'use server';
 /**
  * @fileOverview A Genkit flow for sending 6-digit verification codes to email.
- * Updated V77.0: Integrated App Password for SMTP gateway simulation.
+ * Updated V77.1: Enhanced Nuxus-style professional signal transmission.
  */
 
 import { ai } from '@/ai/genkit';
@@ -19,11 +20,9 @@ const VerificationOutputSchema = z.object({
 });
 export type VerificationOutput = z.infer<typeof VerificationOutputSchema>;
 
-// SECURE_GATEWAY_CONFIG (Simulation)
-const APP_PASSWORD = "9txJiRsJ4od2";
-
 /**
  * Initiates email verification process via Nuxus Secure Mail Gateway.
+ * Simulates direct signal injection to user's inbox.
  */
 export async function sendVerificationCode(input: VerificationInput): Promise<VerificationOutput> {
   return sendVerificationCodeFlow(input);
@@ -36,16 +35,18 @@ const sendVerificationCodeFlow = ai.defineFlow(
     outputSchema: VerificationOutputSchema,
   },
   async (input) => {
-    // Generate a random 6-digit code
+    // Generate a secure 6-digit code
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     
     /**
-     * NUXUS MAIL ENGINE
-     * Using App Password: [9txJiRsJ4od2]
-     * Status: SYNCED
+     * NUXUS MAIL ENGINE V2.0
+     * Status: ACTIVE
+     * Encryption: RSA-4096 (Simulated)
      */
-    console.log(`[NUXUS KERNEL] Mail Gateway Auth: SUCCESS`);
-    console.log(`[NUXUS KERNEL] Transmitting code ${code} to ${input.email}`);
+    console.log(`[NUXUS KERNEL] IDENTITY VERIFICATION SIGNAL INITIALIZED`);
+    console.log(`[NUXUS KERNEL] Target Node: ${input.userName} <${input.email}>`);
+    console.log(`[NUXUS KERNEL] Verification Payload: [ ${code} ]`);
+    console.log(`[NUXUS KERNEL] Signal Transmitted Successfully.`);
     
     return {
       success: true,

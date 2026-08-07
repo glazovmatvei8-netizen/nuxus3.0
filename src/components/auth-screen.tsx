@@ -1,12 +1,13 @@
+
 "use client"
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Eye, EyeOff, AlertCircle, Globe } from 'lucide-react';
+import { Loader2, Eye, EyeOff, AlertCircle, Mail, Phone, ArrowRight, ShieldCheck, Key } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase/provider'; 
 import { 
   signInWithEmailAndPassword,
@@ -26,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { sendVerificationCode } from '@/ai/flows/send-verification-email-flow';
 
 const COUNTRY_CODES = [
   { code: '+380', name: 'Украина', flag: '🇺🇦' },
@@ -64,6 +66,8 @@ const COUNTRY_CODES = [
   { code: '+91', name: 'India', flag: '🇮🇳' },
 ];
 
+type AuthStep = 'initial' | 'email-verify';
+
 export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'login' | 'register' }) {
   const auth = useAuth();
   const db = useFirestore();
@@ -72,49 +76,90 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
   
   const [langSelected, setLangSelected] = useState<string | null>(null);
   const [mode, setMode] = useState<'login' | 'register'>(initialMode);
+  const [authStep, setAuthStep] = useState<AuthStep>('initial');
   const [isLoading, setIsLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
   const [acceptedPolicy, setAcceptedPolicy] = useState(false);
 
+  // Form State
   const [countryCode, setCountryCode] = useState('+380');
   const [identifier, setIdentifier] = useState(''); 
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
 
-  const handleAuth = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!identifier.trim() || !db || !auth) return;
+  // Verification State
+  const [verificationCode, setVerificationCode] = useState('');
+  const [sentCode, setSentCode] = useState<string | null>(null);
 
-    if (mode === 'register' && !acceptedPolicy) {
-      toast({ title: langSelected === 'ru' ? "Ошибка" : "Error", description: langSelected === 'ru' ? "Вы должны согласиться с Политикой конфиденциальности." : "You must agree to the Privacy Policy.", variant: "destructive" });
-      return;
+  const validateRegistration = () => {
+    if (!name.trim() || name.trim().toLowerCase() === 'user' || name.trim().length < 2) {
+      toast({ title: "Недопустимое имя", description: "Пожалуйста, введите ваше реальное имя.", variant: "destructive" });
+      return false;
     }
+    const cleanUsername = username.trim().replace('@', '');
+    if (!cleanUsername || cleanUsername.length < 3) {
+      toast({ title: "Недопустимый ID", description: "ID должен содержать минимум 3 символа.", variant: "destructive" });
+      return false;
+    }
+    if (!acceptedPolicy) {
+      toast({ title: "Ошибка", description: "Вы должны согласиться с Политикой конфиденциальности.", variant: "destructive" });
+      return false;
+    }
+    return true;
+  };
 
+  const initiateRegistration = async () => {
+    if (!validateRegistration()) return;
+    
+    if (email.trim()) {
+      setIsLoading(true);
+      try {
+        const { code, success } = await sendVerificationCode({ email: email.trim(), userName: name.trim() });
+        if (success) {
+          setSentCode(code);
+          setAuthStep('email-verify');
+          toast({ title: "Код отправлен", description: `Проверьте почту ${email}` });
+        }
+      } catch (e: any) {
+        toast({ title: "Ошибка почтового шлюза", description: "Не удалось отправить код подтверждения.", variant: "destructive" });
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      // Стандартная регистрация без почты
+      executeFinalAuth();
+    }
+  };
+
+  const handleVerifyAndRegister = () => {
+    if (verificationCode === sentCode) {
+      executeFinalAuth(true);
+    } else {
+      toast({ title: "Неверный код", description: "Проверьте цифры в письме.", variant: "destructive" });
+    }
+  };
+
+  const executeFinalAuth = async (isEmailVerified = false) => {
+    if (!db || !auth) return;
     setIsLoading(true);
-    
-    // Constructing identification signals
+
     const idClean = identifier.replace(/\D/g, '');
-    const isEmail = identifier.includes('@');
+    const isEmailInput = identifier.includes('@');
     
-    // If user typed a full international number with +, use it directly
-    const finalPhone = isEmail 
-      ? identifier.trim() 
+    const finalPhone = isEmailInput 
+      ? idClean // fallback or ignore if email-only
       : identifier.startsWith('+') 
         ? identifier.replace('+', '').replace(/\D/g, '') 
         : `${countryCode.replace('+', '')}${idClean}`;
 
-    const finalEmail = isEmail ? identifier.trim() : `${finalPhone}@nuxus.chat`;
+    const finalEmail = isEmailInput ? identifier.trim() : (email.trim() || `${finalPhone}@nuxus.chat`);
 
-    // SECURITY SHIELD: Regional validation (After constructing full number)
-    if (!isEmail) {
-      // Blocking Russia (+7 but not +77 for Kazakhstan)
+    // REGIONAL SHIELD (RF Block)
+    if (!isEmailInput) {
       if (finalPhone.startsWith('7') && !finalPhone.startsWith('77')) {
-         toast({ 
-           title: langSelected === 'ru' ? "Региональное ограничение" : "Regional Restriction", 
-           description: langSelected === 'ru' ? "Регистрация из РФ временно недоступна." : "Registration from RF is temporarily unavailable.", 
-           variant: "destructive" 
-         });
+         toast({ title: "Региональное ограничение", description: "Регистрация из РФ временно недоступна.", variant: "destructive" });
          setIsLoading(false);
          return;
       }
@@ -122,49 +167,92 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
 
     try {
       await setPersistence(auth, browserLocalPersistence);
-      if (mode === 'login') {
-        await signInWithEmailAndPassword(auth, finalEmail, password);
-      } else {
-        const usernameWithAt = '@' + username.trim().replace('@', '');
-        const userCred = await createUserWithEmailAndPassword(auth, finalEmail, password);
-        await setDoc(doc(db, 'users', userCred.user.uid), {
-          id: userCred.user.uid,
-          name: name.trim(),
-          username: usernameWithAt,
-          usernameLowercase: usernameWithAt.toLowerCase(),
-          phone: finalPhone,
-          email: finalEmail,
-          createdAt: new Date().toISOString(),
-          balance: 0,
-          settings: { 
-            language: langSelected || 'ru', 
-            theme: 'default', 
-            appearance: 'dark',
-            privacy: { phoneVisibility: 'contacts', lastSeenVisibility: 'everybody', allowGroupsFrom: 'everybody' }
-          }
-        });
-      }
+      const usernameWithAt = '@' + username.trim().replace('@', '');
+      const userCred = await createUserWithEmailAndPassword(auth, finalEmail, password);
+      
+      await setDoc(doc(db, 'users', userCred.user.uid), {
+        id: userCred.user.uid,
+        name: name.trim(),
+        username: usernameWithAt,
+        usernameLowercase: usernameWithAt.toLowerCase(),
+        phone: finalPhone,
+        email: finalEmail,
+        emailVerified: isEmailVerified,
+        createdAt: new Date().toISOString(),
+        balance: 0,
+        settings: { 
+          language: langSelected || 'ru', 
+          theme: 'default', 
+          appearance: 'dark',
+          privacy: { phoneVisibility: 'contacts', lastSeenVisibility: 'everybody', allowGroupsFrom: 'everybody' }
+        }
+      });
+
+      toast({ title: "Узел успешно создан", description: "Добро пожаловать в Ядро." });
     } catch (e: any) {
-      toast({ title: langSelected === 'ru' ? "Сбой" : "Fail", description: "Проверьте данные. Регистрация из РФ ограничена.", variant: "destructive" });
+      toast({ title: "Сбой инициализации", description: e.message || "Проверьте данные.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const openLegal = (e: React.MouseEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    e.stopPropagation();
-    setIsLegalOpen(true);
+    if (!identifier.trim() || !db || !auth) return;
+
+    setIsLoading(true);
+    
+    const idClean = identifier.replace(/\D/g, '');
+    const isEmailInput = identifier.includes('@');
+    
+    const finalEmail = isEmailInput 
+      ? identifier.trim() 
+      : identifier.startsWith('+') 
+        ? `${identifier.replace('+', '').replace(/\D/g, '')}@nuxus.chat`
+        : `${countryCode.replace('+', '')}${idClean}@nuxus.chat`;
+
+    try {
+      await setPersistence(auth, browserLocalPersistence);
+      await signInWithEmailAndPassword(auth, finalEmail, password);
+    } catch (e: any) {
+      toast({ title: "Доступ запрещен", description: "Неверный логин или пароль.", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (!langSelected) {
     return (
       <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#020203] px-6">
         <NuxusLogo size={140} />
-        <div className="space-y-4 w-full max-sm mt-12">
+        <div className="space-y-4 w-full max-w-sm mt-12">
           <button onClick={() => setLangSelected('ru')} className="w-full h-16 bg-primary text-white font-black uppercase italic tracking-widest rounded-2xl shadow-2xl active:scale-95 transition-all">Продолжить на русском</button>
           <button onClick={() => setLangSelected('en')} className="w-full h-14 bg-white/5 text-white/60 font-black uppercase italic tracking-widest rounded-2xl active:scale-95 transition-all">Continue in English</button>
         </div>
+      </div>
+    );
+  }
+
+  if (authStep === 'email-verify') {
+    return (
+      <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#020203] px-6">
+         <Card className="w-full max-w-[400px] bg-white/[0.02] border-white/10 rounded-[3rem] shadow-2xl p-8 text-center space-y-8 animate-in fade-in zoom-in-95 duration-500">
+            <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto border border-primary/20 shadow-xl">
+               <ShieldCheck className="w-10 h-10 text-primary animate-pulse" />
+            </div>
+            <div className="space-y-2">
+               <h3 className="text-2xl font-black text-white uppercase italic tracking-tighter">Верификация</h3>
+               <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Введите 6 цифр, отправленных на {email}</p>
+            </div>
+            <Input 
+               placeholder="••••••" maxLength={6} value={verificationCode} onChange={e => setVerificationCode(e.target.value.replace(/\D/g, ''))}
+               className="h-16 bg-white/5 border-white/10 text-center text-3xl font-black tracking-[0.5em] focus:border-primary/50 transition-all rounded-2xl"
+            />
+            <Button onClick={handleVerifyAndRegister} disabled={isLoading || verificationCode.length < 6} className="w-full h-16 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-xl">
+               {isLoading ? <Loader2 className="animate-spin" /> : 'Подтвердить узел'}
+            </Button>
+            <button onClick={() => setAuthStep('initial')} className="text-[10px] font-black uppercase text-white/20 hover:text-white transition-all">Вернуться назад</button>
+         </Card>
       </div>
     );
   }
@@ -181,52 +269,78 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                 <button type="button" onClick={() => setMode('register')} className={cn("h-11 rounded-xl text-[10px] font-black uppercase transition-all", mode === 'register' ? "bg-primary text-white shadow-lg" : "text-white/30")}>{langSelected === 'ru' ? 'Регистрация' : 'Register'}</button>
               </div>
               <CardTitle className="text-3xl font-black italic text-white uppercase tracking-tighter">{mode === 'login' ? (langSelected === 'ru' ? 'Вход в Ядро' : 'Entry') : (langSelected === 'ru' ? 'Новый Узел' : 'New Node')}</CardTitle>
+              {mode === 'register' && <CardDescription className="text-[9px] font-black uppercase text-primary/40 tracking-widest mt-1">Шаг 1: Идентификация личности</CardDescription>}
             </CardHeader>
             <CardContent className="px-8 pb-10">
-              <form onSubmit={handleAuth} className="space-y-6">
+              <form onSubmit={mode === 'login' ? handleLogin : (e) => { e.preventDefault(); initiateRegistration(); }} className="space-y-5">
                 {mode === 'register' && (
                   <>
-                    <Input placeholder={langSelected === 'ru' ? 'Имя' : 'Name'} value={name} onChange={e => setName(e.target.value)} className="h-14 rounded-2xl bg-white/5 border-white/10 font-bold focus:border-primary/40 transition-all shadow-inner" required />
-                    <Input placeholder="ID (@nick)" value={username} onChange={e => setUsername(e.target.value)} className="h-14 rounded-2xl bg-white/5 border-white/10 font-bold focus:border-primary/40 transition-all shadow-inner" required />
+                    <div className="space-y-1">
+                      <Label className="text-[9px] font-black uppercase text-primary/60 ml-2">Имя (не User)</Label>
+                      <Input placeholder={langSelected === 'ru' ? 'Ваше имя' : 'Name'} value={name} onChange={e => setName(e.target.value)} className="h-14 rounded-2xl bg-white/5 border-white/10 font-bold focus:border-primary/40 transition-all shadow-inner" required />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[9px] font-black uppercase text-primary/60 ml-2">ID (@ID)</Label>
+                      <Input placeholder="unique_id" value={username} onChange={e => setUsername(e.target.value)} className="h-14 rounded-2xl bg-white/5 border-white/10 font-bold focus:border-primary/40 transition-all shadow-inner" required />
+                    </div>
                   </>
                 )}
                 
-                <div className="flex gap-2">
-                  {!identifier.includes('@') && (
-                    <div className="w-[110px] shrink-0">
-                      <Select value={countryCode} onValueChange={setCountryCode}>
-                        <SelectTrigger className="h-14 bg-white/5 border-white/10 rounded-2xl font-bold focus:ring-0 focus:border-primary/40 transition-all shadow-inner">
-                          <SelectValue placeholder="🌍" />
-                        </SelectTrigger>
-                        <SelectContent position="popper" className="bg-[#0a0a0c] border-white/10 rounded-2xl max-h-[300px] overflow-y-auto z-[2000] scrollbar-hide shadow-2xl">
-                          {COUNTRY_CODES.map((c) => (
-                            <SelectItem key={c.code} value={c.code} className="py-3 cursor-pointer hover:bg-primary/10 transition-colors">
-                              {c.flag} {c.code}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-                  <Input 
-                    placeholder={langSelected === 'ru' ? (identifier.includes('@') ? 'Электронная почта' : 'Телефон') : (identifier.includes('@') ? 'Email' : 'Phone')} 
-                    value={identifier} 
-                    onChange={e => setIdentifier(e.target.value)} 
-                    className="h-14 rounded-2xl bg-white/5 border-white/10 flex-1 font-bold focus:border-primary/40 transition-all shadow-inner" 
-                    required 
-                  />
+                <div className="space-y-1">
+                  {mode === 'register' && <Label className="text-[9px] font-black uppercase text-primary/60 ml-2">Телефон (для связи)</Label>}
+                  <div className="flex gap-2">
+                    {!identifier.includes('@') && (
+                      <div className="w-[110px] shrink-0">
+                        <Select value={countryCode} onValueChange={setCountryCode}>
+                          <SelectTrigger className="h-14 bg-white/5 border-white/10 rounded-2xl font-bold focus:ring-0 focus:border-primary/40 transition-all shadow-inner">
+                            <SelectValue placeholder="🌍" />
+                          </SelectTrigger>
+                          <SelectContent position="popper" className="bg-[#0a0a0c] border-white/10 rounded-2xl max-h-[300px] overflow-y-auto z-[2000] scrollbar-hide shadow-2xl">
+                            {COUNTRY_CODES.map((c) => (
+                              <SelectItem key={c.code} value={c.code} className="py-3 cursor-pointer hover:bg-primary/10 transition-colors">
+                                {c.flag} {c.code}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                    <Input 
+                      placeholder={langSelected === 'ru' ? (identifier.includes('@') ? 'Почта' : 'Телефон') : (identifier.includes('@') ? 'Email' : 'Phone')} 
+                      value={identifier} 
+                      onChange={e => setIdentifier(e.target.value)} 
+                      className="h-14 rounded-2xl bg-white/5 border-white/10 flex-1 font-bold focus:border-primary/40 transition-all shadow-inner" 
+                      required 
+                    />
+                  </div>
                 </div>
 
-                <div className="relative">
-                  <Input type={showPass ? "text" : "password"} placeholder={langSelected === 'ru' ? 'Пароль' : 'Password'} value={password} onChange={e => setPassword(e.target.value)} className="h-14 rounded-2xl bg-white/5 border-white/10 font-bold focus:border-primary/40 transition-all shadow-inner" required />
-                  <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-white transition-colors">{showPass ? <EyeOff size={18} /> : <Eye size={18} />}</button>
+                {mode === 'register' && (
+                  <div className="space-y-1">
+                    <Label className="text-[9px] font-black uppercase text-primary/60 ml-2 italic">Почта для подтверждения (Опционально)</Label>
+                    <Input 
+                      type="email" 
+                      placeholder="example@mail.com" 
+                      value={email} 
+                      onChange={e => setEmail(e.target.value)} 
+                      className="h-14 rounded-2xl bg-white/5 border-white/10 font-bold focus:border-primary/40 transition-all shadow-inner"
+                    />
+                  </div>
+                )}
+
+                <div className="space-y-1">
+                  {mode === 'register' && <Label className="text-[9px] font-black uppercase text-primary/60 ml-2">Мастер-пароль</Label>}
+                  <div className="relative">
+                    <Input type={showPass ? "text" : "password"} placeholder={langSelected === 'ru' ? 'Пароль' : 'Password'} value={password} onChange={e => setPassword(e.target.value)} className="h-14 rounded-2xl bg-white/5 border-white/10 font-bold focus:border-primary/40 transition-all shadow-inner" required />
+                    <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-white transition-colors">{showPass ? <EyeOff size={18} /> : <Eye size={18} />}</button>
+                  </div>
                 </div>
 
                 {mode === 'register' && (
                   <div className="flex items-start space-x-3 p-5 bg-white/5 rounded-2xl border border-white/10 shadow-inner">
                     <Checkbox id="policy" checked={acceptedPolicy} onCheckedChange={(v) => setAcceptedPolicy(!!v)} className="mt-1" />
                     <label htmlFor="policy" className="text-[10px] font-bold text-white/60 leading-tight cursor-pointer uppercase tracking-tight">
-                      Я согласен с <button type="button" onClick={openLegal} className="text-primary font-black underline hover:text-white transition-colors">Политикой конфиденциальности</button>
+                      Я согласен с <button type="button" onClick={(e) => { e.preventDefault(); setIsLegalOpen(true); }} className="text-primary font-black underline hover:text-white transition-colors">Политикой конфиденциальности</button>
                     </label>
                   </div>
                 )}
@@ -236,7 +350,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                   {isLoading ? <Loader2 className="animate-spin" /> : (mode === 'login' ? 'Авторизовать' : 'Инициализировать')}
                 </Button>
                 
-                <button type="button" onClick={openLegal} className="w-full text-[9px] font-black uppercase tracking-[0.2em] text-white/20 hover:text-white transition-all py-2">Правовая информация</button>
+                <button type="button" onClick={(e) => { e.preventDefault(); setIsLegalOpen(true); }} className="w-full text-[9px] font-black uppercase tracking-[0.2em] text-white/20 hover:text-white transition-all py-2">Правовая информация</button>
               </form>
             </CardContent>
           </Card>
@@ -249,3 +363,4 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
     </div>
   );
 }
+

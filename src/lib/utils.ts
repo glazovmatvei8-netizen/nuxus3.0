@@ -10,18 +10,30 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * АБСОЛЮТНЫЙ ИДЕНТИФИКАТОР V40.1
- * Приоритет: Реальное имя из базы -> Юзернейм. Без заглушек.
+ * АБСОЛЮТНЫЙ ИДЕНТИФИКАТОР V40.2 «GHOST PURGE»
+ * Приоритет: Реальное имя из базы -> Юзернейм. 
+ * Усиленная защита от пустых имен «User» и «??».
  */
 export function formatDisplayName(name: string | undefined | null, username?: string | null): string {
   const cleanName = name?.trim();
-  if (cleanName && cleanName !== '' && cleanName.toLowerCase() !== 'null' && cleanName !== 'user' && cleanName !== '??') {
+  const lowerName = cleanName?.toLowerCase();
+  
+  if (
+    cleanName && 
+    cleanName !== '' && 
+    lowerName !== 'null' && 
+    lowerName !== 'user' && 
+    lowerName !== 'undefined' &&
+    cleanName !== '??'
+  ) {
     return cleanName;
   }
+  
   const cleanUsername = username?.trim();
   if (cleanUsername && cleanUsername !== '' && cleanUsername !== '@' && cleanUsername !== 'null') {
     return cleanUsername;
   }
+  
   return 'Узел Сети';
 }
 
