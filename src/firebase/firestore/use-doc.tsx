@@ -6,8 +6,8 @@ import { onSnapshot, DocumentSnapshot, DocumentData, FirestoreError } from 'fire
 export type WithId<T> = T & { id: string; isPending?: boolean };
 
 /**
- * РЕАЛЬНЫЙ ХУК useDoc V6.1.4
- * Восстановлен для устранения "Cannot destructure property 'data'".
+ * Хук useDoc V7.0.0
+ * Изолирован для устранения ошибок циклической зависимости.
  */
 export function useDoc<T = any>(memoizedDocRef: any) {
   const [data, setData] = useState<WithId<T> | null>(null);

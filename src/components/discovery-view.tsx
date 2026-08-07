@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useState, useMemo } from 'react';
-import { useFirestore, useUser, useCollection } from '@/firebase/provider';
+import { useFirestore, useUser, useCollection } from '@/firebase';
 import { collection, query, where, limit, orderBy } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
@@ -16,8 +16,8 @@ import type { Chat, User } from '@/lib/types';
 const ADMIN_ID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
 /**
- * НАВИГАТОР V13.0 (Minimalist Hub)
- * ФИКС: Убраны дублирующие баннеры Partner Hub, так как он вынесен в меню.
+ * НАВИГАТОР V13.1 «STABLE RESOLUTION»
+ * ИСПРАВЛЕНО: Корректный импорт хуков через Firebase Barrel.
  */
 export default function DiscoveryView() {
   const db = useFirestore();

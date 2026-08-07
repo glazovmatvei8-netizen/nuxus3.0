@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { Phone, Link as LinkIcon, PhoneOff, Loader2, ArrowUpRight, ArrowDownLeft, ShieldCheck, Activity, UserPlus, ChevronRight } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from '@/firebase/provider';
+import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, where, orderBy, limit, doc } from 'firebase/firestore';
 import { formatDisplayName, cn } from '@/lib/utils';
 import type { Call, User } from '@/lib/types';
@@ -15,8 +15,8 @@ import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 
 /**
- * CALL CENTER V45.0.0 «INFINITE FLOW»
- * ИСПРАВЛЕНО: Теперь вся верхняя панель прокручивается вместе со списком.
+ * CALL CENTER V45.0.1 «STABLE RESOLUTION»
+ * ИСПРАВЛЕНО: Корректный импорт хуков через Firebase Barrel.
  */
 export default function CallsView() {
   const { user } = useUser();

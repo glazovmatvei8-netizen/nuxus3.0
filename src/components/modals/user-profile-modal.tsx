@@ -9,7 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   MessageCircle, Star, Calendar, Phone, Video, Gift, Zap, Globe, ShieldCheck, Cpu, Sparkles, UserCheck, UserPlus, Ban, Crown, ShieldAlert, ShieldX
 } from 'lucide-react';
-import { useFirestore, useUser, useDoc, useCollection } from '@/firebase/provider';
+import { useFirestore, useUser, useDoc, useCollection } from '@/firebase';
 import { doc, query, collection, limit, getDocs, addDoc, where, orderBy, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useAppState } from '@/lib/store';
@@ -24,8 +24,8 @@ const ADMIN_ID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 const ORIGIN_DATE = '2024-01-01T00:00:00Z'; 
 
 /**
- * USER PROFILE MODAL V9.2.0 «EXECUTIVE ACCESS»
- * ADDED: Hidden Admin Actions section for node management.
+ * USER PROFILE MODAL V9.2.1 «STABLE RESOLUTION»
+ * ИСПРАВЛЕНО: Корректный импорт хуков через Firebase Barrel.
  */
 export function UserProfileModal() {
   const db = useFirestore();

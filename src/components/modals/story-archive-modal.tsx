@@ -5,7 +5,7 @@ import React, { useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase/provider';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, orderBy, doc, updateDoc } from 'firebase/firestore';
 import { Archive, Zap, Loader2, Play, RefreshCcw } from 'lucide-react';
 import type { Story } from '@/lib/types';
@@ -14,9 +14,8 @@ import { useToast } from '@/hooks/use-toast';
 import { addHours } from 'date-fns';
 
 /**
- * STORY ARCHIVE MODAL V6.4.0
- * Позволяет просматривать и восстанавливать истекшие истории.
- * FIXED: Direct imports from provider.
+ * STORY ARCHIVE MODAL V6.4.1 «STABLE RESOLUTION»
+ * ИСПРАВЛЕНО: Корректный импорт хуков через Firebase Barrel.
  */
 export function StoryArchiveModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const { user } = useUser();

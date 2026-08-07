@@ -1,9 +1,13 @@
 'use client';
 
 /**
- * DEACTIVATED V6.5.2
- * Barrel file removed to prevent 'originalFactory.call' circular dependency errors in Next.js 15.
- * Import directly from @/firebase/provider or @/firebase/app instead.
+ * NUXUS FIREBASE CORE V7.0.0
+ * Единая точка входа для всех сервисов и хуков.
  */
 
-export {};
+export * from './app';
+export * from './provider';
+export * from './client-provider';
+export * from './firestore/use-collection';
+export * from './firestore/use-doc';
+export { useUser } from './provider';

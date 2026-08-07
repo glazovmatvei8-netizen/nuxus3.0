@@ -6,8 +6,8 @@ import { onSnapshot, QuerySnapshot, DocumentData, FirestoreError, CollectionRefe
 export type WithId<T> = T & { id: string; isPending?: boolean };
 
 /**
- * РЕАЛЬНЫЙ ХУК useCollection V6.1.4
- * Восстановлен для устранения "Cannot destructure property 'data'".
+ * Хук useCollection V7.0.0
+ * Изолирован для устранения ошибок циклической зависимости.
  */
 export function useCollection<T = any>(
   memoizedTargetRefOrQuery: (CollectionReference<DocumentData> | Query<DocumentData>) | null | undefined

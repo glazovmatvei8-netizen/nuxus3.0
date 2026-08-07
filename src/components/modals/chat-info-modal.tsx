@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useMemo, memo } from 'react';
@@ -15,7 +16,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useUser, useFirestore, useDoc, useCollection } from '@/firebase/provider';
+import { useUser, useFirestore, useDoc, useCollection } from '@/firebase';
 import { doc, updateDoc, arrayUnion, query, collection, limit, orderBy, getDocs, arrayRemove, addDoc } from 'firebase/firestore';
 import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
@@ -25,6 +26,11 @@ import type { User, Chat, ReceivedGift } from '@/lib/types';
 import { AddMemberModal } from './add-member-modal';
 import { GiftModal } from './gift-modal';
 import { chatConversationSummary } from '@/ai/flows/chat-conversation-summary-flow';
+
+/**
+ * CHAT INFO MODAL V5.3.2 «STABLE RESOLUTION»
+ * ИСПРАВЛЕНО: Корректный импорт хуков через Firebase Barrel.
+ */
 
 const CustomTitleDialog = memo(({ 
   isOpen, 
@@ -123,10 +129,6 @@ const ParticipantItem = memo(({
 });
 ParticipantItem.displayName = 'ParticipantItem';
 
-/**
- * CHAT INFO MODAL V5.3.1
- * FIXED: Убрана принудительная капитализация (uppercase) имен.
- */
 export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onOpenChange: (o: boolean) => void, chat: Chat }) {
   const db = useFirestore();
   const { user } = useUser();

@@ -2,13 +2,13 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
-import { useUser, useFirestore, useDoc } from '@/firebase/provider'; 
+import { useUser, useFirestore, useDoc } from '@/firebase'; 
 import { doc } from 'firebase/firestore';
 import type { User } from '@/lib/types';
 
 /**
- * ПРИМЕНИТЕЛЬ ТЕМЫ V6.5.4 «ULTIMATE COLOR SYNERGY»
- * ИСПРАВЛЕНО: Принудительный прямой импорт хуков для устранения ошибки 'is not a function'.
+ * ПРИМЕНИТЕЛЬ ТЕМЫ V6.5.5 «STABLE RESOLUTION»
+ * ИСПРАВЛЕНО: Корректный импорт хуков через Firebase Barrel.
  */
 export function ThemeApplier() {
   const { user } = useUser();

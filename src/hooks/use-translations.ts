@@ -1,14 +1,14 @@
 
 'use client';
 
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase/provider';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { translations, type LanguageCode } from '@/lib/translations';
 import type { User } from '@/lib/types';
 
 /**
  * Hook to access current translations based on user profile.
- * V6.5.4: ИСПРАВЛЕНО - Прямой импорт хуков для стабильности.
+ * V6.5.5: ИСПРАВЛЕНО - Корректный импорт хуков через Firebase Barrel.
  */
 export function useTranslations() {
   const { user } = useUser();

@@ -10,7 +10,7 @@ import {
   Sparkles, Video as MovieIcon, Image as ImageIcon, Wand2, 
   Loader2, Download, Zap, ShieldCheck, Play, Plus, X, Star, FileUp
 } from 'lucide-react';
-import { useUser, useFirestore, useDoc } from '@/firebase/provider';
+import { useUser, useFirestore, useDoc } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { cn, isUserPremium } from '@/lib/utils';
@@ -19,8 +19,8 @@ import { generateAiVideo } from '@/ai/flows/generate-ai-video-flow';
 import { generateAiImage } from '@/ai/flows/generate-ai-image-flow';
 
 /**
- * NUXUS AI CINEMA STUDIO V1.1 (Optimized Quotas)
- * FIXED: Direct imports from provider.
+ * NUXUS AI CINEMA STUDIO V1.1.1 «STABLE RESOLUTION»
+ * ИСПРАВЛЕНО: Корректный импорт хуков через Firebase Barrel.
  */
 export default function AiStudioView() {
   const { user } = useUser();

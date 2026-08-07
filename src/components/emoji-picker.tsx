@@ -6,10 +6,15 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { Smile, Sticker, Ghost, Star, Loader2, Trash2, Zap, LayoutGrid, Heart, Coffee, Bike, Camera, MapPin, Flag } from 'lucide-react';
-import { useUser, useFirestore, useDoc, useCollection } from '@/firebase/provider';
+import { useUser, useFirestore, useDoc, useCollection } from '@/firebase';
 import { doc, collection, query, where, updateDoc, arrayRemove } from 'firebase/firestore';
 import type { User, StickerPack } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
+
+/**
+ * EMOJI PICKER V5.2.1 «STABLE RESOLUTION»
+ * ИСПРАВЛЕНО: Корректный импорт хуков через Firebase Barrel.
+ */
 
 const EMOJI_CATEGORIES = [
   { id: 'smiles', label: 'Смайлы', icon: Smile, emojis: ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😮', '😯', '😲', '😳', '🥺', '😦', '😧', '😨', '😰', '😥', '😢', '😭', '😱', '😖', '😣', '😞', '😓', '😩', '😫', '🥱', '😤', '😡', '😠', '🤬', '😈', '👿', '💀', '☠️', '💩', '🤡', '👹', '👺', '👻', '👽', '👾', '🤖'] },
@@ -44,10 +49,6 @@ interface EmojiPickerProps {
   className?: string;
 }
 
-/**
- * EMOJI PICKER V5.2.0
- * FIXED: Direct imports from provider.
- */
 export function EmojiPicker({ onEmojiSelect, onStickerSelect, className }: EmojiPickerProps) {
   const { user } = useUser();
   const db = useFirestore();

@@ -5,7 +5,7 @@ import React, { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useFirestore, useCollection, useUser, useDoc } from '@/firebase/provider';
+import { useFirestore, useCollection, useUser, useDoc } from '@/firebase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Search, UserPlus, Loader2, Contact, ShieldAlert, Lock, Star, Phone } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -16,19 +16,11 @@ import type { User } from '@/lib/types';
 import { formatDisplayName, isUserPremium } from '@/lib/utils';
 import { UserAvatar } from '../user-avatar';
 
-interface AddMemberModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  chatId: string;
-  currentParticipantIds: string[];
-  isCallContext?: boolean; 
-}
-
 /**
- * ADD MEMBER MODAL V5.2.0
- * FIXED: Direct imports from provider.
+ * ADD MEMBER MODAL V5.2.1 «STABLE RESOLUTION»
+ * ИСПРАВЛЕНО: Корректный импорт хуков через Firebase Barrel.
  */
-export function AddMemberModal({ open, onOpenChange, chatId, currentParticipantIds, isCallContext }: AddMemberModalProps) {
+export function AddMemberModal({ open, onOpenChange, chatId, currentParticipantIds, isCallContext }: any) {
   const db = useFirestore();
   const { user } = useUser();
   const [search, setSearch] = useState('');

@@ -15,7 +15,7 @@ import NuxusAiView from './nuxus-ai-view';
 import PartnerView from './partner-view';
 import { useAppState } from '@/lib/store';
 import { cn, isUserPremium } from '@/lib/utils';
-import { useFirestore, useUser, useCollection, useDoc } from '@/firebase/provider';
+import { useFirestore, useUser, useCollection, useDoc } from '@/firebase';
 import { collection, query, where, limit, doc } from 'firebase/firestore';
 import { CallOverlay } from './modals/call-overlay';
 import { NotificationListener } from './notification-listener';
@@ -31,6 +31,11 @@ import { CreateStoryModal } from './modals/create-story-modal';
 import type { Call, User as UserType } from '@/lib/types';
 import { Phone, MessageCircle, Settings, Search, Archive, Music, Wallet, Gamepad2, Layers, Compass, Plus, Sparkles, ShieldCheck, Cpu, BrainCircuit, Code2, Terminal } from 'lucide-react';
 import { useTranslations } from '@/hooks/use-translations';
+
+/**
+ * CHAT MAIN V13.1 «STABLE RESOLUTION»
+ * ИСПРАВЛЕНО: Корректный импорт хуков через Firebase Barrel.
+ */
 
 export default function ChatMain() {
   const { 

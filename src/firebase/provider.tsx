@@ -5,22 +5,15 @@ import { FirebaseApp } from 'firebase/app';
 import { 
   Firestore, 
   doc, 
-  onSnapshot, 
-  collection, 
-  Query, 
-  DocumentData, 
-  QuerySnapshot, 
-  DocumentSnapshot,
-  FirestoreError,
-  CollectionReference
+  onSnapshot
 } from 'firebase/firestore';
 import { Auth, User, onAuthStateChanged, signOut } from 'firebase/auth';
 import { updateDocumentNonBlocking, setDocumentNonBlocking } from './non-blocking-updates';
 import { errorEmitter } from './error-emitter';
 
 /**
- * NUXUS FIREBASE PROVIDER V6.5.0 (ABSOLUTE STABILITY)
- * ПРЯМАЯ РЕАЛИЗАЦИЯ ХУКОВ ДЛЯ ИСКЛЮЧЕНИЯ ОШИБКИ 'CALL'.
+ * NUXUS FIREBASE PROVIDER V7.0.0 (CORE STABILITY)
+ * ОПТИМИЗИРОВАНО: Хуки вынесены в отдельные файлы для предотвращения originalFactory.call.
  */
 
 export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T {
@@ -178,7 +171,7 @@ export const FirebaseProvider: React.FC<{
 
 export const useFirebase = () => {
   const context = useContext(FirebaseContext);
-  return context || { firestore: null, auth: null, user: null, isUserLoading: true };
+  return context || { areServicesAvailable: false, firebaseApp: null, firestore: null, auth: null, user: null, isUserLoading: true, userError: null };
 };
 
 export const useAuth = () => {
@@ -194,94 +187,4 @@ export const useFirestore = () => {
 export const useUser = () => {
   const { user, isUserLoading, userError } = useFirebase();
   return { user, isUserLoading, userError };
-};
-
-export type WithId<T> = T & { id: string, isPending?: boolean };
-
-export function useCollection<T = any>(
-    memoizedTargetRefOrQuery: (CollectionReference<DocumentData> | Query<DocumentData>) | null | undefined,
-) {
-  const [data, setData] = useState<WithId<T>[] | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<FirestoreError | Error | null>(null);
-
-  useEffect(() => {
-    if (!memoizedTargetRefOrQuery) {
-      setData(null);
-      setIsLoading(false);
-      setError(null);
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-
-    const unsubscribe = onSnapshot(
-      memoizedTargetRefOrQuery,
-      { includeMetadataChanges: true },
-      (snapshot: QuerySnapshot<DocumentData>) => {
-        const results: WithId<T>[] = snapshot.docs.map(doc => ({ 
-          ...(doc.data() as T), 
-          id: doc.id,
-          isPending: doc.metadata.hasPendingWrites
-        }));
-        setData(results);
-        setError(null);
-        setIsLoading(false);
-      },
-      (error: FirestoreError) => {
-        setError(error);
-        setIsLoading(false);
-      }
-    );
-
-    return () => unsubscribe();
-  }, [memoizedTargetRefOrQuery]);
-
-  return { data, isLoading, error };
-}
-
-export function useDoc<T = any>(
-  memoizedDocRef: any
-) {
-  const [data, setData] = useState<WithId<T> | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<FirestoreError | Error | null>(null);
-
-  useEffect(() => {
-    if (!memoizedDocRef) {
-      setData(null);
-      setIsLoading(false);
-      setError(null);
-      return;
-    }
-
-    setIsLoading(true);
-
-    const unsubscribe = onSnapshot(
-      memoizedDocRef,
-      { includeMetadataChanges: true },
-      (snapshot: DocumentSnapshot<DocumentData>) => {
-        if (snapshot.exists()) {
-          setData({ 
-            ...(snapshot.data() as T), 
-            id: snapshot.id,
-            isPending: snapshot.metadata.hasPendingWrites
-          });
-        } else {
-          setData(null);
-        }
-        setError(null);
-        setIsLoading(false);
-      },
-      (error: FirestoreError) => {
-        setError(error);
-        setIsLoading(false);
-      }
-    );
-
-    return () => unsubscribe();
-  }, [memoizedDocRef]);
-
-  return { data, isLoading, error };
 }

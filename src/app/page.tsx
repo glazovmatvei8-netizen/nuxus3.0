@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useEffect, useState, useMemo } from 'react';
-import { useUser, useFirestore, useAuth, useDoc } from '@/firebase/provider';
+import { useUser, useFirestore, useAuth, useDoc } from '@/firebase';
 import { useAppState } from '@/lib/store.tsx';
 import AuthScreen from '@/components/auth-screen';
 import ChatMain from '@/components/chat-main';
@@ -20,8 +20,8 @@ import { NuxusLogo } from '@/components/nuxus-logo';
 import { authenticator } from 'otplib';
 
 /**
- * HOME GATE V8.8.0 «AEGIS JUSTICE»
- * ADDED: Appeal system for banned users.
+ * HOME GATE V8.8.1 «STABLE RESOLUTION»
+ * ИСПРАВЛЕНО: Корректный импорт хуков через Firebase Barrel.
  */
 export default function Home() {
   const { user, isUserLoading } = useUser();

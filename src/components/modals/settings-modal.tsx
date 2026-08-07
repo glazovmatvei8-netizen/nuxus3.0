@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -8,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
-import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase/provider';
+import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Settings2, Camera, Star, ShieldCheck, Loader2, Fingerprint, Palette, 
@@ -26,8 +27,8 @@ import { QRCodeSVG } from 'qrcode.react';
 import { authenticator } from 'otplib';
 
 /**
- * SETTINGS MODAL V6.5.1 «TOTAL ELITE CONTROL»
- * ОБНОВЛЕНО: Полный возврат всех настроек стиля, защиты и кастомизации.
+ * SETTINGS MODAL V6.5.2 «STABLE RESOLUTION»
+ * ИСПРАВЛЕНО: Корректный импорт хуков через Firebase Barrel.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -226,7 +227,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                          <div className="flex gap-2">
                             <Input placeholder="000000" maxLength={6} value={totpInput} onChange={e => setTotpInput(e.target.value.replace(/\D/g, ''))} className="h-12 bg-black/40 border-white/10 text-center text-xl tracking-[0.5em] font-black focus:border-primary/50" />
                             <Button onClick={verifyTotp} className="h-12 bg-primary px-6 rounded-xl font-black uppercase text-[10px] shadow-xl">Verify</Button>
-                         </div>
+                      </div>
                       </div>
                     )}
                  </div>
@@ -331,7 +332,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 }
 
 function PrivacySelector({ label, value, onChange }: { label: string, value: PrivacyOption, onChange: (v: PrivacyOption) => void }) {
-  const options: PrivacyOption[] = ['everybody', 'contacts', 'nobody'];
+  const options: PrivacyOption[] = ['everybody', 'contacts', 'premium', 'nobody'];
   const labels: Record<string, string> = { everybody: 'Все', contacts: 'Узлы', nobody: 'Никто' };
   return (
     <div className="space-y-2">
