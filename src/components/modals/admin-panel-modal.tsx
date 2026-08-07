@@ -9,41 +9,39 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Progress } from '@/components/ui/progress';
-import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { useFirestore, useCollection } from '@/firebase/provider';
 import { collection, query, doc, limit, updateDoc, writeBatch, increment, orderBy, deleteDoc } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  ShieldAlert, Users, Star, Ban, Check, Activity, Terminal as TerminalIcon, 
-  Zap, ShieldCheck, Search, Crown, Shield, AlertTriangle, SearchCode, ShieldQuestion, XCircle, UserX, Ghost, Loader2, Phone, MessageSquare, Scale, CheckCircle2
+  ShieldAlert, Users, Star, Ban, Check, Activity, 
+  Zap, ShieldCheck, Search, Crown, Shield, AlertTriangle, SearchCode, ShieldQuestion, XCircle, UserX, Ghost, Loader2, Phone, MessageSquare, Scale, CheckCircle2, BarChart3, PieChart
 } from 'lucide-react';
 import type { User, TopUpRequest, Appeal } from '@/lib/types';
-import { formatDisplayName, cn, isUserAnomaly } from '@/lib/utils';
+import { formatDisplayName, cn, isUserAnomaly, isUserPremium } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { useAppState } from '@/lib/store.tsx';
 
 /**
- * MISSION CONTROL V8.8.0 «AEGIS JUSTICE»
- * ADDED: Appeals management for banned users.
+ * MISSION CONTROL V9.0.0 «AEGIS ANALYTICS»
+ * UPDATED: Replaced Terminal with Analytics Dashboard.
  */
 export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const db = useFirestore();
   const { toast } = useToast();
   const { setInspectedUserId } = useAppState();
   
-  const [activeTab, setActiveTab] = useState('appeals');
+  const [activeTab, setActiveTab] = useState('analytics');
   const [userSearch, setUserSearch] = useState('');
-  const [terminalLines, setTerminalLines] = useState<string[]>(["Nuxus Aegis Console v8.8.0", "Justice Protocol: ACTIVE"]);
-  const [terminalInput, setTerminalInput] = useState('');
   const [adminComment, setAdminComment] = useState('');
   
   const [isAuditing, setIsAuditing] = useState(false);
   const [auditProgress, setUpdateAuditProgress] = useState(0);
   const [auditResults, setAuditResults] = useState<{suspiciousNodes: {user: User, reason: string}[], safeNodesCount: number} | null>(null);
 
-  // APPEALS DATA
+  // DATA FETCHING
   const appealsQuery = useMemo(() => {
     if (!db) return null;
     return query(collection(db, 'appeals'), orderBy('createdAt', 'desc'), limit(50));
@@ -58,39 +56,41 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
 
   const usersQuery = useMemo(() => {
     if (!db) return null;
-    return query(collection(db, 'users'), limit(500));
+    return query(collection(db, 'users'), limit(1000));
   }, [db]);
   const { data: allUsers } = useCollection<User>(usersQuery);
 
   const stats = useMemo(() => {
-    if (!allUsers) return { total: 0, valid: 0, premium: 0 };
-    const valid = allUsers.filter(u => !isUserAnomaly(u)).length;
-    const premium = allUsers.filter(u => u.isPremium).length;
-    return { total: allUsers.length, valid, premium };
+    if (!allUsers) return { total: 0, valid: 0, premium: 0, banned: 0, anomalies: 0 };
+    
+    const banned = allUsers.filter(u => u.isBanned).length;
+    const anomalies = allUsers.filter(u => isUserAnomaly(u)).length;
+    const premium = allUsers.filter(u => isUserPremium(u)).length;
+    const total = allUsers.length;
+    const active = total - banned - anomalies;
+
+    return { 
+      total, 
+      active: active < 0 ? 0 : active, 
+      premium, 
+      banned, 
+      anomalies 
+    };
   }, [allUsers]);
 
   const filteredUsers = useMemo(() => {
     if (!allUsers) return [];
-    let list = allUsers.filter(u => !isUserAnomaly(u));
+    let list = [...allUsers];
     if (userSearch.trim()) {
       const s = userSearch.toLowerCase();
-      list = list.filter(u => u.name?.toLowerCase().includes(s) || u.username?.toLowerCase().includes(s));
+      list = list.filter(u => 
+        u.name?.toLowerCase().includes(s) || 
+        u.username?.toLowerCase().includes(s) ||
+        u.phone?.includes(s)
+      );
     }
-    return list;
+    return list.slice(0, 100);
   }, [allUsers, userSearch]);
-
-  const handleTerminalCommand = (e: React.FormEvent) => {
-    e.preventDefault();
-    const cmd = terminalInput.trim().toLowerCase();
-    if (!cmd) return;
-    let res = "";
-    if (cmd === 'status') res = "Kernel: STABLE | Aegis: ACTIVE | Pending Appeals: " + appeals?.filter(a => a.status === 'pending').length;
-    else if (cmd === 'audit') { handleStartAudit(); return; }
-    else if (cmd === 'clear') { setTerminalLines([]); setTerminalInput(''); return; }
-    else res = `Signal not recognized: ${cmd}`;
-    setTerminalLines(prev => [...prev, `$ ${terminalInput}`, res]);
-    setTerminalInput('');
-  };
 
   const handleStartAudit = () => {
     if (isAuditing || !allUsers) return;
@@ -133,7 +133,6 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     } catch (e) { toast({ title: "Сбой протокола", variant: "destructive" }); }
   };
 
-  // APPEAL ACTIONS
   const handleAppealJustice = async (appeal: Appeal, action: 'accept' | 'reject' | 'comment') => {
     if (!db) return;
     const batch = writeBatch(db);
@@ -184,15 +183,15 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                  <ShieldAlert className="w-8 h-8 text-primary animate-pulse" />
               </div>
               <div className="flex flex-col text-left">
-                <DialogTitle className="text-3xl font-black uppercase italic text-white tracking-tighter">MISSION CONTROL</DialogTitle>
-                <DialogDescription className="text-[10px] font-black uppercase text-primary/60 mt-1">Aegis Executive Dashboard</DialogDescription>
+                <DialogTitle className="text-3xl font-black uppercase italic text-white tracking-tighter leading-none">MISSION CONTROL</DialogTitle>
+                <DialogDescription className="text-[10px] font-black uppercase text-primary/60 mt-2 tracking-widest">Aegis Executive Dashboard v9.0</DialogDescription>
               </div>
             </div>
             <div className="hidden sm:flex bg-black/40 border border-white/5 px-6 py-3 rounded-2xl items-center gap-4">
                <Activity className="w-4 h-4 text-green-500" />
                <div className="flex flex-col">
-                 <span className="text-xs font-black text-white">{stats.valid} / {stats.total}</span>
-                 <span className="text-[7px] font-black text-white/20 uppercase tracking-widest">Integrity Secured</span>
+                 <span className="text-xs font-black text-white">{stats.active} / {stats.total}</span>
+                 <span className="text-[7px] font-black text-white/20 uppercase tracking-widest">Nodes Operational</span>
                </div>
             </div>
           </div>
@@ -201,17 +200,45 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
           <div className="px-8 mt-6">
             <TabsList className="grid grid-cols-5 bg-white/5 p-1.5 rounded-2xl border border-white/5">
-              <TabsTrigger value="appeals" className="text-[9px] font-black uppercase tracking-widest">Апелляции</TabsTrigger>
-              <TabsTrigger value="requests" className="text-[9px] font-black uppercase tracking-widest">Банк</TabsTrigger>
-              <TabsTrigger value="users" className="text-[9px] font-black uppercase tracking-widest">Узлы</TabsTrigger>
-              <TabsTrigger value="shield" className="text-[9px] font-black uppercase tracking-widest">Защита</TabsTrigger>
-              <TabsTrigger value="terminal" className="text-[9px] font-black uppercase tracking-widest">Консоль</TabsTrigger>
+              <TabsTrigger value="analytics" className="text-[9px] font-black uppercase tracking-widest gap-2"><BarChart3 className="w-3 h-3" /> Аналитика</TabsTrigger>
+              <TabsTrigger value="appeals" className="text-[9px] font-black uppercase tracking-widest gap-2"><Scale className="w-3 h-3" /> Апелляции</TabsTrigger>
+              <TabsTrigger value="requests" className="text-[9px] font-black uppercase tracking-widest gap-2"><Zap className="w-3 h-3" /> Банк</TabsTrigger>
+              <TabsTrigger value="users" className="text-[9px] font-black uppercase tracking-widest gap-2"><Users className="w-3 h-3" /> Узлы</TabsTrigger>
+              <TabsTrigger value="shield" className="text-[9px] font-black uppercase tracking-widest gap-2"><ShieldCheck className="w-3 h-3" /> Защита</TabsTrigger>
             </TabsList>
           </div>
 
           <ScrollArea className="flex-1">
             <div className="p-8 pb-32">
               
+              {/* ANALYTICS TAB */}
+              <TabsContent value="analytics" className="m-0 space-y-8 animate-in fade-in duration-500">
+                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <StatCard icon={Users} label="Всего Узлов" value={stats.total} sub="Зарегистрировано" color="text-white" />
+                    <StatCard icon={CheckCircle2} label="Активные" value={stats.active} sub="Вне ограничений" color="text-green-500" />
+                    <StatCard icon={Ban} label="В бане" value={stats.banned} sub="Доступ аннигилирован" color="text-red-500" />
+                    <StatCard icon={Crown} label="Elite Nodes" value={stats.premium} sub="Premium статус" color="text-accent" />
+                 </div>
+
+                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="md:col-span-2 bg-white/5 border border-white/10 rounded-[2.5rem] p-8 space-y-6 shadow-xl relative overflow-hidden">
+                       <div className="absolute top-0 right-0 p-6 opacity-[0.03]"><PieChart className="w-32 h-32 text-primary" /></div>
+                       <h3 className="text-xl font-black uppercase italic text-white tracking-widest">Здоровье Сети</h3>
+                       <div className="space-y-6 pt-4">
+                          <ProgressRow label="Показатель целостности" value={(stats.active / stats.total) * 100} color="bg-green-500" />
+                          <ProgressRow label="Плотность аномалий" value={(stats.anomalies / stats.total) * 100} color="bg-red-500" />
+                          <ProgressRow label="Процент элиты" value={(stats.premium / stats.total) * 100} color="bg-accent" />
+                       </div>
+                    </div>
+                    <div className="bg-primary/5 border border-primary/20 rounded-[2.5rem] p-8 flex flex-col items-center justify-center text-center space-y-4">
+                       <ShieldAlert className="w-12 h-12 text-primary animate-pulse" />
+                       <h4 className="text-sm font-black uppercase text-white tracking-widest">Aegis Status</h4>
+                       <span className="px-4 py-1 rounded-full bg-green-500/20 text-green-500 text-[10px] font-black uppercase tracking-widest border border-green-500/20">Operational</span>
+                       <p className="text-[9px] text-white/40 uppercase font-bold tracking-tight">Автоматическая фильтрация входящих сигналов активна.</p>
+                    </div>
+                 </div>
+              </TabsContent>
+
               <TabsContent value="appeals" className="m-0 space-y-6">
                  {appeals?.filter(a => a.status === 'pending').length === 0 ? (
                    <div className="text-center py-20 opacity-20">
@@ -250,25 +277,9 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                            </div>
 
                            <div className="flex flex-wrap gap-3">
-                              <Button 
-                                onClick={() => handleAppealJustice(appeal, 'accept')}
-                                className="h-12 px-6 bg-green-500 text-white rounded-xl font-black uppercase text-[10px] tracking-widest hover:scale-105 transition-all"
-                              >
-                                 <CheckCircle2 className="w-4 h-4 mr-2" /> Принять и разбанить
-                              </Button>
-                              <Button 
-                                onClick={() => handleAppealJustice(appeal, 'comment')}
-                                className="h-12 px-6 bg-primary text-white rounded-xl font-black uppercase text-[10px] tracking-widest hover:scale-105 transition-all"
-                              >
-                                 <MessageSquare className="w-4 h-4 mr-2" /> Разбанить с комм.
-                              </Button>
-                              <Button 
-                                onClick={() => handleAppealJustice(appeal, 'reject')}
-                                variant="destructive"
-                                className="h-12 px-6 rounded-xl font-black uppercase text-[10px] tracking-widest hover:scale-105 transition-all"
-                              >
-                                 <XCircle className="w-4 h-4 mr-2" /> Отказать
-                              </Button>
+                              <Button onClick={() => handleAppealJustice(appeal, 'accept')} className="h-12 px-6 bg-green-500 text-white rounded-xl font-black uppercase text-[10px] tracking-widest hover:scale-105 transition-all"><CheckCircle2 className="w-4 h-4 mr-2" /> Принять и разбанить</Button>
+                              <Button onClick={() => handleAppealJustice(appeal, 'comment')} className="h-12 px-6 bg-primary text-white rounded-xl font-black uppercase text-[10px] tracking-widest hover:scale-105 transition-all"><MessageSquare className="w-4 h-4 mr-2" /> Разбанить с комм.</Button>
+                              <Button onClick={() => handleAppealJustice(appeal, 'reject')} variant="destructive" className="h-12 px-6 rounded-xl font-black uppercase text-[10px] tracking-widest hover:scale-105 transition-all"><XCircle className="w-4 h-4 mr-2" /> Отказать</Button>
                            </div>
                         </div>
                       ))}
@@ -334,11 +345,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                              <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest mt-1">Поиск профилей "User" и пустых ID</p>
                           </div>
                        </div>
-                       <Button 
-                         onClick={handleStartAudit} 
-                         disabled={isAuditing} 
-                         className="bg-primary text-white h-14 rounded-2xl font-black uppercase tracking-widest px-10 shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all w-full lg:w-auto"
-                       >
+                       <Button onClick={handleStartAudit} disabled={isAuditing} className="bg-primary text-white h-14 rounded-2xl font-black uppercase tracking-widest px-10 shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all w-full lg:w-auto">
                          {isAuditing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Запустить анализ базы"}
                        </Button>
                     </div>
@@ -357,39 +364,22 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                                 <p className="text-[9px] font-black uppercase text-red-500/60 mt-1 tracking-widest">Аномалии обнаружены</p>
                              </div>
                           </div>
-
                           {auditResults.suspiciousNodes.length > 0 && (
                             <div className="flex flex-col gap-6">
-                               <Button onClick={handleMassBan} className="w-full h-16 bg-red-600 text-white rounded-2xl font-black uppercase italic tracking-widest shadow-2xl shadow-red-600/20">
-                                  <Ban className="w-5 h-5 mr-3" /> Аннигилировать все аномалии
-                               </Button>
-
+                               <Button onClick={handleMassBan} className="w-full h-16 bg-red-600 text-white rounded-2xl font-black uppercase italic tracking-widest shadow-2xl shadow-red-600/20"><Ban className="w-5 h-5 mr-3" /> Аннигилировать все аномалии</Button>
                                <div className="space-y-4">
-                                  <div className="flex items-center gap-2 px-2 text-red-500">
-                                     <ShieldQuestion className="w-4 h-4" />
-                                     <h5 className="text-[10px] font-black uppercase tracking-widest">Список на блокировку:</h5>
-                                  </div>
+                                  <div className="flex items-center gap-2 px-2 text-red-500"><ShieldQuestion className="w-4 h-4" /><h5 className="text-[10px] font-black uppercase tracking-widest">Список на блокировку:</h5></div>
                                   <div className="grid grid-cols-1 gap-3">
                                      {auditResults.suspiciousNodes.map(item => (
-                                       <div 
-                                         key={item.user.id} 
-                                         onClick={() => setInspectedUserId(item.user.id)}
-                                         className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white/5 border border-white/5 rounded-2xl hover:bg-white/10 transition-all cursor-pointer group gap-4"
-                                       >
+                                       <div key={item.user.id} onClick={() => setInspectedUserId(item.user.id)} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white/5 border border-white/5 rounded-2xl hover:bg-white/10 transition-all cursor-pointer group gap-4">
                                           <div className="flex items-center gap-4 min-w-0 flex-1">
                                              <UserAvatar userId={item.user.id} className="h-10 w-10 shrink-0 opacity-60 grayscale group-hover:grayscale-0 group-hover:opacity-100 transition-all" />
                                              <div className="flex flex-col text-left min-w-0 overflow-hidden flex-1">
                                                 <span className="text-sm font-bold text-white uppercase italic truncate group-hover:text-primary">{formatDisplayName(item.user.name, item.user.username)}</span>
-                                                <div className="flex flex-wrap items-center gap-2">
-                                                   <span className="text-[9px] text-white/30 font-black uppercase tracking-widest truncate">{item.user.username || 'NO ID'}</span>
-                                                </div>
+                                                <div className="flex flex-wrap items-center gap-2"><span className="text-[9px] text-white/30 font-black uppercase tracking-widest truncate">{item.user.username || 'NO ID'}</span></div>
                                              </div>
                                           </div>
-                                          <div className="px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 shadow-lg shrink-0 self-start sm:self-center">
-                                             <span className="text-[8px] font-black text-red-500 uppercase tracking-tighter whitespace-nowrap">
-                                                {item.reason}
-                                             </span>
-                                          </div>
+                                          <div className="px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 shadow-lg shrink-0 self-start sm:self-center"><span className="text-[8px] font-black text-red-500 uppercase tracking-tighter whitespace-nowrap">{item.reason}</span></div>
                                        </div>
                                      ))}
                                   </div>
@@ -400,31 +390,40 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                     )}
                  </div>
               </TabsContent>
-
-              <TabsContent value="terminal" className="m-0">
-                 <div className="bg-black/60 border border-white/10 rounded-[2.5rem] overflow-hidden h-[400px] flex flex-col font-mono shadow-2xl">
-                    <div className="bg-white/5 p-4 flex items-center gap-4 border-b border-white/5">
-                       <div className="flex gap-2">
-                          <div className="w-3 h-3 rounded-full bg-red-500/50" />
-                          <div className="w-3 h-3 rounded-full bg-green-500/50" />
-                       </div>
-                       <span className="text-[10px] text-white/30 uppercase font-black tracking-widest">nuxus@kernel: ~ aegis-terminal</span>
-                    </div>
-                    <ScrollArea className="flex-1 p-6 text-[12px] leading-relaxed">
-                       {terminalLines.map((line, i) => (
-                         <p key={i} className={cn(line.startsWith('$') ? "text-white" : "text-primary/70 mb-2")}>{line}</p>
-                       ))}
-                       <form onSubmit={handleTerminalCommand} className="flex items-center gap-2 mt-2">
-                          <span className="text-primary">$</span>
-                          <input className="bg-transparent border-none outline-none flex-1 text-white" value={terminalInput} onChange={e => setTerminalInput(e.target.value)} autoFocus />
-                       </form>
-                    </ScrollArea>
-                 </div>
-              </TabsContent>
             </div>
           </ScrollArea>
         </Tabs>
       </DialogContent>
     </Dialog>
   );
+}
+
+function StatCard({ icon: Icon, label, value, sub, color }: any) {
+  return (
+    <div className="bg-white/[0.03] border border-white/5 p-6 rounded-[2rem] flex flex-col gap-4 shadow-xl hover:bg-white/[0.05] transition-all">
+       <div className="flex items-center justify-between">
+          <div className="bg-white/5 p-2 rounded-xl border border-white/10"><Icon className={cn("w-4 h-4", color)} /></div>
+          <span className="text-[8px] font-black uppercase tracking-[0.2em] text-white/20">Live Sync</span>
+       </div>
+       <div className="flex flex-col">
+          <span className="text-2xl font-black text-white italic tracking-tighter tabular-nums">{value}</span>
+          <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest mt-1">{label}</span>
+       </div>
+       <p className="text-[7px] font-black uppercase text-primary/40 tracking-[0.3em] italic">{sub}</p>
+    </div>
+  )
+}
+
+function ProgressRow({ label, value, color }: any) {
+  return (
+    <div className="space-y-2">
+       <div className="flex justify-between items-center px-1">
+          <span className="text-[9px] font-black uppercase tracking-widest text-white/40">{label}</span>
+          <span className="text-[10px] font-black text-white italic">{Math.round(value)}%</span>
+       </div>
+       <div className="h-1.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
+          <div className={cn("h-full transition-all duration-1000 rounded-full", color)} style={{ width: `${value}%` }} />
+       </div>
+    </div>
+  )
 }
