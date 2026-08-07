@@ -2,13 +2,14 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
-import { useUser, useFirestore, useDoc } from '@/firebase';
+import { useUser, useFirestore } from '@/firebase/provider';
+import { useDoc } from '@/firebase/firestore/use-doc';
 import { doc } from 'firebase/firestore';
 import type { User } from '@/lib/types';
 
 /**
- * ОБНОВЛЯТОР ИКОНОК V6.1.1
- * ИСПРАВЛЕНО: Корректный импорт хуков через Firebase Barrel.
+ * ОБНОВЛЯТОР ИКОНОК V6.6.0 «DECOUPLED»
+ * ИСПРАВЛЕНО: Прямые импорты для исключения циклической зависимости.
  */
 export function AppIconApplier() {
   const { user } = useUser();

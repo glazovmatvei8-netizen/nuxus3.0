@@ -2,13 +2,14 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
-import { useUser, useFirestore, useDoc } from '@/firebase'; 
+import { useUser, useFirestore } from '@/firebase/provider'; 
+import { useDoc } from '@/firebase/firestore/use-doc';
 import { doc } from 'firebase/firestore';
 import type { User } from '@/lib/types';
 
 /**
- * ПРИМЕНИТЕЛЬ ТЕМЫ V6.5.5 «STABLE RESOLUTION»
- * ИСПРАВЛЕНО: Корректный импорт хуков через Firebase Barrel.
+ * ПРИМЕНИТЕЛЬ ТЕМЫ V6.6.0 «DECOUPLED»
+ * ИСПРАВЛЕНО: Прямые импорты для исключения циклической зависимости.
  */
 export function ThemeApplier() {
   const { user } = useUser();
@@ -41,15 +42,9 @@ export function ThemeApplier() {
       document.documentElement.classList.add('dark');
     }
 
-    // 3. Обработка кастомного цвета (HEX to HSL Components)
+    // 3. Обработка кастомного цвета
     const applyColor = (hex: string) => {
       if (!hex) return;
-      if (hex.includes(' ')) {
-        document.documentElement.style.setProperty('--primary', hex);
-        document.documentElement.style.setProperty('--ring', hex);
-        return;
-      }
-
       const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
       if (result) {
         let r = parseInt(result[1], 16) / 255;

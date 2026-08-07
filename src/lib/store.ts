@@ -1,9 +1,8 @@
 'use client';
 
 /**
- * NUXUS STORE PROXY V9.5.0
- * Этот файл очищен для предотвращения конфликта с store.tsx.
- * Все импорты перенаправлены на .tsx версию через Next.js resolver.
+ * NUXUS STORE PROXY V9.6.0
+ * Файл деактивирован для предотвращения конфликтов с store.tsx.
+ * Все импорты в приложении теперь должны идти напрямую из store.tsx или через алиас @/lib/store.
  */
-
-export * from './store.tsx';
+export {};
