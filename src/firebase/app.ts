@@ -6,8 +6,8 @@ import { getAuth, Auth } from 'firebase/auth';
 import { getFirestore, initializeFirestore, persistentLocalCache, Firestore } from 'firebase/firestore';
 
 /**
- * Изолированная инициализация инстансов Firebase (Nodes).
- * ОПТИМИЗИРОВАНО V9.5.0: Устранение SyntaxError и стабилизация инициализации.
+ * NUXUS KERNEL APP INITIALIZER V9.8.0
+ * ОПТИМИЗИРОВАНО: Защита от дублирующей инициализации Firestore.
  */
 
 export function initializeFirebase(instanceName?: string) {
@@ -28,12 +28,18 @@ export function initializeFirebase(instanceName?: string) {
   
   let db: Firestore;
   try {
-    // Инициализация Firestore с локальным кэшем
+    // Сначала пытаемся получить существующий инстанс
     db = getFirestore(app);
-  } catch (e: any) {
-    db = initializeFirestore(app, {
-      localCache: persistentLocalCache({})
-    });
+  } catch (e) {
+    // Если инстанса нет, инициализируем с кэшем
+    try {
+      db = initializeFirestore(app, {
+        localCache: persistentLocalCache({})
+      });
+    } catch (criticalError) {
+      // Экстренный фоллбек
+      db = getFirestore(app);
+    }
   }
 
   const auth: Auth = getAuth(app);

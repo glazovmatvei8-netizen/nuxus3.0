@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useMemo, type ReactNode } from 'react';
@@ -12,30 +11,29 @@ interface FirebaseClientProviderProps {
 }
 
 /**
- * ГЛОБАЛЬНЫЙ МЕНЕДЖЕР ИЗОЛИРОВАННЫХ УЗЛОВ NUXUS V9.7.0
- * Использование прямых импортов для стабильности графа зависимостей.
+ * ГЛОБАЛЬНЫЙ МЕНЕДЖЕР УЗЛОВ V9.8.0
+ * ОПТИМИЗИРОВАНО: Ленивая инициализация для предотвращения ChunkLoadError.
  */
 export function FirebaseClientProvider({ children }: FirebaseClientProviderProps) {
   const { activeAccountIndex } = useAppState();
 
-  const instances = useMemo(() => {
-    if (typeof window === 'undefined') return [];
-    return [0, 1, 2, 3, 4].map(i => {
-      const instance = initializeFirebase(`nuxus_node_v95_${i}`);
-      if (instance.auth) {
-        setPersistence(instance.auth, browserLocalPersistence).catch(() => {});
-      }
-      return instance;
-    });
-  }, []);
-
   const activeInstance = useMemo(() => {
-    if (instances.length === 0) return initializeFirebase('nuxus_ssr_temp');
-    return instances[activeAccountIndex] || instances[0];
-  }, [instances, activeAccountIndex]);
+    if (typeof window === 'undefined') return { firebaseApp: null, auth: null, firestore: null };
+    
+    // Инициализируем только нужный узел вместо всех пяти сразу
+    const instance = initializeFirebase(`nuxus_node_v98_${activeAccountIndex}`);
+    if (instance.auth) {
+      setPersistence(instance.auth, browserLocalPersistence).catch(() => {});
+    }
+    return instance;
+  }, [activeAccountIndex]);
 
   if (!activeInstance.firebaseApp || !activeInstance.firestore || !activeInstance.auth) {
-    return <div className="h-screen w-full bg-[#020205]" />;
+    return (
+      <div className="h-screen w-full bg-[#020205] flex items-center justify-center">
+         <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+      </div>
+    );
   }
 
   return (
