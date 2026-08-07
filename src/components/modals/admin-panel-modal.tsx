@@ -15,8 +15,15 @@ import { collection, query, doc, limit, updateDoc, writeBatch, increment, orderB
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   ShieldAlert, Users, Star, Ban, Check, Activity, 
-  Zap, ShieldCheck, Search, Crown, Shield, AlertTriangle, SearchCode, ShieldQuestion, XCircle, UserX, Ghost, Loader2, Phone, MessageSquare, Scale, CheckCircle2, BarChart3, PieChart
+  Zap, ShieldCheck, Search, Crown, Shield, AlertTriangle, SearchCode, ShieldQuestion, XCircle, UserX, Ghost, Loader2, Phone, MessageSquare, Scale, CheckCircle2, BarChart3, PieChart, MoreVertical, ShieldPlus, UserMinus
 } from 'lucide-react';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator
+} from "@/components/ui/dropdown-menu";
 import type { User, TopUpRequest, Appeal } from '@/lib/types';
 import { formatDisplayName, cn, isUserAnomaly, isUserPremium } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -25,8 +32,8 @@ import { ru } from 'date-fns/locale';
 import { useAppState } from '@/lib/store.tsx';
 
 /**
- * MISSION CONTROL V9.0.0 «AEGIS ANALYTICS»
- * UPDATED: Replaced Terminal with Analytics Dashboard.
+ * MISSION CONTROL V9.2.0 «SUPREME CONTROL»
+ * RESTORED: Management menu for individual nodes (Ban, Premium, Admin).
  */
 export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const db = useFirestore();
@@ -91,6 +98,16 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     }
     return list.slice(0, 100);
   }, [allUsers, userSearch]);
+
+  const handleAction = async (userId: string, data: Partial<User>, label: string) => {
+    if (!db) return;
+    try {
+      await updateDoc(doc(db, 'users', userId), data);
+      toast({ title: label });
+    } catch (e) {
+      toast({ title: "Сбой синхронизации", variant: "destructive" });
+    }
+  };
 
   const handleStartAudit = () => {
     if (isAuditing || !allUsers) return;
@@ -184,7 +201,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               </div>
               <div className="flex flex-col text-left">
                 <DialogTitle className="text-3xl font-black uppercase italic text-white tracking-tighter leading-none">MISSION CONTROL</DialogTitle>
-                <DialogDescription className="text-[10px] font-black uppercase text-primary/60 mt-2 tracking-widest">Aegis Executive Dashboard v9.0</DialogDescription>
+                <DialogDescription className="text-[10px] font-black uppercase text-primary/60 mt-2 tracking-widest">Aegis Executive Dashboard v9.2</DialogDescription>
               </div>
             </div>
             <div className="hidden sm:flex bg-black/40 border border-white/5 px-6 py-3 rounded-2xl items-center gap-4">
@@ -211,7 +228,6 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
           <ScrollArea className="flex-1">
             <div className="p-8 pb-32">
               
-              {/* ANALYTICS TAB */}
               <TabsContent value="analytics" className="m-0 space-y-8 animate-in fade-in duration-500">
                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <StatCard icon={Users} label="Всего Узлов" value={stats.total} sub="Зарегистрировано" color="text-white" />
@@ -225,9 +241,9 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                        <div className="absolute top-0 right-0 p-6 opacity-[0.03]"><PieChart className="w-32 h-32 text-primary" /></div>
                        <h3 className="text-xl font-black uppercase italic text-white tracking-widest">Здоровье Сети</h3>
                        <div className="space-y-6 pt-4">
-                          <ProgressRow label="Показатель целостности" value={(stats.active / stats.total) * 100} color="bg-green-500" />
-                          <ProgressRow label="Плотность аномалий" value={(stats.anomalies / stats.total) * 100} color="bg-red-500" />
-                          <ProgressRow label="Процент элиты" value={(stats.premium / stats.total) * 100} color="bg-accent" />
+                          <ProgressRow label="Показатель целостности" value={(stats.active / (stats.total || 1)) * 100} color="bg-green-500" />
+                          <ProgressRow label="Плотность аномалий" value={(stats.anomalies / (stats.total || 1)) * 100} color="bg-red-500" />
+                          <ProgressRow label="Процент элиты" value={(stats.premium / (stats.total || 1)) * 100} color="bg-accent" />
                        </div>
                     </div>
                     <div className="bg-primary/5 border border-primary/20 rounded-[2.5rem] p-8 flex flex-col items-center justify-center text-center space-y-4">
@@ -315,18 +331,40 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                  </div>
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {filteredUsers.map(u => (
-                      <div key={u.id} onClick={() => setInspectedUserId(u.id)} className="bg-white/[0.03] p-5 rounded-[2rem] border border-white/5 flex items-center justify-between cursor-pointer hover:bg-white/[0.08] transition-all group">
-                         <div className="flex items-center gap-4 min-w-0">
+                      <div key={u.id} className="bg-white/[0.03] p-5 rounded-[2rem] border border-white/5 flex items-center justify-between hover:bg-white/[0.08] transition-all group">
+                         <div className="flex items-center gap-4 min-w-0 cursor-pointer flex-1" onClick={() => setInspectedUserId(u.id)}>
                             <UserAvatar userId={u.id} className="h-12 w-12 border border-white/5 shrink-0" manualAvatarUrl={u.avatarUrl} />
                             <div className="flex flex-col text-left min-w-0">
                                <span className="text-sm font-black text-white uppercase italic group-hover:text-primary transition-colors truncate">{formatDisplayName(u.name, u.username)}</span>
                                <span className="text-[10px] text-primary/60 font-black uppercase tracking-widest truncate">{u.username}</span>
                             </div>
                          </div>
-                         <div className="flex gap-1.5 shrink-0">
-                            {u.isPremium && <Crown className="w-4 h-4 text-accent" />}
-                            {u.isAdmin && <ShieldCheck className="w-4 h-4 text-primary" />}
-                            {u.isBanned && <Ban className="w-4 h-4 text-red-500" />}
+                         <div className="flex items-center gap-3">
+                            <div className="flex gap-1.5 shrink-0">
+                                {u.isPremium && <Crown className="w-4 h-4 text-accent" />}
+                                {u.isAdmin && <ShieldCheck className="w-4 h-4 text-primary" />}
+                                {u.isBanned && <Ban className="w-4 h-4 text-red-500" />}
+                            </div>
+                            
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl bg-white/5 border border-white/5 opacity-40 group-hover:opacity-100 transition-opacity">
+                                  <MoreVertical className="w-5 h-5" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-56 bg-[#0a0a0c]/95 backdrop-blur-xl border-white/10 rounded-2xl p-2 shadow-2xl z-[1000]">
+                                <DropdownMenuItem onClick={() => handleAction(u.id, { isPremium: !u.isPremium }, u.isPremium ? "Premium отозван" : "Premium выдан")} className="gap-3 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-primary/10 transition-all">
+                                  <Crown className={cn("w-4 h-4", u.isPremium ? "text-white/40" : "text-accent")} /> {u.isPremium ? 'Снять Premium' : 'Выдать Premium'}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleAction(u.id, { isAdmin: !u.isAdmin }, u.isAdmin ? "Права сняты" : "Админ назначен")} className="gap-3 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-primary/10 transition-all">
+                                  <ShieldCheck className={cn("w-4 h-4", u.isAdmin ? "text-white/40" : "text-primary")} /> {u.isAdmin ? 'Снять Админа' : 'Дать Админа'}
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator className="bg-white/5" />
+                                <DropdownMenuItem onClick={() => handleAction(u.id, { isBanned: !u.isBanned, bannedAt: !u.isBanned ? new Date().toISOString() : null }, u.isBanned ? "Доступ восстановлен" : "Узел аннигилирован")} className="gap-3 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest text-red-500 hover:bg-red-500/10 transition-all">
+                                  <Ban className="w-4 h-4" /> {u.isBanned ? 'Разблокировать' : 'Заблокировать'}
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                          </div>
                       </div>
                     ))}

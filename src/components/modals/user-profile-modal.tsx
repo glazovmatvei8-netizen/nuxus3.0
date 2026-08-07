@@ -7,13 +7,13 @@ import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
-  MessageCircle, Star, Calendar, Phone, Video, Gift, Zap, Globe, ShieldCheck, Cpu, Sparkles, UserCheck, UserPlus
+  MessageCircle, Star, Calendar, Phone, Video, Gift, Zap, Globe, ShieldCheck, Cpu, Sparkles, UserCheck, UserPlus, Ban, Crown, ShieldAlert, ShieldX
 } from 'lucide-react';
 import { useFirestore, useUser, useDoc, useCollection } from '@/firebase/provider';
 import { doc, query, collection, limit, getDocs, addDoc, where, orderBy, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useAppState } from '@/lib/store';
-import { formatDisplayName, isUserPremium, formatLastSeen, decryptSignal, cn, isGlobalAdmin } from '@/lib/utils';
+import { formatDisplayName, isUserPremium, formatLastSeen, cn, isGlobalAdmin } from '@/lib/utils';
 import type { User, ReceivedGift } from '@/lib/types';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
@@ -24,8 +24,8 @@ const ADMIN_ID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 const ORIGIN_DATE = '2024-01-01T00:00:00Z'; 
 
 /**
- * USER PROFILE MODAL V9.1.0 «ACCESSIBILITY SYNC»
- * FIXED: Proper DialogTitle and description placement.
+ * USER PROFILE MODAL V9.2.0 «EXECUTIVE ACCESS»
+ * ADDED: Hidden Admin Actions section for node management.
  */
 export function UserProfileModal() {
   const db = useFirestore();
@@ -34,12 +34,15 @@ export function UserProfileModal() {
   const { toast } = useToast();
 
   const [isGiftModalOpen, setIsGiftModalOpen] = useState(false);
+  const [isAdminProcessing, setIsAdminProcessing] = useState(false);
 
   const currentUserRef = useMemo(() => (!db || !currentUser) ? null : doc(db, 'users', currentUser.uid), [db, currentUser?.uid]);
   const { data: currentUserProfile } = useDoc<User>(currentUserRef);
 
   const targetUserRef = useMemo(() => (!db || !inspectedUserId) ? null : doc(db, 'users', inspectedUserId), [db, inspectedUserId]);
   const { data: targetUser } = useDoc<User>(targetUserRef);
+
+  const isViewerAdmin = useMemo(() => isGlobalAdmin(currentUserProfile), [currentUserProfile]);
 
   const giftsQuery = useMemo(() => {
     if (!db || !inspectedUserId) return null;
@@ -60,6 +63,19 @@ export function UserProfileModal() {
       toast({ title: isContact ? "Узел удален из контактов" : "Узел добавлен в контакты" });
     } catch (e) {
       toast({ title: "Ошибка синхронизации", variant: "destructive" });
+    }
+  };
+
+  const handleAdminAction = async (data: Partial<User>, label: string) => {
+    if (!db || !inspectedUserId) return;
+    setIsAdminProcessing(true);
+    try {
+      await updateDoc(doc(db, 'users', inspectedUserId), data);
+      toast({ title: label });
+    } catch (e) {
+      toast({ title: "Сбой прав доступа", variant: "destructive" });
+    } finally {
+      setIsAdminProcessing(false);
     }
   };
 
@@ -200,6 +216,38 @@ export function UserProfileModal() {
             </div>
 
             <div className="px-6 mt-10 space-y-6">
+              {/* ADMIN ACTIONS SECTION (EXCLUSIVE) */}
+              {isViewerAdmin && inspectedUserId !== currentUser?.uid && (
+                <div className="space-y-3 p-6 bg-red-500/5 rounded-[2.2rem] border border-red-500/20 shadow-xl animate-in zoom-in-95">
+                  <div className="flex items-center gap-2 mb-2 px-1">
+                    <ShieldAlert className="w-4 h-4 text-red-500" />
+                    <h3 className="text-[10px] font-black uppercase text-red-500 tracking-widest">Администрирование</h3>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button 
+                      onClick={() => handleAdminAction({ isPremium: !targetUser?.isPremium }, targetUser?.isPremium ? "Premium аннулирован" : "Premium активирован")} 
+                      variant="ghost" className="h-11 rounded-xl bg-white/5 text-[9px] font-black uppercase gap-2 hover:bg-accent/20 hover:text-accent border border-white/5"
+                    >
+                      <Crown className={cn("w-3.5 h-3.5", targetUser?.isPremium ? "text-white/40" : "text-accent")} /> 
+                      {targetUser?.isPremium ? 'REVOKE PREM' : 'GIVE PREM'}
+                    </Button>
+                    <Button 
+                      onClick={() => handleAdminAction({ isAdmin: !targetUser?.isAdmin }, targetUser?.isAdmin ? "Права отозваны" : "Админ назначен")} 
+                      variant="ghost" className="h-11 rounded-xl bg-white/5 text-[9px] font-black uppercase gap-2 hover:bg-primary/20 hover:text-primary border border-white/5"
+                    >
+                      <ShieldCheck className={cn("w-3.5 h-3.5", targetUser?.isAdmin ? "text-white/40" : "text-primary")} /> 
+                      {targetUser?.isAdmin ? 'REVOKE ADMIN' : 'GIVE ADMIN'}
+                    </Button>
+                  </div>
+                  <Button 
+                    onClick={() => handleAdminAction({ isBanned: !targetUser?.isBanned, bannedAt: !targetUser?.isBanned ? new Date().toISOString() : null }, targetUser?.isBanned ? "Доступ восстановлен" : "Узел аннигилирован")}
+                    className={cn("w-full h-11 rounded-xl font-black uppercase text-[9px] gap-2 shadow-lg", targetUser?.isBanned ? "bg-green-500 text-white" : "bg-red-600 text-white")}
+                  >
+                    {targetUser?.isBanned ? <><ShieldPlus className="w-4 h-4" /> ВОССТАНОВИТЬ ДОСТУП</> : <><UserMinus className="w-4 h-4" /> АННИГИЛИРОВАТЬ УЗЕЛ</>}
+                  </Button>
+                </div>
+              )}
+
               <Button 
                 onClick={handleToggleContact}
                 variant={isContact ? "outline" : "default"}
