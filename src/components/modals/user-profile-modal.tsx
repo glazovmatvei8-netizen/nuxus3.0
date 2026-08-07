@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useMemo } from 'react';
@@ -24,8 +23,8 @@ const ADMIN_ID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 const ORIGIN_DATE = '2024-01-01T00:00:00Z'; 
 
 /**
- * USER PROFILE MODAL V5.3.0
- * FIXED: Direct imports from provider.
+ * USER PROFILE MODAL V5.3.1 «TRUE IDENTITY»
+ * FIXED: Убрано принудительное преобразование имен в CAPS (uppercase).
  */
 export function UserProfileModal() {
   const db = useFirestore();
@@ -166,7 +165,7 @@ export function UserProfileModal() {
 
             <div className="mt-6 px-8 text-center">
               <div className="flex items-center justify-center gap-2">
-                <h2 className="text-2xl font-black text-white italic tracking-tighter uppercase leading-tight">
+                <h2 className="text-2xl font-black text-white italic tracking-tighter leading-tight">
                   {formatDisplayName(targetUser?.name, targetUser?.username)}
                 </h2>
                 {(targetUser?.statusEmoji || (inspectedUserId === ADMIN_ID)) && (

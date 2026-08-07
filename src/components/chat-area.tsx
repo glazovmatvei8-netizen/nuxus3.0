@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
@@ -222,7 +221,6 @@ export default function ChatArea() {
     if (!db || !currentChatId || !chat || !messages || messages.length === 0) return;
     const lastMsg = messages[messages.length - 1];
     
-    // Check if the recipient of the chat is a bot OR if it's a private chat with one of OUR factory bots
     const isBotRecipient = chat.participantIds.some(pid => pid.startsWith('bot_') && pid !== lastMsg.senderId);
     
     if (isBotRecipient && lastMsg.senderId === firebaseUser?.uid && lastMsg.contentType === 'text') {
@@ -292,7 +290,7 @@ export default function ChatArea() {
           <div className="flex items-center gap-3 cursor-pointer min-w-0 flex-1 group" onClick={() => setIsChatInfoOpen(true)}>
             <UserAvatar userId={chat?.type === 'private' ? chat.participantIds.find(id => id !== firebaseUser?.uid) : null} className="h-10 w-10 border border-white/10" manualAvatarUrl={chat?.avatarUrl} fallbackName={formatDisplayName(chat?.name)} showOnlineStatus />
             <div className="flex flex-col min-w-0 text-left">
-              <span className="font-black text-[16px] truncate text-white italic tracking-tighter uppercase group-hover:text-primary transition-colors">{formatDisplayName(chat?.name, chat?.username)}</span>
+              <span className="font-black text-[16px] truncate text-white italic tracking-tighter group-hover:text-primary transition-colors">{formatDisplayName(chat?.name, chat?.username)}</span>
               <span className="text-[9px] font-black uppercase text-primary/40 mt-0.5">Сигнал активен</span>
             </div>
           </div>

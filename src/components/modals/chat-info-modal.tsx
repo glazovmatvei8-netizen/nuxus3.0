@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useMemo, memo } from 'react';
@@ -83,7 +82,7 @@ const ParticipantItem = memo(({
          <UserAvatar userId={userId} className="h-11 w-11 border border-white/10" manualAvatarUrl={profile?.avatarUrl} fallbackName={profile?.name} showOnlineStatus />
          <div className="flex flex-col text-left min-w-0">
            <div className="flex items-center gap-2">
-             <span className="text-[14px] font-black text-white italic tracking-tight uppercase truncate">
+             <span className="text-[14px] font-black text-white italic tracking-tight truncate">
                {userId === 'bot_nuxus_manager' ? 'Nuxus Manager 🛡️' : formatDisplayName(profile?.name, profile?.username)}
              </span>
              {isOwner && <Star className="w-3.5 h-3.5 text-accent fill-accent animate-pulse" />}
@@ -125,8 +124,8 @@ const ParticipantItem = memo(({
 ParticipantItem.displayName = 'ParticipantItem';
 
 /**
- * CHAT INFO MODAL V5.3.0
- * FIXED: Direct imports from provider.
+ * CHAT INFO MODAL V5.3.1
+ * FIXED: Убрана принудительная капитализация (uppercase) имен.
  */
 export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onOpenChange: (o: boolean) => void, chat: Chat }) {
   const db = useFirestore();
@@ -209,14 +208,14 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
              <UserAvatar userId={chat.type === 'saved' ? user?.uid : (isPrivate ? otherId : null)} manualAvatarUrl={chat.type !== 'private' && chat.type !== 'saved' ? chat.avatarUrl : null} className="h-28 w-28 border-[4px] border-[#0a0a0c] shadow-2xl relative z-10" fallbackName={currentDisplayName} showOnlineStatus />
           </div>
           <div className="space-y-1 relative z-10">
-             <DialogTitle className="text-2xl font-black italic text-white flex items-center justify-center gap-3 uppercase tracking-tighter">{currentDisplayName} {isUserPremium(isPrivate ? otherUserProfile : currentUserProfile) && <Star className="w-5 h-5 text-accent fill-accent animate-pulse" />}</DialogTitle>
+             <DialogTitle className="text-2xl font-black italic text-white flex items-center justify-center gap-3 tracking-tighter">{currentDisplayName} {isUserPremium(isPrivate ? otherUserProfile : currentUserProfile) && <Star className="w-5 h-5 text-accent fill-accent animate-pulse" />}</DialogTitle>
              <DialogDescription className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/40 italic">{isPrivate ? formatLastSeen(otherUserProfile?.lastSeen) : (chat.type === 'saved' ? 'Сигнал активен' : chat.username)}</DialogDescription>
           </div>
         </DialogHeader>
         <ScrollArea className="flex-1 px-1">
           <div className="p-6 space-y-8 pb-32">
             <div className="flex flex-col gap-3">
-               {isPrivate && (<Button onClick={toggleContact} variant={isContact ? "outline" : "default"} className={cn("w-full h-14 rounded-2xl font-black uppercase italic text-[11px] tracking-widest gap-2 shadow-xl", isContact ? "border-white/10 bg-white/5" : "bg-primary text-white")}>{isContact ? <><UserCheck className="w-5 h-5 text-primary" /> В контактах</> : <><UserPlus className="w-5 h-5" /> Добавить в контакты</>}</Button>)}
+               {isPrivate && (<Button onClick={toggleContact} variant={isContact ? "outline" : "default"} className={cn("w-full h-14 rounded-2xl font-black uppercase italic tracking-widest gap-2 shadow-xl", isContact ? "border-white/10 bg-white/5" : "bg-primary text-white")}>{isContact ? <><UserCheck className="w-5 h-5 text-primary" /> В контактах</> : <><UserPlus className="w-5 h-5" /> Добавить в контакты</>}</Button>)}
                <Button onClick={handleAiSummary} disabled={isSummarizing} className="w-full h-14 bg-white/[0.03] border border-white/10 text-white rounded-2xl font-black uppercase italic tracking-widest gap-3 shadow-inner text-[10px] hover:bg-primary/10 transition-all">{isSummarizing ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Wand2 className="w-5 h-5 text-primary" /> ПЕРЕСКАЗ ДИАЛОГА (AI)</>}</Button>
                {aiSummary && (<div className="bg-primary/5 p-5 rounded-3xl border border-primary/10 animate-in fade-in zoom-in-95 shadow-xl"><p className="text-[13px] text-white/90 leading-relaxed font-medium">{aiSummary}</p></div>)}
             </div>

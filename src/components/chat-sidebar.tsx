@@ -281,8 +281,6 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
   const [savedAccounts, setSavedAccounts] = useState<Record<number, any>>({});
 
   useEffect(() => {
-    const saved = localStorage.getItem('nuxus_recent_emojis');
-    // dummy check to ensure savedAccounts is initialized from local storage
     const accs = localStorage.getItem('nuxus_multi_accounts');
     if (accs) setSavedAccounts(JSON.parse(accs));
   }, []);
@@ -427,7 +425,6 @@ export default function ChatSidebar({ isArchiveView = false }: { isArchiveView?:
   return (
     <div className="flex flex-col h-full bg-transparent overflow-hidden relative max-w-full">
       <ScrollArea className="flex-1">
-        {/* Infinite Layout: Header and Search now scroll away */}
         <div className="px-6 pt-12 pb-6 bg-transparent z-20 space-y-8 animate-in fade-in slide-in-from-top-2 duration-500">
           <div className="flex items-center justify-between w-full relative">
             <div className="flex flex-col items-center gap-1.5 opacity-40">

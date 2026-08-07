@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useMemo } from 'react';
@@ -20,8 +19,8 @@ import nuxusVersions from '@/app/versions.json';
 import { ru } from 'date-fns/locale';
 
 /**
- * PROFILE VIEW V6.1.3 «STABLE SYNERGY»
- * FIXED: Direct imports from provider.
+ * PROFILE VIEW V6.1.4 «TRUE CASING»
+ * FIXED: Убрана принудительная капитализация (uppercase) имен и никнеймов.
  */
 export default function ProfileView() {
   const { user } = useUser();
@@ -77,13 +76,13 @@ export default function ProfileView() {
              </div>
              <div className="text-center space-y-1">
                 <div className="flex items-center justify-center gap-2">
-                   <h2 className="text-2xl font-black text-white italic tracking-tighter uppercase leading-tight">
-                     {profile?.name ? formatDisplayName(profile.name) : 'СИНХРОНИЗАЦИЯ...'}
+                   <h2 className="text-2xl font-black text-white italic tracking-tighter leading-tight">
+                     {profile?.name ? formatDisplayName(profile.name) : 'Синхронизация...'}
                    </h2>
                    {isPremium && <Star className="w-5 h-5 text-accent fill-accent animate-pulse" />}
                 </div>
                 <div className="flex items-center justify-center gap-3">
-                   <span className="text-[11px] text-primary/60 font-black uppercase tracking-[0.4em] italic ml-[0.4em]">{profile?.username}</span>
+                   <span className="text-[11px] text-primary/60 font-black tracking-[0.4em] italic ml-[0.4em]">{profile?.username}</span>
                    {profile?.phoneVerified && <div className="flex items-center gap-1 bg-green-500/10 px-2 py-0.5 rounded-full border border-green-500/20"><Phone className="w-2.5 h-2.5 text-green-500" /><span className="text-[7px] text-green-500 font-black uppercase">Verified</span></div>}
                    {profile?.emailVerified && <div className="flex items-center gap-1 bg-blue-400/10 px-2 py-0.5 rounded-full border border-blue-400/20"><Mail className="w-2.5 h-2.5 text-blue-400" /><span className="text-[7px] text-blue-400 font-black uppercase">Email</span></div>}
                 </div>
