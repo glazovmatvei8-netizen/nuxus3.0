@@ -1,9 +1,9 @@
+
 'use client';
 
 /**
- * DEACTIVATED V6.1.0
- * Barrel-файл удален для предотвращения циклической зависимости 'originalFactory.call'.
- * Все компоненты теперь импортируют напрямую из @/lib/store.tsx.
+ * NUXUS STORE PROXY V6.1.1
+ * Перенаправляет импорты на .tsx версию для предотвращения ошибки 'originalFactory.call'.
  */
 
-export {};
+export * from './store.tsx';

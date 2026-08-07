@@ -1,3 +1,4 @@
+
 'use client';
 
 import { firebaseConfig } from '@/firebase/config';
@@ -7,7 +8,7 @@ import { getFirestore, initializeFirestore, persistentLocalCache, Firestore } fr
 
 /**
  * Изолированная инициализация инстансов Firebase (Nodes).
- * ОПТИМИЗИРОВАНО V8.5.0: Отключен MultipleTabManager для устранения ASSERTION FAILED (ID: ca9).
+ * ОПТИМИЗИРОВАНО V9.4.0: Защита от ASSERTION FAILED (ID: ca9) при повторной инициализации.
  */
 
 const _global = (typeof window !== 'undefined' ? window : {}) as any;
@@ -20,6 +21,7 @@ export function initializeFirebase(instanceName?: string) {
 
   const name = instanceName || '[DEFAULT]';
   
+  // Возвращаем существующий инстанс, если он уже в памяти
   if (_global.__NUXUS_NODES__[name]) {
     return _global.__NUXUS_NODES__[name];
   }
@@ -29,11 +31,12 @@ export function initializeFirebase(instanceName?: string) {
   
   let db: Firestore;
   try {
-    // Используем упрощенный кэш без мульти-таб менеджера для стабильности в Next.js 15
+    // Пытаемся инициализировать Firestore с кэшем
     db = initializeFirestore(app, {
       localCache: persistentLocalCache({})
     });
   } catch (e: any) {
+    // Если Firestore уже инициализирован (ошибка ca9) или сбой кэша — берем стандартный
     db = getFirestore(app);
   }
 
