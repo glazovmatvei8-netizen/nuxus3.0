@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * NUXUS STORE PROXY V9.8.0
- * Обеспечивает корректное разрешение модуля Webpack.
+ * NUXUS STORE PROXY V9.8.5
+ * Простой экспорт без дополнительных токенов для исключения SyntaxError.
  */
 export * from './store.tsx';

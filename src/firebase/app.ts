@@ -6,10 +6,9 @@ import { getAuth, Auth } from 'firebase/auth';
 import { getFirestore, initializeFirestore, persistentLocalCache, Firestore } from 'firebase/firestore';
 
 /**
- * NUXUS KERNEL APP INITIALIZER V9.8.0
- * ОПТИМИЗИРОВАНО: Защита от дублирующей инициализации Firestore.
+ * NUXUS KERNEL APP INITIALIZER V9.8.5
+ * ОПТИМИЗИРОВАНО: Предотвращение дублирующей инициализации Firestore (ID: ca9 fix).
  */
-
 export function initializeFirebase(instanceName?: string) {
   if (typeof window === 'undefined') {
     return { firebaseApp: null as any, auth: null as any, firestore: null as any };
@@ -28,16 +27,15 @@ export function initializeFirebase(instanceName?: string) {
   
   let db: Firestore;
   try {
-    // Сначала пытаемся получить существующий инстанс
+    // Пытаемся получить существующий инстанс
     db = getFirestore(app);
   } catch (e) {
-    // Если инстанса нет, инициализируем с кэшем
+    // Если инстанса нет, инициализируем с локальным кэшем
     try {
       db = initializeFirestore(app, {
         localCache: persistentLocalCache({})
       });
     } catch (criticalError) {
-      // Экстренный фоллбек
       db = getFirestore(app);
     }
   }
