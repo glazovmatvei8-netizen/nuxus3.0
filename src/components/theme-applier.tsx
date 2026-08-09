@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useMemo } from 'react';
@@ -8,8 +7,8 @@ import { doc } from 'firebase/firestore';
 import type { User } from '@/lib/types';
 
 /**
- * ПРИМЕНИТЕЛЬ ТЕМЫ V6.6.0 «DECOUPLED»
- * ИСПРАВЛЕНО: Прямые импорты для исключения циклической зависимости.
+ * ПРИМЕНИТЕЛЬ ТЕМЫ V10.0 «DIRECT LINK»
+ * ОПТИМИЗИРОВАНО: Прямые импорты для исключения циклической зависимости и ошибки 'call'.
  */
 export function ThemeApplier() {
   const { user } = useUser();
@@ -25,14 +24,10 @@ export function ThemeApplier() {
   useEffect(() => {
     if (typeof document === 'undefined') return;
 
-    // 1. Применение базовой темы
     if (profile?.settings?.theme) {
       document.documentElement.setAttribute('data-theme', profile.settings.theme);
-    } else {
-      document.documentElement.removeAttribute('data-theme');
     }
 
-    // 2. Применение светлой/темной темы
     const appearance = profile?.settings?.appearance || 'dark';
     if (appearance === 'light') {
       document.documentElement.classList.remove('dark');
@@ -42,7 +37,6 @@ export function ThemeApplier() {
       document.documentElement.classList.add('dark');
     }
 
-    // 3. Обработка кастомного цвета
     const applyColor = (hex: string) => {
       if (!hex) return;
       const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -70,9 +64,6 @@ export function ThemeApplier() {
 
     if (profile?.settings?.customPrimaryColor) {
       applyColor(profile.settings.customPrimaryColor);
-    } else {
-      document.documentElement.style.removeProperty('--primary');
-      document.documentElement.style.removeProperty('--ring');
     }
   }, [profile?.settings?.theme, profile?.settings?.appearance, profile?.settings?.customPrimaryColor]);
 

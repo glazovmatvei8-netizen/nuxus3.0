@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * NUXUS STORE PROXY V9.8.5
- * Простой экспорт без дополнительных токенов для исключения SyntaxError.
+ * NUXUS STORE PROXY V10.0
+ * Прямое перенаправление для исключения конфликтов расширений .ts/.tsx.
  */
 export * from './store.tsx';

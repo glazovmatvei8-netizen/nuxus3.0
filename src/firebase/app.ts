@@ -3,11 +3,11 @@
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, FirebaseApp, getApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
-import { getFirestore, initializeFirestore, persistentLocalCache, Firestore } from 'firebase/firestore';
+import { getFirestore, Firestore, enableIndexedDbPersistence, terminate } from 'firebase/firestore';
 
 /**
- * NUXUS KERNEL APP INITIALIZER V9.9.0
- * ОПТИМИЗИРОВАНО: Защита от каскадных ошибок инициализации.
+ * NUXUS QUANTUM INITIALIZER V10.0
+ * Максимальная оптимизация инстансов для исключения конфликтов Webpack.
  */
 export function initializeFirebase(instanceName: string = '[DEFAULT]') {
   if (typeof window === 'undefined') {
@@ -28,21 +28,8 @@ export function initializeFirebase(instanceName: string = '[DEFAULT]') {
     }
   }
   
-  let db: Firestore;
-  try {
-    // Всегда сначала проверяем, нет ли уже созданного инстанса для этого приложения
-    db = getFirestore(app);
-  } catch (e) {
-    try {
-      db = initializeFirestore(app, {
-        localCache: persistentLocalCache({})
-      });
-    } catch (criticalError) {
-      db = getFirestore(app);
-    }
-  }
-
   const auth: Auth = getAuth(app);
+  const db: Firestore = getFirestore(app);
 
   return {
     firebaseApp: app,
