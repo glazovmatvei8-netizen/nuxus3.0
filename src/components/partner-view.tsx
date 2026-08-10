@@ -14,7 +14,7 @@ import {
 import { cn, isGlobalAdmin } from '@/lib/utils';
 import { NuxusLogo } from './nuxus-logo';
 import { useToast } from '@/hooks/use-toast';
-import { useUser, useFirestore, useDoc } from '@/firebase/provider';
+import { useUser, useFirestore, useDoc } from '@/firebase';
 import { collection, doc, setDoc, deleteDoc, getDoc } from 'firebase/firestore';
 import type { User as UserType } from '@/lib/types';
 
@@ -32,6 +32,7 @@ interface BotInstance {
 /**
  * PARTNER HUB V8.5.0 «MAINTENANCE MODE»
  * Доступ только для Администраторов.
+ * FIXED V10.1: Correct imports from @/firebase.
  */
 export default function PartnerView() {
   const { user } = useUser();

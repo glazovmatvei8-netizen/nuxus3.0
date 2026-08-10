@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState } from 'react';
@@ -6,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from '@/firebase/provider';
+import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { collection, query, where, doc, addDoc } from 'firebase/firestore';
 import { useAppState } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
@@ -17,7 +16,7 @@ import type { Chat, Message, User } from '@/lib/types';
 
 /**
  * FORWARD MODAL V5.2.0
- * FIXED: Direct imports from provider. Added missing Share2 icon.
+ * FIXED V10.1: Correct imports from @/firebase. Added missing Share2 icon.
  */
 export function ForwardModal() {
   const { user } = useUser();

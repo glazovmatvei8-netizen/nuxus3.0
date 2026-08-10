@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState } from 'react';
-import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase/provider';
+import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { doc, collection, query, orderBy, limit, writeBatch, increment, getDocs, where, addDoc } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
@@ -26,6 +26,7 @@ const MAX_TOP_UP_AMOUNT = 500000;
 /**
  * WALLET VIEW V8.5.0 «STABILITY CORE»
  * FIXED: Removed Assertion Error by simplifying query execution.
+ * UPDATED V10.1: Correct imports from @/firebase.
  */
 export default function WalletView() {
   const { user } = useUser();

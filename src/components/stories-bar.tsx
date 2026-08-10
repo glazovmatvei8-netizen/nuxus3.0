@@ -1,9 +1,8 @@
-
 "use client"
 
 import React, { useMemo, useState } from 'react';
 import { useAppState } from '@/lib/store';
-import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase/provider';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, where, doc } from 'firebase/firestore';
 import { UserAvatar } from './user-avatar';
 import { Plus, Loader2, Archive } from 'lucide-react';
@@ -15,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 
 /**
  * NUXUS MOMENTS BAR V6.4.0
- * FIXED: Direct imports from provider.
+ * FIXED V10.1: Correct imports from @/firebase.
  */
 export function StoriesBar() {
   const { user } = useUser();
