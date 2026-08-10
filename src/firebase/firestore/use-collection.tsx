@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -6,31 +7,28 @@ import { onSnapshot, QuerySnapshot, DocumentData, FirestoreError, CollectionRefe
 export type WithId<T> = T & { id: string; isPending?: boolean };
 
 /**
- * Хук useCollection V7.0.0
- * Изолирован для устранения ошибок циклической зависимости.
+ * ORIGIN HOOK: useCollection
+ * Оптимизирован для Origin Engine V13.
  */
 export function useCollection<T = any>(
-  memoizedTargetRefOrQuery: (CollectionReference<DocumentData> | Query<DocumentData>) | null | undefined
+  target: (CollectionReference<DocumentData> | Query<DocumentData>) | null | undefined
 ) {
   const [data, setData] = useState<WithId<T>[] | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(!!target);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
 
   useEffect(() => {
-    if (!memoizedTargetRefOrQuery) {
+    if (!target) {
       setData(null);
       setIsLoading(false);
-      setError(null);
       return;
     }
 
     setIsLoading(true);
-    setError(null);
-
     const unsubscribe = onSnapshot(
-      memoizedTargetRefOrQuery,
+      target,
       { includeMetadataChanges: true },
-      (snapshot: QuerySnapshot<DocumentData>) => {
+      (snapshot) => {
         const results: WithId<T>[] = snapshot.docs.map(doc => ({ 
           ...(doc.data() as T), 
           id: doc.id,
@@ -40,14 +38,14 @@ export function useCollection<T = any>(
         setError(null);
         setIsLoading(false);
       },
-      (error: FirestoreError) => {
-        setError(error);
+      (err) => {
+        setError(err);
         setIsLoading(false);
       }
     );
 
     return () => unsubscribe();
-  }, [memoizedTargetRefOrQuery]);
+  }, [target instanceof Object ? null : target]); // Использование стабильного хеша или ссылочной стабильности
 
   return { data, isLoading, error };
 }

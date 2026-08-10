@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useState, useMemo, memo, useRef, useEffect } from 'react';
-import { useAppState } from '@/lib/store.tsx';
+import { useAppState } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
@@ -26,11 +26,6 @@ import {
 } from "@/components/ui/context-menu";
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useToast } from '@/hooks/use-toast';
-
-/**
- * CHAT SIDEBAR V13.1 «STABLE RESOLUTION»
- * ИСПРАВЛЕНО: Корректный импорт хуков через Firebase Barrel.
- */
 
 const AccountItem = memo(({ account, isActive, index, onSwitch, onRemove }: any) => (
   <div className={cn(
@@ -159,7 +154,6 @@ const ChatListItem = memo(({
 
   return (
     <div className="relative overflow-hidden touch-pan-y select-none px-4 py-1.5 max-w-full virtual-list-item no-ios-select">
-      {/* Swipe Actions Background */}
       <div className={cn("absolute inset-y-1.5 left-4 flex h-[calc(100%-12px)] z-0 transition-opacity duration-300 rounded-[2.2rem] overflow-hidden", offsetX > 20 ? "opacity-100" : "opacity-0 pointer-events-none")}>
         <button onClick={(e) => { e.stopPropagation(); onMarkUnread(chat.id); resetSwipe(); }} className="w-[70px] bg-blue-600 flex flex-col items-center justify-center text-white gap-1.5 active:brightness-125 transition-all">
           <MessageSquare className="w-5 h-5" />

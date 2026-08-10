@@ -61,12 +61,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru" className={`dark ${font.variable}`} suppressHydrationWarning>
-      <head>
-        <link rel="preconnect" href="https://images.unsplash.com" />
-        <link rel="icon" href={FINAL_ICON_URL} sizes="any" />
-        <link rel="apple-touch-icon" href={FINAL_ICON_URL} />
-        <meta name="mobile-web-app-capable" content="yes" />
-      </head>
       <body 
         className="font-sans antialiased bg-background text-foreground overflow-hidden h-[100dvh] selection:bg-primary/30" 
         style={{ fontFamily: 'var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, sans-serif' }}
