@@ -15,21 +15,22 @@ export const FirebaseContext = createContext<FirebaseContextState>({
 });
 
 /**
- * NUXUS ENGINE PROVIDER V15.0
+ * NUXUS ENGINE PROVIDER V16.0 «PURE ORIGIN»
  * 
- * Легковесный интерфейс связи с автономным ядром Nuxus Engine.
- * Больше не занимается инициализацией Firebase, только транслирует состояние пользователя.
+ * Изолированный интерфейс связи с ядром Nuxus Engine.
+ * Гарантирует отсутствие ошибок Hydration и стабильную передачу Auth-сигналов.
  */
 export const FirebaseProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isUserLoading, setIsUserLoading] = useState(true);
 
   useEffect(() => {
+    // Прямая связь с ядром без посредников
     if (!nuxus.auth) {
       setIsUserLoading(false);
       return;
     }
-    // Используем синглтон-инстанс напрямую из ядра
+    
     return onAuthStateChanged(nuxus.auth, (firebaseUser) => {
       setUser(firebaseUser);
       setIsUserLoading(false);
@@ -50,6 +51,6 @@ export const useUser = () => {
   return { user, isUserLoading };
 };
 
-// Прокси-геттеры для прямого доступа к ядру через хуки
+// Экспортируем геттеры Ядра для хуков
 export const useFirestore = () => nuxus.db;
 export const useAuth = () => nuxus.auth;
