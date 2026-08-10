@@ -1,7 +1,8 @@
+
 'use client';
 
 /**
- * NUXUS STORE PROXY V10.0
- * Прямое перенаправление для исключения конфликтов расширений .ts/.tsx.
+ * NUXUS STORE HUB V12.0
+ * Теперь это чистый прокси для предотвращения ошибок сборки Next.js 15.
  */
 export * from './store.tsx';

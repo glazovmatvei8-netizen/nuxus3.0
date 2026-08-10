@@ -1,12 +1,11 @@
+
 'use client';
 
 /**
- * NUXUS HYPER-ENGINE V11.0
- * Единый диспетчерский узел Firebase. 
- * Гарантирует отсутствие циклических зависимостей и корректность типов.
+ * NUXUS HUB V12.0
+ * Единая точка доступа без циклических зависимостей.
  */
 
-export * from './app';
 export * from './provider';
 export { useCollection } from './firestore/use-collection';
 export { useDoc } from './firestore/use-doc';

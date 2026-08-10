@@ -43,41 +43,6 @@ interface AppState {
 
 export const AppContext = createContext<AppState | undefined>(undefined);
 
-const SAFE_FALLBACK: AppState = {
-  activeAccountIndex: 0,
-  localDrafts: {},
-  is2FAVerified: false,
-  isSettingsOpen: false,
-  activeView: 'chats',
-  settingsTab: 'profile',
-  currentChatId: null,
-  setCurrentChatId: () => {},
-  setActiveView: () => {},
-  setLocalDrafts: () => {},
-  setIs2FAVerified: () => {},
-  setIsSettingsOpen: () => {},
-  setSettingsTab: () => {},
-  setActiveAccountIndex: () => {},
-  forwardingMessage: null,
-  setForwardingMessage: () => {},
-  activeCallId: null,
-  setActiveCallId: () => {},
-  isSearchOpen: false,
-  setIsSearchOpen: () => {},
-  inspectedUserId: null,
-  setInspectedUserId: () => {},
-  isLegalOpen: false,
-  setIsLegalOpen: () => {},
-  currentTrack: null,
-  setCurrentTrack: () => {},
-  isPlayingMusic: false,
-  setIsPlayingMusic: () => {},
-  isCreateStoryOpen: false,
-  setIsCreateStoryOpen: () => {},
-  storiesToView: null,
-  setStoriesToView: () => {}
-};
-
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<MainView>('chats');
@@ -134,14 +99,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     isPlayingMusic, isCreateStoryOpen, storiesToView
   ]);
 
-  return (
-    <AppContext.Provider value={value}>
-      {children}
-    </AppContext.Provider>
-  );
+  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }
 
 export const useAppState = (): AppState => {
   const context = useContext(AppContext);
-  return context || SAFE_FALLBACK;
+  if (!context) throw new Error("useAppState must be used within AppProvider");
+  return context;
 };

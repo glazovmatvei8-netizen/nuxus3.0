@@ -1,56 +1,38 @@
+
 'use client';
 
-import React, { useMemo, useState, useEffect, type ReactNode } from 'react';
+import React, { useState, useEffect, type ReactNode } from 'react';
 import { FirebaseProvider } from './provider';
-import { initializeFirebase } from './app'; 
-import { useAppState } from '@/lib/store'; 
-import { setPersistence, browserLocalPersistence } from 'firebase/auth';
-
-interface FirebaseClientProviderProps {
-  children: ReactNode;
-}
+import { engine } from '@/lib/firebase-engine';
 
 /**
- * ENGINE WRAPPER V10.0
- * ОПТИМИЗИРОВАНО: Полное устранение Hydration Mismatch и таймаутов чанков.
+ * ENGINE ACTIVATOR V12.0
+ * ОПТИМИЗИРОВАНО: Полное исключение Hydration Mismatch через Phantom Mounting.
  */
-export function FirebaseClientProvider({ children }: FirebaseClientProviderProps) {
-  const { activeAccountIndex } = useAppState();
+export function FirebaseClientProvider({ children }: { children: ReactNode }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  const activeInstance = useMemo(() => {
-    if (typeof window === 'undefined') return null;
-    
-    try {
-      const instance = initializeFirebase(`nuxus_node_v10_${activeAccountIndex}`);
-      if (instance.auth) {
-        setPersistence(instance.auth, browserLocalPersistence).catch(() => {});
-      }
-      return instance;
-    } catch (e) {
-      console.error("Engine Init Error:", e);
-      return null;
-    }
-  }, [activeAccountIndex]);
-
-  // КРИТИЧЕСКИЙ ФИКС: Рендерим загрузчик только на клиенте, не ломая SSR структуру
-  if (!mounted || !activeInstance) {
+  if (!mounted || !engine.app || !engine.db || !engine.auth) {
     return (
-      <div className="fixed inset-0 z-[10000] bg-[#020205] flex items-center justify-center">
-         <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-      </div>
+      <>
+        <div className="fixed inset-0 z-[10000] bg-[#020205] flex flex-col items-center justify-center gap-6">
+           <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin shadow-[0_0_20px_rgba(168,85,247,0.3)]" />
+           <p className="text-[9px] font-black uppercase text-primary/40 tracking-[0.4em] animate-pulse">Syncing Engine V12</p>
+        </div>
+        <div className="invisible opacity-0 pointer-events-none">{children}</div>
+      </>
     );
   }
 
   return (
     <FirebaseProvider
-      firebaseApp={activeInstance.firebaseApp as any}
-      auth={activeInstance.auth as any}
-      firestore={activeInstance.firestore as any}
+      firebaseApp={engine.app}
+      auth={engine.auth}
+      firestore={engine.db}
     >
       {children}
     </FirebaseProvider>
