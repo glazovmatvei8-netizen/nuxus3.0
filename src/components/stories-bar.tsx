@@ -13,8 +13,8 @@ import { StoryArchiveModal } from './modals/story-archive-modal';
 import { useToast } from '@/hooks/use-toast';
 
 /**
- * NUXUS MOMENTS BAR V6.4.0
- * FIXED V10.1: Correct imports from @/firebase.
+ * NUXUS MOMENTS BAR V11.0.0 «HYPER-ENGINE READY»
+ * FIXED: Импорты переведены на центральный хаб.
  */
 export function StoriesBar() {
   const { user } = useUser();
@@ -56,7 +56,6 @@ export function StoriesBar() {
 
   return (
     <div className="flex gap-4 p-4 overflow-x-auto scrollbar-hide bg-transparent border-b border-white/5 shrink-0 relative z-20">
-      {/* Кнопка Архива */}
       <div className="flex flex-col items-center gap-1.5 shrink-0 group cursor-pointer" onClick={() => setIsArchiveOpen(true)}>
          <div className="h-[68px] w-[68px] rounded-full p-[2px] bg-white/5 border border-white/5 flex items-center justify-center group-hover:bg-white/10 transition-all">
             <Archive className="w-6 h-6 text-white/40 group-hover:text-primary transition-colors" />
@@ -64,7 +63,6 @@ export function StoriesBar() {
          <span className="text-[10px] font-black uppercase text-white/40 tracking-[0.1em] italic">Архив</span>
       </div>
 
-      {/* Моя история */}
       <div className="flex flex-col items-center gap-1.5 shrink-0 group cursor-pointer" onClick={() => myStories.length > 0 ? setStoriesToView(myStories) : handleAddStory()}>
         <div className={cn("relative h-[68px] w-[68px] rounded-full p-[2px] transition-all duration-500 flex items-center justify-center", myStories.length > 0 ? "bg-gradient-to-tr from-[#34C759] via-[#007AFF] to-[#AF52DE] shadow-[0_0_15px_rgba(52,199,89,0.3)] animate-pulse" : "bg-white/10 group-hover:bg-white/20")}>
           <div className="rounded-full h-full w-full overflow-hidden relative bg-[#0a0a0c] flex items-center justify-center">

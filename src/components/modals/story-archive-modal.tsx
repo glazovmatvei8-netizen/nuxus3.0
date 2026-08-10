@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useMemo } from 'react';
@@ -14,8 +13,8 @@ import { useToast } from '@/hooks/use-toast';
 import { addHours } from 'date-fns';
 
 /**
- * STORY ARCHIVE MODAL V6.4.1 «STABLE RESOLUTION»
- * ИСПРАВЛЕНО: Корректный импорт хуков через Firebase Barrel.
+ * STORY ARCHIVE MODAL V11.0.0 «HYPER-ENGINE READY»
+ * FIXED: Импорты переведены на центральный хаб.
  */
 export function StoryArchiveModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const { user } = useUser();

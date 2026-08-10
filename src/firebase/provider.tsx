@@ -2,18 +2,15 @@
 
 import React, { createContext, useContext, ReactNode, useMemo, useState, useEffect, DependencyList } from 'react';
 import { FirebaseApp } from 'firebase/app';
-import { 
-  Firestore, 
-  doc, 
-  onSnapshot
-} from 'firebase/firestore';
+import { Firestore, doc, onSnapshot } from 'firebase/firestore';
 import { Auth, User, onAuthStateChanged, signOut } from 'firebase/auth';
 import { updateDocumentNonBlocking, setDocumentNonBlocking } from './non-blocking-updates';
 import { errorEmitter } from './error-emitter';
 
 /**
- * NUXUS FIREBASE PROVIDER V7.0.0 (CORE STABILITY)
- * ОПТИМИЗИРОВАНО: Хуки вынесены в отдельные файлы для предотвращения originalFactory.call.
+ * NUXUS CORE CONTEXT V11.0
+ * Только хранение состояния и управление сессией. 
+ * Логика хуков вынесена для исключения ошибок 'call'.
  */
 
 export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T {
@@ -44,12 +41,7 @@ export const FirebaseProvider: React.FC<{
   firebaseApp: FirebaseApp;
   firestore: Firestore;
   auth: Auth;
-}> = ({
-  children,
-  firebaseApp,
-  firestore,
-  auth,
-}) => {
+}> = ({ children, firebaseApp, firestore, auth }) => {
   const [userAuthState, setUserAuthState] = useState<UserAuthState>({
     user: null,
     isUserLoading: true,
@@ -60,12 +52,8 @@ export const FirebaseProvider: React.FC<{
     if (!auth) return;
     const unsubscribe = onAuthStateChanged(
       auth,
-      (firebaseUser) => {
-        setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
-      },
-      (error) => {
-        setUserAuthState({ user: null, isUserLoading: false, userError: error });
-      }
+      (firebaseUser) => setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null }),
+      (error) => setUserAuthState({ user: null, isUserLoading: false, userError: error })
     );
     return () => unsubscribe();
   }, [auth]);
@@ -128,25 +116,11 @@ export const FirebaseProvider: React.FC<{
       }
     };
 
-    const unsubscribeSession = onSnapshot(sessionRef, (snap) => {
-      if (!snap.exists() && userAuthState.user) {
-        signOut(auth).then(() => {
-          if (typeof window !== 'undefined') {
-            localStorage.removeItem('nuxus_session_id');
-            window.location.reload();
-          }
-        });
-      }
-    });
-
     initSession();
     updateStatus();
     const interval = setInterval(updateStatus, 60000); 
 
-    return () => {
-      clearInterval(interval);
-      unsubscribeSession();
-    };
+    return () => clearInterval(interval);
   }, [userAuthState.user?.uid, firestore, auth]);
 
   const contextValue = useMemo((): FirebaseContextState => {
@@ -162,11 +136,7 @@ export const FirebaseProvider: React.FC<{
     };
   }, [firebaseApp, firestore, auth, userAuthState]);
 
-  return (
-    <FirebaseContext.Provider value={contextValue}>
-      {children}
-    </FirebaseContext.Provider>
-  );
+  return <FirebaseContext.Provider value={contextValue}>{children}</FirebaseContext.Provider>;
 };
 
 export const useFirebase = () => {
@@ -174,17 +144,9 @@ export const useFirebase = () => {
   return context || { areServicesAvailable: false, firebaseApp: null, firestore: null, auth: null, user: null, isUserLoading: true, userError: null };
 };
 
-export const useAuth = () => {
-  const { auth } = useFirebase();
-  return auth;
-};
-
-export const useFirestore = () => {
-  const { firestore } = useFirebase();
-  return firestore;
-};
-
+export const useAuth = () => useFirebase().auth;
+export const useFirestore = () => useFirebase().firestore;
 export const useUser = () => {
   const { user, isUserLoading, userError } = useFirebase();
   return { user, isUserLoading, userError };
-}
+};

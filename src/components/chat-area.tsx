@@ -1,8 +1,7 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
-import { useAppState } from '@/lib/store.tsx';
+import { useAppState } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { UserAvatar } from '@/components/user-avatar';
@@ -25,8 +24,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { askNexusAI } from '@/ai/flows/nuxus-intelligence-flow';
 
 /**
- * CHAT AREA V13.1 «STABLE RESOLUTION»
- * ИСПРАВЛЕНО: Корректный импорт хуков через Firebase Barrel.
+ * CHAT AREA V11.0.0 «HYPER-ENGINE READY»
+ * FIXED: Импорты переведены на центральный хаб.
  */
 
 const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, isPremium, replyTo, onCancelReply }: any) => {

@@ -9,7 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   Pencil, Bookmark, ChevronRight, Star, Share2, Zap, QrCode, Fingerprint, Cpu, ShieldAlert, Palette, Sparkles, Phone, Mail
 } from 'lucide-react';
-import { useAppState } from '@/lib/store.tsx';
+import { useAppState } from '@/lib/store';
 import { formatDisplayName, cn, isUserPremium } from '@/lib/utils';
 import type { User, ReceivedGift } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -18,9 +18,8 @@ import { QRCodeSVG } from 'qrcode.react';
 import nuxusVersions from '@/app/versions.json';
 
 /**
- * PROFILE VIEW V6.1.4 «TRUE CASING»
- * FIXED: Убрана принудительная капитализация (uppercase) имен и никнеймов.
- * UPDATED V10.1: Correct imports from @/firebase.
+ * PROFILE VIEW V11.0.0 «HYPER-ENGINE READY»
+ * FIXED: Импорты переведены на центральный хаб.
  */
 export default function ProfileView() {
   const { user } = useUser();

@@ -24,9 +24,8 @@ import { ru } from 'date-fns/locale';
 const MAX_TOP_UP_AMOUNT = 500000;
 
 /**
- * WALLET VIEW V8.5.0 «STABILITY CORE»
- * FIXED: Removed Assertion Error by simplifying query execution.
- * UPDATED V10.1: Correct imports from @/firebase.
+ * WALLET VIEW V11.0.0 «HYPER-ENGINE READY»
+ * FIXED: Импорты переведены на центральный хаб.
  */
 export default function WalletView() {
   const { user } = useUser();
@@ -43,11 +42,9 @@ export default function WalletView() {
   const [foundUser, setFoundUser] = useState<User | null>(null);
   const [isSearchingUser, setIsSearchingUser] = useState(false);
 
-  // СТАБИЛЬНЫЙ ПРОФИЛЬ
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user?.uid]);
   const { data: profile } = useDoc<User>(userRef);
 
-  // СТАБИЛЬНЫЕ ТРАНЗАКЦИИ
   const transactionsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
     return query(

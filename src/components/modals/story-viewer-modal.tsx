@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -7,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { X, Eye, Heart, Smile, Loader2, Share2, Send } from 'lucide-react';
 import { useAppState } from '@/lib/store';
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase/provider';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import type { Story, User } from '@/lib/types';
 import { cn, formatDisplayName } from '@/lib/utils';
@@ -19,8 +18,8 @@ import { useToast } from '@/hooks/use-toast';
 const STORY_REACTIONS = ['❤️', '🔥', '😂', '😮', '😢', '💯', '👏'];
 
 /**
- * STORY VIEWER MODAL V5.2.0
- * FIXED: Direct imports from provider.
+ * STORY VIEWER MODAL V11.0.0 «HYPER-ENGINE READY»
+ * FIXED: Импорты переведены на центральный хаб.
  */
 export function StoryViewerModal() {
   const { user } = useUser();
@@ -148,7 +147,6 @@ export function StoryViewerModal() {
           
           <div className="relative w-full h-full md:max-w-[450px] md:h-[90vh] md:rounded-[2rem] md:overflow-hidden bg-[#0a0a0c] shadow-2xl flex flex-col items-center justify-center">
             
-            {/* Progress Bars */}
             <div className="absolute top-4 left-4 right-4 z-[2200] flex gap-1.5 px-2">
               {storiesToView.map((_, i) => (
                 <div key={i} className="h-[3px] flex-1 bg-white/20 rounded-full overflow-hidden">
@@ -160,11 +158,10 @@ export function StoryViewerModal() {
               ))}
             </div>
 
-            {/* Header */}
             <div className="absolute top-10 left-0 right-0 z-[2200] flex items-center justify-between px-6">
               <div className="flex items-center gap-3">
                 <UserAvatar userId={currentStory.userId} className="h-10 w-10 border-2 border-white/20" manualAvatarUrl={storyUser?.avatarUrl} />
-                <div className="flex flex-col">
+                <div className="flex flex-col text-left">
                   <span className="text-white font-black text-sm uppercase tracking-wider">{formatDisplayName(storyUser?.name || '...')}</span>
                   <span className="text-[9px] text-white/60 font-bold uppercase">
                     {formatDistanceToNow(new Date(currentStory.createdAt), { addSuffix: true, locale: ru })}
@@ -177,7 +174,6 @@ export function StoryViewerModal() {
               </div>
             </div>
 
-            {/* Media Content */}
             <div 
               className="w-full h-full flex items-center justify-center bg-black"
               onMouseDown={() => setIsPaused(true)}
@@ -210,13 +206,11 @@ export function StoryViewerModal() {
               )}
             </div>
 
-            {/* Navigation Overlay */}
             <div className="absolute inset-0 z-[2150] flex">
               <div className="flex-1 h-full cursor-pointer" onClick={prev} />
               <div className="flex-1 h-full cursor-pointer" onClick={next} />
             </div>
 
-            {/* Caption */}
             {currentStory.caption && (
               <div className="absolute bottom-32 left-0 right-0 z-[2200] px-8 text-center pointer-events-none">
                 <p className="text-white text-lg font-bold drop-shadow-[0_2px_8px_rgba(0,0,0,1)]">
@@ -225,7 +219,6 @@ export function StoryViewerModal() {
               </div>
             )}
 
-            {/* Footer */}
             <div className="absolute bottom-10 left-0 right-0 z-[2200] flex items-center justify-between px-8">
               <div className="flex gap-2">
                 <Popover open={showReactions} onOpenChange={setShowReactions}>
@@ -255,7 +248,6 @@ export function StoryViewerModal() {
                 )}
               </div>
 
-              {/* Reactions Display */}
               {currentStory.reactions && Object.entries(currentStory.reactions).some(([_, uids]) => uids.length > 0) && (
                 <div className="flex gap-1.5">
                   {Object.entries(currentStory.reactions).map(([emoji, uids]) => uids.length > 0 && (
