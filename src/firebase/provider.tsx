@@ -16,7 +16,7 @@ export const FirebaseContext = createContext<FirebaseContextState>({
 });
 
 /**
- * ORIGIN PROVIDER: Легковесная оболочка над Nuxus Engine.
+ * NUXUS PROVIDER: Легковесный интерфейс связи с Nuxus Engine.
  */
 export const FirebaseProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);

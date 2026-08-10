@@ -7,11 +7,12 @@ import { getFirestore, Firestore } from 'firebase/firestore';
 import { firebaseConfig } from '@/firebase/config';
 
 /**
- * NUXUS ORIGIN ENGINE V13.0 (Singleton Core)
- * Полностью автономный движок, исключающий циклические зависимости.
+ * NUXUS ORIGIN ENGINE V14.0 (Autonomous Core)
+ * Полностью автономный движок мессенджера.
+ * Синглтон-архитектура исключает любые ошибки инициализации и циклы.
  */
-class OriginEngine {
-  private static instance: OriginEngine;
+class NuxusEngine {
+  private static instance: NuxusEngine;
   public app: FirebaseApp | null = null;
   public auth: Auth | null = null;
   public db: Firestore | null = null;
@@ -19,17 +20,17 @@ class OriginEngine {
 
   private constructor() {
     if (typeof window === 'undefined') return;
-    this.init();
+    this.ignite();
   }
 
-  public static getInstance(): OriginEngine {
-    if (!OriginEngine.instance) {
-      OriginEngine.instance = new OriginEngine();
+  public static getInstance(): NuxusEngine {
+    if (!NuxusEngine.instance) {
+      NuxusEngine.instance = new NuxusEngine();
     }
-    return OriginEngine.instance;
+    return NuxusEngine.instance;
   }
 
-  private init() {
+  private ignite() {
     if (this.initialized) return;
     try {
       const apps = getApps();
@@ -37,11 +38,11 @@ class OriginEngine {
       this.auth = getAuth(this.app);
       this.db = getFirestore(this.app);
       this.initialized = true;
-      console.log('Nuxus Origin Engine: Online');
+      console.log('🛰️ Nuxus Engine: Online');
     } catch (e) {
-      console.error('Nuxus Origin Engine: Critical Failure', e);
+      console.error('❌ Nuxus Engine: Core Failure', e);
     }
   }
 }
 
-export const nuxus = OriginEngine.getInstance();
+export const nuxus = NuxusEngine.getInstance();

@@ -2,13 +2,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { onSnapshot, DocumentData, FirestoreError, DocumentReference } from 'firebase/firestore';
+import { onSnapshot, DocumentData, FirestoreError, DocumentReference, doc } from 'firebase/firestore';
+import { nuxus } from '@/lib/nuxus-engine';
 
 export type WithId<T> = T & { id: string; isPending?: boolean };
 
 /**
- * ORIGIN HOOK: useDoc
- * Работает напрямую с ядром, минуя тяжелые провайдеры.
+ * NUXUS HOOK: useDoc
+ * Работает напрямую через Nuxus Engine, исключая ошибки контекста.
  */
 export function useDoc<T = any>(docRef: DocumentReference<DocumentData> | null | undefined) {
   const [data, setData] = useState<WithId<T> | null>(null);
@@ -16,7 +17,7 @@ export function useDoc<T = any>(docRef: DocumentReference<DocumentData> | null |
   const [error, setError] = useState<FirestoreError | Error | null>(null);
 
   useEffect(() => {
-    if (!docRef) {
+    if (!docRef || !nuxus.db) {
       setData(null);
       setIsLoading(false);
       return;
@@ -46,7 +47,7 @@ export function useDoc<T = any>(docRef: DocumentReference<DocumentData> | null |
     );
 
     return () => unsubscribe();
-  }, [docRef?.path]); // Стабильная зависимость по пути
+  }, [docRef?.path]);
 
   return { data, isLoading, error };
 }

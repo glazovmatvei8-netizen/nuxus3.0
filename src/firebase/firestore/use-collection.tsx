@@ -2,13 +2,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { onSnapshot, QuerySnapshot, DocumentData, FirestoreError, CollectionReference, Query } from 'firebase/firestore';
+import { onSnapshot, DocumentData, FirestoreError, CollectionReference, Query } from 'firebase/firestore';
+import { nuxus } from '@/lib/nuxus-engine';
 
 export type WithId<T> = T & { id: string; isPending?: boolean };
 
 /**
- * ORIGIN HOOK: useCollection
- * Оптимизирован для Origin Engine V13.
+ * NUXUS HOOK: useCollection
+ * Оптимизирован для прямой работы с Origin Core.
  */
 export function useCollection<T = any>(
   target: (CollectionReference<DocumentData> | Query<DocumentData>) | null | undefined
@@ -18,7 +19,7 @@ export function useCollection<T = any>(
   const [error, setError] = useState<FirestoreError | Error | null>(null);
 
   useEffect(() => {
-    if (!target) {
+    if (!target || !nuxus.db) {
       setData(null);
       setIsLoading(false);
       return;
@@ -45,7 +46,7 @@ export function useCollection<T = any>(
     );
 
     return () => unsubscribe();
-  }, [target instanceof Object ? null : target]); // Использование стабильного хеша или ссылочной стабильности
+  }, [target instanceof Object ? null : target]);
 
   return { data, isLoading, error };
 }
