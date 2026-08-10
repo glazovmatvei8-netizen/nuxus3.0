@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
@@ -16,7 +15,10 @@ export const FirebaseContext = createContext<FirebaseContextState>({
 });
 
 /**
- * NUXUS PROVIDER: Легковесный интерфейс связи с Nuxus Engine.
+ * NUXUS ENGINE PROVIDER V15.0
+ * 
+ * Легковесный интерфейс связи с автономным ядром Nuxus Engine.
+ * Больше не занимается инициализацией Firebase, только транслирует состояние пользователя.
  */
 export const FirebaseProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -27,6 +29,7 @@ export const FirebaseProvider: React.FC<{ children: ReactNode }> = ({ children }
       setIsUserLoading(false);
       return;
     }
+    // Используем синглтон-инстанс напрямую из ядра
     return onAuthStateChanged(nuxus.auth, (firebaseUser) => {
       setUser(firebaseUser);
       setIsUserLoading(false);
@@ -46,5 +49,7 @@ export const useUser = () => {
   const { user, isUserLoading } = useFirebase();
   return { user, isUserLoading };
 };
+
+// Прокси-геттеры для прямого доступа к ядру через хуки
 export const useFirestore = () => nuxus.db;
 export const useAuth = () => nuxus.auth;

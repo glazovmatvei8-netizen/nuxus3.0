@@ -1,15 +1,14 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
-import { onSnapshot, DocumentData, FirestoreError, DocumentReference, doc } from 'firebase/firestore';
+import { onSnapshot, DocumentData, FirestoreError, DocumentReference } from 'firebase/firestore';
 import { nuxus } from '@/lib/nuxus-engine';
 
 export type WithId<T> = T & { id: string; isPending?: boolean };
 
 /**
- * NUXUS HOOK: useDoc
- * Работает напрямую через Nuxus Engine, исключая ошибки контекста.
+ * NUXUS ENGINE HOOK: useDoc
+ * Работает напрямую через ядро Nuxus Engine V15.
  */
 export function useDoc<T = any>(docRef: DocumentReference<DocumentData> | null | undefined) {
   const [data, setData] = useState<WithId<T> | null>(null);

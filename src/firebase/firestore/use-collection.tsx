@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -8,8 +7,8 @@ import { nuxus } from '@/lib/nuxus-engine';
 export type WithId<T> = T & { id: string; isPending?: boolean };
 
 /**
- * NUXUS HOOK: useCollection
- * Оптимизирован для прямой работы с Origin Core.
+ * NUXUS ENGINE HOOK: useCollection
+ * Оптимизирован для прямой связи с ядром Origin Core.
  */
 export function useCollection<T = any>(
   target: (CollectionReference<DocumentData> | Query<DocumentData>) | null | undefined
