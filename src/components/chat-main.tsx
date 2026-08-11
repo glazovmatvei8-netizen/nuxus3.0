@@ -32,8 +32,8 @@ import {
 } from 'lucide-react';
 
 /**
- * CHAT MAIN V32.0 «ELITE SYMMETRY»
- * Внедрена система добавления аккаунтов в слоты.
+ * CHAT MAIN V35.0 «ETHEREAL ATMOSPHERE»
+ * Добавлен живой градиентный фон и оптимизированы переходы.
  */
 export default function ChatMain() {
   const { 
@@ -48,17 +48,11 @@ export default function ChatMain() {
 
   const handleSlotClick = (index: number) => {
     if (index === activeAccountIndex) return;
-    
-    // Если слот пустой или другой, мы имитируем выход и переход к входу
-    // В реальной системе здесь бы происходило переключение между инстансами
-    if (confirm("Вы хотите переключиться на другой слот? Текущая сессия будет завершена для загрузки новой.")) {
+    if (confirm("Вы хотите переключиться на другой слот? Текущая сессия будет завершена.")) {
       setActiveAccountIndex(index);
       signOut(auth!);
     }
   };
-
-  const userProfileRef = useMemo(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user?.uid]);
-  const { data: profile } = useDoc<User>(userProfileRef);
 
   const incomingCallsQuery = useMemo(() => {
     if (!db || !user) return null;
@@ -82,10 +76,17 @@ export default function ChatMain() {
     <div className="fixed inset-0 flex flex-col w-screen bg-[#010103] overflow-hidden h-[100dvh]">
       <NotificationListener />
       
+      {/* Background Atmosphere */}
+      <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
+         <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] bg-primary/5 blur-[120px] rounded-full animate-pulse" />
+         <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-accent/5 blur-[120px] rounded-full animate-pulse" style={{ animationDelay: '2s' }} />
+         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.03)_0%,transparent_70%)]" />
+      </div>
+
       <div className="flex-1 flex overflow-hidden w-full relative h-full z-10">
         
         {/* Rail Side (Desktop) */}
-        <div className="hidden md:flex w-[80px] h-full flex-col items-center py-8 bg-white/[0.01] border-r border-white/5 shrink-0 z-50">
+        <div className="hidden md:flex w-[80px] h-full flex-col items-center py-8 bg-white/[0.01] border-r border-white/5 shrink-0 z-50 backdrop-blur-xl">
           <div className="flex flex-col gap-6 items-center w-full">
             {[0, 1, 2, 3, 4].map((i) => (
               <button 
@@ -102,7 +103,7 @@ export default function ChatMain() {
                   <UserAvatar userId={user?.uid} className="w-full h-full rounded-none" />
                 ) : (
                   <div className="flex flex-col items-center gap-1">
-                    <UserPlus className="w-4 h-4 text-white/40 group-hover:text-white transition-colors" />
+                    <Plus className="w-4 h-4 text-white/40 group-hover:text-white transition-colors" />
                     <span className="text-[7px] font-black uppercase text-white/20">Slot {i+1}</span>
                   </div>
                 )}
@@ -120,10 +121,10 @@ export default function ChatMain() {
         {/* Command Nexus */}
         <div className="flex-1 flex overflow-hidden h-full relative">
           <div className={cn(
-            "w-full md:w-[400px] lg:w-[440px] h-full flex-shrink-0 z-30 bg-black/20 backdrop-blur-3xl border-r border-white/5 relative overflow-hidden transition-all duration-500", 
+            "w-full md:w-[400px] lg:w-[440px] h-full flex-shrink-0 z-30 bg-black/40 backdrop-blur-3xl border-r border-white/5 relative overflow-hidden transition-all duration-500", 
             (currentChatId && !['profile', 'contacts', 'calls', 'wallet', 'discovery', 'ai', 'partner'].includes(activeView)) ? "hidden md:block" : "block"
           )}>
-            <div className="h-full w-full animate-in fade-in duration-700">
+            <div className="h-full w-full animate-in fade-in slide-in-from-left-2 duration-700">
               {activeView === 'chats' && <ChatSidebar />}
               {activeView === 'contacts' && <ContactsView />}
               {activeView === 'calls' && <CallsView />}
@@ -162,7 +163,7 @@ export default function ChatMain() {
 
       {/* Floating Bottom Nav (Mobile) */}
       {!currentChatId && (
-        <div className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 bg-white/[0.04] backdrop-blur-2xl rounded-[3rem] h-20 flex items-center justify-between px-8 z-[100] w-[92%] border border-white/10 shadow-2xl">
+        <div className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 bg-white/[0.04] backdrop-blur-3xl rounded-[3rem] h-20 flex items-center justify-between px-8 z-[100] w-[92%] border border-white/10 shadow-2xl">
           <NavButton icon={Globe} active={activeView === 'discovery'} onClick={() => setActiveView('discovery')} />
           <NavButton icon={Phone} active={activeView === 'calls'} onClick={() => setActiveView('calls')} />
           
