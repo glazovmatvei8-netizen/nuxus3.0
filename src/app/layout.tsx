@@ -54,8 +54,8 @@ export const viewport: Viewport = {
 }
 
 /**
- * ROOT LAYOUT V17.0 «QUANTUM HARMONY»
- * Оптимизированный порядок провайдеров для стабильного запуска Engine.
+ * ROOT LAYOUT V17.1 «QUANTUM HARMONY»
+ * Оптимизированный порядок провайдеров для стабильного запуска Nuxus Engine.
  */
 export default function RootLayout({
   children,
@@ -65,9 +65,8 @@ export default function RootLayout({
   return (
     <html lang="ru" className={`dark ${font.variable}`} suppressHydrationWarning>
       <body 
-        className="font-sans antialiased bg-background text-foreground overflow-hidden h-[100dvh] selection:bg-primary/30" 
+        className="font-sans antialiased bg-background text-foreground overflow-hidden h-[100dvh]" 
         style={{ fontFamily: 'var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, sans-serif' }}
-        suppressHydrationWarning
       >
         <AppProvider>
           <FirebaseClientProvider>
@@ -89,7 +88,7 @@ export default function RootLayout({
             if ('serviceWorker' in navigator) {
               window.addEventListener('load', function() {
                 navigator.serviceWorker.register('/sw.js').then(function(reg) {
-                  console.log('Nuxus Engine: Active');
+                  console.log('Nuxus Engine: SW Active');
                 }).catch(function(err) {
                   console.log('Nuxus Engine: SW Fail', err);
                 });

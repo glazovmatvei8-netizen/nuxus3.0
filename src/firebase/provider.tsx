@@ -15,10 +15,8 @@ export const FirebaseContext = createContext<FirebaseContextState>({
 });
 
 /**
- * NUXUS ENGINE PROVIDER V17.0
- * 
+ * NUXUS ENGINE PROVIDER V17.1
  * Облегченный провайдер, который только транслирует состояние авторизации.
- * Вся тяжелая логика вынесена в Nuxus Engine.
  */
 export const FirebaseProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -30,7 +28,6 @@ export const FirebaseProvider: React.FC<{ children: ReactNode }> = ({ children }
       return;
     }
     
-    // Прямая подписка на поток авторизации ядра
     return onAuthStateChanged(nuxus.auth, (firebaseUser) => {
       setUser(firebaseUser);
       setIsUserLoading(false);
@@ -51,6 +48,5 @@ export const useUser = () => {
   return { user: context.user, isUserLoading: context.isUserLoading };
 };
 
-// Геттеры ядра для использования в хуках и компонентах
 export const useFirestore = () => nuxus.db;
 export const useAuth = () => nuxus.auth;
