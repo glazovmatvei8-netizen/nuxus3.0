@@ -3,26 +3,26 @@ export const translations = {
   ru: {
     app: { 
       name: "Nuxus 2.0", 
-      kernel: "Nuxus Kernel", 
-      signal: "Nuxus Signal",
-      chats: "чаты 🐱",
-      archive: "архив 🐱",
-      calls: "звонки",
-      music: "музыка",
-      wallet: "кошелек",
-      games: "игры",
-      profile: "профиль"
+      kernel: "Ядро Nuxus", 
+      signal: "Сообщение",
+      chats: "Чаты",
+      archive: "Архив",
+      calls: "Звонки",
+      music: "Музыка",
+      wallet: "Кошелек",
+      games: "Игры",
+      profile: "Аккаунт"
     },
     sidebar: { 
       all: "Все", 
-      private: "Чаты", 
+      private: "Личные", 
       groups: "Группы", 
       channels: "Каналы", 
       search: "Поиск...", 
-      create: "Создать сообщество", 
+      create: "Создать чат", 
       sync: "Синхронизация...", 
-      noResults: "Никто не найден", 
-      connecting: "соединение..." 
+      noResults: "Ничего не найдено", 
+      connecting: "Подключение..." 
     },
     chat: { 
       placeholder: "Напишите сообщение...", 
@@ -37,49 +37,53 @@ export const translations = {
       typing: "печатает" 
     },
     settings: { 
-      title: "Профиль", 
+      title: "Настройки", 
       tabs: { 
         profile: "Профиль", 
-        style: "Стиль", 
-        privacy: "Защита", 
+        style: "Оформление", 
+        privacy: "Безопасность", 
         language: "Язык", 
-        prime: "Prime", 
+        prime: "Premium", 
         interface: "Интерфейс" 
       }, 
       labels: { 
         name: "Имя", 
-        username: "Никнейм", 
+        username: "Никнейм (@)", 
         bio: "О себе", 
-        avatar: "Генерировать ИИ-аватар", 
-        theme: "Тема оформления", 
+        avatar: "Сменить аватар", 
+        theme: "Тема", 
         textSize: "Размер текста", 
-        save: "Сохранить", 
-        language: "Язык интерфейса" 
+        save: "Сохранить изменения", 
+        language: "Язык приложения" 
       } 
     },
     auth: { 
       title: "Nuxus", 
-      subtitle: "Ядро Авторизации", 
-      login: "Войти в Ядро", 
-      register: "Загрузить профиль", 
-      noAccount: "Нет аккаунта? Регистрация", 
-      hasAccount: "Уже есть аккаунт? Вход" 
+      subtitle: "Добро пожаловать", 
+      login: "Вход", 
+      register: "Регистрация", 
+      noAccount: "Нет аккаунта? Зарегистрируйтесь", 
+      hasAccount: "Уже есть аккаунт? Войдите",
+      enterEmail: "Email или телефон",
+      enterPass: "Пароль",
+      name: "Ваше имя",
+      username: "Никнейм (@)"
     },
-    initializing: "Initializing",
+    initializing: "Загрузка системы",
     online: "в сети"
   },
   en: {
     app: { 
       name: "Nuxus 2.0", 
-      kernel: "Nuxus Kernel", 
-      signal: "Nuxus Signal",
-      chats: "chats 🐱",
-      archive: "archive 🐱",
-      calls: "calls",
-      music: "music",
-      wallet: "wallet",
-      games: "games",
-      profile: "profile"
+      kernel: "Nuxus Core", 
+      signal: "Message",
+      chats: "Chats",
+      archive: "Archive",
+      calls: "Calls",
+      music: "Music",
+      wallet: "Wallet",
+      games: "Games",
+      profile: "Profile"
     },
     sidebar: { 
       all: "All", 
@@ -87,10 +91,10 @@ export const translations = {
       groups: "Groups", 
       channels: "Channels", 
       search: "Search...", 
-      create: "Create Community", 
+      create: "Create Chat", 
       sync: "Syncing...", 
-      noResults: "No one found", 
-      connecting: "connecting..." 
+      noResults: "No results", 
+      connecting: "Connecting..." 
     },
     chat: { 
       placeholder: "Type a message...", 
@@ -108,30 +112,34 @@ export const translations = {
       title: "Settings", 
       tabs: { 
         profile: "Profile", 
-        style: "Style", 
-        privacy: "Privacy", 
+        style: "Design", 
+        privacy: "Security", 
         language: "Language", 
-        prime: "Prime", 
+        prime: "Premium", 
         interface: "Interface" 
       }, 
       labels: { 
         name: "Name", 
-        username: "Username", 
+        username: "Username (@)", 
         bio: "Bio", 
-        avatar: "Generate AI Avatar", 
+        avatar: "Change Avatar", 
         theme: "Theme", 
         textSize: "Text Size", 
-        save: "Save", 
-        language: "Interface Language" 
+        save: "Save Changes", 
+        language: "App Language" 
       } 
     },
     auth: { 
       title: "Nuxus", 
-      subtitle: "Authorization Kernel", 
-      login: "Enter Kernel", 
-      register: "Load Profile", 
+      subtitle: "Welcome back", 
+      login: "Log In", 
+      register: "Sign Up", 
       noAccount: "No account? Register", 
-      hasAccount: "Already have an account? Login" 
+      hasAccount: "Already have an account? Login",
+      enterEmail: "Email or phone",
+      enterPass: "Password",
+      name: "Your Name",
+      username: "Username (@)"
     },
     initializing: "Initializing",
     online: "online"
