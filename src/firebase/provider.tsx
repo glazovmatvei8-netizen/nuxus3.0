@@ -15,20 +15,21 @@ export const FirebaseContext = createContext<FirebaseContextState>({
 });
 
 /**
- * NUXUS PROVIDER V20.0
- * Облегченный узел трансляции состояния.
+ * NUXUS PROVIDER V21.0 «ABSOLUTE ZERO»
+ * Стабильный транслятор состояния без лишних импортов.
  */
 export const FirebaseProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isUserLoading, setIsUserLoading] = useState(true);
 
   useEffect(() => {
-    if (!nuxus.auth) {
+    const auth = nuxus.auth;
+    if (!auth) {
       setIsUserLoading(false);
       return;
     }
     
-    return onAuthStateChanged(nuxus.auth, (firebaseUser) => {
+    return onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser);
       setIsUserLoading(false);
     });

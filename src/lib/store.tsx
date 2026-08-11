@@ -43,8 +43,8 @@ interface AppState {
 export const AppContext = createContext<AppState | undefined>(undefined);
 
 /**
- * NUXUS ATOMIC STORE V20.0
- * Исключены прокси-файлы для предотвращения ошибки 'call'.
+ * NUXUS ATOMIC STORE V21.0 «ABSOLUTE ZERO»
+ * Единственный источник состояния. proxy-файлы удалены.
  */
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);

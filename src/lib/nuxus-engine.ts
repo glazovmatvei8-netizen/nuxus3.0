@@ -6,45 +6,45 @@ import { getFirestore, Firestore } from 'firebase/firestore';
 import { firebaseConfig } from '@/firebase/config';
 
 /**
- * NUXUS ENGINE V20.0 «EVENT HORIZON»
+ * NUXUS ENGINE V21.0 «ABSOLUTE ZERO»
  * 
- * Изолированное квантовое ядро. Работает как автономный синглтон.
- * Исключает любые ошибки 'call' за счет прямой инициализации инстансов.
+ * Полностью автономное ядро на базе функциональных геттеров.
+ * Исключает ReferenceError и конфликты модулей Webpack.
  */
-class NuxusEngine {
-  private static instance: NuxusEngine;
-  public app: FirebaseApp | null = null;
-  public auth: Auth | null = null;
-  public db: Firestore | null = null;
-  private isIgnited = false;
 
-  private constructor() {
-    if (typeof window !== 'undefined') {
-      this.ignite();
-    }
+let appInstance: FirebaseApp | undefined;
+let authInstance: Auth | undefined;
+let dbInstance: Firestore | undefined;
+
+const ignite = () => {
+  if (typeof window === 'undefined') return;
+  if (appInstance) return;
+
+  try {
+    const apps = getApps();
+    appInstance = apps.length > 0 ? apps[0] : initializeApp(firebaseConfig);
+    authInstance = getAuth(appInstance);
+    dbInstance = getFirestore(appInstance);
+    console.log('🛰️ Nuxus Engine V21.0: Active');
+  } catch (e) {
+    console.error('❌ Nuxus Engine: Ignition Failure', e);
   }
+};
 
-  public static getInstance(): NuxusEngine {
-    if (!NuxusEngine.instance) {
-      NuxusEngine.instance = new NuxusEngine();
-    }
-    return NuxusEngine.instance;
+// Экспортируем геттеры для гарантированного доступа
+export const nuxus = {
+  get app() { 
+    if (!appInstance) ignite();
+    return appInstance; 
+  },
+  get auth() { 
+    if (!authInstance) ignite();
+    return authInstance; 
+  },
+  get db() { 
+    if (!dbInstance) ignite();
+    return dbInstance; 
   }
+};
 
-  private ignite() {
-    if (this.isIgnited) return;
-    try {
-      const apps = getApps();
-      this.app = apps.length > 0 ? apps[0] : initializeApp(firebaseConfig);
-      this.auth = getAuth(this.app);
-      this.db = getFirestore(this.app);
-      this.isIgnited = true;
-      console.log('🛰️ Nuxus Engine V20.0: Event Horizon Active');
-    } catch (e) {
-      console.error('❌ Nuxus Engine: Critical Failure', e);
-    }
-  }
-}
-
-export const nuxus = NuxusEngine.getInstance();
 export const engine = nuxus;

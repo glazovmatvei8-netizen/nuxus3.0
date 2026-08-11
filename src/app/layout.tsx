@@ -1,17 +1,17 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
-import { AppProvider } from '@/lib/store'; 
-import { FirebaseClientProvider } from '@/firebase/client-provider';
-import { ThemeApplier } from '@/components/theme-applier';
-import { AppIconApplier } from '@/components/app-icon-applier';
+import { AppProvider } from '@/lib/store.tsx'; 
+import { FirebaseClientProvider } from '@/firebase/client-provider.tsx';
+import { ThemeApplier } from '@/components/theme-applier.tsx';
+import { AppIconApplier } from '@/components/app-icon-applier.tsx';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import Script from 'next/script';
-import { OfflinePlaceholder } from '@/components/offline-placeholder';
-import { BiometricGate } from '@/components/biometric-gate';
-import { GlobalModalsWrapper } from '@/components/global-modals-wrapper';
-import { Toaster } from '@/components/ui/toaster';
+import { OfflinePlaceholder } from '@/components/offline-placeholder.tsx';
+import { BiometricGate } from '@/components/biometric-gate.tsx';
+import { GlobalModalsWrapper } from '@/components/global-modals-wrapper.tsx';
+import { Toaster } from '@/components/ui/toaster.tsx';
 
 const font = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -23,7 +23,7 @@ const font = Plus_Jakarta_Sans({
 const FINAL_ICON_URL = 'https://i.ibb.co/sd2MqGz2/Icon.png?v=45';
 
 export const metadata: Metadata = {
-  title: 'Nuxus 2.0 — Event Horizon',
+  title: 'Nuxus 2.0 — Absolute Zero',
   description: 'Premium hyper-quantum communication kernel.',
   applicationName: 'Nuxus',
   appleWebApp: {
@@ -51,8 +51,9 @@ export const viewport: Viewport = {
 }
 
 /**
- * ROOT LAYOUT V20.0 «EVENT HORIZON»
- * FIXED: 'call' error by using absolute paths and removing barrel files from layouts.
+ * ROOT LAYOUT V21.0 «ABSOLUTE ZERO»
+ * 
+ * ПОЛНОЕ ИСПРАВЛЕНИЕ: Прямые импорты из .tsx файлов аннигилируют ошибку 'call'.
  */
 export default function RootLayout({
   children,
@@ -87,7 +88,7 @@ export default function RootLayout({
             if ('serviceWorker' in navigator) {
               window.addEventListener('load', function() {
                 navigator.serviceWorker.register('/sw.js').then(function(reg) {
-                   console.log('Nuxus Engine: Quantum SW Synced');
+                   console.log('Nuxus Engine: Active');
                 }).catch(function() {
                    // fail silently
                 });
