@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Eye, EyeOff, CheckCircle2, ChevronDown, Phone, Mail, Globe, Search } from 'lucide-react';
+import { Loader2, Eye, EyeOff, CheckCircle2, ChevronDown, Phone, Mail } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase'; 
 import { 
   signInWithEmailAndPassword,
@@ -14,7 +14,7 @@ import {
   browserLocalPersistence,
   setPersistence
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { NuxusLogo } from './nuxus-logo';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -74,7 +74,6 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
       }
 
       if (mode === 'login') {
-        // Попытка входа
         await signInWithEmailAndPassword(auth, finalEmail, password);
         toast({ title: "Вы вошли в аккаунт" });
       } else {
@@ -146,18 +145,18 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
             <NuxusLogo size={80} />
           </div>
           
-          <Card className="w-full max-w-[440px] bg-white/[0.02] backdrop-blur-2xl border-white/10 rounded-[3rem] p-4 shadow-2xl relative z-10 overflow-hidden">
+          <Card className="w-full max-w-[440px] bg-white/[0.02] backdrop-blur-2xl border-white/10 rounded-[3rem] p-2 sm:p-4 shadow-2xl relative z-10 overflow-hidden">
             <CardHeader className="text-center pt-8 pb-4 space-y-6">
               <div className="inline-flex bg-black/20 p-1 rounded-2xl border border-white/5 mx-auto shadow-inner">
                 <button 
                   onClick={() => setMode('login')} 
-                  className={cn("px-10 py-3 rounded-xl text-sm font-bold transition-all", mode === 'login' ? "bg-white text-black shadow-xl" : "text-white/30 hover:text-white/50")}
+                  className={cn("px-8 sm:px-10 py-3 rounded-xl text-sm font-bold transition-all", mode === 'login' ? "bg-white text-black shadow-xl" : "text-white/30 hover:text-white/50")}
                 >
                   {t.login}
                 </button>
                 <button 
                   onClick={() => setMode('register')} 
-                  className={cn("px-10 py-3 rounded-xl text-sm font-bold transition-all", mode === 'register' ? "bg-white text-black shadow-xl" : "text-white/30 hover:text-white/50")}
+                  className={cn("px-8 sm:px-10 py-3 rounded-xl text-sm font-bold transition-all", mode === 'register' ? "bg-white text-black shadow-xl" : "text-white/30 hover:text-white/50")}
                 >
                   {t.register}
                 </button>
@@ -170,7 +169,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                 <CardDescription className="text-white/40 font-medium text-lg">{t.subtitle}</CardDescription>
               </div>
 
-              <div className="flex gap-2 p-1 bg-black/20 rounded-xl border border-white/5 shadow-inner">
+              <div className="flex gap-2 p-1 bg-black/20 rounded-xl border border-white/5 shadow-inner w-full max-w-[320px] mx-auto">
                 <button 
                   onClick={() => setAuthMethod('phone')} 
                   className={cn("flex-1 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all", authMethod === 'phone' ? "bg-white/5 text-white" : "text-white/20")}
@@ -186,24 +185,24 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
               </div>
             </CardHeader>
 
-            <CardContent className="px-8 pb-10">
+            <CardContent className="px-6 sm:px-8 pb-10">
               <form onSubmit={handleAuth} className="space-y-5">
                 {mode === 'register' && (
-                  <div className="grid grid-cols-1 gap-4">
+                  <div className="flex flex-col gap-4">
                     <Input 
                       placeholder={t.name} 
                       value={name} 
                       onChange={e => setName(e.target.value)} 
-                      className="h-14 bg-white/[0.03] border-white/5 rounded-2xl font-medium text-lg px-6 focus:border-blue-500/40 transition-all shadow-inner" 
+                      className="h-14 bg-white/[0.03] border-white/5 rounded-2xl font-medium text-lg px-6 focus:border-blue-500/40 transition-all shadow-inner w-full" 
                       required 
                     />
-                    <div className="relative">
+                    <div className="relative w-full">
                       <span className="absolute left-6 top-1/2 -translate-y-1/2 text-blue-500 font-black text-lg">@</span>
                       <Input 
                         placeholder="username" 
                         value={username} 
                         onChange={e => setUsername(e.target.value)} 
-                        className="h-14 bg-white/[0.03] border-white/5 rounded-2xl font-medium text-lg pl-12 focus:border-blue-500/40 transition-all shadow-inner" 
+                        className="h-14 bg-white/[0.03] border-white/5 rounded-2xl font-medium text-lg pl-12 focus:border-blue-500/40 transition-all shadow-inner w-full" 
                         required 
                       />
                     </div>
@@ -212,15 +211,15 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                 
                 <div className="space-y-5">
                   {authMethod === 'phone' ? (
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 w-full">
                        <Popover open={isCountryPickerOpen} onOpenChange={setIsCountryPickerOpen}>
                           <PopoverTrigger asChild>
-                            <button type="button" className="h-14 px-4 bg-white/[0.03] border border-white/5 rounded-2xl flex items-center gap-3 hover:bg-white/[0.08] transition-all shadow-inner shrink-0 min-w-[110px] justify-between">
+                            <button type="button" className="h-14 px-4 bg-white/[0.03] border border-white/5 rounded-2xl flex items-center gap-2 hover:bg-white/[0.08] transition-all shadow-inner shrink-0 min-w-[100px] justify-between">
                                <div className="flex items-center gap-2">
                                   <span className="text-xl">{country.flag}</span>
-                                  <span className="text-sm font-bold text-white/60">{country.code}</span>
+                                  <span className="text-xs font-black text-white/80">{country.code}</span>
                                </div>
-                               <ChevronDown size={14} className="text-white/20" />
+                               <ChevronDown size={12} className="text-white/20" />
                             </button>
                           </PopoverTrigger>
                           <PopoverContent className="w-64 bg-[#121214] border-white/10 rounded-2xl p-2 shadow-2xl z-[1000]">
@@ -246,7 +245,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                         placeholder={t.enterPhone} 
                         value={phoneNumber} 
                         onChange={e => setPhoneNumber(e.target.value.replace(/\D/g, ''))} 
-                        className="h-14 flex-1 bg-white/[0.03] border-white/5 rounded-2xl font-medium text-lg px-6 focus:border-blue-500/40 transition-all shadow-inner" 
+                        className="h-14 flex-1 bg-white/[0.03] border-white/5 rounded-2xl font-medium text-lg px-6 focus:border-blue-500/40 transition-all shadow-inner min-w-0" 
                         required 
                       />
                     </div>
@@ -256,18 +255,18 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                       placeholder={t.enterEmail} 
                       value={email} 
                       onChange={e => setEmail(e.target.value)} 
-                      className="h-14 bg-white/[0.03] border-white/5 rounded-2xl font-medium text-lg px-6 focus:border-blue-500/40 transition-all shadow-inner" 
+                      className="h-14 bg-white/[0.03] border-white/5 rounded-2xl font-medium text-lg px-6 focus:border-blue-500/40 transition-all shadow-inner w-full" 
                       required 
                     />
                   )}
 
-                  <div className="relative">
+                  <div className="relative w-full">
                     <Input 
                       type={showPass ? "text" : "password"} 
                       placeholder={t.enterPass} 
                       value={password} 
                       onChange={e => setPassword(e.target.value)} 
-                      className="h-14 bg-white/[0.03] border-white/5 rounded-2xl font-medium text-lg px-6 focus:border-blue-500/40 transition-all shadow-inner" 
+                      className="h-14 bg-white/[0.03] border-white/5 rounded-2xl font-medium text-lg px-6 focus:border-blue-500/40 transition-all shadow-inner w-full" 
                       required 
                     />
                     <button 

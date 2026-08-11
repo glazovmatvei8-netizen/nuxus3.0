@@ -23,15 +23,17 @@ import { GlobalSearchModal } from './modals/global-search-modal';
 import { ForwardModal } from './modals/forward-modal';
 import { UserProfileModal } from './modals/user-profile-modal';
 import { UserAvatar } from './user-avatar';
+import { signOut } from 'firebase/auth';
+import { useAuth } from '@/firebase/provider';
 import type { Call, User } from '@/lib/types';
 import { 
   MessageSquare, Settings, Phone, Wallet, 
-  Globe, Plus, LayoutGrid
+  Globe, Plus, LayoutGrid, UserPlus
 } from 'lucide-react';
 
 /**
- * CHAT MAIN V31.0 «MODERN HARMONY»
- * Внедрена система мульти-аккаунтов (5 слотов) и фиксы цвета.
+ * CHAT MAIN V32.0 «ELITE SYMMETRY»
+ * Внедрена система добавления аккаунтов в слоты.
  */
 export default function ChatMain() {
   const { 
@@ -42,6 +44,18 @@ export default function ChatMain() {
   } = useAppState();
   const { user } = useUser();
   const db = useFirestore();
+  const auth = useAuth();
+
+  const handleSlotClick = (index: number) => {
+    if (index === activeAccountIndex) return;
+    
+    // Если слот пустой или другой, мы имитируем выход и переход к входу
+    // В реальной системе здесь бы происходило переключение между инстансами
+    if (confirm("Вы хотите переключиться на другой слот? Текущая сессия будет завершена для загрузки новой.")) {
+      setActiveAccountIndex(index);
+      signOut(auth!);
+    }
+  };
 
   const userProfileRef = useMemo(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user?.uid]);
   const { data: profile } = useDoc<User>(userProfileRef);
@@ -76,19 +90,20 @@ export default function ChatMain() {
             {[0, 1, 2, 3, 4].map((i) => (
               <button 
                 key={i}
-                onClick={() => setActiveAccountIndex(i)}
+                onClick={() => handleSlotClick(i)}
                 className={cn(
-                  "relative w-12 h-12 rounded-2xl transition-all duration-500 overflow-hidden border-2",
+                  "relative w-12 h-12 rounded-2xl transition-all duration-500 overflow-hidden border-2 flex items-center justify-center group",
                   activeAccountIndex === i 
-                    ? "border-primary scale-110 shadow-[0_0_15px_rgba(var(--primary),0.3)]" 
-                    : "border-transparent opacity-40 hover:opacity-100"
+                    ? "border-primary scale-110 shadow-[0_0_15px_rgba(var(--primary),0.3)] bg-primary/10" 
+                    : "border-transparent opacity-40 hover:opacity-100 bg-white/5"
                 )}
               >
-                {activeAccountIndex === i ? (
+                {activeAccountIndex === i && user ? (
                   <UserAvatar userId={user?.uid} className="w-full h-full rounded-none" />
                 ) : (
-                  <div className="w-full h-full bg-white/5 flex items-center justify-center">
-                    <Plus className="w-4 h-4 text-white/20" />
+                  <div className="flex flex-col items-center gap-1">
+                    <UserPlus className="w-4 h-4 text-white/40 group-hover:text-white transition-colors" />
+                    <span className="text-[7px] font-black uppercase text-white/20">Slot {i+1}</span>
                   </div>
                 )}
               </button>

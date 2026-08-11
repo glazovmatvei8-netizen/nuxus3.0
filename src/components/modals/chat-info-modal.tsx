@@ -8,7 +8,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { 
-  Star, Shield, UserPlus, X, Trash2, Wand2, Loader2, Sparkles, UserCheck, Gift, Zap, ShieldCheck, MoreVertical, Ban, UserMinus, Edit2
+  Star, Shield, UserPlus, X, Trash2, Wand2, Loader2, Sparkles, UserCheck, Gift, Zap, ShieldCheck, MoreVertical, Ban, UserMinus, Edit2, ShieldAlert, Settings
 } from 'lucide-react';
 import { 
   DropdownMenu,
@@ -26,11 +26,6 @@ import type { User, Chat, ReceivedGift } from '@/lib/types';
 import { AddMemberModal } from './add-member-modal';
 import { GiftModal } from './gift-modal';
 import { chatConversationSummary } from '@/ai/flows/chat-conversation-summary-flow';
-
-/**
- * CHAT INFO MODAL V5.3.2 «STABLE RESOLUTION»
- * ИСПРАВЛЕНО: Корректный импорт хуков через Firebase Barrel.
- */
 
 const CustomTitleDialog = memo(({ 
   isOpen, 
@@ -152,17 +147,12 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
   const otherUserProfileRef = useMemo(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
   const { data: otherUserProfile } = useDoc<User>(otherUserProfileRef);
 
-  const giftsQuery = useMemo(() => {
-    if (!db || !otherId) return null;
-    return query(collection(db, 'users', otherId, 'receivedGifts'), limit(20));
-  }, [db, otherId]);
-  const { data: gifts } = useCollection<ReceivedGift>(giftsQuery);
-
   const amIAdmin = useMemo(() => {
     if (!user || !chat) return false;
     return chat.ownerId === user.uid || chat.adminIds?.includes(user.uid) || isGlobalAdmin(currentUserProfile);
   }, [chat, user?.uid, currentUserProfile]);
 
+  const isOwner = useMemo(() => user && chat.ownerId === user.uid, [user, chat.ownerId]);
   const isPremium = useMemo(() => isUserPremium(currentUserProfile), [currentUserProfile]);
   const isContact = useMemo(() => otherId && currentUserProfile?.contactIds?.includes(otherId), [otherId, currentUserProfile?.contactIds]);
 
@@ -205,27 +195,48 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md bg-[#0a0a0c]/95 backdrop-blur-[60px] border-white/10 p-0 overflow-hidden h-[85vh] flex flex-col rounded-[2.5rem] shadow-2xl outline-none">
         <DialogHeader className="p-8 text-center flex flex-col items-center shrink-0 space-y-0 relative border-b border-white/5 bg-gradient-to-b from-primary/10 to-transparent">
-          <div className="relative mb-6">
+          <DialogTitle className="text-2xl font-black italic text-white flex items-center justify-center gap-3 tracking-tighter">{currentDisplayName} {isUserPremium(isPrivate ? otherUserProfile : currentUserProfile) && <Star className="w-5 h-5 text-accent fill-accent animate-pulse" />}</DialogTitle>
+          <DialogDescription className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/40 italic">{isPrivate ? formatLastSeen(otherUserProfile?.lastSeen) : (chat.type === 'saved' ? 'Сигнал активен' : chat.username)}</DialogDescription>
+          
+          <div className="relative mb-6 mt-6">
              <div className="absolute -inset-4 bg-primary/20 blur-3xl rounded-full animate-pulse" />
              <UserAvatar userId={chat.type === 'saved' ? user?.uid : (isPrivate ? otherId : null)} manualAvatarUrl={chat.type !== 'private' && chat.type !== 'saved' ? chat.avatarUrl : null} className="h-28 w-28 border-[4px] border-[#0a0a0c] shadow-2xl relative z-10" fallbackName={currentDisplayName} showOnlineStatus />
-          </div>
-          <div className="space-y-1 relative z-10">
-             <DialogTitle className="text-2xl font-black italic text-white flex items-center justify-center gap-3 tracking-tighter">{currentDisplayName} {isUserPremium(isPrivate ? otherUserProfile : currentUserProfile) && <Star className="w-5 h-5 text-accent fill-accent animate-pulse" />}</DialogTitle>
-             <DialogDescription className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/40 italic">{isPrivate ? formatLastSeen(otherUserProfile?.lastSeen) : (chat.type === 'saved' ? 'Сигнал активен' : chat.username)}</DialogDescription>
           </div>
         </DialogHeader>
         <ScrollArea className="flex-1 px-1">
           <div className="p-6 space-y-8 pb-32">
+            {isOwner && (
+               <div className="p-6 bg-red-500/5 rounded-[2.2rem] border border-red-500/20 shadow-xl space-y-4">
+                  <div className="flex items-center gap-3 text-red-500">
+                    <ShieldAlert className="w-5 h-5" />
+                    <h3 className="text-xs font-black uppercase tracking-widest">Управление чатом</h3>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button variant="ghost" onClick={() => setIsAddMemberOpen(true)} className="h-11 rounded-xl bg-white/5 text-[9px] font-black uppercase gap-2 hover:bg-primary/20 border border-white/5">
+                      <UserPlus className="w-3.5 h-3.5" /> Добавить
+                    </Button>
+                    <Button variant="ghost" onClick={() => toast({ title: "Настройки чата", description: "Функция в разработке" })} className="h-11 rounded-xl bg-white/5 text-[9px] font-black uppercase gap-2 hover:bg-primary/20 border border-white/5">
+                      <Settings className="w-3.5 h-3.5" /> Настройки
+                    </Button>
+                  </div>
+               </div>
+            )}
+
             <div className="flex flex-col gap-3">
                {isPrivate && (<Button onClick={toggleContact} variant={isContact ? "outline" : "default"} className={cn("w-full h-14 rounded-2xl font-black uppercase italic tracking-widest gap-2 shadow-xl", isContact ? "border-white/10 bg-white/5" : "bg-primary text-white")}>{isContact ? <><UserCheck className="w-5 h-5 text-primary" /> В контактах</> : <><UserPlus className="w-5 h-5" /> Добавить в контакты</>}</Button>)}
                <Button onClick={handleAiSummary} disabled={isSummarizing} className="w-full h-14 bg-white/[0.03] border border-white/10 text-white rounded-2xl font-black uppercase italic tracking-widest gap-3 shadow-inner text-[10px] hover:bg-primary/10 transition-all">{isSummarizing ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Wand2 className="w-5 h-5 text-primary" /> ПЕРЕСКАЗ ДИАЛОГА (AI)</>}</Button>
                {aiSummary && (<div className="bg-primary/5 p-5 rounded-3xl border border-primary/10 animate-in fade-in zoom-in-95 shadow-xl"><p className="text-[13px] text-white/90 leading-relaxed font-medium">{aiSummary}</p></div>)}
             </div>
+            
             {isPrivate && (<div className="flex gap-3"><Button onClick={() => setIsGiftModalOpen(true)} variant="outline" className="flex-1 h-14 rounded-2xl border-white/10 bg-white/[0.02] text-white font-black uppercase italic text-[10px] tracking-widest gap-3 hover:bg-primary/5 transition-all"><Gift className="w-5 h-5 text-primary" /> Подарок</Button></div>)}
+            
             <div className="space-y-4">
-              <div className="flex items-center justify-between px-1"><h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40 italic">Узлы: {chat.participantIds?.length}</h3>{(amIAdmin || chat.type === 'saved') && chat.type !== 'saved' && (<Button variant="ghost" size="sm" className="h-8 text-[9px] uppercase font-black text-primary tracking-widest hover:bg-primary/10" onClick={() => setIsAddMemberOpen(true)}><Zap className="w-3 h-3 mr-2" /> Добавить</Button>)}</div>
+              <div className="flex items-center justify-between px-1">
+                <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40 italic">Участники: {chat.participantIds?.length}</h3>
+              </div>
               <div className="space-y-2">{chat.participantIds?.map((pid: string) => (<ParticipantItem key={pid} userId={pid} onClick={() => { onOpenChange(false); setInspectedUserId(pid); }} canManage={amIAdmin && pid !== user?.uid} isAdmin={chat.adminIds?.includes(pid)} isOwner={chat.ownerId === pid} customTitle={chat.metadata?.[pid]?.customTitle} onPromote={handlePromote} onDemote={handleDemote} onKick={handleKick} onSetTitle={(uid: any) => setTitleModalUser(uid)} />))}</div>
             </div>
+
             <Button variant="ghost" className="w-full h-12 text-red-500/60 hover:text-red-500 hover:bg-red-500/10 rounded-2xl font-black uppercase italic text-[10px] tracking-widest gap-3 transition-all mt-4" onClick={() => { deleteDocumentNonBlocking(doc(db!, 'chats', chat.id)); setCurrentChatId(null); onOpenChange(false); }}><Trash2 className="w-4 h-4" /> Удалить диалог</Button>
           </div>
         </ScrollArea>
