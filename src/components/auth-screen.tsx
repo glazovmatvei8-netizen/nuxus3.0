@@ -66,14 +66,15 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
       
       let finalEmail = email.trim();
       if (authMethod === 'phone') {
-        finalEmail = `${country.code}${phoneNumber.replace(/\D/g, '')}@nuxus.app`;
+        const cleanPhone = phoneNumber.replace(/\D/g, '');
+        if (cleanPhone.length < 5) {
+          throw new Error("Введите корректный номер");
+        }
+        finalEmail = `${country.code}${cleanPhone}@nuxus.app`;
       }
 
       if (mode === 'login') {
-        /**
-         * КРИТИЧЕСКИЙ ФИКС: В Next.js 15 чтение из Firestore до логина запрещено.
-         * Поэтому проверку почты делаем через обработку ошибки Auth.
-         */
+        // Попытка входа
         await signInWithEmailAndPassword(auth, finalEmail, password);
         toast({ title: "Вы вошли в аккаунт" });
       } else {
@@ -101,6 +102,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
       if (e.code === 'auth/wrong-password') msg = "Неверный пароль";
       if (e.code === 'auth/email-already-in-use') msg = "Этот адрес уже занят";
       if (e.code === 'auth/invalid-email') msg = "Неверный формат почты";
+      if (e.message) msg = e.message;
       
       toast({ title: "Ошибка", description: msg, variant: "destructive" });
     } finally {
@@ -213,12 +215,15 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                     <div className="flex gap-2">
                        <Popover open={isCountryPickerOpen} onOpenChange={setIsCountryPickerOpen}>
                           <PopoverTrigger asChild>
-                            <button type="button" className="h-14 px-4 bg-white/[0.03] border border-white/5 rounded-2xl flex items-center gap-2 hover:bg-white/[0.08] transition-all shadow-inner shrink-0">
-                               <span className="text-xl">{country.flag}</span>
+                            <button type="button" className="h-14 px-4 bg-white/[0.03] border border-white/5 rounded-2xl flex items-center gap-3 hover:bg-white/[0.08] transition-all shadow-inner shrink-0 min-w-[110px] justify-between">
+                               <div className="flex items-center gap-2">
+                                  <span className="text-xl">{country.flag}</span>
+                                  <span className="text-sm font-bold text-white/60">{country.code}</span>
+                               </div>
                                <ChevronDown size={14} className="text-white/20" />
                             </button>
                           </PopoverTrigger>
-                          <PopoverContent className="w-56 bg-[#121214] border-white/10 rounded-2xl p-2 shadow-2xl z-[1000]">
+                          <PopoverContent className="w-64 bg-[#121214] border-white/10 rounded-2xl p-2 shadow-2xl z-[1000]">
                              <ScrollArea className="h-64">
                                 {COUNTRIES.map((c, i) => (
                                   <button 
@@ -240,7 +245,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                        <Input 
                         placeholder={t.enterPhone} 
                         value={phoneNumber} 
-                        onChange={e => setPhoneNumber(e.target.value)} 
+                        onChange={e => setPhoneNumber(e.target.value.replace(/\D/g, ''))} 
                         className="h-14 flex-1 bg-white/[0.03] border-white/5 rounded-2xl font-medium text-lg px-6 focus:border-blue-500/40 transition-all shadow-inner" 
                         required 
                       />
