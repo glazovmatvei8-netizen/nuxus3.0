@@ -104,7 +104,7 @@ export default function ChatSidebar() {
   const db = useFirestore();
   const auth = useAuth();
   const { t } = useTranslations();
-  const { currentChatId, setCurrentChatId, setIsSearchOpen, activeAccountIndex, setActiveAccountIndex } = useAppState();
+  const { currentChatId, setCurrentChatId, setIsSearchOpen, activeAccountIndex, setActiveAccountIndex, slotNames } = useAppState();
   
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
@@ -129,7 +129,7 @@ export default function ChatSidebar() {
 
   const handleSlotSwitch = (idx: number) => {
     if (idx === activeAccountIndex) return;
-    if (confirm("Переключиться на другой слот? Текущая сессия будет завершена.")) {
+    if (confirm("Переключиться на этот аккаунт? Текущая сессия будет завершена.")) {
       setActiveAccountIndex(idx);
       signOut(auth!);
     }
@@ -146,7 +146,7 @@ export default function ChatSidebar() {
                   <UserAvatar userId={user?.uid} className="h-10 w-10 border border-white/10" manualAvatarUrl={profile?.avatarUrl} />
                   <div className="flex flex-col text-left min-w-0">
                      <span className="font-bold text-sm text-white truncate leading-tight">{formatDisplayName(profile?.name)}</span>
-                     <span className="text-[10px] text-white/30 font-black uppercase tracking-widest">Слот {activeAccountIndex + 1}</span>
+                     <span className="text-[10px] text-white/30 font-black uppercase tracking-widest">Активный аккаунт</span>
                   </div>
                </div>
                <ChevronDown className="w-4 h-4 text-white/20 group-hover:text-white transition-colors" />
@@ -167,7 +167,7 @@ export default function ChatSidebar() {
                         <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center border", activeAccountIndex === i ? "bg-primary/10 border-primary/20" : "bg-white/5 border-white/5")}>
                            {activeAccountIndex === i ? <Star className="w-4 h-4 text-primary fill-primary" /> : <Plus className="w-4 h-4" />}
                         </div>
-                        <span>Аккаунт {i+1}</span>
+                        <span className="truncate max-w-[140px]">{slotNames[i] || `Добавить аккаунт`}</span>
                      </div>
                      {activeAccountIndex === i && <div className="w-2 h-2 bg-primary rounded-full animate-pulse shadow-[0_0_10px_rgba(var(--primary),1)]" />}
                   </DropdownMenuItem>

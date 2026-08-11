@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useMemo } from 'react';
@@ -21,17 +20,13 @@ import { signOut } from 'firebase/auth';
 import { useAuth } from '@/firebase/provider';
 import { AdminPanelModal } from './modals/admin-panel-modal';
 
-/**
- * PROFILE VIEW V35.0 «STABLE NAVIGATION»
- * Исправлены импорты и добавлена плавная загрузка профиля.
- */
 export default function ProfileView() {
   const { user } = useUser();
   const db = useFirestore();
   const auth = useAuth();
   const { t } = useTranslations();
   const { toast } = useToast();
-  const { setIsSettingsOpen, setSettingsTab, setIsLegalOpen, activeAccountIndex, setActiveAccountIndex } = useAppState();
+  const { setIsSettingsOpen, setSettingsTab, setIsLegalOpen, activeAccountIndex, setActiveAccountIndex, slotNames } = useAppState();
   
   const [isQrOpen, setIsQrOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
@@ -91,14 +86,14 @@ export default function ProfileView() {
           </div>
 
           <div className="space-y-5">
-             <h3 className="text-[10px] font-black uppercase text-white/20 tracking-[0.4em] ml-4 italic">Учётные записи (Слоты)</h3>
+             <h3 className="text-[10px] font-black uppercase text-white/20 tracking-[0.4em] ml-4 italic">Учётные записи</h3>
              <div className="flex gap-4 overflow-x-auto scrollbar-hide px-1 py-2">
                 {[0, 1, 2, 3, 4].map(i => (
                   <button 
                     key={i} 
                     onClick={() => {
                       if (activeAccountIndex !== i) {
-                        if (confirm("Переключиться на другой слот?")) {
+                        if (confirm("Переключиться на этот аккаунт?")) {
                           setActiveAccountIndex(i);
                           signOut(auth!);
                         }
@@ -112,9 +107,16 @@ export default function ProfileView() {
                     {activeAccountIndex === i ? (
                       <UserAvatar userId={user?.uid} className="h-10 w-10 border-none" />
                     ) : (
-                      <Plus className="w-6 h-6 text-white/20" />
+                      <div className="flex flex-col items-center">
+                        <Plus className="w-4 h-4 text-white/20" />
+                      </div>
                     )}
                     {activeAccountIndex === i && <div className="absolute top-1 right-1 w-2.5 h-2.5 bg-primary rounded-full shadow-[0_0_10px_rgba(var(--primary),1)]" />}
+                    {slotNames[i] && activeAccountIndex !== i && (
+                      <div className="absolute bottom-1 px-1 w-full bg-black/60 backdrop-blur-sm">
+                        <span className="text-[6px] font-black text-white uppercase truncate block w-full text-center">{slotNames[i]}</span>
+                      </div>
+                    )}
                   </button>
                 ))}
              </div>

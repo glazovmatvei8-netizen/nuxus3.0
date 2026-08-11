@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
@@ -27,6 +26,8 @@ interface AppState {
   setSettingsTab: (tab: string) => void;
   activeAccountIndex: number;
   setActiveAccountIndex: (index: number) => void;
+  slotNames: string[];
+  setSlotName: (index: number, name: string) => void;
   inspectedUserId: string | null;
   setInspectedUserId: (id: string | null) => void;
   isLegalOpen: boolean;
@@ -43,10 +44,6 @@ interface AppState {
 
 export const AppContext = createContext<AppState | undefined>(undefined);
 
-/**
- * NUXUS ATOMIC STORE V31.0 «MULTIVERSE»
- * Добавлена поддержка мульти-аккаунтов и фиксы интерфейса.
- */
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<MainView>('chats');
@@ -60,11 +57,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isLegalOpen, setIsLegalOpen] = useState(false);
   const [inspectedUserId, setInspectedUserId] = useState<string | null>(null);
   const [activeAccountIndex, setActiveAccountIndex] = useState(0);
+  const [slotNames, setSlotNames] = useState<string[]>(['', '', '', '', '']);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('nuxus_active_account_v31');
-      if (saved) setActiveAccountIndex(parseInt(saved));
+      const savedIndex = localStorage.getItem('nuxus_active_account_v31');
+      if (savedIndex) setActiveAccountIndex(parseInt(savedIndex));
+      
+      const savedNames = localStorage.getItem('nuxus_slot_names');
+      if (savedNames) {
+        try {
+          setSlotNames(JSON.parse(savedNames));
+        } catch (e) {
+          console.error("Failed to parse slot names");
+        }
+      }
     }
   }, []);
 
@@ -73,6 +80,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem('nuxus_active_account_v31', activeAccountIndex.toString());
     }
   }, [activeAccountIndex]);
+
+  const setSlotName = (index: number, name: string) => {
+    setSlotNames(prev => {
+      const newNames = [...prev];
+      newNames[index] = name;
+      localStorage.setItem('nuxus_slot_names', JSON.stringify(newNames));
+      return newNames;
+    });
+  };
   
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isPlayingMusic, setIsPlayingMusic] = useState(false);
@@ -90,6 +106,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     isSearchOpen, setIsSearchOpen,
     settingsTab, setSettingsTab,
     activeAccountIndex, setActiveAccountIndex,
+    slotNames, setSlotName,
     isLegalOpen, setIsLegalOpen,
     inspectedUserId, setInspectedUserId,
     currentTrack, setCurrentTrack,
@@ -99,7 +116,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }), [
     currentChatId, activeView, forwardingMessage, activeCallId, localDrafts,
     is2FAVerified, isSettingsOpen, isSearchOpen, settingsTab,
-    activeAccountIndex, isLegalOpen, inspectedUserId, currentTrack,
+    activeAccountIndex, slotNames, isLegalOpen, inspectedUserId, currentTrack,
     isPlayingMusic, isCreateStoryOpen, storiesToView
   ]);
 

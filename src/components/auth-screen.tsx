@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState } from 'react';
@@ -12,14 +11,16 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   browserLocalPersistence,
-  setPersistence
+  setPersistence,
+  updateProfile
 } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { NuxusLogo } from './nuxus-logo';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { translations } from '@/lib/translations';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { useAppState } from '@/lib/store';
 
 const COUNTRIES = [
   { name: 'Россия', code: '+7', flag: '🇷🇺' },
@@ -34,14 +35,11 @@ const COUNTRIES = [
   { name: 'ОАЭ', code: '+971', flag: '🇦🇪' },
 ];
 
-/**
- * AUTH SCREEN V35.0 «SYMMETRY & ATMOSPHERE»
- * Достигнута абсолютная симметрия и баланс интерфейса.
- */
 export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'login' | 'register' }) {
   const auth = useAuth();
   const db = useFirestore();
   const { toast } = useToast();
+  const { activeAccountIndex, setSlotName } = useAppState();
   
   const [lang, setLang] = useState<'ru' | 'en' | null>(null);
   const [mode, setMode] = useState<'login' | 'register'>(initialMode);
@@ -73,15 +71,28 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
       if (authMethod === 'phone') {
         const cleanPhone = phoneNumber.replace(/\D/g, '');
         if (cleanPhone.length < 5) throw new Error("Введите корректный номер");
-        finalEmail = `${country.code}${cleanPhone}@nuxus.app`;
+        // Strip '+' from country code for internal email mapping to avoid Auth errors
+        const cleanCountryCode = country.code.replace('+', '');
+        finalEmail = `${cleanCountryCode}${cleanPhone}@nuxus.app`;
       }
 
       if (mode === 'login') {
-        await signInWithEmailAndPassword(auth, finalEmail, password);
+        const userCred = await signInWithEmailAndPassword(auth, finalEmail, password);
+        
+        // Fetch name from firestore to update slot metadata
+        const userDoc = await getDoc(doc(db, 'users', userCred.user.uid));
+        if (userDoc.exists()) {
+          setSlotName(activeAccountIndex, userDoc.data().name || 'Пользователь');
+        } else {
+          setSlotName(activeAccountIndex, userCred.user.displayName || 'Пользователь');
+        }
+        
         toast({ title: "Вы вошли в аккаунт" });
       } else {
         const usernameWithAt = '@' + username.trim().replace('@', '');
         const userCred = await createUserWithEmailAndPassword(auth, finalEmail, password);
+        
+        await updateProfile(userCred.user, { displayName: name.trim() });
         
         await setDoc(doc(db, 'users', userCred.user.uid), {
           id: userCred.user.uid,
@@ -95,13 +106,16 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
           settings: { language: lang || 'ru', appearance: 'dark', theme: 'default' }
         });
         
+        setSlotName(activeAccountIndex, name.trim());
         toast({ title: "Аккаунт создан" });
       }
     } catch (e: any) {
+      console.error("Auth Error:", e);
       let msg = "Ошибка авторизации";
       if (e.code === 'auth/user-not-found') msg = "Аккаунт не найден";
       if (e.code === 'auth/wrong-password') msg = "Неверный пароль";
       if (e.code === 'auth/email-already-in-use') msg = "Этот адрес уже занят";
+      if (e.code === 'auth/invalid-email') msg = "Некорректный формат данных";
       toast({ title: "Ошибка", description: msg, variant: "destructive" });
     } finally {
       setIsLoading(false);
@@ -215,7 +229,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                   <div className="flex gap-4 w-full">
                      <Popover open={isCountryPickerOpen} onOpenChange={setIsCountryPickerOpen}>
                         <PopoverTrigger asChild>
-                          <button type="button" className="h-16 px-6 bg-white/[0.03] border border-white/5 rounded-2xl flex items-center gap-3 hover:bg-white/[0.08] transition-all shadow-inner shrink-0 min-w-[120px] justify-between group">
+                          <button type="button" className="h-16 px-6 bg-white/[0.03] border border-white/5 rounded-2xl flex items-center gap-3 hover:bg-white/[0.08] transition-all shadow-inner min-w-[120px] justify-between group">
                              <div className="flex items-center gap-3">
                                 <span className="text-2xl">{country.flag}</span>
                                 <span className="text-[11px] font-black text-white/80">{country.code}</span>
@@ -247,7 +261,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                      <Input 
                       placeholder="000 000-00-00" 
                       value={phoneNumber} 
-                      onChange={e => setPhoneNumber(e.target.value.replace(/\D/g, '').slice(0, 10))} 
+                      onChange={e => setPhoneNumber(e.target.value.replace(/\D/g, ''))} 
                       className="h-16 flex-1 bg-white/[0.03] border-white/5 rounded-2xl font-bold text-lg px-8 focus:border-primary/40 transition-all shadow-inner min-w-0 placeholder:text-white/10" 
                       required 
                     />
