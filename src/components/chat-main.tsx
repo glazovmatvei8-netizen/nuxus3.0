@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useEffect, useMemo } from 'react';
@@ -31,8 +32,9 @@ import {
 } from 'lucide-react';
 
 /**
- * CHAT MAIN V26.0 «OBSIDIAN VOID»
- * Полный редизайн интерфейса. Глубокое погружение в кибер-эстетику Obsidian Glass.
+ * CHAT MAIN V29.0 «MODERN STANDARD»
+ * РЕДИЗАЙН: Удалены устаревшие "кибер" элементы. 
+ * Фокус на чистоте, удобстве и понятной терминологии.
  */
 export default function ChatMain() {
   const { 
@@ -62,33 +64,30 @@ export default function ChatMain() {
   }, [incomingCalls, activeCallId, setActiveCallId]);
 
   return (
-    <div className="fixed inset-0 flex flex-col w-screen bg-[#010103] overflow-hidden h-[100dvh]">
+    <div className="fixed inset-0 flex flex-col w-screen bg-[#050505] overflow-hidden h-[100dvh]">
       <NotificationListener />
       
-      {/* Obsidian Void Nebula */}
+      {/* Background Gradient */}
       <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-40%] left-[-20%] w-[120%] h-[120%] bg-primary/10 blur-[300px] rounded-full animate-nebula" />
-        <div className="absolute bottom-[-30%] right-[-10%] w-[90%] h-[90%] bg-accent/5 blur-[250px] rounded-full" />
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.01)_1.5px,transparent_1.5px),linear-gradient(90deg,rgba(255,255,255,0.01)_1.5px,transparent_1.5px)] bg-[size:120px_120px] opacity-10" />
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-500/5 blur-[120px] rounded-full" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-500/5 blur-[100px] rounded-full" />
       </div>
 
       <div className="flex-1 flex overflow-hidden w-full relative h-full z-10">
         
-        {/* Obsidian Rail V26.0 */}
-        <div className="hidden md:flex w-[110px] h-full flex-col items-center py-12 ethereal-panel border-r border-white/[0.03] shrink-0 z-50">
+        {/* Modern Rail (Sidebar for Desktop) */}
+        <div className="hidden md:flex w-[100px] h-full flex-col items-center py-10 bg-white/[0.01] border-r border-white/5 shrink-0 z-50 shadow-2xl">
           <div 
-            className="mb-16 cursor-pointer active:scale-90 transition-all relative group" 
+            className="mb-14 cursor-pointer active:scale-90 transition-all relative group" 
             onClick={() => { setActiveView('chats'); setCurrentChatId(null); }}
           >
-            <div className="absolute -inset-12 bg-primary/40 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
-            <div className="w-16 h-16 quantum-card flex items-center justify-center relative z-10 border-primary/40 shadow-2xl neon-glow-primary bg-black">
-              <Cpu className="w-8 h-8 text-primary animate-pulse" />
+            <div className="w-14 h-14 bg-white/[0.03] border border-white/10 rounded-2xl flex items-center justify-center shadow-xl group-hover:bg-blue-500/10 group-hover:border-blue-500/20 transition-all">
+              <MessageSquare className="w-6 h-6 text-blue-500" />
             </div>
           </div>
           
-          <div className="flex flex-col gap-10 flex-1 overflow-y-auto no-scrollbar py-2 w-full px-5">
+          <div className="flex flex-col gap-8 flex-1 overflow-y-auto no-scrollbar py-2 w-full px-5">
             <RailButton icon={MessageSquare} active={activeView === 'chats'} onClick={() => { setActiveView('chats'); setCurrentChatId(null); }} />
-            <RailButton icon={BrainCircuit} active={activeView === 'ai'} onClick={() => { setActiveView('ai'); setCurrentChatId(null); }} />
             <RailButton icon={Globe} active={activeView === 'discovery'} onClick={() => { setActiveView('discovery'); setCurrentChatId(null); }} />
             <RailButton icon={Phone} active={activeView === 'calls'} onClick={() => { setActiveView('calls'); setCurrentChatId(null); }} />
             <RailButton icon={Wallet} active={activeView === 'wallet'} onClick={() => { setActiveView('wallet'); setCurrentChatId(null); }} />
@@ -98,22 +97,22 @@ export default function ChatMain() {
             <button 
               onClick={() => { setActiveView('profile'); setCurrentChatId(null); }} 
               className={cn(
-                "relative transition-all duration-700 p-1.5 rounded-full border-2", 
-                activeView === 'profile' ? "border-primary scale-110 neon-glow-primary" : "border-transparent opacity-40 hover:opacity-100"
+                "relative transition-all duration-300 p-1 rounded-full border-2", 
+                activeView === 'profile' ? "border-blue-500 scale-110 shadow-[0_0_15px_rgba(59,130,246,0.3)]" : "border-transparent opacity-40 hover:opacity-100"
               )}
             >
-              <UserAvatar userId={user?.uid} className="h-14 w-14" />
+              <UserAvatar userId={user?.uid} className="h-12 w-12" />
             </button>
           </div>
         </div>
 
-        {/* Command Nexus V26.0 */}
+        {/* Command Nexus */}
         <div className="flex-1 flex overflow-hidden h-full relative">
           <div className={cn(
-            "w-full md:w-[460px] lg:w-[500px] h-full flex-shrink-0 z-30 bg-black/40 backdrop-blur-[120px] border-r border-white/5 relative overflow-hidden transition-all duration-700", 
+            "w-full md:w-[420px] lg:w-[460px] h-full flex-shrink-0 z-30 bg-black/20 backdrop-blur-3xl border-r border-white/5 relative overflow-hidden transition-all duration-500", 
             (currentChatId && !['profile', 'contacts', 'calls', 'wallet', 'discovery', 'ai', 'partner'].includes(activeView)) ? "hidden md:block" : "block"
           )}>
-            <div className="h-full w-full animate-in fade-in slide-in-from-left-8 duration-1000">
+            <div className="h-full w-full animate-in fade-in duration-700">
               {activeView === 'chats' && <ChatSidebar />}
               {activeView === 'contacts' && <ContactsView />}
               {activeView === 'calls' && <CallsView />}
@@ -127,22 +126,19 @@ export default function ChatMain() {
           </div>
           
           <div className={cn(
-            "flex-1 h-full flex flex-col min-w-0 bg-transparent relative z-20 overflow-hidden transition-all duration-700 md:px-10 py-6", 
+            "flex-1 h-full flex flex-col min-w-0 bg-transparent relative z-20 overflow-hidden transition-all duration-500 md:p-6 lg:p-8", 
             (!currentChatId || ['profile', 'wallet', 'ai', 'partner'].includes(activeView)) ? "hidden md:flex" : "flex"
           )}>
-            <div className="h-full w-full overflow-hidden flex flex-col ethereal-panel md:rounded-[4rem] border-white/[0.1] shadow-[0_80px_200px_rgba(0,0,0,1)] animate-in fade-in zoom-in-98 duration-1000 bg-[#020205]/60">
+            <div className="h-full w-full overflow-hidden flex flex-col bg-white/[0.01] md:rounded-[3rem] border border-white/5 shadow-2xl animate-in fade-in duration-1000">
               {currentChatId ? <ChatArea /> : (
-                <div className="hidden md:flex flex-1 flex-col items-center justify-center p-16 text-center space-y-16 opacity-30">
+                <div className="hidden md:flex flex-1 flex-col items-center justify-center p-16 text-center space-y-8 opacity-40">
                    <div className="relative">
-                      <div className="absolute -inset-32 bg-primary/15 blur-[180px] rounded-full animate-nebula" />
-                      <div className="w-56 h-56 quantum-card flex items-center justify-center shadow-2xl border-white/10 relative z-10 bg-black">
-                        <Layers className="w-24 h-24 text-primary" />
-                        <div className="laser-line" />
-                      </div>
+                      <div className="absolute -inset-10 bg-blue-500/10 blur-[80px] rounded-full" />
+                      <NuxusLogo size={140} className="relative z-10" />
                    </div>
-                   <div className="space-y-6">
-                      <h2 className="text-5xl font-black uppercase italic tracking-[1.5em] text-white drop-shadow-2xl ml-[1.5em]">SINGULARITY</h2>
-                      <p className="text-[12px] font-black uppercase tracking-[1em] text-primary/60 italic ml-[1em]">Nexus Core Signal Neutral...</p>
+                   <div className="space-y-4">
+                      <h2 className="text-3xl font-bold text-white tracking-tight">Выберите чат</h2>
+                      <p className="text-sm font-medium text-white/40 max-w-xs mx-auto">Начните общение с вашими контактами или создайте новую группу.</p>
                    </div>
                 </div>
               )}
@@ -151,19 +147,18 @@ export default function ChatMain() {
         </div>
       </div>
 
-      {/* Floating Tactical Navigation (Mobile) V26.0 */}
+      {/* Floating Bottom Nav (Mobile) */}
       {!currentChatId && (
-        <div className="md:hidden fixed bottom-8 left-1/2 -translate-x-1/2 ethereal-panel rounded-[3.5rem] h-[86px] flex items-center justify-between px-10 z-[100] w-[90%] border-white/[0.15] shadow-[0_40px_120px_rgba(0,0,0,1)] bg-black/80">
+        <div className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 bg-white/[0.04] backdrop-blur-2xl rounded-[2.5rem] h-20 flex items-center justify-between px-8 z-[100] w-[92%] border border-white/10 shadow-2xl">
           <NavButton icon={Globe} active={activeView === 'discovery'} onClick={() => setActiveView('discovery')} />
-          <NavButton icon={BrainCircuit} active={activeView === 'ai'} onClick={() => setActiveView('ai')} />
+          <NavButton icon={Phone} active={activeView === 'calls'} onClick={() => setActiveView('calls')} />
           
-          <div className="relative -top-10">
-            <div className="absolute -inset-10 bg-primary/40 blur-3xl animate-pulse rounded-full" />
+          <div className="relative -top-8">
             <button 
               onClick={() => setActiveView('chats')}
               className={cn(
-                "h-20 w-20 rounded-[3rem] flex items-center justify-center transition-all duration-700 relative z-20 border-2 shadow-2xl active:scale-90 neon-glow-primary",
-                activeView === 'chats' ? "bg-primary text-white border-primary/40" : "bg-[#0a0a0c] text-white/30 border-white/10"
+                "h-20 w-20 rounded-[2.2rem] flex items-center justify-center transition-all duration-300 relative z-20 border-2 shadow-2xl active:scale-90",
+                activeView === 'chats' ? "bg-blue-600 text-white border-white/20 shadow-blue-500/20" : "bg-[#121214] text-white/30 border-white/5"
               )}
             >
               <MessageSquare className={cn("w-9 h-9", activeView === 'chats' && "fill-current")} />
@@ -189,24 +184,24 @@ function RailButton({ icon: Icon, active, onClick }: any) {
     <button 
       onClick={onClick} 
       className={cn(
-        "group h-16 w-16 rounded-[2rem] flex items-center justify-center border transition-all duration-700", 
+        "group h-14 w-14 rounded-2xl flex items-center justify-center border transition-all duration-300", 
         active 
-          ? "bg-primary/15 border-primary/40 text-primary neon-glow-primary scale-110" 
-          : "bg-white/5 border-transparent text-white/20 hover:bg-white/10 hover:text-white"
+          ? "bg-blue-600 text-white border-white/10 shadow-lg scale-110" 
+          : "bg-white/5 border-transparent text-white/20 hover:bg-white/[0.08] hover:text-white"
       )}
     >
-      <Icon className={cn("w-7 h-7 transition-all duration-700", active ? "fill-current scale-110" : "group-hover:scale-110")} />
+      <Icon className={cn("w-6 h-6 transition-all", active ? "fill-current" : "group-hover:scale-110")} />
     </button>
   );
 }
 
 function NavButton({ icon: Icon, active, onClick, isProfile, userId }: any) {
   return (
-    <button onClick={onClick} className={cn("flex flex-col items-center justify-center h-full w-14 transition-all relative", active ? "text-primary scale-125" : "text-white/20")}>
+    <button onClick={onClick} className={cn("flex flex-col items-center justify-center h-full w-14 transition-all relative", active ? "text-blue-500 scale-125" : "text-white/20")}>
       {isProfile ? (
-        <UserAvatar userId={userId} className={cn("h-11 w-11 border-2 transition-all", active ? "border-primary shadow-lg" : "border-transparent")} />
+        <UserAvatar userId={userId} className={cn("h-10 w-10 border-2 transition-all", active ? "border-blue-500 shadow-lg" : "border-transparent")} />
       ) : (
-        <Icon className={cn("w-7 h-7", active && "fill-current")} />
+        <Icon className={cn("w-6 h-6", active && "fill-current")} />
       )}
     </button>
   );

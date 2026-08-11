@@ -18,9 +18,9 @@ export const translations = {
       private: "Личные", 
       groups: "Группы", 
       channels: "Каналы", 
-      search: "Поиск контактов...", 
+      search: "Поиск...", 
       create: "Создать", 
-      sync: "Загрузка...", 
+      sync: "Синхронизация...", 
       noResults: "Ничего не найдено", 
       connecting: "Подключение..." 
     },
@@ -39,7 +39,7 @@ export const translations = {
     settings: { 
       title: "Настройки", 
       tabs: { 
-        profile: "Профиль", 
+        profile: "Аккаунт", 
         style: "Стиль", 
         privacy: "Защита", 
         language: "Язык", 
@@ -58,7 +58,7 @@ export const translations = {
       } 
     },
     auth: { 
-      title: "Вход в Nuxus", 
+      title: "Вход в аккаунт", 
       subtitle: "Ваш безопасный мессенджер", 
       login: "Войти", 
       register: "Регистрация", 
@@ -71,9 +71,9 @@ export const translations = {
       username: "Ваш никнейм (@)",
       selectCountry: "Выберите страну"
     },
-    initializing: "Загрузка...",
+    initializing: "Загрузка системы...",
     online: "в сети",
-    offline: "был(а) недавно"
+    offline: "не в сети"
   },
   en: {
     app: { 
@@ -86,7 +86,7 @@ export const translations = {
       music: "Music",
       wallet: "Wallet",
       games: "Games",
-      profile: "Profile"
+      profile: "Account"
     },
     sidebar: { 
       all: "All Chats", 
@@ -114,9 +114,9 @@ export const translations = {
     settings: { 
       title: "Settings", 
       tabs: { 
-        profile: "Profile", 
+        profile: "Account", 
         style: "Style", 
-        privacy: "Privacy", 
+        privacy: "Security", 
         language: "Language", 
         prime: "Premium", 
         interface: "Interface" 
@@ -133,7 +133,7 @@ export const translations = {
       } 
     },
     auth: { 
-      title: "Nuxus Login", 
+      title: "Sign In", 
       subtitle: "Secure messaging starts here", 
       login: "Log In", 
       register: "Sign Up", 

@@ -2,8 +2,9 @@
 'use client';
 
 /**
- * NUXUS CORE HUB V28.0
+ * NUXUS CORE HUB V29.0
  * Централизованный экспорт всех системных функций.
+ * FIXED: Exports normalized to prevent runtime TypeErrors.
  */
 
 export { nuxus, engine } from '@/lib/nuxus-engine';
