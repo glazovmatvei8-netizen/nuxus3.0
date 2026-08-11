@@ -1,9 +1,13 @@
 'use client';
 
 /**
- * NUXUS ORIGIN HUB V23.0
- * ОПТИМИЗИРОВАНО: Удалены ре-экспорты хуков, вызывавшие циклические зависимости.
- * Теперь это только точка доступа к Engine.
+ * NUXUS ORIGIN HUB V26.0
+ * 
+ * ГЛОБАЛЬНЫЙ МОСТ: Экспорт всех хуков и движка.
+ * Линейная структура исключает ошибку "is not a function".
  */
 
 export { nuxus, engine } from '@/lib/nuxus-engine';
+export { FirebaseProvider, useUser, useFirestore, useAuth, useFirebase } from './provider';
+export { useDoc } from './firestore/use-doc';
+export { useCollection } from './firestore/use-collection';

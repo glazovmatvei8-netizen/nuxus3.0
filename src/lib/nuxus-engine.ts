@@ -6,10 +6,10 @@ import { getFirestore, Firestore } from 'firebase/firestore';
 import { firebaseConfig } from '@/firebase/config';
 
 /**
- * NUXUS ENGINE V24.0 «PRIME KERNEL»
+ * NUXUS ENGINE V26.0 «QUANTUM SINGULARITY»
  * 
- * ПОЛНАЯ АВТОНОМНОСТЬ: Движок работает как изолированный синглтон.
- * Гарантирует отсутствие ошибки 'call' за счет исключения реактивных зависимостей при инициализации.
+ * АБСОЛЮТНОЕ ЯДРО: Изолированный синглтон-контроллер.
+ * Управляет всеми узлами связи мессенджера автономно от React.
  */
 
 let appInstance: FirebaseApp | undefined;
@@ -26,9 +26,9 @@ const ignite = () => {
     authInstance = getAuth(appInstance);
     dbInstance = getFirestore(appInstance);
     
-    console.log('%c🛰️ NUXUS ENGINE V24: QUANTUM LINK ESTABLISHED', 'color: #a855f7; font-weight: bold;');
+    console.log('%c🛰️ NUXUS ENGINE V26: SINGULARITY ACTIVE', 'color: #a855f7; font-weight: bold; font-size: 10px;');
   } catch (e) {
-    console.warn('⚠️ Nuxus Engine: Critical ignition bypass');
+    console.warn('⚠️ Nuxus Engine: Ignition Fault Bypass');
   }
 };
 

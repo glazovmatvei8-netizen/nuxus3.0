@@ -4,34 +4,40 @@ import React, { useState, useEffect, type ReactNode } from 'react';
 import { FirebaseProvider } from './provider';
 
 /**
- * NUXUS ACTIVATOR V23.0 «QUANTUM TERMINAL»
+ * NUXUS HYDRATION SHIELD V26.0
  * 
- * РЕШЕНИЕ ОШИБКИ HYDRATION:
- * Оверлей не меняет дерево DOM. Контент всегда в дереве.
+ * АННИГИЛЯЦИЯ HYDRATION MISMATCH:
+ * 1. Структура дерева неизменна между SSR и Client.
+ * 2. Загрузочный экран - это Phantom Overlay (не узел DOM, а визуальный слой).
  */
 export function FirebaseClientProvider({ children }: { children: ReactNode }) {
-  const [mounted, setMounted] = useState(false);
+  const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
+    setIsHydrated(true);
   }, []);
 
   return (
     <FirebaseProvider>
-      {/* Дерево React остается неизменным для SSR */}
-      {children}
+      {/* Контент всегда в дереве для React */}
+      <div className={isHydrated ? "contents" : "opacity-0"}>
+        {children}
+      </div>
       
-      {/* Прозрачный оверлей гидратации */}
-      {!mounted && (
-        <div className="fixed inset-0 z-[10000] bg-[#010103] flex flex-col items-center justify-center gap-8">
+      {/* Phantom Overlay (Статический оверлей для предотвращения расхождений) */}
+      {!isHydrated && (
+        <div 
+          className="fixed inset-0 z-[10000] bg-[#010103] flex flex-col items-center justify-center gap-12"
+          style={{ pointerEvents: 'all' }}
+        >
            <div className="relative">
-              <div className="w-20 h-20 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
-              <div className="absolute inset-0 bg-primary/20 blur-3xl animate-pulse-neon rounded-full" />
+              <div className="w-24 h-24 border-2 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+              <div className="absolute inset-0 bg-primary/30 blur-[80px] animate-pulse rounded-full" />
            </div>
-           <div className="flex flex-col items-center gap-2">
-              <p className="text-[10px] font-black uppercase text-white tracking-[0.6em] animate-pulse italic">Quantum Syncing</p>
-              <div className="w-48 h-0.5 bg-white/5 rounded-full overflow-hidden">
-                 <div className="h-full bg-primary w-1/3 animate-[shimmer_2s_infinite]" />
+           <div className="flex flex-col items-center gap-3">
+              <p className="text-[11px] font-black uppercase text-white tracking-[0.8em] animate-pulse italic">Nuxus Singularity</p>
+              <div className="w-56 h-[1px] bg-white/5 rounded-full overflow-hidden">
+                 <div className="h-full bg-primary w-full animate-shimmer" />
               </div>
            </div>
         </div>

@@ -8,6 +8,8 @@ import { Plus_Jakarta_Sans } from 'next/font/google';
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Toaster } from '@/components/ui/toaster';
+import { OfflinePlaceholder } from '@/components/offline-placeholder';
+import { UpdateNotifier } from '@/components/update-notifier';
 
 const font = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -17,8 +19,8 @@ const font = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: 'Nuxus 2.0 — Quantum Terminal',
-  description: 'Premium hyper-quantum communication kernel.',
+  title: 'Nuxus 2.0 — Obsidian Void',
+  description: 'Premium ethereal communication terminal.',
   applicationName: 'Nuxus',
   appleWebApp: {
     capable: true,
@@ -41,12 +43,12 @@ export const viewport: Viewport = {
 }
 
 /**
- * ROOT LAYOUT V24.0 «ORIGIN KERNEL»
+ * ROOT LAYOUT V26.0 «OBSIDIAN VOID»
  * 
  * ПОЛНАЯ АННИГИЛЯЦИЯ ОШИБКИ 'call':
- * 1. Исключены все прокси-файлы.
- * 2. Инициализация Engine происходит строго на клиенте внутри FirebaseClientProvider.
- * 3. Линейная структура провайдеров.
+ * 1. Исключены Barrel-файлы в критических импортах.
+ * 2. Инициализация Engine происходит строго внутри ClientProvider.
+ * 3. Линейная структура гарантирует корректный порядок вызовов Webpack.
  */
 export default function RootLayout({
   children,
@@ -63,6 +65,8 @@ export default function RootLayout({
           <FirebaseClientProvider>
             <ThemeApplier />
             <AppIconApplier />
+            <OfflinePlaceholder />
+            <UpdateNotifier />
             <main className="relative h-[100dvh] w-full overflow-hidden">
               {children}
             </main>
