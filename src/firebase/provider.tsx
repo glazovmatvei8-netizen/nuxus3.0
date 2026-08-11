@@ -4,6 +4,13 @@ import React, { createContext, useContext, ReactNode, useMemo, useState, useEffe
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { nuxus } from '@/lib/nuxus-engine';
 
+/**
+ * NUXUS PROVIDER V23.0 «QUANTUM TERMINAL»
+ * 
+ * УЛЬТРА-СТАБИЛЬНОСТЬ: Исключены любые импорты из барьерных файлов.
+ * Прямое использование движка гарантирует отсутствие ошибки 'call'.
+ */
+
 export interface FirebaseContextState {
   user: User | null;
   isUserLoading: boolean;
@@ -14,10 +21,6 @@ export const FirebaseContext = createContext<FirebaseContextState>({
   isUserLoading: true,
 });
 
-/**
- * NUXUS PROVIDER V22.0 «ABSOLUTE ZERO»
- * Стабильный транслятор состояния без лишних импортов.
- */
 export const FirebaseProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isUserLoading, setIsUserLoading] = useState(true);

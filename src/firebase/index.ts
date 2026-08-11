@@ -1,11 +1,9 @@
 'use client';
 
 /**
- * NUXUS ORIGIN HUB V22.0
- * Единый шлюз для доступа ко всем ресурсам нового движка.
+ * NUXUS ORIGIN HUB V23.0
+ * ОПТИМИЗИРОВАНО: Удалены ре-экспорты хуков, вызывавшие циклические зависимости.
+ * Теперь это только точка доступа к Engine.
  */
 
-export * from './provider';
-export { useCollection } from './firestore/use-collection';
-export { useDoc } from './firestore/use-doc';
-export { nuxus } from '@/lib/nuxus-engine';
+export { nuxus, engine } from '@/lib/nuxus-engine';

@@ -43,8 +43,8 @@ interface AppState {
 export const AppContext = createContext<AppState | undefined>(undefined);
 
 /**
- * NUXUS ATOMIC STORE V21.0 «ABSOLUTE ZERO»
- * Единственный источник состояния. proxy-файлы удалены.
+ * NUXUS ATOMIC STORE V23.0 «QUANTUM TERMINAL»
+ * Единый источник правды для UI. Полная изоляция от логики Firebase.
  */
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
@@ -107,6 +107,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
 export const useAppState = (): AppState => {
   const context = useContext(AppContext);
-  if (!context) throw new Error("useAppState must be used within AppProvider");
+  if (!context) throw new Error("useAppState: AppProvider is not ready.");
   return context;
 };

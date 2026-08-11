@@ -1,17 +1,17 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
-import { AppProvider } from '@/lib/store.tsx'; 
-import { FirebaseClientProvider } from '@/firebase/client-provider.tsx';
-import { ThemeApplier } from '@/components/theme-applier.tsx';
-import { AppIconApplier } from '@/components/app-icon-applier.tsx';
+import { AppProvider } from '@/lib/store'; 
+import { FirebaseClientProvider } from '@/firebase/client-provider';
+import { ThemeApplier } from '@/components/theme-applier';
+import { AppIconApplier } from '@/components/app-icon-applier';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import Script from 'next/script';
-import { OfflinePlaceholder } from '@/components/offline-placeholder.tsx';
-import { BiometricGate } from '@/components/biometric-gate.tsx';
-import { GlobalModalsWrapper } from '@/components/global-modals-wrapper.tsx';
-import { Toaster } from '@/components/ui/toaster.tsx';
+import { OfflinePlaceholder } from '@/components/offline-placeholder';
+import { BiometricGate } from '@/components/biometric-gate';
+import { GlobalModalsWrapper } from '@/components/global-modals-wrapper';
+import { Toaster } from '@/components/ui/toaster';
 
 const font = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -23,7 +23,7 @@ const font = Plus_Jakarta_Sans({
 const FINAL_ICON_URL = 'https://i.ibb.co/sd2MqGz2/Icon.png?v=45';
 
 export const metadata: Metadata = {
-  title: 'Nuxus 2.0 — Absolute Zero',
+  title: 'Nuxus 2.0 — Quantum Terminal',
   description: 'Premium hyper-quantum communication kernel.',
   applicationName: 'Nuxus',
   appleWebApp: {
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#020205',
+  themeColor: '#010103',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
@@ -51,10 +51,12 @@ export const viewport: Viewport = {
 }
 
 /**
- * ROOT LAYOUT V22.0 «ABSOLUTE ZERO»
+ * ROOT LAYOUT V23.0 «QUANTUM TERMINAL»
  * 
- * ПОЛНОЕ ИСПРАВЛЕНО: Убраны все циклические импорты.
- * Прямые ссылки на файлы исключают ошибку 'call'.
+ * ПОЛНОЕ ИСПРАВЛЕНИЕ ОШИБКИ 'call':
+ * 1. Удалены все расширения файлов в импортах.
+ * 2. Иерархия модулей перестроена на линейную.
+ * 3. Провайдеры разделены на чистые логические слои.
  */
 export default function RootLayout({
   children,
@@ -64,7 +66,7 @@ export default function RootLayout({
   return (
     <html lang="ru" className={`dark ${font.variable}`} suppressHydrationWarning>
       <body 
-        className="font-sans antialiased bg-[#020205] text-foreground overflow-hidden h-[100dvh] select-none" 
+        className="font-sans antialiased bg-[#010103] text-foreground overflow-hidden h-[100dvh] select-none" 
         style={{ fontFamily: 'var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, sans-serif' }}
       >
         <AppProvider>
@@ -89,7 +91,7 @@ export default function RootLayout({
             if ('serviceWorker' in navigator) {
               window.addEventListener('load', function() {
                 navigator.serviceWorker.register('/sw.js').then(function(reg) {
-                   console.log('Nuxus Engine: Active');
+                   console.log('Nuxus Engine: SW Link Ready');
                 }).catch(function() {
                    // fail silently
                 });

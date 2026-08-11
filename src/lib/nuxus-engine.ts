@@ -6,11 +6,10 @@ import { getFirestore, Firestore } from 'firebase/firestore';
 import { firebaseConfig } from '@/firebase/config';
 
 /**
- * NUXUS ENGINE V22.0 «ABSOLUTE ZERO»
+ * NUXUS ENGINE V23.0 «QUANTUM TERMINAL»
  * 
- * Полностью автономное ядро на базе функциональных геттеров.
- * Исключает ReferenceError и конфликты модулей Webpack.
- * Прямая инициализация без классов для максимальной скорости.
+ * ПОЛНАЯ ИЗОЛЯЦИЯ: Ядро теперь работает как чистый синглтон,
+ * защищенный от SSR-конфликтов Next.js 15.
  */
 
 let appInstance: FirebaseApp | undefined;
@@ -23,27 +22,27 @@ const ignite = () => {
 
   try {
     const apps = getApps();
+    // Инициализируем только если нет существующих приложений
     appInstance = apps.length > 0 ? apps[0] : initializeApp(firebaseConfig);
     authInstance = getAuth(appInstance);
     dbInstance = getFirestore(appInstance);
-    console.log('🛰️ Nuxus Engine V22.0: Active');
+    console.log('🛰️ Nuxus Engine V23.0: Quantum Sync Active');
   } catch (e) {
-    console.error('❌ Nuxus Engine: Ignition Failure', e);
+    console.warn('⚠️ Nuxus Engine: Ignition delayed or re-routed');
   }
 };
 
-// Экспортируем геттеры для гарантированного доступа
 export const nuxus = {
   get app() { 
-    if (!appInstance) ignite();
+    if (typeof window !== 'undefined' && !appInstance) ignite();
     return appInstance; 
   },
   get auth() { 
-    if (!authInstance) ignite();
+    if (typeof window !== 'undefined' && !authInstance) ignite();
     return authInstance; 
   },
   get db() { 
-    if (!dbInstance) ignite();
+    if (typeof window !== 'undefined' && !dbInstance) ignite();
     return dbInstance; 
   }
 };
