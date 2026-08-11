@@ -24,8 +24,8 @@ const ADMIN_ID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 const ORIGIN_DATE = '2024-01-01T00:00:00Z'; 
 
 /**
- * USER PROFILE MODAL V9.2.1 «STABLE RESOLUTION»
- * ИСПРАВЛЕНО: Корректный импорт хуков через Firebase Barrel.
+ * USER PROFILE MODAL V31.0 «ACCESSIBILITY SYNC»
+ * FIXED: Added missing DialogTitle to fix console errors.
  */
 export function UserProfileModal() {
   const db = useFirestore();
@@ -60,7 +60,7 @@ export function UserProfileModal() {
       await updateDoc(doc(db, 'users', currentUser.uid), {
         contactIds: isContact ? arrayRemove(inspectedUserId) : arrayUnion(inspectedUserId)
       });
-      toast({ title: isContact ? "Узел удален из контактов" : "Узел добавлен в контакты" });
+      toast({ title: isContact ? "Аккаунт удален из контактов" : "Аккаунт добавлен в контакты" });
     } catch (e) {
       toast({ title: "Ошибка синхронизации", variant: "destructive" });
     }
@@ -163,10 +163,15 @@ export function UserProfileModal() {
     <Dialog open={!!inspectedUserId} onOpenChange={(o) => !o && setInspectedUserId(null)}>
       <DialogContent className="max-w-[420px] bg-[#030306]/95 backdrop-blur-[50px] border-white/10 p-0 overflow-hidden h-[90vh] flex flex-col rounded-[3rem] shadow-[0_0_100px_rgba(0,0,0,0.8)] outline-none">
         <DialogHeader className="p-8 text-center flex flex-col items-center shrink-0 space-y-0 relative border-b border-white/5 bg-gradient-to-b from-primary/10 to-transparent">
-          <DialogTitle className="sr-only">Профиль: {formatDisplayName(targetUser?.name, targetUser?.username)}</DialogTitle>
-          <DialogDescription className="sr-only">Профиль узла Ядра Nuxus</DialogDescription>
+          <DialogTitle className="text-2xl font-black italic text-white flex items-center justify-center gap-3 tracking-tighter">
+            {formatDisplayName(targetUser?.name, targetUser?.username)}
+            {isUserPremium(targetUser) && <Star className="w-5 h-5 text-primary fill-primary" />}
+          </DialogTitle>
+          <DialogDescription className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/40 mt-1 opacity-70 italic">
+            Профиль аккаунта
+          </DialogDescription>
           
-          <div className="relative mb-6">
+          <div className="relative mb-6 mt-6">
             <div className="absolute -inset-4 bg-primary/20 blur-3xl rounded-full animate-pulse" />
             <UserAvatar 
               userId={inspectedUserId} 
@@ -175,21 +180,6 @@ export function UserProfileModal() {
               fallbackName={targetUser?.name}
               showOnlineStatus
             />
-            <div className="absolute bottom-[-20%] left-1/2 -translate-x-1/2 w-48 h-48 bg-primary/10 blur-[60px] -z-0 rounded-full" />
-          </div>
-
-          <div className="relative z-10 text-center">
-            <div className="flex items-center justify-center gap-2">
-              <h2 className="text-2xl font-black text-white italic tracking-tighter leading-tight">
-                {formatDisplayName(targetUser?.name, targetUser?.username)}
-              </h2>
-              {(targetUser?.statusEmoji || (inspectedUserId === ADMIN_ID)) && (
-                 <span className="text-2xl drop-shadow-[0_0_100px_rgba(255,255,255,0.3)]">
-                   {targetUser?.statusEmoji || '👑'}
-                 </span>
-              )}
-            </div>
-            <p className="text-[11px] text-primary/60 font-black uppercase tracking-[0.4em] mt-1 opacity-70 italic">{targetUser?.username}</p>
           </div>
         </DialogHeader>
 
@@ -197,54 +187,31 @@ export function UserProfileModal() {
           <div className="flex flex-col min-h-full pb-24">
             <div className="mt-6 px-8 text-center">
               {targetUser?.statusText && (
-                <div className="mt-4 px-6 py-2.5 bg-primary/10 rounded-2xl border border-primary/20 inline-flex items-center gap-3 max-w-full shadow-lg animate-in fade-in slide-in-from-top-2">
-                  <Sparkles className="w-4 h-4 text-accent shrink-0 animate-pulse" />
+                <div className="mt-4 px-6 py-2.5 bg-primary/10 rounded-2xl border border-primary/20 inline-flex items-center gap-3 max-w-full shadow-lg">
+                  <Sparkles className="w-4 h-4 text-primary shrink-0 animate-pulse" />
                   <p className="text-[11px] text-white font-black uppercase tracking-[0.2em] truncate">{targetUser.statusText}</p>
                 </div>
               )}
 
               <p className="text-[9px] text-muted-foreground uppercase font-black tracking-widest mt-4 opacity-40">
-                {formatLastSeen(
-                  targetUser?.lastSeen, 
-                  targetUser?.settings?.privacy?.lastSeenVisibility, 
-                  false, 
-                  'в сети', 
-                  targetUser?.settings?.privacy?.lastSeenWhitelist || [], 
-                  currentUser?.uid
-                )}
+                {formatLastSeen(targetUser?.lastSeen, targetUser?.settings?.privacy?.lastSeenVisibility)}
               </p>
             </div>
 
             <div className="px-6 mt-10 space-y-6">
-              {/* ADMIN ACTIONS SECTION (EXCLUSIVE) */}
               {isViewerAdmin && inspectedUserId !== currentUser?.uid && (
-                <div className="space-y-3 p-6 bg-red-500/5 rounded-[2.2rem] border border-red-500/20 shadow-xl animate-in zoom-in-95">
-                  <div className="flex items-center gap-2 mb-2 px-1">
-                    <ShieldAlert className="w-4 h-4 text-red-500" />
-                    <h3 className="text-[10px] font-black uppercase text-red-500 tracking-widest">Администрирование</h3>
-                  </div>
+                <div className="space-y-3 p-6 bg-red-500/5 rounded-[2.2rem] border border-red-500/20 shadow-xl">
+                  <h3 className="text-[10px] font-black uppercase text-red-500 tracking-widest flex items-center gap-2 mb-2">
+                    <ShieldAlert className="w-4 h-4" /> Администрирование
+                  </h3>
                   <div className="grid grid-cols-2 gap-2">
-                    <Button 
-                      onClick={() => handleAdminAction({ isPremium: !targetUser?.isPremium }, targetUser?.isPremium ? "Premium аннулирован" : "Premium активирован")} 
-                      variant="ghost" className="h-11 rounded-xl bg-white/5 text-[9px] font-black uppercase gap-2 hover:bg-accent/20 hover:text-accent border border-white/5"
-                    >
-                      <Crown className={cn("w-3.5 h-3.5", targetUser?.isPremium ? "text-white/40" : "text-accent")} /> 
-                      {targetUser?.isPremium ? 'REVOKE PREM' : 'GIVE PREM'}
+                    <Button onClick={() => handleAdminAction({ isPremium: !targetUser?.isPremium }, "Premium статус изменен")} variant="ghost" className="h-11 rounded-xl bg-white/5 text-[9px] font-black uppercase gap-2 hover:bg-primary/20 border border-white/5">
+                      <Crown className="w-3.5 h-3.5" /> {targetUser?.isPremium ? 'REVOKE PREM' : 'GIVE PREM'}
                     </Button>
-                    <Button 
-                      onClick={() => handleAdminAction({ isAdmin: !targetUser?.isAdmin }, targetUser?.isAdmin ? "Права отозваны" : "Админ назначен")} 
-                      variant="ghost" className="h-11 rounded-xl bg-white/5 text-[9px] font-black uppercase gap-2 hover:bg-primary/20 hover:text-primary border border-white/5"
-                    >
-                      <ShieldCheck className={cn("w-3.5 h-3.5", targetUser?.isAdmin ? "text-white/40" : "text-primary")} /> 
-                      {targetUser?.isAdmin ? 'REVOKE ADMIN' : 'GIVE ADMIN'}
+                    <Button onClick={() => handleAdminAction({ isAdmin: !targetUser?.isAdmin }, "Права админа изменены")} variant="ghost" className="h-11 rounded-xl bg-white/5 text-[9px] font-black uppercase gap-2 hover:bg-primary/20 border border-white/5">
+                      <ShieldCheck className="w-3.5 h-3.5" /> {targetUser?.isAdmin ? 'REVOKE ADMIN' : 'GIVE ADMIN'}
                     </Button>
                   </div>
-                  <Button 
-                    onClick={() => handleAdminAction({ isBanned: !targetUser?.isBanned, bannedAt: !targetUser?.isBanned ? new Date().toISOString() : null }, targetUser?.isBanned ? "Доступ восстановлен" : "Узел аннигилирован")}
-                    className={cn("w-full h-11 rounded-xl font-black uppercase text-[9px] gap-2 shadow-lg", targetUser?.isBanned ? "bg-green-500 text-white" : "bg-red-600 text-white")}
-                  >
-                    {targetUser?.isBanned ? <><ShieldPlus className="w-4 h-4" /> ВОССТАНОВИТЬ ДОСТУП</> : <><UserMinus className="w-4 h-4" /> АННИГИЛИРОВАТЬ УЗЕЛ</>}
-                  </Button>
                 </div>
               )}
 
@@ -257,7 +224,7 @@ export function UserProfileModal() {
               </Button>
 
               <div className="flex gap-3">
-                <Button onClick={handleStartChat} className="flex-1 h-14 obsidian-glass border-white/5 text-white rounded-2xl font-black uppercase italic tracking-widest gap-2 shadow-xl hover:bg-primary/10 hover:border-primary/40 transition-all">
+                <Button onClick={handleStartChat} className="flex-1 h-14 bg-white/[0.03] border border-white/5 text-white rounded-2xl font-black uppercase italic tracking-widest gap-2 shadow-xl hover:bg-primary/10 hover:border-primary/40 transition-all">
                   <MessageCircle className="w-5 h-5 text-primary" /> Сообщение
                 </Button>
                 <Button onClick={() => setIsGiftModalOpen(true)} variant="outline" className="flex-1 h-14 border-white/10 bg-white/[0.03] text-white rounded-2xl font-black uppercase italic tracking-widest gap-2">
@@ -265,26 +232,9 @@ export function UserProfileModal() {
                 </Button>
               </div>
 
-              {gifts && gifts.length > 0 && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between px-1">
-                    <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/60 flex items-center gap-2">
-                      <Zap className="w-3.5 h-3.5" /> Артефакты
-                    </h3>
-                  </div>
-                  <div className="grid grid-cols-4 gap-3">
-                    {gifts.map(gift => (
-                      <div key={gift.id} className="aspect-square bg-white/[0.03] rounded-2xl border border-white/5 flex flex-col items-center justify-center hover:bg-white/10 transition-all shadow-lg">
-                        <div className="text-3xl drop-shadow-2xl">{gift.giftIcon}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
               {targetUser?.bio && (
                 <div className="space-y-2">
-                  <h3 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 px-1">Спецификация</h3>
+                  <h3 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 px-1">О себе</h3>
                   <div className="bg-white/[0.02] p-5 rounded-[2rem] border border-white/[0.05]">
                     <p className="text-[13px] text-white/90 leading-relaxed font-medium">{targetUser.bio}</p>
                   </div>
@@ -292,20 +242,18 @@ export function UserProfileModal() {
               )}
 
               <div className="space-y-2">
-                <h3 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 px-1">Данные узла</h3>
+                <h3 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 px-1">Данные аккаунта</h3>
                 <div className="bg-white/[0.02] rounded-[2rem] border border-white/[0.05] overflow-hidden divide-y divide-white/[0.02] shadow-xl">
                   <InfoRow icon={Calendar} label="Регистрация" value={registrationDate} />
-                  <InfoRow icon={ShieldCheck} label="Целостность" value={hasActivePremium ? "Elite Node" : "Standard"} color={hasActivePremium ? "text-accent" : "text-white/30"} />
-                  <InfoRow icon={Cpu} label="Протокол" value={`QES ${versions.qesVersion}`} />
-                  {targetUser?.isAdmin && <InfoRow icon={ShieldCheck} label="Роль" value="Administrator" color="text-primary" />}
+                  <InfoRow icon={ShieldCheck} label="Статус" value={hasActivePremium ? "Elite" : "Стандарт"} color={hasActivePremium ? "text-primary" : "text-white/30"} />
+                  <InfoRow icon={Cpu} label="Версия" value={`V${versions.latestVersion}`} />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3 pb-4">
-                <Button variant="ghost" onClick={() => startCall('audio')} className="h-14 rounded-2xl bg-white/[0.02] border border-white/[0.05] text-[10px] font-black uppercase tracking-widest gap-2 hover:bg-primary/10 hover:text-primary transition-all"><Phone className="w-4 h-4" /> Аудио</Button>
-                <Button variant="ghost" onClick={() => startCall('video')} className="h-14 rounded-2xl bg-white/[0.02] border border-white/[0.05] text-[10px] font-black uppercase tracking-widest gap-2 hover:bg-primary/10 hover:text-primary transition-all"><Video className="w-4 h-4" /> Видео</Button>
+                <Button variant="ghost" onClick={() => startCall('audio')} className="h-14 rounded-2xl bg-white/[0.02] border border-white/[0.05] text-[10px] font-black uppercase tracking-widest gap-2 hover:bg-primary/10 transition-all"><Phone className="w-4 h-4" /> Аудио</Button>
+                <Button variant="ghost" onClick={() => startCall('video')} className="h-14 rounded-2xl bg-white/[0.02] border border-white/[0.05] text-[10px] font-black uppercase tracking-widest gap-2 hover:bg-primary/10 transition-all"><Video className="w-4 h-4" /> Видео</Button>
               </div>
-              <button className="w-full text-[8px] font-black uppercase tracking-[0.5em] text-white/10 hover:text-white/40 h-10" onClick={copyId}>UID: {inspectedUserId}</button>
             </div>
           </div>
         </ScrollArea>

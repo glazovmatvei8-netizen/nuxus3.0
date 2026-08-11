@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
@@ -43,8 +44,8 @@ interface AppState {
 export const AppContext = createContext<AppState | undefined>(undefined);
 
 /**
- * NUXUS ATOMIC STORE V23.0 «QUANTUM TERMINAL»
- * Единый источник правды для UI. Полная изоляция от логики Firebase.
+ * NUXUS ATOMIC STORE V31.0 «MULTIVERSE»
+ * Добавлена поддержка мульти-аккаунтов и фиксы интерфейса.
  */
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
@@ -62,14 +63,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('nuxus_active_index_v71');
+      const saved = localStorage.getItem('nuxus_active_account_v31');
       if (saved) setActiveAccountIndex(parseInt(saved));
     }
   }, []);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('nuxus_active_index_v71', activeAccountIndex.toString());
+      localStorage.setItem('nuxus_active_account_v31', activeAccountIndex.toString());
     }
   }, [activeAccountIndex]);
   
