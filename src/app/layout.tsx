@@ -23,8 +23,8 @@ const font = Plus_Jakarta_Sans({
 const FINAL_ICON_URL = 'https://i.ibb.co/sd2MqGz2/Icon.png?v=45';
 
 export const metadata: Metadata = {
-  title: 'Nuxus 2.0 — Премиальная связь',
-  description: 'Современный и безопасный мессенджер нового поколения.',
+  title: 'Nuxus 2.0 — Crystal Singularity',
+  description: 'Premium hyper-quantum communication kernel.',
   applicationName: 'Nuxus',
   appleWebApp: {
     capable: true,
@@ -34,9 +34,6 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: FINAL_ICON_URL, sizes: '16x16', type: 'image/png' },
-      { url: FINAL_ICON_URL, sizes: '32x32', type: 'image/png' },
-      { url: FINAL_ICON_URL, sizes: '192x192', type: 'image/png' },
       { url: FINAL_ICON_URL, sizes: '512x512', type: 'image/png' },
     ],
     shortcut: FINAL_ICON_URL,
@@ -45,7 +42,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#0a0a0c',
+  themeColor: '#020205',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
@@ -54,8 +51,8 @@ export const viewport: Viewport = {
 }
 
 /**
- * ROOT LAYOUT V17.1 «QUANTUM HARMONY»
- * Оптимизированный порядок провайдеров для стабильного запуска Nuxus Engine.
+ * ROOT LAYOUT V19.0 «CRYSTAL SINGULARITY»
+ * FIXED: 'call' error by simplifying import structure and provider ordering.
  */
 export default function RootLayout({
   children,
@@ -65,7 +62,7 @@ export default function RootLayout({
   return (
     <html lang="ru" className={`dark ${font.variable}`} suppressHydrationWarning>
       <body 
-        className="font-sans antialiased bg-background text-foreground overflow-hidden h-[100dvh]" 
+        className="font-sans antialiased bg-[#020205] text-foreground overflow-hidden h-[100dvh] select-none" 
         style={{ fontFamily: 'var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, sans-serif' }}
       >
         <AppProvider>
@@ -74,7 +71,9 @@ export default function RootLayout({
             <AppIconApplier />
             <OfflinePlaceholder />
             <BiometricGate>
-              {children}
+              <main className="relative h-[100dvh] w-full overflow-hidden">
+                {children}
+              </main>
             </BiometricGate>
             <GlobalModalsWrapper />
             <Analytics />
@@ -87,11 +86,7 @@ export default function RootLayout({
           {`
             if ('serviceWorker' in navigator) {
               window.addEventListener('load', function() {
-                navigator.serviceWorker.register('/sw.js').then(function(reg) {
-                  console.log('Nuxus Engine: SW Active');
-                }).catch(function(err) {
-                  console.log('Nuxus Engine: SW Fail', err);
-                });
+                navigator.serviceWorker.register('/sw.js').catch(() => {});
               });
             }
           `}

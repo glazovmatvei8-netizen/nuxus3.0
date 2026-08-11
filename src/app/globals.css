@@ -6,22 +6,22 @@
   :root {
     --background: 240 25% 2%;
     --foreground: 0 0% 98%;
-    --card: 240 20% 4%;
+    --card: 240 20% 3%;
     --card-foreground: 0 0% 98%;
-    --popover: 240 25% 3%;
+    --popover: 240 25% 2%;
     --popover-foreground: 0 0% 98%;
     --primary: 270 95% 65%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 240 10% 10%;
+    --secondary: 240 10% 8%;
     --secondary-foreground: 0 0% 98%;
-    --muted: 240 10% 8%;
+    --muted: 240 10% 6%;
     --muted-foreground: 240 5% 60%;
     --accent: 180 100% 50%;
     --accent-foreground: 240 10% 4%;
-    --border: 240 10% 12%;
-    --input: 240 10% 12%;
+    --border: 240 10% 10%;
+    --input: 240 10% 10%;
     --ring: 270 95% 65%;
-    --radius: 1.5rem;
+    --radius: 2rem;
   }
 }
 
@@ -32,12 +32,10 @@
   }
   
   html, body {
-    @apply bg-background text-foreground antialiased;
-    background-color: #020205;
+    @apply bg-[#020205] text-foreground antialiased selection:bg-primary/30;
     background-image: 
-      radial-gradient(circle at 50% 0%, rgba(120, 50, 255, 0.05) 0%, transparent 50%),
-      linear-gradient(180deg, #020205 0%, #05050a 100%);
-    
+      radial-gradient(circle at 50% -20%, rgba(168, 85, 247, 0.15) 0%, transparent 50%),
+      radial-gradient(circle at 0% 100%, rgba(6, 182, 212, 0.05) 0%, transparent 40%);
     overscroll-behavior: none !important;
     height: 100dvh;
     width: 100%;
@@ -46,27 +44,43 @@
   }
 }
 
-/* ОПТИМИЗАЦИЯ: Минимальный блюр для охлаждения */
 .obsidian-glass {
-  @apply bg-white/[0.03] backdrop-blur-[6px] border border-white/[0.05] shadow-2xl;
+  @apply bg-white/[0.02] backdrop-blur-[16px] border border-white/[0.05] shadow-[0_20px_50px_rgba(0,0,0,0.5)];
+}
+
+.crystal-card {
+  @apply relative overflow-hidden rounded-[2.5rem] border border-white/[0.08] bg-gradient-to-b from-white/[0.05] to-transparent backdrop-blur-md;
 }
 
 .floating-nav {
-  @apply fixed bottom-6 left-1/2 -translate-x-1/2 obsidian-glass rounded-[2.5rem] h-[72px] flex items-center justify-between px-6 z-[100] w-[92%] max-w-[420px];
+  @apply fixed bottom-8 left-1/2 -translate-x-1/2 obsidian-glass rounded-[3rem] h-[80px] flex items-center justify-between px-8 z-[100] w-[94%] max-w-[440px] border-white/[0.1] ring-1 ring-white/[0.05];
 }
 
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 
 .premium-glow {
-  box-shadow: 0 0 20px hsl(var(--primary) / 0.15);
-  border-color: hsl(var(--primary) / 0.3) !important;
+  box-shadow: 0 0 30px hsl(var(--primary) / 0.2);
+  border-color: hsl(var(--primary) / 0.4) !important;
 }
 
-/* ANTI-SELECTION FOR IOS LONG PRESS */
+@keyframes pulse-ring {
+  0% { transform: scale(0.95); opacity: 0.5; }
+  50% { transform: scale(1.05); opacity: 0.8; }
+  100% { transform: scale(0.95); opacity: 0.5; }
+}
+
+.animate-pulse-ring {
+  animation: pulse-ring 3s ease-in-out infinite;
+}
+
+/* ANTI-SELECTION FOR IOS */
 .no-ios-select {
   -webkit-touch-callout: none !important;
   -webkit-user-select: none !important;
   user-select: none !important;
-  -webkit-tap-highlight-color: transparent !important;
+}
+
+.chat-pattern-bg {
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 30 L31 31' stroke='white' stroke-opacity='0.03' stroke-width='1'/%3E%3C/svg%3E");
 }

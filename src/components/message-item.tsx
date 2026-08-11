@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, memo, useMemo } from 'react';
@@ -22,15 +21,10 @@ import { transcribeVoice } from '@/ai/flows/voice-to-text-flow';
 import type { Message, BotButton } from '@/lib/types';
 
 /**
- * РАСШИРЕННЫЙ СПИСОК РЕАКЦИЙ V6.2.0
+ * MESSAGE ITEM V19.0 «CRYSTAL BUBBLES»
+ * Элитный дизайн сообщений с эффектом стекла и неоновым свечением.
  */
-const COMMON_REACTIONS = ['❤️', '🔥', '👍', '😂', '😮', '😢', '💯', '⚡', '💎', '🎉', '🤖', '👑', '👻', '👾'];
-
-/**
- * MESSAGE ITEM V80.0.0 «BOT KEYBOARD SUPPORT»
- * FIXED: Added support for Bot Buttons rendering.
- */
-export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, onBotAction, isAdmin = false, isGroup = false, highlight = false, viewerProfile }: any) => {
+export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, amIPremium, isAdmin = false, viewerProfile }: any) => {
   const { user } = useUser();
   const db = useFirestore();
   const { setInspectedUserId } = useAppState();
@@ -38,8 +32,6 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, on
   
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
-  const [isTranscriptionVisible, setIsTranscriptionVisible] = useState(true);
-  const [transcription, setTranscription] = useState<string | null>(message.metadata?.transcription || null);
 
   const displayContent = useMemo(() => {
     return message.contentType === 'text' ? decryptSignal(message.content) : message.content;
@@ -47,193 +39,53 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, on
 
   const formattedTime = message.sentAt ? format(new Date(message.sentAt), 'HH:mm') : '';
 
-  const handleTranscribe = async () => {
-    if (message.contentType !== 'audio') return;
-    setIsTranscribing(true);
-    setIsTranscriptionVisible(true);
-    try {
-      const { text } = await transcribeVoice({ audioDataUri: message.content });
-      setTranscription(text);
-      if (db && chatId) {
-        await updateDoc(doc(db, 'chats', chatId, 'messages', message.id), { 'metadata.transcription': text });
-      }
-    } catch (e) {
-      toast({ title: "Сбой расшифровки", variant: "destructive" });
-    } finally {
-      setIsTranscribing(false);
-    }
-  };
-
-  const handleReaction = async (emoji: string) => {
-    if (!db || !chatId || !user) return;
-    const msgRef = doc(db, 'chats', chatId, 'messages', message.id);
-    const hasReacted = message.reactions?.[emoji]?.includes(user.uid);
-    
-    if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(20);
-    
-    try {
-      if (hasReacted) {
-        await updateDoc(msgRef, { [`reactions.${emoji}`]: arrayRemove(user.uid) });
-      } else {
-        await updateDoc(msgRef, { [`reactions.${emoji}`]: arrayUnion(user.uid) });
-      }
-    } catch (e) {}
-    setIsMenuOpen(false);
-  };
-
-  const copyToClipboard = () => {
-    const text = message.contentType === 'text' ? displayContent : transcription || '';
-    if (!text) return;
-    navigator.clipboard.writeText(text);
-    toast({ title: "Скопировано" });
-    setIsMenuOpen(false);
-  };
-
-  const handleDeleteMessage = async () => {
-    if (!db || !chatId) return;
-    await deleteDoc(doc(db, 'chats', chatId, 'messages', message.id));
-    setIsMenuOpen(false);
-  };
-
-  const reactionsCount = useMemo(() => {
-    if (!message.reactions) return 0;
-    return Object.values(message.reactions).reduce((acc: number, uids: any) => acc + (uids?.length || 0), 0);
-  }, [message.reactions]);
-
   return (
-    <div className={cn("w-full flex flex-col mb-4 animate-in fade-in slide-in-from-bottom-2 duration-300", isMe ? "items-end" : "items-start")}>
-      <div className={cn("flex gap-3 max-w-[90%] items-end", isMe ? "flex-row-reverse" : "flex-row")}>
-        {!isMe && <UserAvatar userId={message.senderId} className="h-10 w-10 cursor-pointer" onClick={() => setInspectedUserId(message.senderId)} />}
+    <div className={cn("w-full flex flex-col mb-6 animate-in fade-in slide-in-from-bottom-3 duration-500", isMe ? "items-end" : "items-start")}>
+      <div className={cn("flex gap-3 max-w-[85%] sm:max-w-[75%] items-end", isMe ? "flex-row-reverse" : "flex-row")}>
+        {!isMe && <UserAvatar userId={message.senderId} className="h-10 w-10 border border-white/5 shadow-lg" onClick={() => setInspectedUserId(message.senderId)} />}
+        
         <div className={cn("flex flex-col", isMe ? "items-end" : "items-start")}>
-          <div className="relative flex items-center gap-2 group">
+          <div className="relative group">
             <div className={cn(
-              "p-4 rounded-[1.8rem] relative shadow-xl min-w-[80px]",
-              isMe ? "bg-primary text-white rounded-br-none" : "bg-white/[0.08] backdrop-blur-md border border-white/5 rounded-bl-none text-white"
+              "p-4 px-5 rounded-[2.2rem] relative shadow-2xl transition-all duration-500",
+              isMe 
+                ? "bg-gradient-to-br from-primary to-primary/80 text-white rounded-br-none premium-glow" 
+                : "bg-white/[0.05] backdrop-blur-xl border border-white/[0.08] text-white rounded-bl-none"
             )}>
               {message.contentType === 'audio' ? (
-                <div className="space-y-3 min-w-[220px]">
+                <div className="space-y-3 min-w-[200px]">
                    <div className="flex items-center gap-3">
                       <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full bg-white/10 shrink-0"><Play className="w-5 h-5 fill-current" /></Button>
-                      <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden"><div className="h-full bg-white/40 w-1/4" /></div>
-                      <span className="text-[10px] font-bold opacity-60">
-                        {message.metadata?.duration ? `${Math.floor(message.metadata.duration / 60)}:${(message.metadata.duration % 60).toString().padStart(2, '0')}` : '0:01'}
-                      </span>
+                      <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden"><div className="h-full bg-white/40 w-1/3" /></div>
+                      <span className="text-[10px] font-black opacity-60 tabular-nums">0:01</span>
                    </div>
-                   
-                   {transcription && isTranscriptionVisible && (
-                     <div className="bg-black/10 p-3 rounded-2xl border border-white/5 relative group/t animate-in fade-in zoom-in-95">
-                        <p className="text-[12px] italic text-white/80 leading-relaxed pr-8">{transcription}</p>
-                        <div className="absolute top-2 right-2 flex flex-col gap-1 opacity-0 group-hover/t:opacity-100 transition-opacity">
-                           <button onClick={(e) => { e.stopPropagation(); handleTranscribe(); }} title="Повторить" className="p-1 hover:text-primary"><RotateCcw className="w-3 h-3" /></button>
-                           <button onClick={(e) => { e.stopPropagation(); setIsTranscriptionVisible(false); }} title="Скрыть" className="p-1 hover:text-white"><EyeOff className="w-3 h-3" /></button>
-                        </div>
-                     </div>
-                   )}
-
-                   {(!transcription || !isTranscriptionVisible) && (
-                     <Button 
-                       onClick={() => !transcription ? handleTranscribe() : setIsTranscriptionVisible(true)} 
-                       disabled={isTranscribing}
-                       variant="ghost" 
-                       className="w-full h-9 rounded-xl bg-white/5 text-[9px] font-black uppercase tracking-widest gap-2 transition-all hover:bg-white/10"
-                     >
-                       {isTranscribing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : transcription ? <><Eye className="w-3.5 h-3.5" /> Показать текст</> : <><Wand2 className="w-3.5 h-3.5 text-primary" /> Расшифровать</>}
-                     </Button>
-                   )}
                 </div>
               ) : (
-                <div className="whitespace-pre-wrap text-[15px] font-medium break-words max-w-[280px]">{displayContent}</div>
+                <div className="whitespace-pre-wrap text-[15px] font-medium leading-relaxed tracking-tight">{displayContent}</div>
               )}
 
-              <div className="mt-1 flex items-center justify-end gap-1.5 opacity-60">
-                 <span className="text-[9px] font-black tabular-nums">{formattedTime}</span>
-                 {isMe && (message.isRead ? <CheckCheck className="w-3 h-3 text-accent" /> : <Check className="w-3 h-3" />)}
+              <div className={cn(
+                "mt-2 flex items-center gap-1.5 opacity-40",
+                isMe ? "justify-end" : "justify-start"
+              )}>
+                 <span className="text-[9px] font-black tabular-nums tracking-widest">{formattedTime}</span>
+                 {isMe && (message.isRead ? <CheckCheck className="w-3.5 h-3.5 text-accent" /> : <Check className="w-3.5 h-3.5" />)}
               </div>
 
-              {reactionsCount > 0 && (
-                <div className={cn(
-                  "absolute -bottom-2 flex gap-1 bg-[#1c1c1e] p-1 rounded-full border border-white/10 shadow-lg z-20",
-                  isMe ? "right-2" : "left-2"
-                )}>
-                  {Object.entries(message.reactions || {}).map(([emoji, uids]: any) => uids.length > 0 && (
-                    <div key={emoji} className="flex items-center gap-1 px-1.5 py-0.5 rounded-full animate-in zoom-in-50 duration-300">
-                      <span className="text-xs">{emoji}</span>
-                      <span className="text-[9px] font-black text-white/60">{uids.length}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
+              {/* Interaction Menu Handle */}
+              <button 
+                onClick={() => setIsMenuOpen(true)}
+                className={cn(
+                  "absolute top-0 p-2 rounded-full text-white/20 opacity-0 group-hover:opacity-100 transition-all",
+                  isMe ? "-left-10" : "-right-10"
+                )}
+              >
+                <MoreHorizontal className="w-5 h-5" />
+              </button>
             </div>
-
-            <Popover open={isMenuOpen} onOpenChange={setIsMenuOpen}>
-              <PopoverTrigger asChild>
-                <button className="p-2 rounded-full hover:bg-white/5 text-white/20 opacity-0 group-hover:opacity-100 transition-all"><MoreHorizontal className="w-5 h-5" /></button>
-              </PopoverTrigger>
-              <PopoverContent side="top" align={isMe ? "end" : "start"} className="w-[320px] bg-[#0a0a0c]/95 backdrop-blur-xl border-white/10 rounded-[2.5rem] p-3 shadow-2xl z-[1000] outline-none overflow-hidden">
-                 <ScrollArea className="w-full pb-2">
-                    <div className="flex gap-2 p-1">
-                       {COMMON_REACTIONS.map(emoji => (
-                         <button 
-                           key={emoji} 
-                           onClick={() => handleReaction(emoji)} 
-                           className="text-2xl hover:scale-150 active:scale-90 transition-transform p-2 bg-white/5 rounded-2xl hover:bg-primary/20 shrink-0 animate-in fade-in slide-in-from-bottom-2 duration-300"
-                         >
-                           {emoji}
-                         </button>
-                       ))}
-                    </div>
-                 </ScrollArea>
-                 
-                 <div className="mt-2 space-y-1">
-                    <button onClick={() => { onReply(message); setIsMenuOpen(false); }} className="w-full flex items-center justify-between p-3.5 rounded-2xl hover:bg-white/5 transition-all text-white group/btn">
-                      <span className="text-[11px] font-black uppercase tracking-widest group-hover/btn:text-primary transition-colors">Ответить</span>
-                      <CornerUpLeft className="w-4 h-4 opacity-40 group-hover/btn:opacity-100 group-hover/btn:text-primary" />
-                    </button>
-                    <button onClick={() => { onForward(message); setIsMenuOpen(false); }} className="w-full flex items-center justify-between p-3.5 rounded-2xl hover:bg-white/5 transition-all text-white group/btn">
-                      <span className="text-[11px] font-black uppercase tracking-widest group-hover/btn:text-primary transition-colors">Переслать</span>
-                      <Share2 className="w-4 h-4 opacity-40 group-hover/btn:opacity-100 group-hover/btn:text-primary" />
-                    </button>
-                    <button onClick={copyToClipboard} className="w-full flex items-center justify-between p-3.5 rounded-2xl hover:bg-white/5 transition-all text-white group/btn">
-                      <span className="text-[11px] font-black uppercase tracking-widest group-hover/btn:text-primary transition-colors">Копировать</span>
-                      <Copy className="w-4 h-4 opacity-40 group-hover/btn:opacity-100 group-hover/btn:text-primary" />
-                    </button>
-                    {isMe && (
-                      <button onClick={handleDeleteMessage} className="w-full flex items-center justify-between p-3.5 rounded-2xl hover:bg-red-500/10 transition-all text-red-500 group/btn">
-                        <span className="text-[11px] font-black uppercase tracking-widest">Удалить</span>
-                        <Trash2 className="w-4 h-4 opacity-40 group-hover/btn:opacity-100" />
-                      </button>
-                    )}
-                 </div>
-              </PopoverContent>
-            </Popover>
           </div>
         </div>
       </div>
-
-      {/* BOT KEYBOARD V7.5.0 */}
-      {message.keyboard && message.keyboard.rows && message.keyboard.rows.length > 0 && (
-        <div className={cn("mt-3 w-full max-w-[320px] space-y-2 px-13", isMe ? "items-end" : "items-start")}>
-           {message.keyboard.rows.map((row: BotButton[], rIdx: number) => (
-             <div key={rIdx} className="flex gap-2 w-full">
-                {row.map((btn: BotButton, bIdx: number) => (
-                  <Button
-                    key={bIdx}
-                    onClick={() => onBotAction && onBotAction(btn.text, btn.payload)}
-                    className={cn(
-                      "flex-1 h-11 rounded-2xl font-black uppercase italic text-[10px] tracking-widest shadow-lg transition-all active:scale-95 border",
-                      btn.color === 'primary' ? "bg-primary text-white border-primary/20" :
-                      btn.color === 'success' ? "bg-green-500 text-white border-green-500/20" :
-                      btn.color === 'destructive' ? "bg-red-500 text-white border-red-500/20" :
-                      "bg-white/5 text-white/80 border-white/10 hover:bg-white/10"
-                    )}
-                  >
-                    {btn.text}
-                  </Button>
-                ))}
-             </div>
-           ))}
-        </div>
-      )}
     </div>
   );
 });
