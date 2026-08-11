@@ -15,7 +15,7 @@ export const FirebaseContext = createContext<FirebaseContextState>({
 });
 
 /**
- * NUXUS PROVIDER V21.0 «ABSOLUTE ZERO»
+ * NUXUS PROVIDER V22.0 «ABSOLUTE ZERO»
  * Стабильный транслятор состояния без лишних импортов.
  */
 export const FirebaseProvider: React.FC<{ children: ReactNode }> = ({ children }) => {

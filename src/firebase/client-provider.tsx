@@ -4,7 +4,7 @@ import React, { useState, useEffect, type ReactNode } from 'react';
 import { FirebaseProvider } from './provider.tsx';
 
 /**
- * NUXUS ACTIVATOR V21.0 «ABSOLUTE ZERO»
+ * NUXUS ACTIVATOR V22.0 «ABSOLUTE ZERO»
  * 
  * РЕШЕНИЕ ОШИБКИ HYDRATION:
  * Оверлей отрисовывается ПОВЕРХ контента, не меняя структуру дерева Suspense.

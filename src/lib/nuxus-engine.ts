@@ -6,10 +6,11 @@ import { getFirestore, Firestore } from 'firebase/firestore';
 import { firebaseConfig } from '@/firebase/config';
 
 /**
- * NUXUS ENGINE V21.0 «ABSOLUTE ZERO»
+ * NUXUS ENGINE V22.0 «ABSOLUTE ZERO»
  * 
  * Полностью автономное ядро на базе функциональных геттеров.
  * Исключает ReferenceError и конфликты модулей Webpack.
+ * Прямая инициализация без классов для максимальной скорости.
  */
 
 let appInstance: FirebaseApp | undefined;
@@ -25,7 +26,7 @@ const ignite = () => {
     appInstance = apps.length > 0 ? apps[0] : initializeApp(firebaseConfig);
     authInstance = getAuth(appInstance);
     dbInstance = getFirestore(appInstance);
-    console.log('🛰️ Nuxus Engine V21.0: Active');
+    console.log('🛰️ Nuxus Engine V22.0: Active');
   } catch (e) {
     console.error('❌ Nuxus Engine: Ignition Failure', e);
   }

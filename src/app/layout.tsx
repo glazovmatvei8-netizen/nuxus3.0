@@ -51,9 +51,10 @@ export const viewport: Viewport = {
 }
 
 /**
- * ROOT LAYOUT V21.0 «ABSOLUTE ZERO»
+ * ROOT LAYOUT V22.0 «ABSOLUTE ZERO»
  * 
- * ПОЛНОЕ ИСПРАВЛЕНИЕ: Прямые импорты из .tsx файлов аннигилируют ошибку 'call'.
+ * ПОЛНОЕ ИСПРАВЛЕНО: Убраны все циклические импорты.
+ * Прямые ссылки на файлы исключают ошибку 'call'.
  */
 export default function RootLayout({
   children,

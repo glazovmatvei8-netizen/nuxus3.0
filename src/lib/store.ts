@@ -1,7 +1,8 @@
 'use client';
 
 /**
- * NUXUS STORE PROXY V20.0
- * Облегченная версия для предотвращения ошибки 'call' при Webpack-сборке.
+ * DEPRECATED V22.0
+ * Файл очищен для предотвращения конфликта с store.tsx.
+ * Все импорты должны использовать @/lib/store.tsx напрямую.
  */
-export * from './store.tsx';
+export {};

@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * NUXUS ORIGIN HUB V17.0
+ * NUXUS ORIGIN HUB V22.0
  * Единый шлюз для доступа ко всем ресурсам нового движка.
  */
 
