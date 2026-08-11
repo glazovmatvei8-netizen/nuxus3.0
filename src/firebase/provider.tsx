@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
@@ -5,10 +6,8 @@ import { onAuthStateChanged, User } from 'firebase/auth';
 import { nuxus } from '@/lib/nuxus-engine';
 
 /**
- * NUXUS PROVIDER V23.0 «QUANTUM TERMINAL»
- * 
- * УЛЬТРА-СТАБИЛЬНОСТЬ: Исключены любые импорты из барьерных файлов.
- * Прямое использование движка гарантирует отсутствие ошибки 'call'.
+ * NUXUS PROVIDER V30.0
+ * Изолированный контекст авторизации.
  */
 
 export interface FirebaseContextState {

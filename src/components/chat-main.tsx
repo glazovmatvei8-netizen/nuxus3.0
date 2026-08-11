@@ -25,16 +25,13 @@ import { UserProfileModal } from './modals/user-profile-modal';
 import { UserAvatar } from './user-avatar';
 import type { Call } from '@/lib/types';
 import { 
-  MessageSquare, Settings, Phone, Music, Wallet, 
-  Gamepad2, Compass, BrainCircuit, Terminal, 
-  Zap, Shield, LayoutGrid, Activity, Star, Layout,
-  Layers, Cpu, Globe, Ghost
+  MessageSquare, Settings, Phone, Wallet, 
+  Globe, LayoutGrid
 } from 'lucide-react';
 
 /**
- * CHAT MAIN V29.0 «MODERN STANDARD»
- * РЕДИЗАЙН: Удалены устаревшие "кибер" элементы. 
- * Фокус на чистоте, удобстве и понятной терминологии.
+ * CHAT MAIN V30.0 «MODERN MINIMALISM»
+ * РЕДИЗАЙН: Чистый, дорогой интерфейс. Удаление визуального шума.
  */
 export default function ChatMain() {
   const { 
@@ -64,15 +61,9 @@ export default function ChatMain() {
   }, [incomingCalls, activeCallId, setActiveCallId]);
 
   return (
-    <div className="fixed inset-0 flex flex-col w-screen bg-[#050505] overflow-hidden h-[100dvh]">
+    <div className="fixed inset-0 flex flex-col w-screen bg-[#010103] overflow-hidden h-[100dvh]">
       <NotificationListener />
       
-      {/* Background Gradient */}
-      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-500/5 blur-[120px] rounded-full" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-500/5 blur-[100px] rounded-full" />
-      </div>
-
       <div className="flex-1 flex overflow-hidden w-full relative h-full z-10">
         
         {/* Modern Rail (Sidebar for Desktop) */}
@@ -98,7 +89,7 @@ export default function ChatMain() {
               onClick={() => { setActiveView('profile'); setCurrentChatId(null); }} 
               className={cn(
                 "relative transition-all duration-300 p-1 rounded-full border-2", 
-                activeView === 'profile' ? "border-blue-500 scale-110 shadow-[0_0_15px_rgba(59,130,246,0.3)]" : "border-transparent opacity-40 hover:opacity-100"
+                activeView === 'profile' ? "border-blue-500 scale-110 shadow-lg" : "border-transparent opacity-40 hover:opacity-100"
               )}
             >
               <UserAvatar userId={user?.uid} className="h-12 w-12" />
@@ -134,11 +125,13 @@ export default function ChatMain() {
                 <div className="hidden md:flex flex-1 flex-col items-center justify-center p-16 text-center space-y-8 opacity-40">
                    <div className="relative">
                       <div className="absolute -inset-10 bg-blue-500/10 blur-[80px] rounded-full" />
-                      <NuxusLogo size={140} className="relative z-10" />
+                      <div className="w-40 h-40 rounded-[4rem] bg-white/[0.02] border border-white/5 flex items-center justify-center shadow-inner relative z-10">
+                         <MessageSquare className="w-16 h-16 text-blue-500" />
+                      </div>
                    </div>
                    <div className="space-y-4">
                       <h2 className="text-3xl font-bold text-white tracking-tight">Выберите чат</h2>
-                      <p className="text-sm font-medium text-white/40 max-w-xs mx-auto">Начните общение с вашими контактами или создайте новую группу.</p>
+                      <p className="text-sm font-medium text-white/40 max-w-xs mx-auto">Начните общение с друзьями или создайте новую группу.</p>
                    </div>
                 </div>
               )}
@@ -149,7 +142,7 @@ export default function ChatMain() {
 
       {/* Floating Bottom Nav (Mobile) */}
       {!currentChatId && (
-        <div className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 bg-white/[0.04] backdrop-blur-2xl rounded-[2.5rem] h-20 flex items-center justify-between px-8 z-[100] w-[92%] border border-white/10 shadow-2xl">
+        <div className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 bg-white/[0.04] backdrop-blur-2xl rounded-[3rem] h-20 flex items-center justify-between px-8 z-[100] w-[92%] border border-white/10 shadow-2xl">
           <NavButton icon={Globe} active={activeView === 'discovery'} onClick={() => setActiveView('discovery')} />
           <NavButton icon={Phone} active={activeView === 'calls'} onClick={() => setActiveView('calls')} />
           
@@ -157,7 +150,7 @@ export default function ChatMain() {
             <button 
               onClick={() => setActiveView('chats')}
               className={cn(
-                "h-20 w-20 rounded-[2.2rem] flex items-center justify-center transition-all duration-300 relative z-20 border-2 shadow-2xl active:scale-90",
+                "h-20 w-20 rounded-[2.5rem] flex items-center justify-center transition-all duration-300 relative z-20 border shadow-2xl active:scale-90",
                 activeView === 'chats' ? "bg-blue-600 text-white border-white/20 shadow-blue-500/20" : "bg-[#121214] text-white/30 border-white/5"
               )}
             >

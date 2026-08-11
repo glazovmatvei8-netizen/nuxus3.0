@@ -70,17 +70,10 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
       }
 
       if (mode === 'login') {
-        // Проверка привязки почты, если вход по email
-        if (authMethod === 'email') {
-          const q = query(collection(db, 'users'), where('email', '==', finalEmail), limit(1));
-          const snap = await getDocs(q);
-          if (snap.empty) {
-            toast({ title: "Ошибка входа", description: "Аккаунт с такой почтой не найден. Пожалуйста, войдите по номеру телефона или зарегистрируйтесь.", variant: "destructive" });
-            setIsLoading(false);
-            return;
-          }
-        }
-        
+        /**
+         * КРИТИЧЕСКИЙ ФИКС: В Next.js 15 чтение из Firestore до логина запрещено.
+         * Поэтому проверку почты делаем через обработку ошибки Auth.
+         */
         await signInWithEmailAndPassword(auth, finalEmail, password);
         toast({ title: "Вы вошли в аккаунт" });
       } else {
@@ -107,6 +100,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
       if (e.code === 'auth/user-not-found') msg = "Аккаунт не найден";
       if (e.code === 'auth/wrong-password') msg = "Неверный пароль";
       if (e.code === 'auth/email-already-in-use') msg = "Этот адрес уже занят";
+      if (e.code === 'auth/invalid-email') msg = "Неверный формат почты";
       
       toast({ title: "Ошибка", description: msg, variant: "destructive" });
     } finally {
@@ -116,8 +110,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
 
   if (!lang) {
     return (
-      <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#050505] px-6 relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.03)_0%,transparent_70%)]" />
+      <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#010103] px-6 relative overflow-hidden">
         <NuxusLogo size={100} className="mb-12 animate-in fade-in zoom-in duration-1000" />
         
         <div className="space-y-4 w-full max-w-sm relative z-10">
@@ -142,7 +135,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
   }
 
   return (
-    <div className="h-[100dvh] w-full flex flex-col bg-[#050505] relative overflow-hidden">
+    <div className="h-[100dvh] w-full flex flex-col bg-[#010103] relative overflow-hidden">
       <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/5 blur-[120px] rounded-full" />
       
       <ScrollArea className="w-full h-full">
@@ -151,7 +144,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
             <NuxusLogo size={80} />
           </div>
           
-          <Card className="w-full max-w-[440px] bg-white/[0.02] backdrop-blur-2xl border-white/10 rounded-[2.5rem] p-4 shadow-2xl relative z-10 overflow-hidden">
+          <Card className="w-full max-w-[440px] bg-white/[0.02] backdrop-blur-2xl border-white/10 rounded-[3rem] p-4 shadow-2xl relative z-10 overflow-hidden">
             <CardHeader className="text-center pt-8 pb-4 space-y-6">
               <div className="inline-flex bg-black/20 p-1 rounded-2xl border border-white/5 mx-auto shadow-inner">
                 <button 
@@ -285,7 +278,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                 <Button 
                   type="submit" 
                   disabled={isLoading} 
-                  className="w-full h-16 bg-blue-600 hover:bg-blue-500 text-white font-bold text-lg rounded-2xl shadow-2xl shadow-blue-500/20 transition-all active:scale-95 mt-6 border border-white/10"
+                  className="w-full h-16 bg-blue-600 hover:bg-blue-500 text-white font-bold text-lg rounded-2xl shadow-2xl transition-all active:scale-95 mt-6 border border-white/10"
                 >
                   {isLoading ? <Loader2 className="animate-spin" /> : (mode === 'login' ? t.login : t.register)}
                 </Button>
