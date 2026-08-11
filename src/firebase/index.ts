@@ -1,10 +1,9 @@
-
 'use client';
 
 /**
- * NUXUS CORE HUB V30.0
+ * NUXUS CORE HUB V36.0
  * Централизованный экспорт всех системных функций.
- * FIXED: Абсолютная стабильность экспортов для предотвращения TypeError.
+ * ГАРАНТИЯ СТАБИЛЬНОСТИ: useCollection и useDoc теперь экспортируются корректно.
  */
 
 export { nuxus, engine } from '@/lib/nuxus-engine';

@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useEffect, useMemo } from 'react';
@@ -12,7 +11,7 @@ import GamesView from './games-view';
 import DiscoveryView from './discovery-view';
 import NuxusAiView from './nuxus-ai-view';
 import PartnerView from './partner-view';
-import { useAppState } from '@/lib/store.tsx';
+import { useAppState } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
 import { collection, query, where, limit, doc } from 'firebase/firestore';
@@ -32,8 +31,8 @@ import {
 } from 'lucide-react';
 
 /**
- * CHAT MAIN V35.0 «ETHEREAL ATMOSPHERE»
- * Добавлен живой градиентный фон и оптимизированы переходы.
+ * CHAT MAIN V36.0 «SUPREME MULTI-LINK»
+ * Глобальный переключатель аккаунтов теперь интегрирован в Sidebar.
  */
 export default function ChatMain() {
   const { 
@@ -45,14 +44,6 @@ export default function ChatMain() {
   const { user } = useUser();
   const db = useFirestore();
   const auth = useAuth();
-
-  const handleSlotClick = (index: number) => {
-    if (index === activeAccountIndex) return;
-    if (confirm("Вы хотите переключиться на другой слот? Текущая сессия будет завершена.")) {
-      setActiveAccountIndex(index);
-      signOut(auth!);
-    }
-  };
 
   const incomingCallsQuery = useMemo(() => {
     if (!db || !user) return null;
@@ -85,39 +76,6 @@ export default function ChatMain() {
 
       <div className="flex-1 flex overflow-hidden w-full relative h-full z-10">
         
-        {/* Rail Side (Desktop) */}
-        <div className="hidden md:flex w-[80px] h-full flex-col items-center py-8 bg-white/[0.01] border-r border-white/5 shrink-0 z-50 backdrop-blur-xl">
-          <div className="flex flex-col gap-6 items-center w-full">
-            {[0, 1, 2, 3, 4].map((i) => (
-              <button 
-                key={i}
-                onClick={() => handleSlotClick(i)}
-                className={cn(
-                  "relative w-12 h-12 rounded-2xl transition-all duration-500 overflow-hidden border-2 flex items-center justify-center group",
-                  activeAccountIndex === i 
-                    ? "border-primary scale-110 shadow-[0_0_15px_rgba(var(--primary),0.3)] bg-primary/10" 
-                    : "border-transparent opacity-40 hover:opacity-100 bg-white/5"
-                )}
-              >
-                {activeAccountIndex === i && user ? (
-                  <UserAvatar userId={user?.uid} className="w-full h-full rounded-none" />
-                ) : (
-                  <div className="flex flex-col items-center gap-1">
-                    <Plus className="w-4 h-4 text-white/40 group-hover:text-white transition-colors" />
-                    <span className="text-[7px] font-black uppercase text-white/20">Slot {i+1}</span>
-                  </div>
-                )}
-              </button>
-            ))}
-          </div>
-          
-          <div className="mt-auto flex flex-col gap-6 pb-4">
-             <button onClick={() => { setActiveView('profile'); setCurrentChatId(null); }} className={cn("p-3 rounded-2xl transition-all", activeView === 'profile' ? "bg-primary/10 text-primary" : "text-white/20 hover:text-white")}>
-                <Settings className="w-6 h-6" />
-             </button>
-          </div>
-        </div>
-
         {/* Command Nexus */}
         <div className="flex-1 flex overflow-hidden h-full relative">
           <div className={cn(
