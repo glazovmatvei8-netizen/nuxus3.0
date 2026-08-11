@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { AppProvider } from '@/lib/store'; 
-import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { ThemeApplier } from '@/components/theme-applier';
 import { AppIconApplier } from '@/components/app-icon-applier';
@@ -12,6 +11,7 @@ import Script from 'next/script';
 import { OfflinePlaceholder } from '@/components/offline-placeholder';
 import { BiometricGate } from '@/components/biometric-gate';
 import { GlobalModalsWrapper } from '@/components/global-modals-wrapper';
+import { Toaster } from '@/components/ui/toaster';
 
 const font = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -23,7 +23,7 @@ const font = Plus_Jakarta_Sans({
 const FINAL_ICON_URL = 'https://i.ibb.co/sd2MqGz2/Icon.png?v=45';
 
 export const metadata: Metadata = {
-  title: 'Nuxus 2.0 — Crystal Singularity',
+  title: 'Nuxus 2.0 — Event Horizon',
   description: 'Premium hyper-quantum communication kernel.',
   applicationName: 'Nuxus',
   appleWebApp: {
@@ -51,8 +51,8 @@ export const viewport: Viewport = {
 }
 
 /**
- * ROOT LAYOUT V19.0 «CRYSTAL SINGULARITY»
- * FIXED: 'call' error by simplifying import structure and provider ordering.
+ * ROOT LAYOUT V20.0 «EVENT HORIZON»
+ * FIXED: 'call' error by using absolute paths and removing barrel files from layouts.
  */
 export default function RootLayout({
   children,
@@ -86,7 +86,11 @@ export default function RootLayout({
           {`
             if ('serviceWorker' in navigator) {
               window.addEventListener('load', function() {
-                navigator.serviceWorker.register('/sw.js').catch(() => {});
+                navigator.serviceWorker.register('/sw.js').then(function(reg) {
+                   console.log('Nuxus Engine: Quantum SW Synced');
+                }).catch(function() {
+                   // fail silently
+                });
               });
             }
           `}

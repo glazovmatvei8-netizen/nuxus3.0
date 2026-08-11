@@ -15,8 +15,8 @@ export const FirebaseContext = createContext<FirebaseContextState>({
 });
 
 /**
- * NUXUS ENGINE PROVIDER V17.1
- * Облегченный провайдер, который только транслирует состояние авторизации.
+ * NUXUS PROVIDER V20.0
+ * Облегченный узел трансляции состояния.
  */
 export const FirebaseProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);

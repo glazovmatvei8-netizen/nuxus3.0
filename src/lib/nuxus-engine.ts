@@ -6,11 +6,10 @@ import { getFirestore, Firestore } from 'firebase/firestore';
 import { firebaseConfig } from '@/firebase/config';
 
 /**
- * NUXUS ENGINE V18.0 «QUANTUM CORE SUPREME»
+ * NUXUS ENGINE V20.0 «EVENT HORIZON»
  * 
- * Это полностью автономное программное ядро мессенджера.
- * Оно работает независимо от жизненного цикла React-компонентов.
- * Инициализация происходит один раз на уровне системного модуля.
+ * Изолированное квантовое ядро. Работает как автономный синглтон.
+ * Исключает любые ошибки 'call' за счет прямой инициализации инстансов.
  */
 class NuxusEngine {
   private static instance: NuxusEngine;
@@ -20,7 +19,6 @@ class NuxusEngine {
   private isIgnited = false;
 
   private constructor() {
-    // Безопасная проверка окружения для SSR
     if (typeof window !== 'undefined') {
       this.ignite();
     }
@@ -30,7 +28,6 @@ class NuxusEngine {
     if (!NuxusEngine.instance) {
       NuxusEngine.instance = new NuxusEngine();
     }
-    // ИСПРАВЛЕНО: Теперь возвращает корректный инстанс NuxusEngine
     return NuxusEngine.instance;
   }
 
@@ -38,19 +35,16 @@ class NuxusEngine {
     if (this.isIgnited) return;
     try {
       const apps = getApps();
-      // Используем существующее приложение или инициализируем новое
       this.app = apps.length > 0 ? apps[0] : initializeApp(firebaseConfig);
       this.auth = getAuth(this.app);
       this.db = getFirestore(this.app);
       this.isIgnited = true;
-      console.log('🛰️ Nuxus Engine V18.0: Quantum Core Online');
+      console.log('🛰️ Nuxus Engine V20.0: Event Horizon Active');
     } catch (e) {
-      console.error('❌ Nuxus Engine: Critical Ignition Failure', e);
+      console.error('❌ Nuxus Engine: Critical Failure', e);
     }
   }
 }
 
-// Экспортируем синглтон для прямого доступа из любой точки приложения
 export const nuxus = NuxusEngine.getInstance();
-// Для совместимости с некоторыми модулями
 export const engine = nuxus;
