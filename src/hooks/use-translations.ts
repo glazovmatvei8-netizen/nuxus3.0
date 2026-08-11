@@ -7,21 +7,24 @@ import { translations, type LanguageCode } from '@/lib/translations';
 import type { User } from '@/lib/types';
 
 /**
- * Hook to access current translations based on user profile.
- * V6.5.5: ИСПРАВЛЕНО - Корректный импорт хуков через Firebase Barrel.
+ * Хук для доступа к текущим переводам на основе профиля пользователя.
  */
 export function useTranslations() {
   const { user } = useUser();
   const db = useFirestore();
 
-  const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
+  const userRef = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    return doc(db, 'users', user.uid);
+  }, [db, user?.uid]);
+
   const { data: profile } = useDoc<User>(userRef);
 
   const langCode: LanguageCode = (profile?.settings?.language as LanguageCode) || 'ru';
   const dictionary = translations[langCode] || translations.ru;
 
   /**
-   * Translation function. Supports nested keys like 'sidebar.all'.
+   * Функция перевода. Поддерживает вложенные ключи, например 'app.chats'.
    */
   const t = (key: string): string => {
     if (profile?.settings?.interfaceOverrides?.[key]) {
@@ -35,6 +38,7 @@ export function useTranslations() {
       if (value && value[k]) {
         value = value[k];
       } else {
+        // Резервный поиск по всему словарю, если вложенность не сработала
         if (dictionary[key as keyof typeof dictionary]) {
           return dictionary[key as keyof typeof dictionary] as string;
         }

@@ -2,8 +2,8 @@
 export const translations = {
   ru: {
     app: { 
-      name: "Nuxus 2.0", 
-      kernel: "Ядро Nuxus", 
+      name: "Nuxus", 
+      kernel: "Система Nuxus", 
       signal: "Сообщение",
       chats: "Чаты",
       archive: "Архив",
@@ -14,13 +14,13 @@ export const translations = {
       profile: "Аккаунт"
     },
     sidebar: { 
-      all: "Все", 
+      all: "Все чаты", 
       private: "Личные", 
       groups: "Группы", 
       channels: "Каналы", 
-      search: "Поиск...", 
-      create: "Создать чат", 
-      sync: "Синхронизация...", 
+      search: "Поиск контактов...", 
+      create: "Создать", 
+      sync: "Загрузка...", 
       noResults: "Ничего не найдено", 
       connecting: "Подключение..." 
     },
@@ -40,41 +40,44 @@ export const translations = {
       title: "Настройки", 
       tabs: { 
         profile: "Профиль", 
-        style: "Оформление", 
-        privacy: "Безопасность", 
+        style: "Стиль", 
+        privacy: "Защита", 
         language: "Язык", 
         prime: "Premium", 
         interface: "Интерфейс" 
       }, 
       labels: { 
-        name: "Имя", 
+        name: "Ваше имя", 
         username: "Никнейм (@)", 
         bio: "О себе", 
-        avatar: "Сменить аватар", 
-        theme: "Тема", 
+        avatar: "Изменить фото", 
+        theme: "Тема оформления", 
         textSize: "Размер текста", 
-        save: "Сохранить изменения", 
+        save: "Сохранить", 
         language: "Язык приложения" 
       } 
     },
     auth: { 
-      title: "Nuxus", 
-      subtitle: "Добро пожаловать", 
-      login: "Вход", 
+      title: "Вход в Nuxus", 
+      subtitle: "Ваш безопасный мессенджер", 
+      login: "Войти", 
       register: "Регистрация", 
-      noAccount: "Нет аккаунта? Зарегистрируйтесь", 
-      hasAccount: "Уже есть аккаунт? Войдите",
-      enterEmail: "Email или телефон",
+      noAccount: "Еще нет аккаунта?", 
+      hasAccount: "Уже зарегистрированы?",
+      enterEmail: "Электронная почта",
+      enterPhone: "Номер телефона",
       enterPass: "Пароль",
       name: "Ваше имя",
-      username: "Никнейм (@)"
+      username: "Ваш никнейм (@)",
+      selectCountry: "Выберите страну"
     },
-    initializing: "Загрузка системы",
-    online: "в сети"
+    initializing: "Загрузка...",
+    online: "в сети",
+    offline: "был(а) недавно"
   },
   en: {
     app: { 
-      name: "Nuxus 2.0", 
+      name: "Nuxus", 
       kernel: "Nuxus Core", 
       signal: "Message",
       chats: "Chats",
@@ -86,12 +89,12 @@ export const translations = {
       profile: "Profile"
     },
     sidebar: { 
-      all: "All", 
-      private: "Chats", 
+      all: "All Chats", 
+      private: "Private", 
       groups: "Groups", 
       channels: "Channels", 
       search: "Search...", 
-      create: "Create Chat", 
+      create: "Create", 
       sync: "Syncing...", 
       noResults: "No results", 
       connecting: "Connecting..." 
@@ -112,17 +115,17 @@ export const translations = {
       title: "Settings", 
       tabs: { 
         profile: "Profile", 
-        style: "Design", 
-        privacy: "Security", 
+        style: "Style", 
+        privacy: "Privacy", 
         language: "Language", 
         prime: "Premium", 
         interface: "Interface" 
       }, 
       labels: { 
-        name: "Name", 
+        name: "Full Name", 
         username: "Username (@)", 
         bio: "Bio", 
-        avatar: "Change Avatar", 
+        avatar: "Change Photo", 
         theme: "Theme", 
         textSize: "Text Size", 
         save: "Save Changes", 
@@ -130,19 +133,22 @@ export const translations = {
       } 
     },
     auth: { 
-      title: "Nuxus", 
-      subtitle: "Welcome back", 
+      title: "Nuxus Login", 
+      subtitle: "Secure messaging starts here", 
       login: "Log In", 
       register: "Sign Up", 
-      noAccount: "No account? Register", 
-      hasAccount: "Already have an account? Login",
-      enterEmail: "Email or phone",
+      noAccount: "New to Nuxus?", 
+      hasAccount: "Already have an account?",
+      enterEmail: "Email Address",
+      enterPhone: "Phone Number",
       enterPass: "Password",
       name: "Your Name",
-      username: "Username (@)"
+      username: "Username (@)",
+      selectCountry: "Select Country"
     },
-    initializing: "Initializing",
-    online: "online"
+    initializing: "Initializing...",
+    online: "online",
+    offline: "offline"
   }
 };
 
