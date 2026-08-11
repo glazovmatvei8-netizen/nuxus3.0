@@ -33,6 +33,10 @@ const COUNTRIES = [
   { name: 'ОАЭ', code: '+971', flag: '🇦🇪' },
 ];
 
+/**
+ * AUTH SCREEN V33.0 «SYMMETRY FIX»
+ * FIXED: Balanced spacing, country picker width, phone string alignment.
+ */
 export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'login' | 'register' }) {
   const auth = useAuth();
   const db = useFirestore();
@@ -114,7 +118,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
       <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#010103] px-6 relative overflow-hidden">
         <NuxusLogo size={100} className="mb-12 animate-in fade-in zoom-in duration-1000" />
         
-        <div className="space-y-4 w-full max-w-sm relative z-10">
+        <div className="space-y-4 w-full max-sm relative z-10">
           <h1 className="text-3xl font-bold text-white text-center mb-10 tracking-tight">Выберите язык</h1>
           <button 
             onClick={() => setLang('ru')} 
@@ -186,9 +190,9 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
             </CardHeader>
 
             <CardContent className="px-6 sm:px-8 pb-10">
-              <form onSubmit={handleAuth} className="space-y-5">
+              <form onSubmit={handleAuth} className="space-y-4">
                 {mode === 'register' && (
-                  <div className="flex flex-col gap-4">
+                  <>
                     <Input 
                       placeholder={t.name} 
                       value={name} 
@@ -206,77 +210,75 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                         required 
                       />
                     </div>
-                  </div>
+                  </>
                 )}
                 
-                <div className="space-y-5">
-                  {authMethod === 'phone' ? (
-                    <div className="flex gap-2 w-full">
-                       <Popover open={isCountryPickerOpen} onOpenChange={setIsCountryPickerOpen}>
-                          <PopoverTrigger asChild>
-                            <button type="button" className="h-14 px-4 bg-white/[0.03] border border-white/5 rounded-2xl flex items-center gap-2 hover:bg-white/[0.08] transition-all shadow-inner shrink-0 min-w-[100px] justify-between">
-                               <div className="flex items-center gap-2">
-                                  <span className="text-xl">{country.flag}</span>
-                                  <span className="text-xs font-black text-white/80">{country.code}</span>
-                               </div>
-                               <ChevronDown size={12} className="text-white/20" />
-                            </button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-64 bg-[#121214] border-white/10 rounded-2xl p-2 shadow-2xl z-[1000]">
-                             <ScrollArea className="h-64">
-                                {COUNTRIES.map((c, i) => (
-                                  <button 
-                                    key={i} 
-                                    type="button"
-                                    onClick={() => { setCountry(c); setIsCountryPickerOpen(false); }}
-                                    className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-all text-left"
-                                  >
-                                     <div className="flex items-center gap-3">
-                                        <span className="text-xl">{c.flag}</span>
-                                        <span className="text-sm font-bold text-white/80">{c.name}</span>
-                                     </div>
-                                     <span className="text-[10px] font-black text-blue-500">{c.code}</span>
-                                  </button>
-                                ))}
-                             </ScrollArea>
-                          </PopoverContent>
-                       </Popover>
-                       <Input 
-                        placeholder={t.enterPhone} 
-                        value={phoneNumber} 
-                        onChange={e => setPhoneNumber(e.target.value.replace(/\D/g, ''))} 
-                        className="h-14 flex-1 bg-white/[0.03] border-white/5 rounded-2xl font-medium text-lg px-6 focus:border-blue-500/40 transition-all shadow-inner min-w-0" 
-                        required 
-                      />
-                    </div>
-                  ) : (
-                    <Input 
-                      type="email"
-                      placeholder={t.enterEmail} 
-                      value={email} 
-                      onChange={e => setEmail(e.target.value)} 
-                      className="h-14 bg-white/[0.03] border-white/5 rounded-2xl font-medium text-lg px-6 focus:border-blue-500/40 transition-all shadow-inner w-full" 
+                {authMethod === 'phone' ? (
+                  <div className="flex gap-3 w-full">
+                     <Popover open={isCountryPickerOpen} onOpenChange={setIsCountryPickerOpen}>
+                        <PopoverTrigger asChild>
+                          <button type="button" className="h-14 px-4 bg-white/[0.03] border border-white/5 rounded-2xl flex items-center gap-2 hover:bg-white/[0.08] transition-all shadow-inner shrink-0 min-w-[110px] justify-between">
+                             <div className="flex items-center gap-2">
+                                <span className="text-xl">{country.flag}</span>
+                                <span className="text-xs font-black text-white/80">{country.code}</span>
+                             </div>
+                             <ChevronDown size={12} className="text-white/20" />
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-64 bg-[#121214] border-white/10 rounded-2xl p-2 shadow-2xl z-[1000]">
+                           <ScrollArea className="h-64">
+                              {COUNTRIES.map((c, i) => (
+                                <button 
+                                  key={i} 
+                                  type="button"
+                                  onClick={() => { setCountry(c); setIsCountryPickerOpen(false); }}
+                                  className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-all text-left"
+                                >
+                                   <div className="flex items-center gap-3">
+                                      <span className="text-xl">{c.flag}</span>
+                                      <span className="text-sm font-bold text-white/80">{c.name}</span>
+                                   </div>
+                                   <span className="text-[10px] font-black text-blue-500">{c.code}</span>
+                                </button>
+                              ))}
+                           </ScrollArea>
+                        </PopoverContent>
+                     </Popover>
+                     <Input 
+                      placeholder={t.enterPhone} 
+                      value={phoneNumber} 
+                      onChange={e => setPhoneNumber(e.target.value.replace(/\D/g, ''))} 
+                      className="h-14 flex-1 bg-white/[0.03] border-white/5 rounded-2xl font-medium text-lg px-6 focus:border-blue-500/40 transition-all shadow-inner min-w-0" 
                       required 
                     />
-                  )}
-
-                  <div className="relative w-full">
-                    <Input 
-                      type={showPass ? "text" : "password"} 
-                      placeholder={t.enterPass} 
-                      value={password} 
-                      onChange={e => setPassword(e.target.value)} 
-                      className="h-14 bg-white/[0.03] border-white/5 rounded-2xl font-medium text-lg px-6 focus:border-blue-500/40 transition-all shadow-inner w-full" 
-                      required 
-                    />
-                    <button 
-                      type="button" 
-                      onClick={() => setShowPass(!showPass)} 
-                      className="absolute right-6 top-1/2 -translate-y-1/2 text-white/20 hover:text-white transition-colors"
-                    >
-                      {showPass ? <EyeOff size={22} /> : <Eye size={22} />}
-                    </button>
                   </div>
+                ) : (
+                  <Input 
+                    type="email"
+                    placeholder={t.enterEmail} 
+                    value={email} 
+                    onChange={e => setEmail(e.target.value)} 
+                    className="h-14 bg-white/[0.03] border-white/5 rounded-2xl font-medium text-lg px-6 focus:border-blue-500/40 transition-all shadow-inner w-full" 
+                    required 
+                  />
+                )}
+
+                <div className="relative w-full">
+                  <Input 
+                    type={showPass ? "text" : "password"} 
+                    placeholder={t.enterPass} 
+                    value={password} 
+                    onChange={e => setPassword(e.target.value)} 
+                    className="h-14 bg-white/[0.03] border-white/5 rounded-2xl font-medium text-lg px-6 focus:border-blue-500/40 transition-all shadow-inner w-full" 
+                    required 
+                  />
+                  <button 
+                    type="button" 
+                    onClick={() => setShowPass(!showPass)} 
+                    className="absolute right-6 top-1/2 -translate-y-1/2 text-white/20 hover:text-white transition-colors"
+                  >
+                    {showPass ? <EyeOff size={22} /> : <Eye size={22} />}
+                  </button>
                 </div>
 
                 <Button 

@@ -8,7 +8,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
-  Pencil, ChevronRight, Star, Share2, QrCode, Fingerprint, Palette, Mail, ShieldAlert, LogOut, LayoutGrid, Crown, ShieldCheck
+  Pencil, ChevronRight, Star, Share2, QrCode, Fingerprint, Palette, Mail, ShieldAlert, LogOut, LayoutGrid, Crown, ShieldCheck, Plus
 } from 'lucide-react';
 import { useAppState } from '@/lib/store';
 import { formatDisplayName, cn, isUserPremium, isGlobalAdmin } from '@/lib/utils';
@@ -21,6 +21,10 @@ import { signOut } from 'firebase/auth';
 import { useAuth } from '@/firebase/provider';
 import { AdminPanelModal } from './modals/admin-panel-modal';
 
+/**
+ * PROFILE VIEW V33.0 «MODERN HARMONY»
+ * FIXED: Plus icon import, added multi-account slots label.
+ */
 export default function ProfileView() {
   const { user } = useUser();
   const db = useFirestore();
@@ -53,7 +57,7 @@ export default function ProfileView() {
       </div>
 
       <ScrollArea className="flex-1">
-        <div className="px-6 space-y-6 pb-32 pt-2">
+        <div className="px-6 space-y-8 pb-32 pt-2">
           
           <div className="flex flex-col items-center gap-4 py-8 bg-white/[0.02] border border-white/5 rounded-[3rem] shadow-xl relative overflow-hidden">
              <div className="absolute top-0 right-0 p-4"><QrCode className="w-6 h-6 text-white/10 cursor-pointer hover:text-primary" onClick={() => setIsQrOpen(true)} /></div>
@@ -69,21 +73,31 @@ export default function ProfileView() {
              </div>
           </div>
 
-          {/* Accounts Switcher (Mobile) */}
-          <div className="md:hidden space-y-3">
-             <h3 className="text-[10px] font-black uppercase text-white/20 tracking-widest ml-4">Учётные записи (Слоты)</h3>
+          <div className="space-y-4">
+             <h3 className="text-[10px] font-black uppercase text-white/20 tracking-[0.3em] ml-4">Учётные записи</h3>
              <div className="flex gap-3 overflow-x-auto scrollbar-hide px-1">
                 {[0, 1, 2, 3, 4].map(i => (
                   <button 
                     key={i} 
-                    onClick={() => setActiveAccountIndex(i)}
+                    onClick={() => {
+                      if (activeAccountIndex !== i) {
+                        if (confirm("Переключиться на другой слот? Текущая сессия будет завершена.")) {
+                          setActiveAccountIndex(i);
+                          signOut(auth!);
+                        }
+                      }
+                    }}
                     className={cn(
-                      "h-14 min-w-[56px] rounded-2xl border transition-all flex items-center justify-center relative overflow-hidden",
-                      activeAccountIndex === i ? "border-primary bg-primary/10" : "border-white/5 bg-white/5 opacity-40"
+                      "h-14 min-w-[56px] rounded-2xl border transition-all flex items-center justify-center relative overflow-hidden active:scale-90",
+                      activeAccountIndex === i ? "border-primary bg-primary/10 shadow-lg shadow-primary/20" : "border-white/5 bg-white/5 opacity-40 hover:opacity-100"
                     )}
                   >
-                    {activeAccountIndex === i ? <UserAvatar userId={user?.uid} className="w-10 h-10" /> : <Plus className="w-5 h-5 text-white/20" />}
-                    {activeAccountIndex === i && <div className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full" />}
+                    {activeAccountIndex === i ? (
+                      <UserAvatar userId={user?.uid} className="h-10 w-10 border-none" />
+                    ) : (
+                      <Plus className="w-5 h-5 text-white/20" />
+                    )}
+                    {activeAccountIndex === i && <div className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full shadow-[0_0_8px_rgba(var(--primary),0.8)]" />}
                   </button>
                 ))}
              </div>

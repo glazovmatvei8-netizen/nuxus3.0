@@ -27,6 +27,11 @@ import { AddMemberModal } from './add-member-modal';
 import { GiftModal } from './gift-modal';
 import { chatConversationSummary } from '@/ai/flows/chat-conversation-summary-flow';
 
+/**
+ * CHAT INFO MODAL V33.0 «MODERN HARMONY»
+ * ENHANCED: Owner Panel UI and prominent management label.
+ */
+
 const CustomTitleDialog = memo(({ 
   isOpen, 
   onClose, 
@@ -206,17 +211,17 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
         <ScrollArea className="flex-1 px-1">
           <div className="p-6 space-y-8 pb-32">
             {isOwner && (
-               <div className="p-6 bg-red-500/5 rounded-[2.2rem] border border-red-500/20 shadow-xl space-y-4">
-                  <div className="flex items-center gap-3 text-red-500">
-                    <ShieldAlert className="w-5 h-5" />
-                    <h3 className="text-xs font-black uppercase tracking-widest">Управление чатом</h3>
+               <div className="p-6 bg-primary/5 rounded-[2.2rem] border border-primary/20 shadow-xl space-y-5">
+                  <div className="flex items-center gap-3 text-primary">
+                    <ShieldAlert className="w-5 h-5 animate-pulse" />
+                    <h3 className="text-sm font-black uppercase italic tracking-widest">Управление кластером</h3>
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button variant="ghost" onClick={() => setIsAddMemberOpen(true)} className="h-11 rounded-xl bg-white/5 text-[9px] font-black uppercase gap-2 hover:bg-primary/20 border border-white/5">
-                      <UserPlus className="w-3.5 h-3.5" /> Добавить
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button onClick={() => setIsAddMemberOpen(true)} className="h-14 rounded-2xl bg-white/5 text-[10px] font-black uppercase gap-2 hover:bg-primary/20 border border-white/10 transition-all">
+                      <UserPlus className="w-4 h-4" /> Добавить
                     </Button>
-                    <Button variant="ghost" onClick={() => toast({ title: "Настройки чата", description: "Функция в разработке" })} className="h-11 rounded-xl bg-white/5 text-[9px] font-black uppercase gap-2 hover:bg-primary/20 border border-white/5">
-                      <Settings className="w-3.5 h-3.5" /> Настройки
+                    <Button onClick={() => toast({ title: "Настройки чата", description: "Доступно в следующем обновлении Ядра" })} className="h-14 rounded-2xl bg-white/5 text-[10px] font-black uppercase gap-2 hover:bg-primary/20 border border-white/10 transition-all">
+                      <Settings className="w-4 h-4" /> Настройки
                     </Button>
                   </div>
                </div>
