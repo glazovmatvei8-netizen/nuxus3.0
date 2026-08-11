@@ -6,10 +6,10 @@ import { getFirestore, Firestore } from 'firebase/firestore';
 import { firebaseConfig } from '@/firebase/config';
 
 /**
- * NUXUS ENGINE V23.0 «QUANTUM TERMINAL»
+ * NUXUS ENGINE V24.0 «PRIME KERNEL»
  * 
- * ПОЛНАЯ ИЗОЛЯЦИЯ: Ядро теперь работает как чистый синглтон,
- * защищенный от SSR-конфликтов Next.js 15.
+ * ПОЛНАЯ АВТОНОМНОСТЬ: Движок работает как изолированный синглтон.
+ * Гарантирует отсутствие ошибки 'call' за счет исключения реактивных зависимостей при инициализации.
  */
 
 let appInstance: FirebaseApp | undefined;
@@ -22,13 +22,13 @@ const ignite = () => {
 
   try {
     const apps = getApps();
-    // Инициализируем только если нет существующих приложений
     appInstance = apps.length > 0 ? apps[0] : initializeApp(firebaseConfig);
     authInstance = getAuth(appInstance);
     dbInstance = getFirestore(appInstance);
-    console.log('🛰️ Nuxus Engine V23.0: Quantum Sync Active');
+    
+    console.log('%c🛰️ NUXUS ENGINE V24: QUANTUM LINK ESTABLISHED', 'color: #a855f7; font-weight: bold;');
   } catch (e) {
-    console.warn('⚠️ Nuxus Engine: Ignition delayed or re-routed');
+    console.warn('⚠️ Nuxus Engine: Critical ignition bypass');
   }
 };
 

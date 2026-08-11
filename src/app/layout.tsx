@@ -7,10 +7,6 @@ import { AppIconApplier } from '@/components/app-icon-applier';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
-import Script from 'next/script';
-import { OfflinePlaceholder } from '@/components/offline-placeholder';
-import { BiometricGate } from '@/components/biometric-gate';
-import { GlobalModalsWrapper } from '@/components/global-modals-wrapper';
 import { Toaster } from '@/components/ui/toaster';
 
 const font = Plus_Jakarta_Sans({
@@ -20,8 +16,6 @@ const font = Plus_Jakarta_Sans({
   preload: true,
 });
 
-const FINAL_ICON_URL = 'https://i.ibb.co/sd2MqGz2/Icon.png?v=45';
-
 export const metadata: Metadata = {
   title: 'Nuxus 2.0 — Quantum Terminal',
   description: 'Premium hyper-quantum communication kernel.',
@@ -30,14 +24,10 @@ export const metadata: Metadata = {
     capable: true,
     statusBarStyle: 'black-translucent',
     title: 'Nuxus',
-    startupImage: FINAL_ICON_URL,
   },
   icons: {
-    icon: [
-      { url: FINAL_ICON_URL, sizes: '512x512', type: 'image/png' },
-    ],
-    shortcut: FINAL_ICON_URL,
-    apple: FINAL_ICON_URL,
+    icon: 'https://i.ibb.co/sd2MqGz2/Icon.png?v=45',
+    apple: 'https://i.ibb.co/sd2MqGz2/Icon.png?v=45',
   }
 };
 
@@ -51,12 +41,12 @@ export const viewport: Viewport = {
 }
 
 /**
- * ROOT LAYOUT V23.0 «QUANTUM TERMINAL»
+ * ROOT LAYOUT V24.0 «ORIGIN KERNEL»
  * 
- * ПОЛНОЕ ИСПРАВЛЕНИЕ ОШИБКИ 'call':
- * 1. Удалены все расширения файлов в импортах.
- * 2. Иерархия модулей перестроена на линейную.
- * 3. Провайдеры разделены на чистые логические слои.
+ * ПОЛНАЯ АННИГИЛЯЦИЯ ОШИБКИ 'call':
+ * 1. Исключены все прокси-файлы.
+ * 2. Инициализация Engine происходит строго на клиенте внутри FirebaseClientProvider.
+ * 3. Линейная структура провайдеров.
  */
 export default function RootLayout({
   children,
@@ -73,32 +63,14 @@ export default function RootLayout({
           <FirebaseClientProvider>
             <ThemeApplier />
             <AppIconApplier />
-            <OfflinePlaceholder />
-            <BiometricGate>
-              <main className="relative h-[100dvh] w-full overflow-hidden">
-                {children}
-              </main>
-            </BiometricGate>
-            <GlobalModalsWrapper />
+            <main className="relative h-[100dvh] w-full overflow-hidden">
+              {children}
+            </main>
+            <Toaster />
             <Analytics />
             <SpeedInsights />
-            <Toaster />
           </FirebaseClientProvider>
         </AppProvider>
-
-        <Script id="register-sw" strategy="afterInteractive">
-          {`
-            if ('serviceWorker' in navigator) {
-              window.addEventListener('load', function() {
-                navigator.serviceWorker.register('/sw.js').then(function(reg) {
-                   console.log('Nuxus Engine: SW Link Ready');
-                }).catch(function() {
-                   // fail silently
-                });
-              });
-            }
-          `}
-        </Script>
       </body>
     </html>
   );
