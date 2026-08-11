@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
-import { Auth, User, onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, User } from 'firebase/auth';
 import { nuxus } from '@/lib/nuxus-engine';
 
 export interface FirebaseContextState {
@@ -15,22 +15,22 @@ export const FirebaseContext = createContext<FirebaseContextState>({
 });
 
 /**
- * NUXUS ENGINE PROVIDER V16.0 «PURE ORIGIN»
+ * NUXUS ENGINE PROVIDER V17.0
  * 
- * Изолированный интерфейс связи с ядром Nuxus Engine.
- * Гарантирует отсутствие ошибок Hydration и стабильную передачу Auth-сигналов.
+ * Облегченный провайдер, который только транслирует состояние авторизации.
+ * Вся тяжелая логика вынесена в Nuxus Engine.
  */
 export const FirebaseProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isUserLoading, setIsUserLoading] = useState(true);
 
   useEffect(() => {
-    // Прямая связь с ядром без посредников
     if (!nuxus.auth) {
       setIsUserLoading(false);
       return;
     }
     
+    // Прямая подписка на поток авторизации ядра
     return onAuthStateChanged(nuxus.auth, (firebaseUser) => {
       setUser(firebaseUser);
       setIsUserLoading(false);
@@ -47,10 +47,10 @@ export const FirebaseProvider: React.FC<{ children: ReactNode }> = ({ children }
 
 export const useFirebase = () => useContext(FirebaseContext);
 export const useUser = () => {
-  const { user, isUserLoading } = useFirebase();
-  return { user, isUserLoading };
+  const context = useContext(FirebaseContext);
+  return { user: context.user, isUserLoading: context.isUserLoading };
 };
 
-// Экспортируем геттеры Ядра для хуков
+// Геттеры ядра для использования в хуках и компонентах
 export const useFirestore = () => nuxus.db;
 export const useAuth = () => nuxus.auth;

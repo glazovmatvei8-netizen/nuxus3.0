@@ -6,11 +6,11 @@ import { getFirestore, Firestore } from 'firebase/firestore';
 import { firebaseConfig } from '@/firebase/config';
 
 /**
- * NUXUS ORIGIN ENGINE V16.0 «ABSOLUTE ORIGIN»
+ * NUXUS ENGINE V17.0 «QUANTUM CORE»
  * 
- * Это автономное ядро мессенджера. Оно работает независимо от React
- * и гарантирует 100% доступность сервисов Firebase.
- * Инициализация происходит один раз на уровне модуля.
+ * Это полностью автономное программное ядро мессенджера.
+ * Оно работает независимо от жизненного цикла React-компонентов.
+ * Инициализация происходит один раз на уровне системного модуля.
  */
 class NuxusEngine {
   private static instance: NuxusEngine;
@@ -35,15 +35,17 @@ class NuxusEngine {
     if (this.isIgnited) return;
     try {
       const apps = getApps();
+      // Гарантируем использование только одного инстанса
       this.app = apps.length > 0 ? apps[0] : initializeApp(firebaseConfig);
       this.auth = getAuth(this.app);
       this.db = getFirestore(this.app);
       this.isIgnited = true;
-      console.log('🛰️ Nuxus Engine V16: Absolute Origin Online');
+      console.log('🛰️ Nuxus Engine V17: Quantum Core Online');
     } catch (e) {
-      console.error('❌ Nuxus Engine: Critical Failure', e);
+      console.error('❌ Nuxus Engine: Critical Ignition Failure', e);
     }
   }
 }
 
+// Экспортируем синглтон для прямого доступа из любой точки приложения
 export const nuxus = NuxusEngine.getInstance();

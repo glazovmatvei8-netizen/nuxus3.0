@@ -8,7 +8,7 @@ export type WithId<T> = T & { id: string; isPending?: boolean };
 
 /**
  * NUXUS ENGINE HOOK: useDoc
- * Работает напрямую через ядро Nuxus Engine V15.
+ * Подключен напрямую к Quantum Core в обход контекста.
  */
 export function useDoc<T = any>(docRef: DocumentReference<DocumentData> | null | undefined) {
   const [data, setData] = useState<WithId<T> | null>(null);
@@ -23,6 +23,7 @@ export function useDoc<T = any>(docRef: DocumentReference<DocumentData> | null |
     }
 
     setIsLoading(true);
+    
     const unsubscribe = onSnapshot(
       docRef,
       { includeMetadataChanges: true },

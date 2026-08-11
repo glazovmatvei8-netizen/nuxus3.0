@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
@@ -43,6 +42,10 @@ interface AppState {
 
 export const AppContext = createContext<AppState | undefined>(undefined);
 
+/**
+ * NUXUS ATOMIC STORE V17.0
+ * Изолированное состояние интерфейса.
+ */
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<MainView>('chats');
@@ -57,6 +60,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [inspectedUserId, setInspectedUserId] = useState<string | null>(null);
   const [activeAccountIndex, setActiveAccountIndex] = useState(0);
 
+  // Восстановление активного слота
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('nuxus_active_index_v71');

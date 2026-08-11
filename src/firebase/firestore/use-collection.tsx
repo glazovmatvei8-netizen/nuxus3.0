@@ -8,7 +8,7 @@ export type WithId<T> = T & { id: string; isPending?: boolean };
 
 /**
  * NUXUS ENGINE HOOK: useCollection
- * Оптимизирован для прямой связи с ядром Origin Core.
+ * Подключен напрямую к Quantum Core в обход контекста.
  */
 export function useCollection<T = any>(
   target: (CollectionReference<DocumentData> | Query<DocumentData>) | null | undefined
@@ -18,6 +18,7 @@ export function useCollection<T = any>(
   const [error, setError] = useState<FirestoreError | Error | null>(null);
 
   useEffect(() => {
+    // Если Ядро еще не готово или цель пуста - сбрасываем состояние
     if (!target || !nuxus.db) {
       setData(null);
       setIsLoading(false);
@@ -25,6 +26,8 @@ export function useCollection<T = any>(
     }
 
     setIsLoading(true);
+    
+    // Прямая связь с потоком данных через ядро Engine
     const unsubscribe = onSnapshot(
       target,
       { includeMetadataChanges: true },
@@ -45,7 +48,7 @@ export function useCollection<T = any>(
     );
 
     return () => unsubscribe();
-  }, [target instanceof Object ? null : target]);
+  }, [target instanceof Object ? null : target]); // Стабилизация зависимости
 
   return { data, isLoading, error };
 }

@@ -53,6 +53,10 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
 }
 
+/**
+ * ROOT LAYOUT V17.0 «QUANTUM HARMONY»
+ * Оптимизированный порядок провайдеров для стабильного запуска Engine.
+ */
 export default function RootLayout({
   children,
 }: Readonly<{
