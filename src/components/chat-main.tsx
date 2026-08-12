@@ -31,9 +31,9 @@ import {
 } from 'lucide-react';
 
 /**
- * CHAT MAIN V47.0 «BALANCED ELEGANCE»
- * ОПТИМИЗАЦИЯ: Нижняя панель навигации стала более компактной и изящной.
- * Устранены лишние наложения и визуальный вес.
+ * CHAT MAIN V48.0 «COMFORT & COMMAND»
+ * ОБНОВЛЕНИЕ: Увеличены размеры кнопок навигации (Dock).
+ * Оптимизирована эргономика для больших экранов и удобства нажатий.
  */
 export default function ChatMain() {
   const { 
@@ -116,10 +116,10 @@ export default function ChatMain() {
         </div>
       </div>
 
-      {/* Floating Bottom Nav (Mobile) - Redesigned for Elegance */}
+      {/* Floating Bottom Nav (Mobile) - RE-SIZED FOR COMFORT */}
       {!currentChatId && (
-        <div className="md:hidden fixed bottom-10 left-1/2 -translate-x-1/2 z-[1000] w-[90%] max-w-[380px]">
-          <div className="bg-[#0c0c0e]/80 backdrop-blur-3xl rounded-[2.5rem] h-18 flex items-center justify-between px-8 shadow-[0_30px_80px_rgba(0,0,0,0.9)] border border-white/10 relative">
+        <div className="md:hidden fixed bottom-8 left-1/2 -translate-x-1/2 z-[1000] w-[92%] max-w-[420px] animate-in slide-in-from-bottom-6 duration-700">
+          <div className="bg-[#0c0c0e]/85 backdrop-blur-3xl rounded-[3rem] h-22 flex items-center justify-between px-10 shadow-[0_40px_100px_rgba(0,0,0,0.9)] border border-white/10 relative">
             <NavButton icon={Globe} active={activeView === 'discovery'} onClick={() => setActiveView('discovery')} />
             <NavButton icon={Phone} active={activeView === 'calls'} onClick={() => setActiveView('calls')} />
             
@@ -127,11 +127,11 @@ export default function ChatMain() {
               <button 
                 onClick={() => setActiveView('chats')}
                 className={cn(
-                  "h-16 w-16 rounded-2xl flex items-center justify-center transition-all duration-300 relative z-20 border shadow-2xl active:scale-90 -mt-10",
-                  activeView === 'chats' ? "bg-primary text-white border-white/20 shadow-lg shadow-primary/20" : "bg-[#161618] text-white/20 border-white/5"
+                  "h-20 w-20 rounded-[1.8rem] flex items-center justify-center transition-all duration-300 relative z-20 border shadow-[0_20px_50px_rgba(var(--primary),0.3)] active:scale-90 -mt-12",
+                  activeView === 'chats' ? "bg-primary text-white border-white/20" : "bg-[#161618] text-white/20 border-white/5"
                 )}
               >
-                <MessageSquare className={cn("w-7 h-7", activeView === 'chats' && "fill-current")} />
+                <MessageSquare className={cn("w-9 h-9", activeView === 'chats' && "fill-current")} />
               </button>
             </div>
 
@@ -152,15 +152,15 @@ export default function ChatMain() {
 
 function NavButton({ icon: Icon, active, onClick, isProfile, userId }: any) {
   return (
-    <button onClick={onClick} className={cn("flex flex-col items-center justify-center h-full transition-all relative", active ? "text-primary scale-105" : "text-white/20 hover:text-white/40")}>
+    <button onClick={onClick} className={cn("flex flex-col items-center justify-center h-full transition-all relative px-4", active ? "text-primary scale-110" : "text-white/20 hover:text-white/40")}>
       {isProfile ? (
-        <div className={cn("rounded-xl p-[1px] transition-all", active ? "bg-primary" : "bg-transparent")}>
-           <UserAvatar userId={userId} className="h-7 w-7 rounded-lg" />
+        <div className={cn("rounded-2xl p-[2px] transition-all shadow-lg", active ? "bg-primary scale-110" : "bg-transparent")}>
+           <UserAvatar userId={userId} className="h-10 w-10 rounded-xl" />
         </div>
       ) : (
-        <Icon className={cn("w-6 h-6", active && "fill-current")} />
+        <Icon className={cn("w-8 h-8 transition-transform duration-300", active && "fill-current")} />
       )}
-      {active && !isProfile && <div className="absolute -bottom-2 w-1 h-1 bg-primary rounded-full shadow-[0_0_8px_rgba(var(--primary),1)]" />}
+      {active && !isProfile && <div className="absolute -bottom-3 w-1.5 h-1.5 bg-primary rounded-full shadow-[0_0_12px_rgba(var(--primary),1)]" />}
     </button>
   );
 }
