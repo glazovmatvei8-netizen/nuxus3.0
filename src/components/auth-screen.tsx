@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState } from 'react';
@@ -6,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Eye, EyeOff, Phone, Mail, ChevronDown, Lock } from 'lucide-react';
+import { Loader2, Eye, EyeOff, Phone, Mail, ChevronDown, Lock, Globe, UserCheck, ShieldCheck } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase'; 
 import { 
   signInWithEmailAndPassword,
@@ -17,7 +16,7 @@ import {
 } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { NuxusLogo } from './nuxus-logo';
-import { cn } from '@/lib/utils';
+import { cn, formatDisplayName } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { translations } from '@/lib/translations';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -73,7 +72,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
         const cleanPhone = phoneNumber.replace(/\D/g, '');
         if (cleanPhone.length < 5) throw new Error("Введите корректный номер");
         const cleanCountryCode = country.code.replace('+', '');
-        // Единый стандарт формирования email для телефонов: код_номер@nuxus.app
+        // Формируем уникальный идентификатор для телефона без спецсимволов
         finalEmail = `${cleanCountryCode}${cleanPhone}@nuxus.app`;
       }
 
@@ -81,7 +80,8 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
         const userCred = await signInWithEmailAndPassword(auth, finalEmail, password);
         const userDoc = await getDoc(doc(db, 'users', userCred.user.uid));
         if (userDoc.exists()) {
-          setSlotName(activeAccountIndex, userDoc.data().name || 'Аккаунт');
+          const userData = userDoc.data();
+          setSlotName(activeAccountIndex, formatDisplayName(userData.name, userData.username));
         } else {
           setSlotName(activeAccountIndex, userCred.user.displayName || 'Аккаунт');
         }
@@ -106,7 +106,8 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
             theme: 'default',
             fontFamily: 'jakarta',
             bubbleStyle: 'default',
-            messageSize: 'medium'
+            messageSize: 'medium',
+            privacy: { phoneVisibility: 'everybody', lastSeenVisibility: 'everybody', allowGroupsFrom: 'everybody' }
           }
         };
 
@@ -120,7 +121,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
       if (e.code === 'auth/user-not-found') msg = "Аккаунт не найден";
       if (e.code === 'auth/wrong-password') msg = "Неверный пароль";
       if (e.code === 'auth/email-already-in-use') msg = "Этот адрес или номер уже занят";
-      toast({ title: "Сигнал прерван", description: msg, variant: "destructive" });
+      toast({ title: "Сбой входа", description: msg, variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -129,24 +130,24 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
   if (!lang) {
     return (
       <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#010103] px-8 relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.08)_0%,transparent_70%)]" />
-        <NuxusLogo size={140} className="mb-16 animate-in fade-in zoom-in duration-1000" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.1)_0%,transparent_70%)]" />
+        <NuxusLogo size={160} className="mb-20 animate-in fade-in zoom-in duration-1000" />
         
-        <div className="space-y-4 w-full max-w-[340px] relative z-10">
-          <h1 className="text-4xl font-black text-white text-center mb-12 tracking-tight uppercase italic drop-shadow-2xl">Язык Системы</h1>
+        <div className="space-y-6 w-full max-w-[360px] relative z-10">
+          <h1 className="text-5xl font-black text-white text-center mb-16 tracking-tighter uppercase italic drop-shadow-[0_0_30px_rgba(168,85,247,0.4)]">Язык Системы</h1>
           <button 
             onClick={() => setLang('ru')} 
-            className="w-full h-20 bg-white/[0.02] border border-white/5 backdrop-blur-xl hover:bg-white/10 rounded-[2rem] flex items-center justify-between px-10 transition-all active:scale-95 group shadow-2xl"
+            className="w-full h-24 bg-white/[0.03] border border-white/10 backdrop-blur-2xl hover:bg-white/10 rounded-[2.5rem] flex items-center justify-between px-10 transition-all active:scale-95 group shadow-2xl"
           >
-            <span className="text-white font-black uppercase italic tracking-widest text-lg">Русский</span>
-            <div className="bg-primary/20 px-4 py-1.5 rounded-xl text-primary text-[10px] font-black uppercase">RU</div>
+            <span className="text-white font-black uppercase italic tracking-widest text-xl">Русский</span>
+            <div className="bg-primary/20 px-5 py-2 rounded-xl text-primary text-[11px] font-black uppercase border border-primary/20">RU</div>
           </button>
           <button 
             onClick={() => setLang('en')} 
-            className="w-full h-20 bg-white/[0.02] border border-white/5 backdrop-blur-xl hover:bg-white/10 rounded-[2rem] flex items-center justify-between px-10 transition-all active:scale-95 group shadow-2xl"
+            className="w-full h-24 bg-white/[0.03] border border-white/10 backdrop-blur-2xl hover:bg-white/10 rounded-[2.5rem] flex items-center justify-between px-10 transition-all active:scale-95 group shadow-2xl"
           >
-            <span className="text-white font-black uppercase italic tracking-widest text-lg">English</span>
-            <div className="bg-primary/20 px-4 py-1.5 rounded-xl text-primary text-[10px] font-black uppercase">EN</div>
+            <span className="text-white font-black uppercase italic tracking-widest text-xl">English</span>
+            <div className="bg-primary/20 px-5 py-2 rounded-xl text-primary text-[11px] font-black uppercase border border-primary/20">EN</div>
           </button>
         </div>
       </div>
@@ -155,165 +156,181 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
 
   return (
     <div className="h-[100dvh] w-full flex flex-col bg-[#010103] relative overflow-hidden">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(168,85,247,0.08)_0%,transparent_70%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(168,85,247,0.1)_0%,transparent_70%)]" />
       
       <ScrollArea className="w-full h-full">
         <div className="min-h-full w-full flex flex-col items-center justify-center p-6 py-20">
-          <div className="mb-12 cursor-pointer active:scale-90 transition-all" onClick={() => setLang(null)}>
-            <NuxusLogo size={100} />
+          <div className="mb-14 cursor-pointer active:scale-90 transition-all" onClick={() => setLang(null)}>
+            <NuxusLogo size={120} />
           </div>
           
-          <Card className="w-full max-w-[460px] bg-white/[0.01] backdrop-blur-3xl border-white/10 rounded-[3.5rem] p-2 sm:p-4 shadow-[0_40px_120px_rgba(0,0,0,0.8)] relative z-10 overflow-hidden">
-            <CardHeader className="text-center pt-10 pb-6 space-y-10">
-              <div className="inline-flex bg-black/40 p-1.5 rounded-[1.8rem] border border-white/5 mx-auto shadow-inner">
+          <Card className="w-full max-w-[480px] bg-white/[0.02] backdrop-blur-[60px] border-white/10 rounded-[3.5rem] p-2 sm:p-4 shadow-[0_50px_150px_rgba(0,0,0,0.9)] relative z-10 overflow-hidden">
+            <CardHeader className="text-center pt-10 pb-8 space-y-12">
+              <div className="inline-flex bg-black/60 p-2 rounded-[2rem] border border-white/5 mx-auto shadow-inner">
                 <button 
                   onClick={() => setMode('login')} 
-                  className={cn("px-12 py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all", mode === 'login' ? "bg-white text-black shadow-2xl" : "text-white/20 hover:text-white/40")}
+                  className={cn("px-14 py-4 rounded-[1.5rem] text-xs font-black uppercase tracking-widest transition-all", mode === 'login' ? "bg-white text-black shadow-2xl scale-105" : "text-white/20 hover:text-white/40")}
                 >
                   Вход
                 </button>
                 <button 
                   onClick={() => setMode('register')} 
-                  className={cn("px-12 py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all", mode === 'register' ? "bg-white text-black shadow-2xl" : "text-white/20 hover:text-white/40")}
+                  className={cn("px-14 py-4 rounded-[1.5rem] text-xs font-black uppercase tracking-widest transition-all", mode === 'register' ? "bg-white text-black shadow-2xl scale-105" : "text-white/20 hover:text-white/40")}
                 >
                   Регистрация
                 </button>
               </div>
               
-              <div className="space-y-3">
-                <CardTitle className="text-5xl font-black text-white tracking-tighter italic uppercase leading-none">
+              <div className="space-y-4">
+                <CardTitle className="text-6xl font-black text-white tracking-tighter italic uppercase leading-none drop-shadow-2xl">
                   {mode === 'login' ? 'Вход' : 'Аккаунт'}
                 </CardTitle>
-                <CardDescription className="text-white/20 font-bold uppercase text-[11px] tracking-[0.4em]">{t.subtitle}</CardDescription>
+                <CardDescription className="text-primary/60 font-black uppercase text-[11px] tracking-[0.5em] italic">{t.subtitle}</CardDescription>
               </div>
 
-              <div className="flex gap-2 p-1.5 bg-black/40 rounded-2xl border border-white/5 shadow-inner w-full max-w-[360px] mx-auto">
+              <div className="flex gap-3 p-2 bg-black/40 rounded-[1.8rem] border border-white/5 shadow-inner w-full max-w-[400px] mx-auto">
                 <button 
                   onClick={() => setAuthMethod('phone')} 
-                  className={cn("flex-1 py-3.5 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 transition-all", authMethod === 'phone' ? "bg-white/5 text-white" : "text-white/20")}
+                  className={cn("flex-1 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] flex items-center justify-center gap-3 transition-all", authMethod === 'phone' ? "bg-white/10 text-white shadow-xl" : "text-white/20")}
                 >
-                  <Phone size={15} /> Телефон
+                  <Phone size={16} /> Телефон
                 </button>
                 <button 
                   onClick={() => setAuthMethod('email')} 
-                  className={cn("flex-1 py-3.5 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 transition-all", authMethod === 'email' ? "bg-white/5 text-white" : "text-white/20")}
+                  className={cn("flex-1 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] flex items-center justify-center gap-3 transition-all", authMethod === 'email' ? "bg-white/10 text-white shadow-xl" : "text-white/20")}
                 >
-                  <Mail size={15} /> Почта
+                  <Mail size={16} /> Почта
                 </button>
               </div>
             </CardHeader>
 
-            <CardContent className="px-8 sm:px-12 pb-14">
+            <CardContent className="px-10 sm:px-14 pb-16">
               <form onSubmit={handleAuth} className="space-y-6">
                 {mode === 'register' && (
-                  <div className="space-y-6 animate-in slide-in-from-top-4 duration-500">
-                    <div className="relative">
+                  <div className="space-y-6 animate-in slide-in-from-top-6 duration-700">
+                    <div className="space-y-2">
+                       <Label className="text-[10px] font-black uppercase text-primary/40 ml-4 tracking-widest">Ваше Имя</Label>
                        <Input 
-                        placeholder="Ваше имя" 
+                        placeholder="Иван Иванов" 
                         value={name} 
                         onChange={e => setName(e.target.value)} 
-                        className="h-16 bg-white/[0.03] border-white/5 rounded-2xl font-bold text-lg px-8 focus:border-primary/40 transition-all shadow-inner w-full placeholder:text-white/10" 
+                        className="h-16 bg-white/[0.03] border-white/10 rounded-[1.5rem] font-black italic text-lg px-8 focus:border-primary/50 transition-all shadow-inner w-full placeholder:text-white/10 text-white" 
                         required 
                       />
                     </div>
-                    <div className="relative">
-                      <span className="absolute left-8 top-1/2 -translate-y-1/2 text-primary font-black text-xl">@</span>
-                      <Input 
-                        placeholder="id_пользователя" 
-                        value={username} 
-                        onChange={e => setUsername(e.target.value)} 
-                        className="h-16 bg-white/[0.03] border-white/5 rounded-2xl font-bold text-lg pl-14 focus:border-primary/40 transition-all shadow-inner w-full placeholder:text-white/10" 
-                        required 
-                      />
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase text-primary/40 ml-4 tracking-widest">Никнейм (@)</Label>
+                      <div className="relative">
+                        <span className="absolute left-8 top-1/2 -translate-y-1/2 text-primary font-black text-xl italic">@</span>
+                        <Input 
+                          placeholder="username" 
+                          value={username} 
+                          onChange={e => setUsername(e.target.value)} 
+                          className="h-16 bg-white/[0.03] border-white/10 rounded-[1.5rem] font-bold text-lg pl-16 focus:border-primary/50 transition-all shadow-inner w-full placeholder:text-white/10 text-white" 
+                          required 
+                        />
+                      </div>
                     </div>
                   </div>
                 )}
                 
                 {authMethod === 'phone' ? (
-                  <div className="flex gap-4 w-full">
-                     <Popover open={isCountryPickerOpen} onOpenChange={setIsCountryPickerOpen}>
-                        <PopoverTrigger asChild>
-                          <button type="button" className="h-16 px-5 bg-white/[0.03] border border-white/5 rounded-2xl flex items-center gap-3 hover:bg-white/[0.08] transition-all shadow-inner min-w-[110px] justify-between group">
-                             <div className="flex items-center gap-2">
-                                <span className="text-2xl shrink-0">{country.flag}</span>
-                                <span className="text-[12px] font-black text-white/80">{country.code}</span>
-                             </div>
-                             <ChevronDown size={14} className="text-white/20 group-hover:text-primary transition-colors shrink-0" />
-                          </button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-64 bg-[#0a0a0c]/98 backdrop-blur-2xl border-white/10 rounded-[2.5rem] p-2 shadow-2xl z-[1000]">
-                           <ScrollArea className="h-72">
-                              <div className="p-2 space-y-1.5">
-                                {COUNTRIES.map((c, i) => (
-                                  <button 
-                                    key={i} 
-                                    type="button"
-                                    onClick={() => { setCountry(c); setIsCountryPickerOpen(false); }}
-                                    className="w-full flex items-center justify-between p-4 rounded-2xl hover:bg-white/5 transition-all text-left"
-                                  >
-                                     <div className="flex items-center gap-4">
-                                        <span className="text-2xl">{c.flag}</span>
-                                        <span className="text-[13px] font-black text-white/80">{c.name}</span>
-                                     </div>
-                                     <span className="text-[11px] font-black text-primary">{c.code}</span>
-                                  </button>
-                                ))}
-                              </div>
-                           </ScrollArea>
-                        </PopoverContent>
-                     </Popover>
-                     <Input 
-                      placeholder="Номер телефона" 
-                      value={phoneNumber} 
-                      onChange={e => setPhoneNumber(e.target.value.replace(/\D/g, ''))} 
-                      className="h-16 flex-1 bg-white/[0.03] border-white/5 rounded-2xl font-bold text-lg px-8 focus:border-primary/40 transition-all shadow-inner placeholder:text-white/10 text-white" 
-                      required 
-                    />
+                  <div className="space-y-2">
+                     <Label className="text-[10px] font-black uppercase text-primary/40 ml-4 tracking-widest">Номер Телефона</Label>
+                     <div className="flex gap-4 w-full">
+                        <Popover open={isCountryPickerOpen} onOpenChange={setIsCountryPickerOpen}>
+                           <PopoverTrigger asChild>
+                             <button type="button" className="h-16 px-6 bg-white/[0.03] border border-white/10 rounded-[1.5rem] flex items-center gap-4 hover:bg-white/[0.08] transition-all shadow-inner min-w-[130px] justify-between group">
+                                <div className="flex items-center gap-3">
+                                   <span className="text-2xl shrink-0">{country.flag}</span>
+                                   <span className="text-[13px] font-black text-white/80">{country.code}</span>
+                                </div>
+                                <ChevronDown size={16} className="text-white/20 group-hover:text-primary transition-colors shrink-0" />
+                             </button>
+                           </PopoverTrigger>
+                           <PopoverContent className="w-72 bg-[#0a0a0c]/98 backdrop-blur-[40px] border-white/10 rounded-[2.5rem] p-3 shadow-[0_30px_100px_rgba(0,0,0,0.9)] z-[1000] outline-none">
+                              <ScrollArea className="h-80">
+                                 <div className="p-2 space-y-2">
+                                   {COUNTRIES.map((c, i) => (
+                                     <button 
+                                       key={i} 
+                                       type="button"
+                                       onClick={() => { setCountry(c); setIsCountryPickerOpen(false); }}
+                                       className="w-full flex items-center justify-between p-4 rounded-2xl hover:bg-white/5 transition-all text-left group"
+                                     >
+                                        <div className="flex items-center gap-4">
+                                           <span className="text-2xl">{c.flag}</span>
+                                           <span className="text-[14px] font-black text-white/80 uppercase group-hover:text-white">{c.name}</span>
+                                        </div>
+                                        <span className="text-[12px] font-black text-primary italic">{c.code}</span>
+                                     </button>
+                                   ))}
+                                 </div>
+                              </ScrollArea>
+                           </PopoverContent>
+                        </Popover>
+                        <Input 
+                         placeholder="900 000-00-00" 
+                         value={phoneNumber} 
+                         onChange={e => setPhoneNumber(e.target.value.replace(/\D/g, ''))} 
+                         className="h-16 flex-1 bg-white/[0.03] border-white/10 rounded-[1.5rem] font-black text-xl px-8 focus:border-primary/50 transition-all shadow-inner placeholder:text-white/10 text-white tracking-widest" 
+                         required 
+                       />
+                     </div>
                   </div>
                 ) : (
-                  <div className="relative">
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase text-primary/40 ml-4 tracking-widest">Электронная Почта</Label>
                     <Input 
                       type="email"
-                      placeholder="example@nuxus.app" 
+                      placeholder="example@mail.com" 
                       value={email} 
                       onChange={e => setEmail(e.target.value)} 
-                      className="h-16 bg-white/[0.03] border-white/5 rounded-2xl font-bold text-lg px-8 focus:border-primary/40 transition-all shadow-inner w-full placeholder:text-white/10" 
+                      className="h-16 bg-white/[0.03] border-white/10 rounded-[1.5rem] font-bold text-lg px-8 focus:border-primary/50 transition-all shadow-inner w-full placeholder:text-white/10 text-white" 
                       required 
                     />
                   </div>
                 )}
 
-                <div className="relative w-full group">
-                  <Input 
-                    type={showPass ? "text" : "password"} 
-                    placeholder="Пароль доступа" 
-                    value={password} 
-                    onChange={e => setPassword(e.target.value)} 
-                    className="h-16 bg-white/[0.03] border-white/5 rounded-2xl font-bold text-lg px-8 focus:border-primary/40 transition-all shadow-inner w-full placeholder:text-white/10" 
-                    required 
-                  />
-                  <button 
-                    type="button" 
-                    onClick={() => setShowPass(!showPass)} 
-                    className="absolute right-6 top-1/2 -translate-y-1/2 text-white/10 hover:text-white transition-colors p-3"
-                  >
-                    {showPass ? <EyeOff size={24} /> : <Eye size={24} />}
-                  </button>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase text-primary/40 ml-4 tracking-widest">Пароль Доступа</Label>
+                  <div className="relative group">
+                    <Input 
+                      type={showPass ? "text" : "password"} 
+                      placeholder="••••••••" 
+                      value={password} 
+                      onChange={e => setPassword(e.target.value)} 
+                      className="h-16 bg-white/[0.03] border-white/10 rounded-[1.5rem] font-black text-xl px-8 focus:border-primary/50 transition-all shadow-inner w-full placeholder:text-white/10 text-white tracking-[0.3em]" 
+                      required 
+                    />
+                    <button 
+                      type="button" 
+                      onClick={() => setShowPass(!showPass)} 
+                      className="absolute right-6 top-1/2 -translate-y-1/2 text-white/10 hover:text-primary transition-colors p-4 active:scale-90"
+                    >
+                      {showPass ? <EyeOff size={24} /> : <Eye size={24} />}
+                    </button>
+                  </div>
                 </div>
 
                 <Button 
                   type="submit" 
                   disabled={isLoading} 
-                  className="w-full h-20 bg-primary hover:scale-[1.02] text-white font-black uppercase italic tracking-[0.2em] text-xl rounded-[2rem] shadow-2xl shadow-primary/20 transition-all active:scale-95 mt-6 border border-white/10"
+                  className="w-full h-24 bg-primary hover:scale-[1.02] text-white font-black uppercase italic tracking-[0.3em] text-2xl rounded-[2.2rem] shadow-[0_20px_60px_rgba(var(--primary),0.4)] transition-all active:scale-95 mt-10 border border-white/20 group relative overflow-hidden"
                 >
-                  {isLoading ? <Loader2 className="animate-spin w-8 h-8" /> : (mode === 'login' ? 'Войти' : 'Создать')}
+                  <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+                  {isLoading ? <Loader2 className="animate-spin w-10 h-10" /> : (mode === 'login' ? 'Войти' : 'Создать')}
                 </Button>
               </form>
             </CardContent>
           </Card>
           
-          <div className="mt-16 flex flex-col items-center gap-6 opacity-30">
-            <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.5em]">© 2025 Nuxus platforms • V{versions.latestVersion}</p>
+          <div className="mt-20 flex flex-col items-center gap-6 opacity-20 group">
+             <div className="flex items-center gap-3 bg-white/5 px-6 py-2 rounded-full border border-white/10">
+                <ShieldCheck className="w-4 h-4 text-primary" />
+                <p className="text-[10px] font-black text-white uppercase tracking-[0.6em]">Quantum Shield Active</p>
+             </div>
+             <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.8em]">Build {versions.build} • Pulse {versions.latestVersion}</p>
           </div>
         </div>
       </ScrollArea>

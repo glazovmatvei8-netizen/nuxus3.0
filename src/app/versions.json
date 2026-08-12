@@ -1,13 +1,13 @@
-
 {
-  "latestVersion": "8.1.0",
-  "qesVersion": "25.4",
-  "build": "Master-Console-Persistence-Fix",
-  "sizeMb": 118,
+  "latestVersion": "8.5.0",
+  "qesVersion": "26.0",
+  "build": "Nuxus-Engine-V40-Final",
+  "sizeMb": 124,
   "changelog": [
-    "Partner Hub 8.1: API Keys now persist across sessions via localStorage.",
-    "Bot Identity: Full persistence for bot profile data (Name, Username, Avatar).",
-    "Real Audience: Refined logic - audience is 0 until a bot identity is configured.",
-    "Stability: Removed ghost users from dev console statistics."
+    "Engine V40.0: Total UI/UX Redesign with Fluid Glassmorphism.",
+    "Identity Preservation: User names prioritized over generic IDs.",
+    "Stability: Fixed chat opening errors and version sync loops.",
+    "Personalization: Active font and background style management.",
+    "Security: Enhanced 2FA and Ghost Mode stability."
   ]
 }

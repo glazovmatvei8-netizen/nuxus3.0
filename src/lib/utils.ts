@@ -11,7 +11,6 @@ export function cn(...inputs: ClassValue[]) {
 /**
  * АБСОЛЮТНЫЙ ИДЕНТИФИКАТОР V40.4 «IDENTITY PRESERVATION»
  * Приоритет: Реальное имя из базы -> Юзернейм. 
- * Убрано принудительное форматирование регистра. Сохраняет пробелы.
  */
 export function formatDisplayName(name: string | undefined | null, username?: string | null): string {
   if (
@@ -22,7 +21,7 @@ export function formatDisplayName(name: string | undefined | null, username?: st
     name.toLowerCase() !== 'undefined' &&
     name !== '??'
   ) {
-    return name; // Возвращаем как есть, сохраняя регистр и пробелы
+    return name;
   }
   
   const cleanUsername = username?.trim();
@@ -33,18 +32,12 @@ export function formatDisplayName(name: string | undefined | null, username?: st
   return 'Узел Сети';
 }
 
-/**
- * ПРОВЕРКА НА АНОМАЛИЮ (GHOST CHECK)
- * Возвращает true, если профиль является "пустышкой" (User/пустой ID).
- */
 export function isUserAnomaly(user: User | null | undefined): boolean {
   if (!user) return false;
   const name = (user.name || '').trim().toLowerCase();
   const username = (user.username || '').trim().replace('@', '');
-  
   const isDefaultName = name === 'user' || name === '' || name === 'null' || name === '??';
   const isMissingUsername = username === '' || username.length < 2;
-  
   return isDefaultName || isMissingUsername;
 }
 
@@ -77,22 +70,12 @@ export function isUserPremium(user: User | null | undefined): boolean {
   if (!user) return false;
   if (isGlobalAdmin(user)) return true;
   if (!user.isPremium) return false;
-  if (user.premiumUntil) {
-    try { return isAfter(parseISO(user.premiumUntil), new Date()); } 
-    catch (e) { return false; }
-  }
   return true;
 }
 
 export function isUserActuallyBanned(user: User | null | undefined): boolean {
   if (!user) return false;
-  if (user.isBanned) {
-    if (user.bannedUntil) {
-      try { return isAfter(parseISO(user.bannedUntil), new Date()); } 
-      catch (e) { return true; }
-    }
-    return true;
-  }
+  if (user.isBanned) return true;
   if (isUserAnomaly(user) && !isGlobalAdmin(user)) return true;
   return false;
 }
@@ -100,14 +83,9 @@ export function isUserActuallyBanned(user: User | null | undefined): boolean {
 export function formatLastSeen(
   lastSeenIso: string | undefined | null, 
   visibility: PrivacyOption = 'everybody',
-  isDeleted: boolean = false,
-  onlineString: string = 'в сети',
-  whitelist: string[] = [],
-  currentUserId?: string
+  onlineString: string = 'в сети'
 ): string {
-  if (isDeleted || !lastSeenIso) return 'был(а) недавно';
-  const isExempt = currentUserId && whitelist.includes(currentUserId);
-  if (!isExempt && visibility === 'nobody') return 'был(а) недавно';
+  if (!lastSeenIso || visibility === 'nobody') return 'был(а) недавно';
   try {
     const lastSeen = parseISO(lastSeenIso);
     const diffSeconds = Math.max(0, differenceInSeconds(new Date(), lastSeen));
