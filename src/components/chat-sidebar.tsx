@@ -5,24 +5,17 @@ import { useAppState } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  Plus, Search, Star, Pin, MessageSquare, ChevronDown, ShieldCheck, LogOut, Loader2
+  Plus, Search, Star, Pin, MessageSquare, ShieldCheck, Loader2
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CreateChatModal } from './modals/create-chat-modal';
 import { StoriesBar } from './stories-bar';
 import type { User as UserType, Message, Chat } from '@/lib/types';
-import { useFirestore, useUser, useCollection, useDoc } from '@/firebase';
+import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, where, doc, limit, orderBy } from 'firebase/firestore';
 import { formatDisplayName, cn, decryptSignal, isUserPremium, isGlobalAdmin } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useTranslations } from '@/hooks/use-translations';
-import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator
-} from "@/components/ui/dropdown-menu";
 import { signOut } from 'firebase/auth';
 import { useAuth } from '@/firebase/provider';
 import { AdminPanelModal } from './modals/admin-panel-modal';
@@ -31,10 +24,10 @@ const ChatListItem = memo(({
   chat, isActive, otherId, isPinned, onClick, currentUserId
 }: any) => {
   const db = useFirestore();
-  const userProfileRef = useMemo(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
+  const userProfileRef = useMemoFirebase(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
   const { data: otherProfile } = useDoc<UserType>(userProfileRef);
 
-  const lastMessageQuery = useMemo(() => {
+  const lastMessageQuery = useMemoFirebase(() => {
     if (!db || !chat.id) return null;
     return query(collection(db, 'chats', chat.id, 'messages'), orderBy('sentAt', 'desc'), limit(1));
   }, [db, chat.id]);
@@ -107,10 +100,10 @@ export default function ChatSidebar() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
 
-  const userProfileRef = useMemo(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user?.uid]);
+  const userProfileRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user?.uid]);
   const { data: profile } = useDoc<UserType>(userProfileRef);
 
-  const chatsQuery = useMemo(() => {
+  const chatsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
     return query(collection(db, 'chats'), where('participantIds', 'array-contains', user.uid));
   }, [db, user?.uid]);
@@ -180,7 +173,7 @@ export default function ChatSidebar() {
                     "text-[8px] font-black uppercase tracking-widest truncate w-16 text-center italic",
                     activeAccountIndex === i ? "text-primary" : "text-white/20"
                   )}>
-                    {activeAccountIndex === i ? (profile?.name || 'Active') : (slotNames[i] || `Add Node`)}
+                    {activeAccountIndex === i ? (profile?.name || 'Active') : (slotNames[i] || `Add account`)}
                   </span>
                 </div>
               ))}
@@ -204,7 +197,7 @@ export default function ChatSidebar() {
            {isChatsLoading ? (
              <div className="flex flex-col items-center justify-center py-20 gap-4 opacity-10">
                 <Loader2 className="w-10 h-10 animate-spin text-primary" />
-                <p className="text-[10px] font-black uppercase tracking-widest italic">Syncing Matrix...</p>
+                <p className="text-[10px] font-black uppercase tracking-widest italic">Syncing...</p>
              </div>
            ) : filteredChats.length > 0 ? (
              filteredChats.map(chat => (

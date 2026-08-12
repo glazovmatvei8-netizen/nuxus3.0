@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Eye, EyeOff, Phone, Mail, ChevronDown, ShieldCheck, Star } from 'lucide-react';
+import { Loader2, Eye, EyeOff, Phone, Mail, ChevronDown, ShieldCheck } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase'; 
 import { 
   signInWithEmailAndPassword,
@@ -84,9 +84,9 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
           const userData = userDoc.data();
           setSlotName(activeAccountIndex, formatDisplayName(userData.name, userData.username));
         } else {
-          setSlotName(activeAccountIndex, userCred.user.displayName || 'Аккаунт');
+          setSlotName(activeAccountIndex, userCred.user.displayName || 'Account');
         }
-        toast({ title: "Синхронизация завершена" });
+        toast({ title: "Sync completed" });
       } else {
         const usernameWithAt = '@' + username.trim().replace('@', '').replace(/\s/g, '').toLowerCase();
         const userCred = await createUserWithEmailAndPassword(auth, finalEmail, password);
@@ -114,14 +114,14 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
 
         await setDoc(doc(db, 'users', userCred.user.uid), userData);
         setSlotName(activeAccountIndex, name.trim());
-        toast({ title: "Аккаунт активирован" });
+        toast({ title: "Account activated" });
       }
     } catch (e: any) {
-      let msg = "Ошибка авторизации";
-      if (e.code === 'auth/user-not-found') msg = "Аккаунт не найден";
-      if (e.code === 'auth/wrong-password') msg = "Неверный пароль";
-      if (e.code === 'auth/email-already-in-use') msg = "Этот адрес уже занят";
-      toast({ title: "Ошибка", description: msg, variant: "destructive" });
+      let msg = "Auth error";
+      if (e.code === 'auth/user-not-found') msg = "User not found";
+      if (e.code === 'auth/wrong-password') msg = "Wrong password";
+      if (e.code === 'auth/email-already-in-use') msg = "Email already in use";
+      toast({ title: "Error", description: msg, variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -130,11 +130,11 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
   if (!lang) {
     return (
       <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#010103] px-8 relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(var(--primary),0.1)_0%,transparent_70%)] animate-pulse-glow" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.1)_0%,transparent_70%)]" />
         <NuxusLogo size={180} className="mb-24 animate-in fade-in zoom-in duration-1000" />
         
         <div className="space-y-6 w-full max-w-[360px] relative z-10">
-          <h1 className="text-4xl font-black text-white text-center mb-16 tracking-tighter uppercase italic opacity-80">Выберите Язык</h1>
+          <h1 className="text-4xl font-black text-white text-center mb-16 tracking-tighter uppercase italic opacity-80">Select Language</h1>
           <button 
             onClick={() => setLang('ru')} 
             className="w-full h-24 obsidian-glass rounded-[3rem] flex items-center justify-between px-10 transition-all active:scale-95 group"
@@ -156,7 +156,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
 
   return (
     <div className="h-[100dvh] w-full flex flex-col bg-[#010103] relative overflow-hidden">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(var(--primary),0.1)_0%,transparent_70%)] animate-pulse-glow" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(59,130,246,0.1)_0%,transparent_70%)]" />
       
       <ScrollArea className="w-full h-full no-scrollbar">
         <div className="min-h-full w-full flex flex-col items-center justify-center p-6 py-20">
@@ -171,19 +171,19 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                   onClick={() => setMode('login')} 
                   className={cn("px-12 py-4 rounded-[2rem] text-[10px] font-black uppercase tracking-widest transition-all", mode === 'login' ? "bg-white text-black shadow-2xl" : "text-white/20 hover:text-white/40")}
                 >
-                  Вход
+                  Login
                 </button>
                 <button 
                   onClick={() => setMode('register')} 
                   className={cn("px-12 py-4 rounded-[2rem] text-[10px] font-black uppercase tracking-widest transition-all", mode === 'register' ? "bg-white text-black shadow-2xl" : "text-white/20 hover:text-white/40")}
                 >
-                  Создать
+                  Register
                 </button>
               </div>
               
               <div className="space-y-4">
                 <CardTitle className="text-6xl font-black text-white tracking-tighter italic uppercase leading-none">
-                  {mode === 'login' ? 'Welcome' : 'Activate'}
+                  {mode === 'login' ? 'Welcome' : 'Join'}
                 </CardTitle>
                 <CardDescription className="text-primary/60 font-black uppercase text-[9px] tracking-[0.6em] italic">{t.subtitle}</CardDescription>
               </div>
@@ -193,13 +193,13 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                   onClick={() => setAuthMethod('phone')} 
                   className={cn("flex-1 py-3.5 rounded-3xl text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-2.5 transition-all", authMethod === 'phone' ? "bg-white/10 text-white" : "text-white/20")}
                 >
-                  <Phone size={14} /> Телефон
+                  <Phone size={14} /> Phone
                 </button>
                 <button 
                   onClick={() => setAuthMethod('email')} 
                   className={cn("flex-1 py-3.5 rounded-3xl text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-2.5 transition-all", authMethod === 'email' ? "bg-white/10 text-white" : "text-white/20")}
                 >
-                  <Mail size={14} /> Почта
+                  <Mail size={14} /> Email
                 </button>
               </div>
             </CardHeader>
@@ -209,7 +209,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                 {mode === 'register' && (
                   <div className="space-y-8 animate-in slide-in-from-top-6 duration-700">
                     <div className="space-y-3 text-left">
-                       <Label className="text-[10px] font-black uppercase text-primary/40 ml-5 tracking-widest">Ваше Имя</Label>
+                       <Label className="text-[10px] font-black uppercase text-primary/40 ml-5 tracking-widest">Your Name</Label>
                        <Input 
                         placeholder="Name" 
                         value={name} 
@@ -219,7 +219,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                       />
                     </div>
                     <div className="space-y-3 text-left">
-                      <Label className="text-[10px] font-black uppercase text-primary/40 ml-5 tracking-widest">ID Пользователя</Label>
+                      <Label className="text-[10px] font-black uppercase text-primary/40 ml-5 tracking-widest">Username (@)</Label>
                       <div className="relative">
                         <span className="absolute left-8 top-1/2 -translate-y-1/2 text-primary font-black text-xl italic opacity-40">@</span>
                         <Input 
@@ -236,11 +236,11 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                 
                 {authMethod === 'phone' ? (
                   <div className="space-y-3 text-left">
-                     <Label className="text-[10px] font-black uppercase text-primary/40 ml-5 tracking-widest">Номер Телефона</Label>
+                     <Label className="text-[10px] font-black uppercase text-primary/40 ml-5 tracking-widest">Phone Number</Label>
                      <div className="flex gap-4">
                         <Popover open={isCountryPickerOpen} onOpenChange={setIsCountryPickerOpen}>
                            <PopoverTrigger asChild>
-                             <button type="button" className="h-16 px-6 bg-white/[0.02] border border-white/5 rounded-[2rem] flex items-center gap-3 hover:bg-white/5 transition-all min-w-[120px] justify-between group">
+                             <button type="button" className="h-16 px-6 bg-white/[0.02] border border-white/5 rounded-[2rem] flex items-center gap-3 hover:bg-white/5 transition-all min-w-[110px] justify-between group shrink-0">
                                 <span className="text-xl">{country.flag}</span>
                                 <span className="text-[13px] font-black text-white/80">{country.code}</span>
                                 <ChevronDown size={14} className="text-white/20 group-hover:text-primary transition-colors" />
@@ -271,7 +271,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                          placeholder="000 000 00 00" 
                          value={phoneNumber} 
                          onChange={e => setPhoneNumber(e.target.value.replace(/\D/g, ''))} 
-                         className="h-16 flex-1 bg-white/[0.02] border-white/5 rounded-[2rem] font-black text-xl px-8 focus:border-primary/40 transition-all text-white tracking-widest" 
+                         className="h-16 flex-1 bg-white/[0.02] border-white/5 rounded-[2rem] font-black text-xl px-8 focus:border-primary/40 transition-all text-white tracking-widest min-w-0" 
                          required 
                        />
                      </div>
@@ -281,7 +281,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                     <Label className="text-[10px] font-black uppercase text-primary/40 ml-5 tracking-widest">Email Address</Label>
                     <Input 
                       type="email"
-                      placeholder="mail@nuxus.app" 
+                      placeholder="mail@nuxus.chat" 
                       value={email} 
                       onChange={e => setEmail(e.target.value)} 
                       className="h-16 bg-white/[0.02] border-white/5 rounded-[2rem] font-bold text-lg px-8 focus:border-primary/40 transition-all text-white" 
@@ -291,7 +291,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                 )}
 
                 <div className="space-y-3 text-left">
-                  <Label className="text-[10px] font-black uppercase text-primary/40 ml-5 tracking-widest">Пароль Доступа</Label>
+                  <Label className="text-[10px] font-black uppercase text-primary/40 ml-5 tracking-widest">Passcode</Label>
                   <div className="relative">
                     <Input 
                       type={showPass ? "text" : "password"} 
@@ -317,7 +317,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                   className="w-full h-24 bg-primary hover:scale-[1.02] text-white font-black uppercase italic tracking-[0.3em] text-2xl rounded-[3rem] shadow-[0_30px_60px_rgba(var(--primary),0.3)] transition-all active:scale-95 mt-12 border border-white/10 relative overflow-hidden group"
                 >
                   <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-                  {isLoading ? <Loader2 className="animate-spin w-10 h-10" /> : (mode === 'login' ? 'Войти' : 'Создать')}
+                  {isLoading ? <Loader2 className="animate-spin w-10 h-10" /> : (mode === 'login' ? 'Login' : 'Register')}
                 </Button>
               </form>
             </CardContent>
@@ -326,7 +326,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
           <div className="mt-24 flex flex-col items-center gap-6 opacity-30">
              <div className="flex items-center gap-3 bg-white/5 px-6 py-2.5 rounded-full border border-white/10">
                 <ShieldCheck className="w-4 h-4 text-primary" />
-                <p className="text-[9px] font-black text-white uppercase tracking-[0.6em]">Quantum Shield Active</p>
+                <p className="text-[9px] font-black text-white uppercase tracking-[0.6em]">System Active</p>
              </div>
              <p className="text-[8px] font-black text-white/40 uppercase tracking-[1em]">Build {versions.build} • Pulse {versions.latestVersion}</p>
           </div>

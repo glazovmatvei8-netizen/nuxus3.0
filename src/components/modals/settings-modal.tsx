@@ -12,17 +12,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  LogOut, Settings2, Camera, Star, ShieldCheck, Loader2, Fingerprint, Palette, 
-  ChevronRight, Globe, Smartphone, Monitor, Trash2, Zap, Mail, Phone, Lock, 
-  Eye, EyeOff, AlertTriangle, UserCheck, ShieldAlert, Key, Image as ImageIcon, Type, LayoutGrid, Info, HelpCircle
+  LogOut, Settings2, Camera, ShieldCheck, Loader2, Fingerprint, Palette, 
+  ChevronRight, Globe, Trash2, Mail, Phone, Lock, 
+  Info, HelpCircle, UserCheck, ShieldAlert, ImageIcon, Type, LayoutGrid
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppState } from '@/lib/store';
-import { isUserPremium, cn, formatDisplayName } from '@/lib/utils';
-import type { User, PrivacyOption } from '@/lib/types';
+import { isUserPremium, cn } from '@/lib/utils';
+import type { User } from '@/lib/types';
 import versions from '@/app/versions.json';
 
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
@@ -93,33 +93,33 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         'settings.messageSize': form.messageSize,
         'settings.privacy.isGhostMode': form.isGhostMode,
       });
-      toast({ title: "Настройки синхронизированы" });
+      toast({ title: "Settings synced" });
       onOpenChange(false);
-    } catch (e: any) { toast({ title: "Ошибка записи", variant: "destructive" }); }
+    } catch (e: any) { toast({ title: "Save error", variant: "destructive" }); }
     finally { setIsSaving(false); }
   };
 
   const handleAnnihilate = async () => {
-    if (!confirm("ВНИМАНИЕ: Это действие безвозвратно удалит ваш аккаунт из Ядра Nuxus. Продолжить?")) return;
+    if (!confirm("DANGER: This will permanently delete your account. Continue?")) return;
     if (!db || !user) return;
     try {
       await deleteDoc(doc(db, 'users', user.uid));
       signOut(auth!);
-      toast({ title: "Узел аннигилирован" });
-    } catch (e) { toast({ title: "Сбой протокола" }); }
+      toast({ title: "Account annihilated" });
+    } catch (e) { toast({ title: "Protocol fault" }); }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg bg-[#0a0a0c]/98 backdrop-blur-[80px] border-white/10 p-0 overflow-hidden h-[90dvh] flex flex-col rounded-[3.5rem] shadow-[0_0_100px_rgba(0,0,0,0.8)] outline-none">
+      <DialogContent className="max-w-lg bg-[#0a0a0c]/98 backdrop-blur-[80px] border-white/10 p-0 overflow-hidden h-[90dvh] flex flex-col rounded-[3.5rem] shadow-2xl outline-none">
         <DialogHeader className="p-8 border-b border-white/5 shrink-0 text-left bg-gradient-to-b from-primary/20 to-transparent">
           <div className="flex items-center gap-5">
-            <div className="h-16 w-16 rounded-[2rem] bg-primary/20 flex items-center justify-center border border-primary/20 shadow-2xl shadow-primary/20">
+            <div className="h-16 w-16 rounded-[2rem] bg-primary/20 flex items-center justify-center border border-primary/20">
                <Settings2 className="w-8 h-8 text-primary animate-pulse" />
             </div>
             <div className="flex flex-col">
-              <DialogTitle className="text-3xl font-black italic uppercase text-white tracking-tighter">Настройки</DialogTitle>
-              <DialogDescription className="text-[10px] font-black uppercase text-primary/60 mt-1 tracking-[0.3em]">Nuxus Control Center V{versions.latestVersion}</DialogDescription>
+              <DialogTitle className="text-3xl font-black italic uppercase text-white tracking-tighter">Settings</DialogTitle>
+              <DialogDescription className="text-[10px] font-black uppercase text-primary/60 mt-1 tracking-[0.3em]">Nuxus Control V{versions.latestVersion}</DialogDescription>
             </div>
           </div>
         </DialogHeader>
@@ -127,139 +127,111 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         <Tabs value={settingsTab} onValueChange={setSettingsTab} className="flex-1 flex flex-col min-h-0">
           <div className="px-8 mt-6">
             <TabsList className="grid grid-cols-4 bg-white/5 p-1.5 rounded-2xl border border-white/5 shadow-inner">
-              <TabsTrigger value="profile" className="text-[9px] font-black uppercase tracking-widest">Профиль</TabsTrigger>
-              <TabsTrigger value="privacy" className="text-[9px] font-black uppercase tracking-widest">Защита</TabsTrigger>
-              <TabsTrigger value="style" className="text-[9px] font-black uppercase tracking-widest">Стиль</TabsTrigger>
-              <TabsTrigger value="data" className="text-[9px] font-black uppercase tracking-widest">Инфо</TabsTrigger>
+              <TabsTrigger value="profile" className="text-[9px] font-black uppercase tracking-widest">Account</TabsTrigger>
+              <TabsTrigger value="privacy" className="text-[9px] font-black uppercase tracking-widest">Security</TabsTrigger>
+              <TabsTrigger value="style" className="text-[9px] font-black uppercase tracking-widest">Style</TabsTrigger>
+              <TabsTrigger value="data" className="text-[9px] font-black uppercase tracking-widest">Info</TabsTrigger>
             </TabsList>
           </div>
 
           <ScrollArea className="flex-1">
             <div className="p-8 pb-40 space-y-8"> 
-              {/* PROFILE TAB */}
               <TabsContent value="profile" className="space-y-8 m-0">
                  <div className="flex flex-col items-center gap-8">
                     <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
-                       <div className="absolute -inset-4 bg-primary/20 blur-3xl rounded-full opacity-60 animate-pulse" />
                        <UserAvatar userId={user?.uid} manualAvatarUrl={form.avatarUrl} className="h-44 w-44 border-[8px] border-[#0a0a0c] shadow-2xl relative z-10" />
-                       <div className="absolute bottom-2 right-2 bg-primary p-3.5 rounded-[1.5rem] shadow-2xl border-4 border-[#0a0a0c] group-hover:scale-110 transition-all z-20"><Camera className="w-5 h-5 text-white" /></div>
+                       <div className="absolute bottom-2 right-2 bg-primary p-3.5 rounded-[1.5rem] shadow-2xl z-20"><Camera className="w-5 h-5 text-white" /></div>
                        <input type="file" ref={fileInputRef} className="hidden" accept="image/*" />
                     </div>
                     
                     <div className="w-full space-y-5">
-                       <div className="bg-white/5 p-8 rounded-[3rem] border border-white/5 space-y-6 shadow-2xl backdrop-blur-xl">
+                       <div className="bg-white/5 p-8 rounded-[3rem] border border-white/5 space-y-6">
                           <div className="space-y-2">
-                             <Label className="text-[10px] font-black uppercase text-primary/60 ml-2 tracking-widest">Отображаемое имя</Label>
-                             <Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="h-14 bg-black/40 border-white/10 rounded-2xl font-black italic text-lg focus:border-primary/40 transition-all" />
+                             <Label className="text-[10px] font-black uppercase text-primary/60 ml-2 tracking-widest">Full Name</Label>
+                             <Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="h-14 bg-black/40 border-white/10 rounded-2xl font-black italic text-lg" />
                           </div>
                           <div className="space-y-2">
-                             <Label className="text-[10px] font-black uppercase text-primary/60 ml-2 tracking-widest">Уникальный ID (@)</Label>
-                             <Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="h-14 bg-black/40 border-white/10 rounded-2xl font-mono text-primary shadow-inner" />
+                             <Label className="text-[10px] font-black uppercase text-primary/60 ml-2 tracking-widest">Username (@)</Label>
+                             <Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="h-14 bg-black/40 border-white/10 rounded-2xl font-mono text-primary" />
                           </div>
                           <div className="space-y-2">
-                             <Label className="text-[10px] font-black uppercase text-primary/60 ml-2 tracking-widest">Био аккаунта</Label>
-                             <Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} placeholder="Расскажите о себе..." className="bg-black/40 border-white/10 rounded-[2rem] resize-none h-32 p-5 font-medium leading-relaxed" />
-                          </div>
-                       </div>
-
-                       <div className="bg-white/5 p-8 rounded-[3rem] border border-white/5 space-y-6 shadow-2xl backdrop-blur-xl">
-                          <h4 className="text-[11px] font-black uppercase text-white/40 tracking-widest px-2 flex items-center gap-3"><UserCheck className="w-4 h-4" /> Верификация</h4>
-                          <div className="space-y-2">
-                             <Label className="text-[10px] font-black uppercase text-white/20 ml-2 tracking-widest">Телефон</Label>
-                             <Input value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} placeholder="+7 ..." className="h-14 bg-black/40 border-white/10 rounded-2xl font-black text-lg shadow-inner" />
-                          </div>
-                          <div className="space-y-2">
-                             <Label className="text-[10px] font-black uppercase text-white/20 ml-2 tracking-widest">Email</Label>
-                             <Input value={form.email} onChange={e => setForm({...form, email: e.target.value})} placeholder="mail@nuxus.app" className="h-14 bg-black/40 border-white/10 rounded-2xl font-black text-lg shadow-inner" />
+                             <Label className="text-[10px] font-black uppercase text-primary/60 ml-2 tracking-widest">Bio</Label>
+                             <Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} placeholder="Tell something about yourself..." className="bg-black/40 border-white/10 rounded-[2rem] h-32 p-5" />
                           </div>
                        </div>
                     </div>
                  </div>
               </TabsContent>
 
-              {/* PRIVACY TAB */}
               <TabsContent value="privacy" className="space-y-8 m-0">
-                 <div className="bg-white/5 p-8 rounded-[3.5rem] border border-white/5 space-y-10 shadow-2xl backdrop-blur-xl">
-                    <div className="flex items-center justify-between group">
+                 <div className="bg-white/5 p-8 rounded-[3.5rem] border border-white/5 space-y-10">
+                    <div className="flex items-center justify-between">
                        <div className="flex flex-col gap-1.5">
-                          <span className="text-base font-black text-white uppercase tracking-tight flex items-center gap-3"><ShieldCheck className="w-5 h-5 text-green-500" /> Режим «Призрак»</span>
-                          <span className="text-[10px] text-white/30 font-bold uppercase tracking-widest ml-8">Скрывает время последнего входа</span>
+                          <span className="text-base font-black text-white uppercase tracking-tight flex items-center gap-3"><ShieldCheck className="w-5 h-5 text-green-500" /> Ghost Mode</span>
+                          <span className="text-[10px] text-white/30 font-bold uppercase tracking-widest ml-8">Hide online status</span>
                        </div>
-                       <Switch checked={form.isGhostMode} onCheckedChange={v => setForm({...form, isGhostMode: v})} className="scale-110" />
+                       <Switch checked={form.isGhostMode} onCheckedChange={v => setForm({...form, isGhostMode: v})} />
                     </div>
-
-                    <div className="h-px bg-white/5" />
 
                     <div className="space-y-6">
                        <div className="flex items-center justify-between">
                           <div className="flex flex-col gap-1.5">
-                             <span className="text-base font-black text-white uppercase tracking-tight flex items-center gap-3"><Lock className="w-5 h-5 text-primary" /> Облачный пароль (2FA)</span>
-                             <span className="text-[10px] text-white/30 font-bold uppercase tracking-widest ml-8">Дополнительный PIN для защиты</span>
+                             <span className="text-base font-black text-white uppercase tracking-tight flex items-center gap-3"><Lock className="w-5 h-5 text-primary" /> 2FA Code</span>
+                             <span className="text-[10px] text-white/30 font-bold uppercase tracking-widest ml-8">Additional security PIN</span>
                           </div>
-                          <Switch checked={form.twoFactorEnabled} onCheckedChange={v => setForm({...form, twoFactorEnabled: v})} className="scale-110" />
+                          <Switch checked={form.twoFactorEnabled} onCheckedChange={v => setForm({...form, twoFactorEnabled: v})} />
                        </div>
                        {form.twoFactorEnabled && (
-                         <div className="animate-in slide-in-from-top-4 duration-300">
-                           <Input 
-                             type="password" 
-                             placeholder="Введите 6 цифр" 
-                             maxLength={6}
-                             value={form.twoFactorPin} 
-                             onChange={e => setForm({...form, twoFactorPin: e.target.value.replace(/\D/g, '')})}
-                             className="h-16 bg-black/60 border-primary/40 rounded-2xl text-center font-black tracking-[0.8em] text-3xl shadow-[0_0_30px_rgba(var(--primary),0.2)]" 
-                           />
-                         </div>
+                         <Input 
+                           type="password" 
+                           placeholder="Enter 6 digits" 
+                           maxLength={6}
+                           value={form.twoFactorPin} 
+                           onChange={e => setForm({...form, twoFactorPin: e.target.value.replace(/\D/g, '')})}
+                           className="h-16 bg-black/60 border-primary/40 rounded-2xl text-center font-black tracking-[0.8em] text-3xl" 
+                         />
                        )}
                     </div>
                  </div>
-
-                 <div className="bg-red-500/5 p-8 rounded-[3rem] border border-red-500/10 space-y-5 backdrop-blur-xl">
-                    <div className="flex items-center gap-3 text-red-500 px-2">
-                       <ShieldAlert className="w-5 h-5" />
-                       <h4 className="text-[11px] font-black uppercase tracking-[0.2em]">Критическая зона</h4>
-                    </div>
-                    <Button variant="ghost" onClick={handleAnnihilate} className="w-full h-14 bg-red-500/10 text-red-500 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-red-500/20 border border-red-500/20 shadow-xl transition-all">Аннигилировать Аккаунт</Button>
-                 </div>
               </TabsContent>
 
-              {/* STYLE TAB */}
               <TabsContent value="style" className="space-y-8 m-0">
-                 <div className="bg-white/5 p-8 rounded-[3.5rem] border border-white/5 space-y-10 shadow-2xl backdrop-blur-xl">
+                 <div className="bg-white/5 p-8 rounded-[3.5rem] border border-white/5 space-y-10">
                     <div className="space-y-4">
-                       <Label className="text-[10px] font-black uppercase text-primary/60 ml-2 flex items-center gap-3 tracking-widest"><Palette className="w-5 h-5" /> Акцент системы (HEX)</Label>
+                       <Label className="text-[10px] font-black uppercase text-primary/60 ml-2 flex items-center gap-3 tracking-widest"><Palette className="w-5 h-5" /> Accent Color (HEX)</Label>
                        <div className="flex gap-5">
-                          <Input value={form.customPrimaryColor} onChange={e => setForm({...form, customPrimaryColor: e.target.value})} placeholder="#A855F7" className="h-16 bg-black/40 border-white/10 font-mono text-center tracking-[0.2em] font-black text-xl rounded-2xl flex-1 shadow-inner" />
+                          <Input value={form.customPrimaryColor} onChange={e => setForm({...form, customPrimaryColor: e.target.value})} placeholder="#A855F7" className="h-16 bg-black/40 border-white/10 font-mono text-center tracking-[0.2em] font-black text-xl rounded-2xl flex-1" />
                           <div className="w-16 h-16 rounded-[1.5rem] shadow-2xl border-4 border-[#0a0a0c] shrink-0" style={{ backgroundColor: form.customPrimaryColor || 'hsl(var(--primary))' }} />
                        </div>
                     </div>
 
                     <div className="space-y-4">
-                       <Label className="text-[10px] font-black uppercase text-primary/60 ml-2 flex items-center gap-3 tracking-widest"><ImageIcon className="w-5 h-5" /> Фон чатов (URL)</Label>
-                       <Input value={form.chatBackground} onChange={e => setForm({...form, chatBackground: e.target.value})} placeholder="https://images.unsplash.com/..." className="h-14 bg-black/40 border-white/10 rounded-2xl font-medium shadow-inner px-6" />
+                       <Label className="text-[10px] font-black uppercase text-primary/60 ml-2 flex items-center gap-3 tracking-widest"><ImageIcon className="w-5 h-5" /> Chat Background (URL)</Label>
+                       <Input value={form.chatBackground} onChange={e => setForm({...form, chatBackground: e.target.value})} placeholder="https://..." className="h-14 bg-black/40 border-white/10 rounded-2xl px-6" />
                     </div>
 
                     <div className="grid grid-cols-2 gap-5">
                        <div className="space-y-2">
-                          <Label className="text-[10px] font-black uppercase text-white/40 ml-2 flex items-center gap-3 tracking-widest"><LayoutGrid className="w-4 h-4" /> Пузыри</Label>
+                          <Label className="text-[10px] font-black uppercase text-white/40 ml-2 flex items-center gap-3 tracking-widest"><LayoutGrid className="w-4 h-4" /> Bubbles</Label>
                           <Select value={form.bubbleStyle} onValueChange={v => setForm({...form, bubbleStyle: v})}>
-                             <SelectTrigger className="bg-black/40 border-white/10 rounded-2xl h-14 text-[11px] font-black uppercase tracking-widest shadow-inner">
+                             <SelectTrigger className="bg-black/40 border-white/10 rounded-2xl h-14 text-[11px] font-black uppercase tracking-widest">
                                 <SelectValue />
                              </SelectTrigger>
-                             <SelectContent className="bg-[#0a0a0c]/98 border-white/10 rounded-2xl backdrop-blur-2xl">
-                                <SelectItem value="default" className="text-[10px] font-bold uppercase tracking-widest">Стандарт</SelectItem>
-                                <SelectItem value="neon" className="text-[10px] font-bold uppercase tracking-widest">Неон</SelectItem>
-                                <SelectItem value="gold" className="text-[10px] font-bold uppercase tracking-widest">Золото</SelectItem>
-                                <SelectItem value="ocean" className="text-[10px] font-bold uppercase tracking-widest">Океан</SelectItem>
+                             <SelectContent className="bg-[#0a0a0c]/98 border-white/10 rounded-2xl">
+                                <SelectItem value="default" className="text-[10px] font-bold uppercase tracking-widest">Default</SelectItem>
+                                <SelectItem value="neon" className="text-[10px] font-bold uppercase tracking-widest">Neon</SelectItem>
+                                <SelectItem value="gold" className="text-[10px] font-bold uppercase tracking-widest">Gold</SelectItem>
+                                <SelectItem value="ocean" className="text-[10px] font-bold uppercase tracking-widest">Ocean</SelectItem>
                              </SelectContent>
                           </Select>
                        </div>
                        <div className="space-y-2">
-                          <Label className="text-[10px] font-black uppercase text-white/40 ml-2 flex items-center gap-3 tracking-widest"><Type className="w-4 h-4" /> Шрифт</Label>
+                          <Label className="text-[10px] font-black uppercase text-white/40 ml-2 flex items-center gap-3 tracking-widest"><Type className="w-4 h-4" /> Font</Label>
                           <Select value={form.fontFamily} onValueChange={v => setForm({...form, fontFamily: v})}>
-                             <SelectTrigger className="bg-black/40 border-white/10 rounded-2xl h-14 text-[11px] font-black uppercase tracking-widest shadow-inner">
+                             <SelectTrigger className="bg-black/40 border-white/10 rounded-2xl h-14 text-[11px] font-black uppercase tracking-widest">
                                 <SelectValue />
                              </SelectTrigger>
-                             <SelectContent className="bg-[#0a0a0c]/98 border-white/10 rounded-2xl backdrop-blur-2xl">
+                             <SelectContent className="bg-[#0a0a0c]/98 border-white/10 rounded-2xl">
                                 <SelectItem value="jakarta" className="text-[10px] font-bold uppercase tracking-widest">Jakarta</SelectItem>
                                 <SelectItem value="inter" className="text-[10px] font-bold uppercase tracking-widest">Inter</SelectItem>
                                 <SelectItem value="system" className="text-[10px] font-bold uppercase tracking-widest">System</SelectItem>
@@ -270,19 +242,16 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                  </div>
               </TabsContent>
 
-              {/* DATA TAB */}
               <TabsContent value="data" className="space-y-8 m-0">
                  <div className="bg-white/5 p-10 rounded-[4rem] border border-white/5 flex flex-col items-center gap-8 text-center shadow-2xl backdrop-blur-xl relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-10 opacity-[0.03] rotate-12"><Zap className="w-64 h-64" /></div>
-                    <div className="h-24 w-24 rounded-[2.5rem] bg-primary/10 flex items-center justify-center border border-primary/20 shadow-[0_0_50px_rgba(var(--primary),0.1)] relative z-10"><Zap className="w-12 h-12 text-primary animate-pulse" /></div>
-                    <div className="space-y-3 relative z-10">
+                    <div className="h-24 w-24 rounded-[2.5rem] bg-primary/10 flex items-center justify-center border border-primary/20"><Info className="w-10 h-10 text-primary animate-pulse" /></div>
+                    <div className="space-y-3">
                        <h3 className="text-3xl font-black text-white italic uppercase tracking-tighter">Nuxus Kernel</h3>
-                       <p className="text-[11px] font-black text-white/30 uppercase tracking-[0.5em]">Версия сборки {versions.latestVersion}</p>
+                       <p className="text-[11px] font-black text-white/30 uppercase tracking-[0.5em]">Version {versions.latestVersion}</p>
                     </div>
-                    <div className="w-full h-px bg-white/5 relative z-10" />
-                    <div className="grid grid-cols-2 gap-4 w-full relative z-10">
-                       <Button variant="ghost" onClick={() => toast({title: "Nuxus Support", description: "Связь через @nuxus_help"})} className="h-16 rounded-[1.5rem] bg-white/5 font-black uppercase text-[10px] tracking-widest border border-white/10 hover:bg-white/10 shadow-xl transition-all gap-2"><HelpCircle className="w-4 h-4 text-primary" /> Поддержка</Button>
-                       <Button variant="ghost" onClick={() => setIsLegalOpen(true)} className="h-16 rounded-[1.5rem] bg-white/5 font-black uppercase text-[10px] tracking-widest border border-white/10 hover:bg-white/10 shadow-xl transition-all gap-2"><Info className="w-4 h-4 text-primary" /> Право</Button>
+                    <div className="grid grid-cols-2 gap-4 w-full">
+                       <Button variant="ghost" onClick={() => setIsLegalOpen(true)} className="h-16 rounded-[1.5rem] bg-white/5 font-black uppercase text-[10px] tracking-widest gap-2"><HelpCircle className="w-4 h-4 text-primary" /> Legal</Button>
+                       <Button variant="ghost" className="h-16 rounded-[1.5rem] bg-red-500/10 text-red-500 font-black uppercase text-[10px] tracking-widest gap-2" onClick={handleAnnihilate}><Trash2 className="w-4 h-4" /> Annihilate</Button>
                     </div>
                  </div>
               </TabsContent>
@@ -290,12 +259,11 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           </ScrollArea>
 
           <div className="p-8 border-t border-white/5 bg-[#0a0a0c]/80 backdrop-blur-3xl shrink-0 flex gap-5 z-[100] pb-[calc(2rem+env(safe-area-inset-bottom))] shadow-[0_-20px_100px_rgba(0,0,0,0.8)]">
-            <Button variant="ghost" className="h-20 w-20 rounded-[2.2rem] bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20 transition-all active:scale-90 shadow-2xl" onClick={() => signOut(auth!)}>
+            <Button variant="ghost" className="h-20 w-20 rounded-[2.2rem] bg-red-500/10 text-red-500 border border-red-500/20" onClick={() => signOut(auth!)}>
                <LogOut className="w-8 h-8" />
             </Button>
-            <Button disabled={isSaving} className="flex-1 h-20 rounded-[2.2rem] font-black uppercase italic text-lg bg-primary text-white shadow-[0_20px_50px_rgba(var(--primary),0.4)] active:scale-95 group relative overflow-hidden transition-all border border-white/10" onClick={handleSave}>
-              <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 pointer-events-none" />
-              {isSaving ? <Loader2 className="animate-spin w-8 h-8" /> : 'Синхронизировать'}
+            <Button disabled={isSaving} className="flex-1 h-20 rounded-[2.2rem] font-black uppercase italic text-lg bg-primary text-white shadow-[0_20px_50px_rgba(var(--primary),0.4)]" onClick={handleSave}>
+              {isSaving ? <Loader2 className="animate-spin w-8 h-8" /> : 'Sync System'}
             </Button>
           </div>
         </Tabs>
