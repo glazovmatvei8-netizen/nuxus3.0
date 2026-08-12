@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -25,6 +26,10 @@ import { isUserPremium, cn } from '@/lib/utils';
 import type { User } from '@/lib/types';
 import versions from '@/app/versions.json';
 
+/**
+ * SETTINGS MODAL V50.0 «PERFECT HARMONY»
+ * РЕДИЗАЙН: Элементы стали компактнее, кнопки уменьшены, отступы сбалансированы.
+ */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
   const db = useFirestore();
@@ -93,148 +98,148 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         'settings.messageSize': form.messageSize,
         'settings.privacy.isGhostMode': form.isGhostMode,
       });
-      toast({ title: "Settings synced" });
+      toast({ title: "Настройки синхронизированы" });
       onOpenChange(false);
-    } catch (e: any) { toast({ title: "Save error", variant: "destructive" }); }
+    } catch (e: any) { toast({ title: "Ошибка сохранения", variant: "destructive" }); }
     finally { setIsSaving(false); }
   };
 
   const handleAnnihilate = async () => {
-    if (!confirm("DANGER: This will permanently delete your account. Continue?")) return;
+    if (!confirm("ВНИМАНИЕ: Это действие безвозвратно удалит ваш аккаунт. Продолжить?")) return;
     if (!db || !user) return;
     try {
       await deleteDoc(doc(db, 'users', user.uid));
       signOut(auth!);
-      toast({ title: "Account annihilated" });
-    } catch (e) { toast({ title: "Protocol fault" }); }
+      toast({ title: "Аккаунт аннигилирован" });
+    } catch (e) { toast({ title: "Ошибка протокола" }); }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg bg-[#0a0a0c]/98 backdrop-blur-[80px] border-white/10 p-0 overflow-hidden h-[90dvh] flex flex-col rounded-[3.5rem] shadow-2xl outline-none">
-        <DialogHeader className="p-8 border-b border-white/5 shrink-0 text-left bg-gradient-to-b from-primary/20 to-transparent">
-          <div className="flex items-center gap-5">
-            <div className="h-16 w-16 rounded-[2rem] bg-primary/20 flex items-center justify-center border border-primary/20">
-               <Settings2 className="w-8 h-8 text-primary animate-pulse" />
+      <DialogContent className="max-w-lg bg-[#0a0a0c]/98 backdrop-blur-[80px] border-white/10 p-0 overflow-hidden h-[85dvh] flex flex-col rounded-[2.5rem] shadow-2xl outline-none">
+        <DialogHeader className="p-6 border-b border-white/5 shrink-0 text-left bg-gradient-to-b from-primary/10 to-transparent">
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 rounded-2xl bg-primary/20 flex items-center justify-center border border-primary/20">
+               <Settings2 className="w-6 h-6 text-primary animate-pulse" />
             </div>
             <div className="flex flex-col">
-              <DialogTitle className="text-3xl font-black italic uppercase text-white tracking-tighter">Settings</DialogTitle>
-              <DialogDescription className="text-[10px] font-black uppercase text-primary/60 mt-1 tracking-[0.3em]">Nuxus Control V{versions.latestVersion}</DialogDescription>
+              <DialogTitle className="text-2xl font-black italic uppercase text-white tracking-tighter">Настройки</DialogTitle>
+              <DialogDescription className="text-[9px] font-bold uppercase text-primary/60 mt-0.5 tracking-widest">Nuxus Control V{versions.latestVersion}</DialogDescription>
             </div>
           </div>
         </DialogHeader>
         
         <Tabs value={settingsTab} onValueChange={setSettingsTab} className="flex-1 flex flex-col min-h-0">
-          <div className="px-8 mt-6">
-            <TabsList className="grid grid-cols-4 bg-white/5 p-1.5 rounded-2xl border border-white/5 shadow-inner">
-              <TabsTrigger value="profile" className="text-[9px] font-black uppercase tracking-widest">Account</TabsTrigger>
-              <TabsTrigger value="privacy" className="text-[9px] font-black uppercase tracking-widest">Security</TabsTrigger>
-              <TabsTrigger value="style" className="text-[9px] font-black uppercase tracking-widest">Style</TabsTrigger>
-              <TabsTrigger value="data" className="text-[9px] font-black uppercase tracking-widest">Info</TabsTrigger>
+          <div className="px-6 mt-4">
+            <TabsList className="grid grid-cols-4 bg-white/5 p-1 rounded-xl border border-white/5 shadow-inner">
+              <TabsTrigger value="profile" className="text-[9px] font-black uppercase tracking-widest h-8">Аккаунт</TabsTrigger>
+              <TabsTrigger value="privacy" className="text-[9px] font-black uppercase tracking-widest h-8">Защита</TabsTrigger>
+              <TabsTrigger value="style" className="text-[9px] font-black uppercase tracking-widest h-8">Стиль</TabsTrigger>
+              <TabsTrigger value="data" className="text-[9px] font-black uppercase tracking-widest h-8">Инфо</TabsTrigger>
             </TabsList>
           </div>
 
           <ScrollArea className="flex-1">
-            <div className="p-8 pb-40 space-y-8"> 
-              <TabsContent value="profile" className="space-y-8 m-0">
-                 <div className="flex flex-col items-center gap-8">
+            <div className="p-6 pb-20 space-y-6"> 
+              <TabsContent value="profile" className="space-y-6 m-0">
+                 <div className="flex flex-col items-center gap-6">
                     <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
-                       <UserAvatar userId={user?.uid} manualAvatarUrl={form.avatarUrl} className="h-44 w-44 border-[8px] border-[#0a0a0c] shadow-2xl relative z-10" />
-                       <div className="absolute bottom-2 right-2 bg-primary p-3.5 rounded-[1.5rem] shadow-2xl z-20"><Camera className="w-5 h-5 text-white" /></div>
+                       <UserAvatar userId={user?.uid} manualAvatarUrl={form.avatarUrl} className="h-32 w-32 border-[4px] border-[#0a0a0c] shadow-xl relative z-10" />
+                       <div className="absolute bottom-1 right-1 bg-primary p-2.5 rounded-xl shadow-2xl z-20"><Camera className="w-4 h-4 text-white" /></div>
                        <input type="file" ref={fileInputRef} className="hidden" accept="image/*" />
                     </div>
                     
-                    <div className="w-full space-y-5">
-                       <div className="bg-white/5 p-8 rounded-[3rem] border border-white/5 space-y-6">
-                          <div className="space-y-2">
-                             <Label className="text-[10px] font-black uppercase text-primary/60 ml-2 tracking-widest">Full Name</Label>
-                             <Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="h-14 bg-black/40 border-white/10 rounded-2xl font-black italic text-lg" />
+                    <div className="w-full space-y-4">
+                       <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5 space-y-4">
+                          <div className="space-y-1.5">
+                             <Label className="text-[9px] font-black uppercase text-primary/60 ml-2 tracking-widest">Полное имя</Label>
+                             <Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="h-12 bg-black/40 border-white/10 rounded-xl font-bold text-base" />
                           </div>
-                          <div className="space-y-2">
-                             <Label className="text-[10px] font-black uppercase text-primary/60 ml-2 tracking-widest">Username (@)</Label>
-                             <Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="h-14 bg-black/40 border-white/10 rounded-2xl font-mono text-primary" />
+                          <div className="space-y-1.5">
+                             <Label className="text-[9px] font-black uppercase text-primary/60 ml-2 tracking-widest">Никнейм (@)</Label>
+                             <Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="h-12 bg-black/40 border-white/10 rounded-xl font-mono text-primary" />
                           </div>
-                          <div className="space-y-2">
-                             <Label className="text-[10px] font-black uppercase text-primary/60 ml-2 tracking-widest">Bio</Label>
-                             <Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} placeholder="Tell something about yourself..." className="bg-black/40 border-white/10 rounded-[2rem] h-32 p-5" />
+                          <div className="space-y-1.5">
+                             <Label className="text-[9px] font-black uppercase text-primary/60 ml-2 tracking-widest">О себе</Label>
+                             <Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} placeholder="Расскажите о себе..." className="bg-black/40 border-white/10 rounded-xl h-24 p-4 text-sm" />
                           </div>
                        </div>
                     </div>
                  </div>
               </TabsContent>
 
-              <TabsContent value="privacy" className="space-y-8 m-0">
-                 <div className="bg-white/5 p-8 rounded-[3.5rem] border border-white/5 space-y-10">
+              <TabsContent value="privacy" className="space-y-6 m-0">
+                 <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5 space-y-8">
                     <div className="flex items-center justify-between">
-                       <div className="flex flex-col gap-1.5">
-                          <span className="text-base font-black text-white uppercase tracking-tight flex items-center gap-3"><ShieldCheck className="w-5 h-5 text-green-500" /> Ghost Mode</span>
-                          <span className="text-[10px] text-white/30 font-bold uppercase tracking-widest ml-8">Hide online status</span>
+                       <div className="flex flex-col gap-1">
+                          <span className="text-sm font-black text-white uppercase tracking-tight flex items-center gap-2"><ShieldCheck className="w-4 h-4 text-green-500" /> Ghost Mode</span>
+                          <span className="text-[8px] text-white/30 font-bold uppercase tracking-widest ml-6">Скрыть статус в сети</span>
                        </div>
                        <Switch checked={form.isGhostMode} onCheckedChange={v => setForm({...form, isGhostMode: v})} />
                     </div>
 
-                    <div className="space-y-6">
+                    <div className="space-y-4">
                        <div className="flex items-center justify-between">
-                          <div className="flex flex-col gap-1.5">
-                             <span className="text-base font-black text-white uppercase tracking-tight flex items-center gap-3"><Lock className="w-5 h-5 text-primary" /> 2FA Code</span>
-                             <span className="text-[10px] text-white/30 font-bold uppercase tracking-widest ml-8">Additional security PIN</span>
+                          <div className="flex flex-col gap-1">
+                             <span className="text-sm font-black text-white uppercase tracking-tight flex items-center gap-2"><Lock className="w-4 h-4 text-primary" /> Код защиты</span>
+                             <span className="text-[8px] text-white/30 font-bold uppercase tracking-widest ml-6">Дополнительный PIN</span>
                           </div>
                           <Switch checked={form.twoFactorEnabled} onCheckedChange={v => setForm({...form, twoFactorEnabled: v})} />
                        </div>
                        {form.twoFactorEnabled && (
                          <Input 
                            type="password" 
-                           placeholder="Enter 6 digits" 
+                           placeholder="6 цифр" 
                            maxLength={6}
                            value={form.twoFactorPin} 
                            onChange={e => setForm({...form, twoFactorPin: e.target.value.replace(/\D/g, '')})}
-                           className="h-16 bg-black/60 border-primary/40 rounded-2xl text-center font-black tracking-[0.8em] text-3xl" 
+                           className="h-14 bg-black/60 border-primary/40 rounded-xl text-center font-black tracking-[0.6em] text-2xl" 
                          />
                        )}
                     </div>
                  </div>
               </TabsContent>
 
-              <TabsContent value="style" className="space-y-8 m-0">
-                 <div className="bg-white/5 p-8 rounded-[3.5rem] border border-white/5 space-y-10">
-                    <div className="space-y-4">
-                       <Label className="text-[10px] font-black uppercase text-primary/60 ml-2 flex items-center gap-3 tracking-widest"><Palette className="w-5 h-5" /> Accent Color (HEX)</Label>
-                       <div className="flex gap-5">
-                          <Input value={form.customPrimaryColor} onChange={e => setForm({...form, customPrimaryColor: e.target.value})} placeholder="#A855F7" className="h-16 bg-black/40 border-white/10 font-mono text-center tracking-[0.2em] font-black text-xl rounded-2xl flex-1" />
-                          <div className="w-16 h-16 rounded-[1.5rem] shadow-2xl border-4 border-[#0a0a0c] shrink-0" style={{ backgroundColor: form.customPrimaryColor || 'hsl(var(--primary))' }} />
+              <TabsContent value="style" className="space-y-6 m-0">
+                 <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5 space-y-8">
+                    <div className="space-y-3">
+                       <Label className="text-[9px] font-black uppercase text-primary/60 ml-2 flex items-center gap-2 tracking-widest"><Palette className="w-4 h-4" /> Акцентный цвет (HEX)</Label>
+                       <div className="flex gap-4">
+                          <Input value={form.customPrimaryColor} onChange={e => setForm({...form, customPrimaryColor: e.target.value})} placeholder="#A855F7" className="h-12 bg-black/40 border-white/10 font-mono text-center tracking-[0.1em] font-bold rounded-xl flex-1" />
+                          <div className="w-12 h-12 rounded-xl shadow-xl border-2 border-[#0a0a0c] shrink-0" style={{ backgroundColor: form.customPrimaryColor || 'hsl(var(--primary))' }} />
                        </div>
                     </div>
 
-                    <div className="space-y-4">
-                       <Label className="text-[10px] font-black uppercase text-primary/60 ml-2 flex items-center gap-3 tracking-widest"><ImageIcon className="w-5 h-5" /> Chat Background (URL)</Label>
-                       <Input value={form.chatBackground} onChange={e => setForm({...form, chatBackground: e.target.value})} placeholder="https://..." className="h-14 bg-black/40 border-white/10 rounded-2xl px-6" />
+                    <div className="space-y-3">
+                       <Label className="text-[9px] font-black uppercase text-primary/60 ml-2 flex items-center gap-2 tracking-widest"><ImageIcon className="w-4 h-4" /> Фон чата (URL)</Label>
+                       <Input value={form.chatBackground} onChange={e => setForm({...form, chatBackground: e.target.value})} placeholder="https://..." className="h-12 bg-black/40 border-white/10 rounded-xl px-4 text-xs" />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-5">
+                    <div className="grid grid-cols-2 gap-4">
                        <div className="space-y-2">
-                          <Label className="text-[10px] font-black uppercase text-white/40 ml-2 flex items-center gap-3 tracking-widest"><LayoutGrid className="w-4 h-4" /> Bubbles</Label>
+                          <Label className="text-[9px] font-black uppercase text-white/40 ml-2 flex items-center gap-2 tracking-widest"><LayoutGrid className="w-3.5 h-3.5" /> Пузыри</Label>
                           <Select value={form.bubbleStyle} onValueChange={v => setForm({...form, bubbleStyle: v})}>
-                             <SelectTrigger className="bg-black/40 border-white/10 rounded-2xl h-14 text-[11px] font-black uppercase tracking-widest">
+                             <SelectTrigger className="bg-black/40 border-white/10 rounded-xl h-11 text-[9px] font-black uppercase tracking-widest">
                                 <SelectValue />
                              </SelectTrigger>
-                             <SelectContent className="bg-[#0a0a0c]/98 border-white/10 rounded-2xl">
-                                <SelectItem value="default" className="text-[10px] font-bold uppercase tracking-widest">Default</SelectItem>
-                                <SelectItem value="neon" className="text-[10px] font-bold uppercase tracking-widest">Neon</SelectItem>
-                                <SelectItem value="gold" className="text-[10px] font-bold uppercase tracking-widest">Gold</SelectItem>
-                                <SelectItem value="ocean" className="text-[10px] font-bold uppercase tracking-widest">Ocean</SelectItem>
+                             <SelectContent className="bg-[#0a0a0c]/98 border-white/10 rounded-xl">
+                                <SelectItem value="default" className="text-[9px] font-bold uppercase tracking-widest">Default</SelectItem>
+                                <SelectItem value="neon" className="text-[9px] font-bold uppercase tracking-widest">Neon</SelectItem>
+                                <SelectItem value="gold" className="text-[9px] font-bold uppercase tracking-widest">Gold</SelectItem>
+                                <SelectItem value="ocean" className="text-[9px] font-bold uppercase tracking-widest">Ocean</SelectItem>
                              </SelectContent>
                           </Select>
                        </div>
                        <div className="space-y-2">
-                          <Label className="text-[10px] font-black uppercase text-white/40 ml-2 flex items-center gap-3 tracking-widest"><Type className="w-4 h-4" /> Font</Label>
+                          <Label className="text-[9px] font-black uppercase text-white/40 ml-2 flex items-center gap-2 tracking-widest"><Type className="w-3.5 h-3.5" /> Шрифт</Label>
                           <Select value={form.fontFamily} onValueChange={v => setForm({...form, fontFamily: v})}>
-                             <SelectTrigger className="bg-black/40 border-white/10 rounded-2xl h-14 text-[11px] font-black uppercase tracking-widest">
+                             <SelectTrigger className="bg-black/40 border-white/10 rounded-xl h-11 text-[9px] font-black uppercase tracking-widest">
                                 <SelectValue />
                              </SelectTrigger>
-                             <SelectContent className="bg-[#0a0a0c]/98 border-white/10 rounded-2xl">
-                                <SelectItem value="jakarta" className="text-[10px] font-bold uppercase tracking-widest">Jakarta</SelectItem>
-                                <SelectItem value="inter" className="text-[10px] font-bold uppercase tracking-widest">Inter</SelectItem>
-                                <SelectItem value="system" className="text-[10px] font-bold uppercase tracking-widest">System</SelectItem>
+                             <SelectContent className="bg-[#0a0a0c]/98 border-white/10 rounded-xl">
+                                <SelectItem value="jakarta" className="text-[9px] font-bold uppercase tracking-widest">Jakarta</SelectItem>
+                                <SelectItem value="inter" className="text-[9px] font-bold uppercase tracking-widest">Inter</SelectItem>
+                                <SelectItem value="system" className="text-[9px] font-bold uppercase tracking-widest">System</SelectItem>
                              </SelectContent>
                           </Select>
                        </div>
@@ -242,28 +247,28 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                  </div>
               </TabsContent>
 
-              <TabsContent value="data" className="space-y-8 m-0">
-                 <div className="bg-white/5 p-10 rounded-[4rem] border border-white/5 flex flex-col items-center gap-8 text-center shadow-2xl backdrop-blur-xl relative overflow-hidden">
-                    <div className="h-24 w-24 rounded-[2.5rem] bg-primary/10 flex items-center justify-center border border-primary/20"><Info className="w-10 h-10 text-primary animate-pulse" /></div>
-                    <div className="space-y-3">
-                       <h3 className="text-3xl font-black text-white italic uppercase tracking-tighter">Nuxus Kernel</h3>
-                       <p className="text-[11px] font-black text-white/30 uppercase tracking-[0.5em]">Version {versions.latestVersion}</p>
+              <TabsContent value="data" className="space-y-6 m-0">
+                 <div className="bg-white/5 p-8 rounded-[2.5rem] border border-white/5 flex flex-col items-center gap-6 text-center shadow-xl backdrop-blur-xl relative overflow-hidden">
+                    <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20"><Info className="w-8 h-8 text-primary animate-pulse" /></div>
+                    <div className="space-y-1">
+                       <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Nuxus Kernel</h3>
+                       <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.4em]">Версия {versions.latestVersion}</p>
                     </div>
-                    <div className="grid grid-cols-2 gap-4 w-full">
-                       <Button variant="ghost" onClick={() => setIsLegalOpen(true)} className="h-16 rounded-[1.5rem] bg-white/5 font-black uppercase text-[10px] tracking-widest gap-2"><HelpCircle className="w-4 h-4 text-primary" /> Legal</Button>
-                       <Button variant="ghost" className="h-16 rounded-[1.5rem] bg-red-500/10 text-red-500 font-black uppercase text-[10px] tracking-widest gap-2" onClick={handleAnnihilate}><Trash2 className="w-4 h-4" /> Annihilate</Button>
+                    <div className="grid grid-cols-2 gap-3 w-full">
+                       <Button variant="ghost" onClick={() => setIsLegalOpen(true)} className="h-12 rounded-xl bg-white/5 font-black uppercase text-[8px] tracking-widest gap-2"><HelpCircle className="w-3 h-3 text-primary" /> Право</Button>
+                       <Button variant="ghost" className="h-12 rounded-xl bg-red-500/10 text-red-500 font-black uppercase text-[8px] tracking-widest gap-2" onClick={handleAnnihilate}><Trash2 className="w-3 h-3" /> Стереть</Button>
                     </div>
                  </div>
               </TabsContent>
             </div>
           </ScrollArea>
 
-          <div className="p-8 border-t border-white/5 bg-[#0a0a0c]/80 backdrop-blur-3xl shrink-0 flex gap-5 z-[100] pb-[calc(2rem+env(safe-area-inset-bottom))] shadow-[0_-20px_100px_rgba(0,0,0,0.8)]">
-            <Button variant="ghost" className="h-20 w-20 rounded-[2.2rem] bg-red-500/10 text-red-500 border border-red-500/20" onClick={() => signOut(auth!)}>
-               <LogOut className="w-8 h-8" />
+          <div className="p-6 border-t border-white/5 bg-[#0a0a0c]/80 backdrop-blur-3xl shrink-0 flex gap-4 z-[100] pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+            <Button variant="ghost" className="h-14 w-14 rounded-2xl bg-red-500/10 text-red-500 border border-red-500/20 shadow-lg" onClick={() => signOut(auth!)}>
+               <LogOut className="w-6 h-6" />
             </Button>
-            <Button disabled={isSaving} className="flex-1 h-20 rounded-[2.2rem] font-black uppercase italic text-lg bg-primary text-white shadow-[0_20px_50px_rgba(var(--primary),0.4)]" onClick={handleSave}>
-              {isSaving ? <Loader2 className="animate-spin w-8 h-8" /> : 'Sync System'}
+            <Button disabled={isSaving} className="flex-1 h-14 rounded-2xl font-black uppercase italic text-sm bg-primary text-white shadow-[0_15px_40px_rgba(var(--primary),0.4)]" onClick={handleSave}>
+              {isSaving ? <Loader2 className="animate-spin w-6 h-6" /> : 'Синхронизировать'}
             </Button>
           </div>
         </Tabs>

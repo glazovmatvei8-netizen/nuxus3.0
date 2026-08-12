@@ -31,9 +31,8 @@ import {
 } from 'lucide-react';
 
 /**
- * CHAT MAIN V49.0 «AUTO-RESPONSE UI»
- * ОБНОВЛЕНИЕ: Полная адаптивность Dock под любые экраны.
- * Устранены выходы элементов за пределы видимости.
+ * CHAT MAIN V50.0 «PERFECT HARMONY»
+ * ОБНОВЛЕНИЕ: Dock стал компактнее, устранены наложения.
  */
 export default function ChatMain() {
   const { 
@@ -116,22 +115,22 @@ export default function ChatMain() {
         </div>
       </div>
 
-      {/* Floating Bottom Nav (Mobile) - FULLY RESPONSIVE */}
+      {/* Floating Bottom Nav (Mobile) - COMPACT & BALANCED */}
       {!currentChatId && (
-        <div className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[1000] w-[94%] max-w-[420px] animate-in slide-in-from-bottom-6 duration-700">
-          <div className="bg-[#0c0c0e]/90 backdrop-blur-3xl rounded-[2.5rem] h-20 flex items-center justify-around px-2 shadow-[0_30px_80px_rgba(0,0,0,0.9)] border border-white/10 relative">
+        <div className="md:hidden fixed bottom-5 left-1/2 -translate-x-1/2 z-[1000] w-[90%] max-w-[380px] animate-in slide-in-from-bottom-6 duration-700">
+          <div className="bg-[#0c0c0e]/90 backdrop-blur-3xl rounded-[2rem] h-18 flex items-center justify-around px-2 shadow-[0_30px_60px_rgba(0,0,0,0.8)] border border-white/10 relative">
             <NavButton icon={Globe} active={activeView === 'discovery'} onClick={() => setActiveView('discovery')} />
             <NavButton icon={Phone} active={activeView === 'calls'} onClick={() => setActiveView('calls')} />
             
-            <div className="relative -mt-10">
+            <div className="relative -mt-8">
               <button 
                 onClick={() => setActiveView('chats')}
                 className={cn(
-                  "h-16 w-16 rounded-2xl flex items-center justify-center transition-all duration-300 relative z-20 border shadow-[0_15px_40px_rgba(var(--primary),0.4)] active:scale-90",
+                  "h-14 w-14 rounded-2xl flex items-center justify-center transition-all duration-300 relative z-20 border shadow-[0_10px_30px_rgba(var(--primary),0.4)] active:scale-90",
                   activeView === 'chats' ? "bg-primary text-white border-white/20" : "bg-[#161618] text-white/20 border-white/5"
                 )}
               >
-                <MessageSquare className={cn("w-7 h-7", activeView === 'chats' && "fill-current")} />
+                <MessageSquare className={cn("w-6 h-6", activeView === 'chats' && "fill-current")} />
               </button>
             </div>
 
@@ -152,15 +151,15 @@ export default function ChatMain() {
 
 function NavButton({ icon: Icon, active, onClick, isProfile, userId }: any) {
   return (
-    <button onClick={onClick} className={cn("flex flex-col items-center justify-center h-full transition-all relative flex-1 min-w-0 px-2", active ? "text-primary scale-105" : "text-white/20 hover:text-white/40")}>
+    <button onClick={onClick} className={cn("flex flex-col items-center justify-center h-full transition-all relative flex-1 min-w-0", active ? "text-primary scale-110" : "text-white/20 hover:text-white/40")}>
       {isProfile ? (
-        <div className={cn("rounded-xl p-[1.5px] transition-all shadow-lg", active ? "bg-primary" : "bg-transparent")}>
-           <UserAvatar userId={userId} className="h-8 w-8 rounded-lg" />
+        <div className={cn("rounded-lg p-[1.5px] transition-all", active ? "bg-primary shadow-lg shadow-primary/20" : "bg-transparent")}>
+           <UserAvatar userId={userId} className="h-7 w-7 rounded-lg" />
         </div>
       ) : (
-        <Icon className={cn("w-7 h-7 transition-transform duration-300", active && "fill-current")} />
+        <Icon className={cn("w-6 h-6 transition-transform duration-300", active && "fill-current")} />
       )}
-      {active && !isProfile && <div className="absolute -bottom-2 w-1 w-1 bg-primary rounded-full shadow-[0_0_8px_rgba(var(--primary),1)]" />}
+      {active && !isProfile && <div className="absolute -bottom-1.5 w-1 w-1 bg-primary rounded-full shadow-[0_0_8px_rgba(var(--primary),1)]" />}
     </button>
   );
 }
