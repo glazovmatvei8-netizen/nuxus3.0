@@ -12,39 +12,6 @@ export interface BotKeyboard {
   oneTime?: boolean;
 }
 
-export interface Session {
-  id: string;
-  userId: string;
-  deviceName: string;
-  browser: string;
-  ip: string;
-  countryCode: string;
-  lastActive: string;
-  createdAt: string;
-  userAgent: string;
-}
-
-export interface StickerPack {
-  id: string;
-  ownerId: string;
-  name: string;
-  iconUrl: string | null;
-  stickerUrls: string[];
-  createdAt: string;
-  isPublic?: boolean;
-}
-
-export interface Achievement {
-  id: string;
-  name: string;
-  description: string;
-  icon: string;
-  rarity: 'common' | 'rare' | 'legendary';
-  grantedAt: string;
-  bonus?: string;
-  category: 'activity' | 'content' | 'community' | 'referral' | 'tech';
-}
-
 export interface ReceivedGift {
   id: string;
   senderId: string;
@@ -155,7 +122,6 @@ export interface Story {
 export interface Call {
   id: string;
   callerId: string;
-  callerName?: string;
   receiverId: string;
   participantIds: string[]; 
   chatId: string;
@@ -185,15 +151,11 @@ export interface Chat {
   isPublic?: boolean;
   isArchived?: boolean;
   isManualUnread?: boolean;
-  mutedUntil?: string | null;
-  slowModeSeconds?: number;
   metadata?: Record<string, {
     name: string;
     username: string;
     avatarUrl: string | null;
     isPremium?: boolean;
-    statusEmoji?: string;
-    mutedUntil?: string | null;
     customTitle?: string;
   }>;
 }
@@ -202,19 +164,8 @@ export type PrivacyOption = 'everybody' | 'contacts' | 'premium' | 'nobody';
 
 export interface UserPrivacy {
   phoneVisibility: PrivacyOption;
-  phoneWhitelist?: string[];
   lastSeenVisibility: PrivacyOption;
-  lastSeenWhitelist?: string[];
   allowGroupsFrom: PrivacyOption;
-  groupsWhitelist?: string[];
-  whoCanMessageMe: PrivacyOption;
-  messageWhitelist?: string[];
-  whoCanCallMe: PrivacyOption;
-  callWhitelist?: string[];
-  profilePhotoVisibility: PrivacyOption;
-  profilePhotoWhitelist?: string[];
-  forwardingVisibility: PrivacyOption;
-  forwardingWhitelist?: string[];
   isGhostMode?: boolean;
 }
 
@@ -222,40 +173,20 @@ export interface UserSettings {
   theme: string;
   appearance: 'light' | 'dark';
   chatBackground?: string;
-  chatBackgroundFit?: 'cover' | 'contain';
   customAppIconUrl?: string;
-  customAppIconId?: string;
   customPrimaryColor?: string;
   bubbleStyle?: 'default' | 'neon' | 'gold' | 'ocean';
+  fontFamily?: 'jakarta' | 'inter' | 'system';
   messageSize: 'small' | 'medium' | 'large';
   privacy: UserPrivacy;
-  statusEmoji?: string;
   statusText?: string;
   language?: string;
-  stickers?: string[];
-  interfaceOverrides?: Record<string, string>;
-  biometricEnabled?: boolean;
-  pwaNotificationsEnabled?: boolean;
-  cloudPasswordEnabled?: boolean;
-  totpEnabled?: boolean;
-  totpSecret?: string;
-}
-
-export interface UserStats {
-  messagesSent: number;
-  mediaSent: number;
-  referralsCount: number;
-  daysInRow: number;
-  lastActiveDate: string;
 }
 
 export interface User {
   id: string;
   phone: string;
-  phoneVerified?: boolean;
   email?: string | null;
-  emailVerified?: boolean;
-  emailLastChangedAt?: string;
   name: string;
   username: string;
   usernameLowercase?: string;
@@ -264,28 +195,11 @@ export interface User {
   lastSeen?: string;
   createdAt: string;
   settings?: UserSettings;
-  blockedUserIds?: string[];
-  pinnedChatIds?: string[];
   contactIds?: string[]; 
   isBanned?: boolean;
-  bannedUntil?: string | null;
   isPremium?: boolean;
   isAdmin?: boolean;
-  premiumUntil?: string | null;
   twoFactorEnabled?: boolean;
   twoFactorPin?: string;
-  totpEnabled?: boolean;
-  totpSecret?: string;
-  cloudPassword?: string;
-  cloudPasswordEnabled?: boolean;
-  statusEmoji?: string;
-  statusText?: string;
-  referralCount?: number;
-  invitedBy?: string;
-  installedStickerPackIds?: string[];
-  lastIp?: string;
-  countryCode?: string;
   balance?: number;
-  achievements?: Achievement[];
-  stats?: UserStats;
 }
