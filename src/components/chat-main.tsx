@@ -13,8 +13,8 @@ import NuxusAiView from './nuxus-ai-view';
 import PartnerView from './partner-view';
 import { useAppState } from '@/lib/store';
 import { cn } from '@/lib/utils';
-import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
-import { collection, query, where, limit, doc } from 'firebase/firestore';
+import { useUser, useFirestore, useCollection } from '@/firebase';
+import { collection, query, where, limit } from 'firebase/firestore';
 import { CallOverlay } from './modals/call-overlay';
 import { NotificationListener } from './notification-listener';
 import { SettingsModal } from './modals/settings-modal';
@@ -22,28 +22,26 @@ import { GlobalSearchModal } from './modals/global-search-modal';
 import { ForwardModal } from './modals/forward-modal';
 import { UserProfileModal } from './modals/user-profile-modal';
 import { UserAvatar } from './user-avatar';
-import { signOut } from 'firebase/auth';
 import { useAuth } from '@/firebase/provider';
-import type { Call, User } from '@/lib/types';
+import type { Call } from '@/lib/types';
 import { 
   MessageSquare, Settings, Phone, Wallet, 
-  Globe, Plus, LayoutGrid, UserPlus
+  Globe, Activity
 } from 'lucide-react';
 
 /**
- * CHAT MAIN V42.0 «OBSIDIAN SINGULARITY»
- * Глобальный редизайн с эффектом "iPhone будущего".
+ * CHAT MAIN V45.0 «STABLE RESOLUTION»
+ * РЕДИЗАЙН: Устранены наложения элементов на мобильных устройствах.
+ * Навигация переведена в формат "Floating Dock" с защитными отступами.
  */
 export default function ChatMain() {
   const { 
     currentChatId, activeCallId, setActiveCallId, 
     activeView, setActiveView, isSettingsOpen, setIsSettingsOpen,
-    isSearchOpen, setIsSearchOpen, setCurrentChatId,
-    activeAccountIndex, setActiveAccountIndex
+    isSearchOpen, setIsSearchOpen
   } = useAppState();
   const { user } = useUser();
   const db = useFirestore();
-  const auth = useAuth();
 
   const incomingCallsQuery = useMemo(() => {
     if (!db || !user) return null;
@@ -75,14 +73,12 @@ export default function ChatMain() {
       </div>
 
       <div className="flex-1 flex overflow-hidden w-full relative h-full z-10">
-        
-        {/* Main Interface Structure */}
         <div className="flex-1 flex overflow-hidden h-full relative">
           <div className={cn(
             "w-full md:w-[420px] lg:w-[480px] h-full flex-shrink-0 z-30 bg-black/40 backdrop-blur-[120px] border-r border-white/5 relative overflow-hidden transition-all duration-500", 
             (currentChatId && !['profile', 'contacts', 'calls', 'wallet', 'discovery', 'ai', 'partner'].includes(activeView)) ? "hidden md:block" : "block"
           )}>
-            <div className="h-full w-full animate-in fade-in slide-in-from-left-2 duration-700">
+            <div className="h-full w-full">
               {activeView === 'chats' && <ChatSidebar />}
               {activeView === 'contacts' && <ContactsView />}
               {activeView === 'calls' && <CallsView />}
@@ -99,7 +95,7 @@ export default function ChatMain() {
             "flex-1 h-full flex flex-col min-w-0 bg-transparent relative z-20 overflow-hidden transition-all duration-500 md:p-6 lg:p-10", 
             (!currentChatId || ['profile', 'wallet', 'ai', 'partner'].includes(activeView)) ? "hidden md:flex" : "flex"
           )}>
-            <div className="h-full w-full overflow-hidden flex flex-col bg-white/[0.01] md:rounded-[4rem] border border-white/5 shadow-[0_50px_150px_rgba(0,0,0,0.8)] animate-in fade-in duration-1000">
+            <div className="h-full w-full overflow-hidden flex flex-col bg-white/[0.01] md:rounded-[4rem] border border-white/5 shadow-[0_50px_150px_rgba(0,0,0,0.8)]">
               {currentChatId ? <ChatArea /> : (
                 <div className="hidden md:flex flex-1 flex-col items-center justify-center p-16 text-center space-y-12 opacity-30">
                    <div className="relative">
@@ -119,26 +115,28 @@ export default function ChatMain() {
         </div>
       </div>
 
-      {/* Floating Bottom Nav (Mobile) */}
+      {/* Floating Bottom Nav (Mobile) - Redesigned to avoid overlap */}
       {!currentChatId && (
-        <div className="md:hidden fixed bottom-8 left-1/2 -translate-x-1/2 obsidian-glass rounded-[4rem] h-22 flex items-center justify-between px-10 z-[100] w-[90%] shadow-[0_30px_80px_rgba(0,0,0,0.8)]">
-          <NavButton icon={Globe} active={activeView === 'discovery'} onClick={() => setActiveView('discovery')} />
-          <NavButton icon={Phone} active={activeView === 'calls'} onClick={() => setActiveView('calls')} />
-          
-          <div className="relative -top-10">
-            <button 
-              onClick={() => setActiveView('chats')}
-              className={cn(
-                "h-22 w-22 rounded-[3.5rem] flex items-center justify-center transition-all duration-300 relative z-20 border shadow-2xl active:scale-90",
-                activeView === 'chats' ? "bg-primary text-white border-white/20 shadow-primary/40" : "bg-[#121214] text-white/30 border-white/5"
-              )}
-            >
-              <MessageSquare className={cn("w-10 h-10", activeView === 'chats' && "fill-current")} />
-            </button>
-          </div>
+        <div className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] w-[92%] max-w-[400px]">
+          <div className="obsidian-glass rounded-[3rem] h-20 flex items-center justify-between px-8 shadow-[0_20px_60px_rgba(0,0,0,0.8)] border border-white/10 relative">
+            <NavButton icon={Globe} active={activeView === 'discovery'} onClick={() => setActiveView('discovery')} />
+            <NavButton icon={Phone} active={activeView === 'calls'} onClick={() => setActiveView('calls')} />
+            
+            <div className="relative">
+              <button 
+                onClick={() => setActiveView('chats')}
+                className={cn(
+                  "h-20 w-20 rounded-[2.5rem] flex items-center justify-center transition-all duration-300 relative z-20 border shadow-2xl active:scale-90 -mt-12",
+                  activeView === 'chats' ? "bg-primary text-white border-white/20 shadow-primary/40" : "bg-[#121214] text-white/30 border-white/5"
+                )}
+              >
+                <MessageSquare className={cn("w-9 h-9", activeView === 'chats' && "fill-current")} />
+              </button>
+            </div>
 
-          <NavButton icon={Wallet} active={activeView === 'wallet'} onClick={() => setActiveView('wallet')} />
-          <NavButton icon={Settings} active={activeView === 'profile'} onClick={() => setActiveView('profile')} isProfile userId={user?.uid} />
+            <NavButton icon={Wallet} active={activeView === 'wallet'} onClick={() => setActiveView('wallet')} />
+            <NavButton icon={Settings} active={activeView === 'profile'} onClick={() => setActiveView('profile')} isProfile userId={user?.uid} />
+          </div>
         </div>
       )}
 
@@ -153,12 +151,15 @@ export default function ChatMain() {
 
 function NavButton({ icon: Icon, active, onClick, isProfile, userId }: any) {
   return (
-    <button onClick={onClick} className={cn("flex flex-col items-center justify-center h-full w-16 transition-all relative", active ? "text-primary scale-125" : "text-white/20")}>
+    <button onClick={onClick} className={cn("flex flex-col items-center justify-center h-full transition-all relative", active ? "text-primary scale-110" : "text-white/20")}>
       {isProfile ? (
-        <UserAvatar userId={userId} className={cn("h-11 w-11 border-2 transition-all", active ? "border-primary shadow-lg" : "border-transparent")} />
+        <div className={cn("rounded-2xl p-[1px] transition-all", active ? "bg-primary shadow-lg" : "bg-transparent")}>
+           <UserAvatar userId={userId} className="h-9 w-9 rounded-[0.9rem]" />
+        </div>
       ) : (
         <Icon className={cn("w-7 h-7", active && "fill-current")} />
       )}
+      {active && !isProfile && <div className="absolute -bottom-1 w-1 h-1 bg-primary rounded-full shadow-[0_0_8px_rgba(var(--primary),1)]" />}
     </button>
   );
 }

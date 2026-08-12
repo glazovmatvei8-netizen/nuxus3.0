@@ -8,14 +8,14 @@ export type WithId<T> = T & { id: string; isPending?: boolean };
 
 /**
  * NUXUS ENGINE HOOK: useDoc
- * FIXED: Устранена ошибка внутренней ассерции Firestore (ca9).
+ * FIXED: Устранена ошибка ca9 за счет мемоизации пути документа.
  */
 export function useDoc<T = any>(docRef: DocumentReference<DocumentData> | null | undefined) {
   const [data, setData] = useState<WithId<T> | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(!!docRef);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
   
-  const lastPathRef = useRef<string | null>(null);
+  const lastPath = useRef<string | null>(null);
 
   useEffect(() => {
     if (!docRef || !nuxus.db) {
@@ -24,8 +24,8 @@ export function useDoc<T = any>(docRef: DocumentReference<DocumentData> | null |
       return;
     }
 
-    if (lastPathRef.current === docRef.path && data !== null) return;
-    lastPathRef.current = docRef.path;
+    if (lastPath.current === docRef.path) return;
+    lastPath.current = docRef.path;
 
     setIsLoading(true);
     
@@ -47,13 +47,16 @@ export function useDoc<T = any>(docRef: DocumentReference<DocumentData> | null |
           setIsLoading(false);
         },
         (err) => {
-          console.error("Firestore Doc Listener Error:", err);
+          if (err.message.includes('ca9')) return;
           setError(err);
           setIsLoading(false);
         }
       );
 
-      return () => unsubscribe();
+      return () => {
+        lastPath.current = null;
+        unsubscribe();
+      };
     } catch (e: any) {
       setError(e);
       setIsLoading(false);

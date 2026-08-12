@@ -20,6 +20,10 @@ import { signOut } from 'firebase/auth';
 import { useAuth } from '@/firebase/provider';
 import { AdminPanelModal } from './modals/admin-panel-modal';
 
+/**
+ * PROFILE VIEW V45.0 «STABLE RESOLUTION»
+ * Оптимизированы отступы для исключения наложения нижней панели навигации.
+ */
 export default function ProfileView() {
   const { user } = useUser();
   const db = useFirestore();
@@ -64,10 +68,10 @@ export default function ProfileView() {
       </div>
 
       <ScrollArea className="flex-1">
-        <div className="px-8 space-y-12 pb-40 pt-4 animate-in fade-in duration-700">
+        <div className="px-8 space-y-12 pb-52 pt-4 animate-in fade-in duration-700">
           
           <div className="flex flex-col items-center gap-8 py-12 obsidian-glass rounded-[4rem] shadow-2xl relative overflow-hidden">
-             <div className="absolute top-6 right-6"><QrCode className="w-7 h-7 text-white/10 cursor-pointer hover:text-primary transition-colors" onClick={() => setIsQrOpen(true)} /></div>
+             <div className="absolute top-6 right-6 z-20"><QrCode className="w-7 h-7 text-white/10 cursor-pointer hover:text-primary transition-colors" onClick={() => setIsQrOpen(true)} /></div>
              <div className="relative">
                 <div className="absolute -inset-8 bg-primary/15 blur-3xl rounded-full animate-pulse" />
                 <UserAvatar userId={user?.uid} className={cn("h-40 w-44 border-[8px] border-[#0a0a0c] shadow-2xl relative z-10", isPremium && "border-primary/20")} showOnlineStatus />

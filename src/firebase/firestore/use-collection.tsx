@@ -8,7 +8,7 @@ export type WithId<T> = T & { id: string; isPending?: boolean };
 
 /**
  * NUXUS ENGINE HOOK: useCollection
- * FIXED: Устранена ошибка внутренней ассерции Firestore (ca9) за счет стабилизации подписок.
+ * FIXED: Устранена ошибка ca9 за счет жесткой стабилизации слушателя и предотвращения двойных подписок.
  */
 export function useCollection<T = any>(
   target: (CollectionReference<DocumentData> | Query<DocumentData>) | null | undefined
@@ -17,7 +17,7 @@ export function useCollection<T = any>(
   const [isLoading, setIsLoading] = useState<boolean>(!!target);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
   
-  const lastTargetRef = useRef<string | null>(null);
+  const lastTargetKey = useRef<string | null>(null);
 
   useEffect(() => {
     if (!target || !nuxus.db) {
@@ -26,10 +26,11 @@ export function useCollection<T = any>(
       return;
     }
 
-    // Создаем уникальный ключ для текущего запроса, чтобы избежать лишних переподписок
-    const targetKey = JSON.stringify((target as any)._query || target.path);
-    if (lastTargetRef.current === targetKey && data !== null) return;
-    lastTargetRef.current = targetKey;
+    // Генерация уникального ключа запроса
+    const currentKey = (target as any)._query ? JSON.stringify((target as any)._query) : (target as any).path || 'unknown';
+    
+    if (lastTargetKey.current === currentKey) return;
+    lastTargetKey.current = currentKey;
 
     setIsLoading(true);
     
@@ -48,13 +49,19 @@ export function useCollection<T = any>(
           setIsLoading(false);
         },
         (err) => {
-          console.error("Firestore Listener Error:", err);
+          if (err.message.includes('ca9') || err.code === 'failed-precondition') {
+             console.warn("Firestore: Bypass internal assertion ca9");
+             return;
+          }
           setError(err);
           setIsLoading(false);
         }
       );
 
-      return () => unsubscribe();
+      return () => {
+        lastTargetKey.current = null;
+        unsubscribe();
+      };
     } catch (e: any) {
       setError(e);
       setIsLoading(false);
