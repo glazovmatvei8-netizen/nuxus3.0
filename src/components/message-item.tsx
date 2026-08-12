@@ -1,30 +1,21 @@
-
 "use client"
 
 import React, { useState, memo, useMemo } from 'react';
 import { useFirestore, useUser } from '@/firebase/provider';
 import { UserAvatar } from '@/components/user-avatar';
-import { 
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { format } from 'date-fns';
 import { 
-  CornerUpLeft, Trash2, Check, CheckCheck, Play, Share2, Copy, MoreHorizontal, 
-  ShieldCheck, Wand2, Loader2, RotateCcw, EyeOff, Eye, Heart, Smile, Zap, Star, Ghost, Bot, Sparkles
+  Check, CheckCheck, Play, MoreHorizontal, ShieldCheck
 } from 'lucide-react';
-import { cn, decryptSignal, isUserPremium } from '@/lib/utils';
-import { doc, updateDoc, deleteDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
-import { Button } from './ui/button';
-import { useToast } from '@/hooks/use-toast';
+import { cn, decryptSignal } from '@/lib/utils';
 import { useAppState } from '@/lib/store';
+import Image from 'next/image';
 
 /**
- * MESSAGE ITEM V34.0 «FLUID SIGNAL»
- * Оптимизированная плотность, отображение имен и аватаров.
+ * MESSAGE ITEM V38.0 «TOTAL CONNECTIVITY»
+ * Добавлена поддержка отображения изображений и видео.
  */
-export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, amIPremium, viewerProfile }: any) => {
+export const MessageItem = memo(({ message, isMe, chatId, amIPremium }: any) => {
   const { user } = useUser();
   const db = useFirestore();
   const { setInspectedUserId } = useAppState();
@@ -75,11 +66,19 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, am
 
               {message.contentType === 'audio' ? (
                 <div className="flex items-center gap-3 min-w-[180px] py-1">
-                   <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-white/10 shrink-0"><Play className="w-4 h-4 fill-current" /></Button>
+                   <button className="h-8 w-8 rounded-full bg-white/10 shrink-0 flex items-center justify-center hover:bg-white/20 transition-all"><Play className="w-4 h-4 fill-current" /></button>
                    <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
                       <div className="h-full bg-white/40 w-1/3 shadow-[0_0_8px_white]" />
                    </div>
-                   <span className="text-[10px] font-bold opacity-60 tabular-nums">0:01</span>
+                   <span className="text-[10px] font-bold opacity-60 tabular-nums">{message.metadata?.duration ? `${Math.floor(message.metadata.duration / 60)}:${(message.metadata.duration % 60).toString().padStart(2, '0')}` : '0:01'}</span>
+                </div>
+              ) : message.contentType === 'image' ? (
+                <div className="relative rounded-lg overflow-hidden border border-white/5 max-w-[300px]">
+                   <img src={message.content} alt="Attachment" className="w-full h-auto object-cover" />
+                </div>
+              ) : message.contentType === 'video' ? (
+                <div className="relative rounded-lg overflow-hidden border border-white/5 max-w-[300px] bg-black/40">
+                   <video src={message.content} controls className="w-full h-auto" />
                 </div>
               ) : (
                 <div className="whitespace-pre-wrap text-[15px] font-medium leading-normal tracking-tight">
@@ -94,9 +93,8 @@ export const MessageItem = memo(({ message, isMe, chatId, onReply, onForward, am
                  {isMe && (message.isRead ? <CheckCheck className="w-3 h-3 text-white" /> : <Check className="w-3 h-3" />)}
               </div>
 
-              {/* Action Menu Trigger */}
               <button 
-                onClick={() => setIsMenuOpen(true)}
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
                 className={cn(
                   "absolute top-1/2 -translate-y-1/2 p-2 rounded-full text-white/20 opacity-0 group-hover:opacity-100 transition-all hover:text-white hover:bg-white/10",
                   isMe ? "-left-10" : "-right-10"

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Eye, EyeOff, CheckCircle2, ChevronDown, Phone, Mail, Globe, Lock } from 'lucide-react';
+import { Loader2, Eye, EyeOff, Phone, Mail, ChevronDown, Lock } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase'; 
 import { 
   signInWithEmailAndPassword,
@@ -71,27 +71,22 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
       if (authMethod === 'phone') {
         const cleanPhone = phoneNumber.replace(/\D/g, '');
         if (cleanPhone.length < 5) throw new Error("Введите корректный номер");
-        // Strip '+' from country code for internal email mapping to avoid Auth errors
         const cleanCountryCode = country.code.replace('+', '');
         finalEmail = `${cleanCountryCode}${cleanPhone}@nuxus.app`;
       }
 
       if (mode === 'login') {
         const userCred = await signInWithEmailAndPassword(auth, finalEmail, password);
-        
-        // Fetch name from firestore to update slot metadata
         const userDoc = await getDoc(doc(db, 'users', userCred.user.uid));
         if (userDoc.exists()) {
           setSlotName(activeAccountIndex, userDoc.data().name || 'Пользователь');
         } else {
           setSlotName(activeAccountIndex, userCred.user.displayName || 'Пользователь');
         }
-        
         toast({ title: "Вы вошли в аккаунт" });
       } else {
-        const usernameWithAt = '@' + username.trim().replace('@', '');
+        const usernameWithAt = '@' + username.trim().replace('@', '').replace(/\s/g, '');
         const userCred = await createUserWithEmailAndPassword(auth, finalEmail, password);
-        
         await updateProfile(userCred.user, { displayName: name.trim() });
         
         await setDoc(doc(db, 'users', userCred.user.uid), {
@@ -114,7 +109,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
       let msg = "Ошибка авторизации";
       if (e.code === 'auth/user-not-found') msg = "Аккаунт не найден";
       if (e.code === 'auth/wrong-password') msg = "Неверный пароль";
-      if (e.code === 'auth/email-already-in-use') msg = "Этот адрес уже занят";
+      if (e.code === 'auth/email-already-in-use') msg = "Этот адрес или номер уже занят";
       if (e.code === 'auth/invalid-email') msg = "Некорректный формат данных";
       toast({ title: "Ошибка", description: msg, variant: "destructive" });
     } finally {
@@ -132,14 +127,14 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
           <h1 className="text-3xl font-black text-white text-center mb-12 tracking-tight uppercase italic">Язык системы</h1>
           <button 
             onClick={() => setLang('ru')} 
-            className="w-full h-20 obsidian-glass hover:bg-white/10 rounded-[1.8rem] flex items-center justify-between px-10 transition-all active:scale-95 group shadow-2xl"
+            className="w-full h-20 bg-white/[0.02] border border-white/5 backdrop-blur-xl hover:bg-white/10 rounded-[1.8rem] flex items-center justify-between px-10 transition-all active:scale-95 group shadow-2xl"
           >
             <span className="text-white font-black uppercase italic tracking-widest">Русский</span>
             <div className="bg-primary/20 px-3 py-1 rounded-lg text-primary text-[10px] font-black uppercase">RU</div>
           </button>
           <button 
             onClick={() => setLang('en')} 
-            className="w-full h-20 obsidian-glass hover:bg-white/10 rounded-[1.8rem] flex items-center justify-between px-10 transition-all active:scale-95 group shadow-2xl"
+            className="w-full h-20 bg-white/[0.02] border border-white/5 backdrop-blur-xl hover:bg-white/10 rounded-[1.8rem] flex items-center justify-between px-10 transition-all active:scale-95 group shadow-2xl"
           >
             <span className="text-white font-black uppercase italic tracking-widest">English</span>
             <div className="bg-primary/20 px-3 py-1 rounded-lg text-primary text-[10px] font-black uppercase">EN</div>
@@ -200,9 +195,9 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
             </CardHeader>
 
             <CardContent className="px-8 sm:px-10 pb-12">
-              <form onSubmit={handleAuth} className="space-y-4">
+              <form onSubmit={handleAuth} className="space-y-5">
                 {mode === 'register' && (
-                  <div className="space-y-4">
+                  <>
                     <div className="relative group">
                        <Input 
                         placeholder={t.name} 
@@ -222,19 +217,19 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                         required 
                       />
                     </div>
-                  </div>
+                  </>
                 )}
                 
                 {authMethod === 'phone' ? (
-                  <div className="flex gap-4 w-full">
+                  <div className="flex gap-3 w-full">
                      <Popover open={isCountryPickerOpen} onOpenChange={setIsCountryPickerOpen}>
                         <PopoverTrigger asChild>
-                          <button type="button" className="h-16 px-6 bg-white/[0.03] border border-white/5 rounded-2xl flex items-center gap-3 hover:bg-white/[0.08] transition-all shadow-inner min-w-[120px] justify-between group">
-                             <div className="flex items-center gap-3">
-                                <span className="text-2xl">{country.flag}</span>
-                                <span className="text-[11px] font-black text-white/80">{country.code}</span>
+                          <button type="button" className="h-16 px-4 bg-white/[0.03] border border-white/5 rounded-2xl flex items-center gap-2 hover:bg-white/[0.08] transition-all shadow-inner min-w-[110px] justify-between group">
+                             <div className="flex items-center gap-2">
+                                <span className="text-xl shrink-0">{country.flag}</span>
+                                <span className="text-[11px] font-black text-white/80 whitespace-nowrap">{country.code}</span>
                              </div>
-                             <ChevronDown size={14} className="text-white/20 group-hover:text-primary transition-colors" />
+                             <ChevronDown size={14} className="text-white/20 group-hover:text-primary transition-colors shrink-0" />
                           </button>
                         </PopoverTrigger>
                         <PopoverContent className="w-64 bg-[#0a0a0c]/98 backdrop-blur-2xl border-white/10 rounded-[2rem] p-2 shadow-2xl z-[1000]">
@@ -262,7 +257,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                       placeholder="000 000-00-00" 
                       value={phoneNumber} 
                       onChange={e => setPhoneNumber(e.target.value.replace(/\D/g, ''))} 
-                      className="h-16 flex-1 bg-white/[0.03] border-white/5 rounded-2xl font-bold text-lg px-8 focus:border-primary/40 transition-all shadow-inner min-w-0 placeholder:text-white/10" 
+                      className="h-16 flex-1 bg-white/[0.03] border-white/5 rounded-2xl font-bold text-lg px-6 focus:border-primary/40 transition-all shadow-inner min-w-0 placeholder:text-white/10 text-white" 
                       required 
                     />
                   </div>
@@ -298,7 +293,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                 <Button 
                   type="submit" 
                   disabled={isLoading} 
-                  className="w-full h-20 bg-primary hover:scale-[1.02] text-white font-black uppercase italic tracking-[0.2em] text-lg rounded-[2rem] shadow-2xl shadow-primary/20 transition-all active:scale-95 mt-10 border border-white/10"
+                  className="w-full h-20 bg-primary hover:scale-[1.02] text-white font-black uppercase italic tracking-[0.2em] text-lg rounded-[2rem] shadow-2xl shadow-primary/20 transition-all active:scale-95 mt-6 border border-white/10"
                 >
                   {isLoading ? <Loader2 className="animate-spin" /> : (mode === 'login' ? 'Войти' : 'Создать Аккаунт')}
                 </Button>

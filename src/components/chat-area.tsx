@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
@@ -8,12 +7,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, ChevronLeft, X, Paperclip, Mic, StopCircle, 
-  Smile, ImageIcon, Trash2, AtSign, CornerUpLeft, Circle, Video as VideoIcon
+  Smile, ImageIcon, Trash2, CornerUpLeft
 } from 'lucide-react';
 import { MessageItem } from './message-item';
 import { ChatInfoModal } from './modals/chat-info-modal';
 import { CreatePollModal } from './modals/create-poll-modal';
 import { EmojiPicker } from './emoji-picker';
+import { ImagePreviewModal } from './modals/image-preview-modal';
 import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
 import { collection, query, orderBy, doc, addDoc, updateDoc } from 'firebase/firestore';
 import { formatDisplayName, cn, compressImage, encryptSignal, decryptSignal, isUserPremium } from '@/lib/utils';
@@ -23,15 +23,18 @@ import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useTranslations } from '@/hooks/use-translations';
 
-const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, isPremium, replyTo, onCancelReply }: any) => {
+const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelReply }: any) => {
   const { localDrafts, setLocalDrafts } = useAppState();
   const { t } = useTranslations();
   
   const [messageInput, setMessageInput] = useState(localDrafts[currentChatId] || '');
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-  const [recorderMode, setRecorderMode] = useState<'audio' | 'video'>('audio');
   const [recordingDuration, setRecordingDuration] = useState(0);
+
+  const [pendingFiles, setPendingFiles] = useState<{url: string, type: 'image' | 'video', file: File}[]>([]);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -49,6 +52,43 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
     onSendMessage(messageInput, 'text', null);
     setMessageInput('');
     setLocalDrafts(prev => ({ ...prev, [currentChatId]: '' }));
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const url = ev.target?.result as string;
+        setPendingFiles(prev => [...prev, { 
+          url, 
+          type: file.type.startsWith('video') ? 'video' : 'image',
+          file
+        }]);
+      };
+      reader.readAsDataURL(file);
+    });
+    setIsPreviewOpen(true);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleSendFiles = async () => {
+    setIsUploading(true);
+    try {
+      for (const item of pendingFiles) {
+        let content = item.url;
+        if (item.type === 'image') {
+          content = await compressImage(item.url, 1200, 0.7);
+        }
+        await onSendMessage(content, item.type, null);
+      }
+      setPendingFiles([]);
+      setIsPreviewOpen(false);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const startAudioRecording = async () => {
@@ -84,6 +124,7 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
   const stopAudioRecording = () => { if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') mediaRecorderRef.current.stop(); };
 
   return (
+    <>
     <footer className="p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] bg-black/40 backdrop-blur-2xl border-t border-white/5 shrink-0 z-40 relative flex flex-col gap-2">
       {replyTo && (
         <div className="bg-white/5 p-2 rounded-xl flex items-center justify-between border border-white/5 mb-1 animate-in slide-in-from-bottom-2">
@@ -139,8 +180,24 @@ const ChatInputBar = memo(({ onSendMessage, canPost, onPollOpen, currentChatId, 
           </div>
         )}
       </div>
-      <input type="file" ref={fileInputRef} hidden accept="image/*,video/*" />
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        hidden 
+        multiple
+        accept="image/*,video/*" 
+        onChange={handleFileChange}
+      />
     </footer>
+    <ImagePreviewModal 
+      open={isPreviewOpen} 
+      onOpenChange={setIsPreviewOpen}
+      files={pendingFiles.map(p => ({ url: p.url, type: p.type }))}
+      onRemove={(idx) => setPendingFiles(prev => prev.filter((_, i) => i !== idx))}
+      onSend={handleSendFiles}
+      isSending={isUploading}
+    />
+    </>
   );
 });
 
@@ -177,7 +234,7 @@ export default function ChatArea() {
   const handleSendMessage = useCallback(async (content_msg: string, type_msg: Message['contentType'] = 'text', meta: any = null) => {
     if (!content_msg || !currentChatId || !firebaseUser || !db) return;
     let finalContent = (type_msg === 'text' || type_msg === 'reply') ? encryptSignal(content_msg) : content_msg;
-    if (type_msg === 'image' && !content_msg.startsWith('data:')) finalContent = await compressImage(content_msg, 1200, 0.6);
+    
     const msgData: any = { 
       chatId: currentChatId, senderId: firebaseUser.uid, senderName: userProfile?.name || 'User', 
       content: finalContent, contentType: type_msg, sentAt: new Date().toISOString(), isRead: false,
@@ -197,7 +254,6 @@ export default function ChatArea() {
 
   return (
     <div className="flex-1 flex flex-col h-full bg-[#050505] relative overflow-hidden z-20">
-      {/* Background Overlay */}
       <div className="absolute inset-0 z-0 opacity-20 pointer-events-none" style={bgStyle} />
       
       <header className="h-14 border-b border-white/5 bg-white/[0.02] backdrop-blur-3xl flex items-center px-4 shrink-0 z-30">
@@ -228,7 +284,7 @@ export default function ChatArea() {
         </ScrollArea>
       </div>
 
-      <ChatInputBar onSendMessage={handleSendMessage} canPost={true} onPollOpen={() => setIsPollModalOpen(true)} currentChatId={currentChatId} isPremium={isPremium} replyTo={replyTo} onCancelReply={() => setReplyTo(null)} />
+      <ChatInputBar onSendMessage={handleSendMessage} currentChatId={currentChatId} replyTo={replyTo} onCancelReply={() => setReplyTo(null)} />
 
       {chat && <ChatInfoModal open={isChatInfoOpen} onOpenChange={setIsChatInfoOpen} chat={chat as any} />}
       {currentChatId && <CreatePollModal open={isPollModalOpen} onOpenChange={setIsPollModalOpen} chatId={currentChatId} />}
