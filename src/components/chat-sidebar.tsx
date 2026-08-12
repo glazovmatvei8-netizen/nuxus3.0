@@ -129,7 +129,7 @@ export default function ChatSidebar() {
   return (
     <div className="flex flex-col h-full bg-transparent overflow-hidden">
       <ScrollArea className="flex-1 no-scrollbar">
-        <div className="flex flex-col min-h-full pb-40">
+        <div className="flex flex-col min-h-full pb-60">
           {/* HEADER (Now part of the scroll flow) */}
           <div className="px-6 pt-12 pb-6 space-y-6">
             <div className="flex items-center justify-between">

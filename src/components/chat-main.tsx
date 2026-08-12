@@ -30,9 +30,9 @@ import {
 } from 'lucide-react';
 
 /**
- * CHAT MAIN V45.0 «STABLE RESOLUTION»
- * РЕДИЗАЙН: Устранены наложения элементов на мобильных устройствах.
- * Навигация переведена в формат "Floating Dock" с защитными отступами.
+ * CHAT MAIN V46.0 «STABLE RESOLUTION»
+ * РЕДИЗАЙН: Полная ликвидация наложений элементов.
+ * Навигация перенесена в формат "Floating Dock" с увеличенным Z-индексом.
  */
 export default function ChatMain() {
   const { 
@@ -117,8 +117,8 @@ export default function ChatMain() {
 
       {/* Floating Bottom Nav (Mobile) - Redesigned to avoid overlap */}
       {!currentChatId && (
-        <div className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] w-[92%] max-w-[400px]">
-          <div className="obsidian-glass rounded-[3rem] h-20 flex items-center justify-between px-8 shadow-[0_20px_60px_rgba(0,0,0,0.8)] border border-white/10 relative">
+        <div className="md:hidden fixed bottom-8 left-1/2 -translate-x-1/2 z-[1000] w-[92%] max-w-[400px]">
+          <div className="obsidian-glass rounded-[3.5rem] h-22 flex items-center justify-between px-10 shadow-[0_40px_100px_rgba(0,0,0,0.9)] border border-white/10 relative">
             <NavButton icon={Globe} active={activeView === 'discovery'} onClick={() => setActiveView('discovery')} />
             <NavButton icon={Phone} active={activeView === 'calls'} onClick={() => setActiveView('calls')} />
             
@@ -126,11 +126,11 @@ export default function ChatMain() {
               <button 
                 onClick={() => setActiveView('chats')}
                 className={cn(
-                  "h-20 w-20 rounded-[2.5rem] flex items-center justify-center transition-all duration-300 relative z-20 border shadow-2xl active:scale-90 -mt-12",
-                  activeView === 'chats' ? "bg-primary text-white border-white/20 shadow-primary/40" : "bg-[#121214] text-white/30 border-white/5"
+                  "h-22 w-22 rounded-[3rem] flex items-center justify-center transition-all duration-300 relative z-20 border shadow-2xl active:scale-90 -mt-16",
+                  activeView === 'chats' ? "bg-primary text-white border-white/20 shadow-[0_20px_50px_rgba(var(--primary),0.5)]" : "bg-[#121214] text-white/30 border-white/5"
                 )}
               >
-                <MessageSquare className={cn("w-9 h-9", activeView === 'chats' && "fill-current")} />
+                <MessageSquare className={cn("w-10 h-10", activeView === 'chats' && "fill-current")} />
               </button>
             </div>
 
@@ -153,13 +153,13 @@ function NavButton({ icon: Icon, active, onClick, isProfile, userId }: any) {
   return (
     <button onClick={onClick} className={cn("flex flex-col items-center justify-center h-full transition-all relative", active ? "text-primary scale-110" : "text-white/20")}>
       {isProfile ? (
-        <div className={cn("rounded-2xl p-[1px] transition-all", active ? "bg-primary shadow-lg" : "bg-transparent")}>
-           <UserAvatar userId={userId} className="h-9 w-9 rounded-[0.9rem]" />
+        <div className={cn("rounded-2xl p-[1.5px] transition-all", active ? "bg-primary shadow-lg" : "bg-transparent")}>
+           <UserAvatar userId={userId} className="h-10 w-10 rounded-[1rem]" />
         </div>
       ) : (
-        <Icon className={cn("w-7 h-7", active && "fill-current")} />
+        <Icon className={cn("w-8 h-8", active && "fill-current")} />
       )}
-      {active && !isProfile && <div className="absolute -bottom-1 w-1 h-1 bg-primary rounded-full shadow-[0_0_8px_rgba(var(--primary),1)]" />}
+      {active && !isProfile && <div className="absolute -bottom-2 w-1.5 h-1.5 bg-primary rounded-full shadow-[0_0_12px_rgba(var(--primary),1)]" />}
     </button>
   );
 }
