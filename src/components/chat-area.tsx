@@ -124,7 +124,7 @@ const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelRepl
 
   return (
     <>
-    <footer className="p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] bg-black/60 backdrop-blur-3xl border-t border-white/5 shrink-0 z-40 relative flex flex-col gap-2">
+    <footer className="p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] bg-black/60 backdrop-blur-[120px] border-t border-white/5 shrink-0 z-40 relative flex flex-col gap-2">
       {replyTo && (
         <div className="bg-white/5 p-3 rounded-2xl flex items-center justify-between border border-white/5 mb-1 animate-in slide-in-from-bottom-2 shadow-xl">
           <div className="flex items-center gap-4 min-w-0">
@@ -141,9 +141,9 @@ const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelRepl
       <div className="flex gap-3 items-end w-full max-w-5xl mx-auto">
         {!isRecording ? (
           <>
-            <Button variant="ghost" size="icon" className="h-12 w-12 shrink-0 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 shadow-xl transition-all" onClick={() => fileInputRef.current?.click()}><Paperclip className="w-6 h-6 text-white/40" /></Button>
+            <Button variant="ghost" size="icon" className="h-12 w-12 shrink-0 rounded-2xl obsidian-glass hover:bg-white/10 border border-white/5 shadow-xl transition-all" onClick={() => fileInputRef.current?.click()}><Paperclip className="w-6 h-6 text-white/40" /></Button>
             
-            <div className="flex-1 flex items-end bg-white/5 rounded-[1.8rem] border border-white/5 min-h-[48px] px-4 py-2.5 shadow-inner transition-all focus-within:border-primary/40 focus-within:bg-white/[0.08]">
+            <div className="flex-1 flex items-end bg-white/5 rounded-[2rem] border border-white/5 min-h-[48px] px-4 py-2.5 shadow-inner transition-all focus-within:border-primary/40 focus-within:bg-white/[0.08]">
               <Textarea 
                 placeholder={t('chat.placeholder')} 
                 className="bg-transparent border-none focus-visible:ring-0 text-white min-h-[26px] max-h-[180px] py-0 text-[15px] resize-none w-full scrollbar-hide font-medium tracking-tight" 
@@ -169,7 +169,7 @@ const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelRepl
             )}
           </>
         ) : (
-          <div className="flex-1 flex items-center bg-primary/10 border border-primary/20 rounded-[1.8rem] h-12 px-5 gap-4 animate-in slide-in-from-right-4 shadow-2xl">
+          <div className="flex-1 flex items-center bg-primary/10 border border-primary/20 rounded-[2rem] h-12 px-5 gap-4 animate-in slide-in-from-right-4 shadow-2xl">
             <div className="flex items-center gap-3 text-primary animate-pulse"><div className="w-2.5 h-2.5 rounded-full bg-primary" /><span className="text-[10px] font-black tracking-widest">REC</span></div>
             <span className="text-base font-black flex-1 tabular-nums text-white italic">
               {Math.floor(recordingDuration / 60).toString().padStart(2, '0')}:{(recordingDuration % 60).toString().padStart(2, '0')}
@@ -252,9 +252,9 @@ export default function ChatArea() {
 
   return (
     <div className="flex-1 flex flex-col h-full bg-[#030306] relative overflow-hidden z-20">
-      <div className="absolute inset-0 z-0 opacity-[0.15] pointer-events-none" style={bgStyle} />
+      <div className="absolute inset-0 z-0 opacity-[0.2] pointer-events-none" style={bgStyle} />
       
-      <header className="h-16 border-b border-white/5 bg-white/[0.02] backdrop-blur-[40px] flex items-center px-4 shrink-0 z-30 shadow-2xl">
+      <header className="h-16 border-b border-white/5 bg-white/[0.02] backdrop-blur-[120px] flex items-center px-4 shrink-0 z-30 shadow-2xl">
         <div className="flex items-center gap-4 flex-1 min-w-0">
           <Button variant="ghost" size="icon" className="md:hidden rounded-2xl text-white/40 h-10 w-10 hover:bg-white/5" onClick={() => setCurrentChatId(null)}><ChevronLeft className="w-6 h-6" /></Button>
           <div className="flex items-center gap-4 cursor-pointer min-w-0 flex-1 group" onClick={() => setIsChatInfoOpen(true)}>
@@ -267,7 +267,7 @@ export default function ChatArea() {
             />
             <div className="flex flex-col min-w-0 text-left">
               <span className="font-black text-base truncate text-white leading-tight italic tracking-tighter uppercase">{formatDisplayName(chat?.name, chat?.username)}</span>
-              <span className="text-[10px] font-bold text-primary/60 tracking-widest uppercase italic">{t('online')}</span>
+              <span className="text-[9px] font-bold text-primary/60 tracking-widest uppercase italic">{t('online')}</span>
             </div>
           </div>
         </div>

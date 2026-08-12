@@ -41,13 +41,13 @@
   }
 }
 
-/* ULTRA MODERN GLASS */
+/* ULTRA MODERN OBSIDIAN GLASS */
 .obsidian-glass {
-  @apply bg-white/[0.01] backdrop-blur-[100px] border border-white/[0.03] shadow-[0_50px_100px_rgba(0,0,0,0.8)];
+  @apply bg-white/[0.01] backdrop-blur-[120px] border border-white/[0.03] shadow-[0_50px_100px_rgba(0,0,0,0.8)];
 }
 
 .droplet-bubble {
-  @apply bg-white/[0.04] backdrop-blur-3xl border border-white/[0.05] shadow-2xl transition-all duration-500;
+  @apply bg-white/[0.04] backdrop-blur-3xl border border-white/[0.05] shadow-2xl transition-all duration-500 rounded-[2.8rem];
 }
 
 .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -71,4 +71,9 @@
   background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
   background-size: 200% 100%;
   animation: liquid-shimmer 3s infinite linear;
+}
+
+/* ScrollArea Customization */
+[data-radix-scroll-area-viewport] {
+  scroll-behavior: smooth !important;
 }

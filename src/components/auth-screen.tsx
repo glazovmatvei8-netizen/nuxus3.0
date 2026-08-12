@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Eye, EyeOff, Phone, Mail, ChevronDown, ShieldCheck } from 'lucide-react';
+import { Loader2, Eye, EyeOff, Phone, Mail, ChevronDown, ShieldCheck, Star } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase'; 
 import { 
   signInWithEmailAndPassword,
@@ -137,14 +137,14 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
           <h1 className="text-4xl font-black text-white text-center mb-16 tracking-tighter uppercase italic opacity-80">Выберите Язык</h1>
           <button 
             onClick={() => setLang('ru')} 
-            className="w-full h-24 bg-white/[0.02] border border-white/5 backdrop-blur-[60px] hover:bg-white/5 rounded-[3rem] flex items-center justify-between px-10 transition-all active:scale-95 group shadow-2xl"
+            className="w-full h-24 obsidian-glass rounded-[3rem] flex items-center justify-between px-10 transition-all active:scale-95 group"
           >
             <span className="text-white font-black uppercase italic tracking-widest text-lg">Русский</span>
             <div className="bg-primary/20 px-5 py-2 rounded-2xl text-primary text-[10px] font-black uppercase border border-primary/20">RU</div>
           </button>
           <button 
             onClick={() => setLang('en')} 
-            className="w-full h-24 bg-white/[0.02] border border-white/5 backdrop-blur-[60px] hover:bg-white/5 rounded-[3rem] flex items-center justify-between px-10 transition-all active:scale-95 group shadow-2xl"
+            className="w-full h-24 obsidian-glass rounded-[3rem] flex items-center justify-between px-10 transition-all active:scale-95 group"
           >
             <span className="text-white font-black uppercase italic tracking-widest text-lg">English</span>
             <div className="bg-primary/20 px-5 py-2 rounded-2xl text-primary text-[10px] font-black uppercase border border-primary/20">EN</div>
@@ -164,7 +164,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
             <NuxusLogo size={140} />
           </div>
           
-          <Card className="w-full max-w-[480px] bg-white/[0.01] backdrop-blur-[100px] border-white/5 rounded-[4rem] p-4 shadow-[0_50px_150px_rgba(0,0,0,0.9)] relative z-10 overflow-hidden">
+          <Card className="w-full max-w-[520px] bg-white/[0.01] backdrop-blur-[120px] border-white/5 rounded-[4rem] p-2 shadow-[0_50px_150px_rgba(0,0,0,0.9)] relative z-10 overflow-hidden">
             <CardHeader className="text-center pt-12 pb-8 space-y-12">
               <div className="inline-flex bg-black/60 p-1.5 rounded-[2.5rem] border border-white/5 mx-auto shadow-inner">
                 <button 
@@ -182,7 +182,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
               </div>
               
               <div className="space-y-4">
-                <CardTitle className="text-5xl font-black text-white tracking-tighter italic uppercase leading-none">
+                <CardTitle className="text-6xl font-black text-white tracking-tighter italic uppercase leading-none">
                   {mode === 'login' ? 'Welcome' : 'Activate'}
                 </CardTitle>
                 <CardDescription className="text-primary/60 font-black uppercase text-[9px] tracking-[0.6em] italic">{t.subtitle}</CardDescription>
@@ -208,8 +208,8 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
               <form onSubmit={handleAuth} className="space-y-8">
                 {mode === 'register' && (
                   <div className="space-y-8 animate-in slide-in-from-top-6 duration-700">
-                    <div className="space-y-3">
-                       <Label className="text-[9px] font-black uppercase text-primary/40 ml-5 tracking-widest">Ваше Имя</Label>
+                    <div className="space-y-3 text-left">
+                       <Label className="text-[10px] font-black uppercase text-primary/40 ml-5 tracking-widest">Ваше Имя</Label>
                        <Input 
                         placeholder="Name" 
                         value={name} 
@@ -218,8 +218,8 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                         required 
                       />
                     </div>
-                    <div className="space-y-3">
-                      <Label className="text-[9px] font-black uppercase text-primary/40 ml-5 tracking-widest">ID Пользователя</Label>
+                    <div className="space-y-3 text-left">
+                      <Label className="text-[10px] font-black uppercase text-primary/40 ml-5 tracking-widest">ID Пользователя</Label>
                       <div className="relative">
                         <span className="absolute left-8 top-1/2 -translate-y-1/2 text-primary font-black text-xl italic opacity-40">@</span>
                         <Input 
@@ -235,8 +235,8 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                 )}
                 
                 {authMethod === 'phone' ? (
-                  <div className="space-y-3">
-                     <Label className="text-[9px] font-black uppercase text-primary/40 ml-5 tracking-widest">Номер Телефона</Label>
+                  <div className="space-y-3 text-left">
+                     <Label className="text-[10px] font-black uppercase text-primary/40 ml-5 tracking-widest">Номер Телефона</Label>
                      <div className="flex gap-4">
                         <Popover open={isCountryPickerOpen} onOpenChange={setIsCountryPickerOpen}>
                            <PopoverTrigger asChild>
@@ -246,7 +246,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                                 <ChevronDown size={14} className="text-white/20 group-hover:text-primary transition-colors" />
                              </button>
                            </PopoverTrigger>
-                           <PopoverContent className="w-72 bg-black/95 backdrop-blur-[100px] border-white/5 rounded-[3rem] p-3 shadow-2xl z-[1000] outline-none">
+                           <PopoverContent className="w-72 bg-black/95 backdrop-blur-[120px] border-white/10 rounded-[3rem] p-3 shadow-2xl z-[1000] outline-none">
                               <ScrollArea className="h-80 no-scrollbar">
                                  <div className="p-2 space-y-2">
                                    {COUNTRIES.map((c, i) => (
@@ -277,8 +277,8 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                      </div>
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    <Label className="text-[9px] font-black uppercase text-primary/40 ml-5 tracking-widest">Email Address</Label>
+                  <div className="space-y-3 text-left">
+                    <Label className="text-[10px] font-black uppercase text-primary/40 ml-5 tracking-widest">Email Address</Label>
                     <Input 
                       type="email"
                       placeholder="mail@nuxus.app" 
@@ -290,8 +290,8 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                   </div>
                 )}
 
-                <div className="space-y-3">
-                  <Label className="text-[9px] font-black uppercase text-primary/40 ml-5 tracking-widest">Пароль Доступа</Label>
+                <div className="space-y-3 text-left">
+                  <Label className="text-[10px] font-black uppercase text-primary/40 ml-5 tracking-widest">Пароль Доступа</Label>
                   <div className="relative">
                     <Input 
                       type={showPass ? "text" : "password"} 
