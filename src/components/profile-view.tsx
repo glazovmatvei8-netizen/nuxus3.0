@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useMemo } from 'react';
@@ -21,9 +22,9 @@ import { useAuth } from '@/firebase/provider';
 import { AdminPanelModal } from './modals/admin-panel-modal';
 
 /**
- * PROFILE VIEW V46.0 «INFINITE HORIZON»
- * ПОЛНОЭКРАННЫЙ РЕЖИМ: Профиль больше не зажат в узкое окно.
- * Устранены все наложения навигационной панели.
+ * PROFILE VIEW V47.0 «BALANCED ELEGANCE»
+ * РЕДИЗАЙН: Устранена визуальная тяжесть. 
+ * Элементы стали компактнее, шрифты — благороднее, баланс — идеальным.
  */
 export default function ProfileView() {
   const { user } = useUser();
@@ -62,86 +63,86 @@ export default function ProfileView() {
 
   return (
     <div className="flex flex-col h-full bg-[#010103] overflow-hidden relative">
-      {/* Background Glows */}
-      <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-primary/10 to-transparent pointer-events-none z-0" />
+      {/* Background Glows - Softened */}
+      <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none z-0" />
       
-      {/* Header */}
-      <div className="px-8 pt-16 pb-8 flex items-center justify-between shrink-0 relative z-30">
-        <div className="flex flex-col">
-           <h1 className="text-5xl font-black text-white italic tracking-tighter uppercase leading-none">Аккаунт</h1>
-           <span className="text-[10px] font-black text-primary/40 uppercase tracking-[0.5em] mt-2 ml-1">Personal Terminal</span>
+      {/* Header - More Elegant */}
+      <div className="px-8 pt-12 pb-6 flex items-center justify-between shrink-0 relative z-30">
+        <div className="flex flex-col text-left">
+           <h1 className="text-2xl font-black text-white uppercase tracking-tight leading-none">Аккаунт</h1>
+           <span className="text-[8px] font-bold text-white/20 uppercase tracking-[0.4em] mt-1.5 ml-0.5">Secure Terminal</span>
         </div>
         <Button 
-          variant="ghost" size="icon" className="h-14 w-14 rounded-[2rem] bg-white/5 border border-white/10 text-white/60 hover:text-white transition-all shadow-2xl active:scale-90" 
+          variant="ghost" size="icon" className="h-10 w-10 rounded-xl bg-white/5 border border-white/10 text-white/40 hover:text-white transition-all active:scale-90" 
           onClick={() => { setSettingsTab('profile'); setIsSettingsOpen(true); }}
         >
-          <Pencil className="w-7 h-7" />
+          <Pencil className="w-5 h-5" />
         </Button>
       </div>
 
       <ScrollArea className="flex-1 relative z-20">
-        <div className="px-6 space-y-12 pb-60 pt-4 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+        <div className="px-6 space-y-10 pb-40 pt-2 animate-in fade-in slide-in-from-bottom-2 duration-700">
           
-          {/* Profile Card */}
-          <div className="flex flex-col items-center gap-8 py-14 bg-white/[0.02] border border-white/5 backdrop-blur-3xl rounded-[4rem] shadow-[0_50px_100px_rgba(0,0,0,0.5)] relative overflow-hidden">
-             <div className="absolute top-8 right-8 z-20">
-                <button onClick={() => setIsQrOpen(true)} className="p-3 rounded-2xl bg-white/5 border border-white/10 text-white/20 hover:text-primary transition-all">
-                   <QrCode className="w-7 h-7" />
+          {/* Profile Card - Balanced size */}
+          <div className="flex flex-col items-center gap-6 py-10 bg-white/[0.015] border border-white/5 backdrop-blur-2xl rounded-[3rem] shadow-2xl relative overflow-hidden">
+             <div className="absolute top-6 right-6 z-20">
+                <button onClick={() => setIsQrOpen(true)} className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-white/10 hover:text-primary transition-all">
+                   <QrCode className="w-5 h-5" />
                 </button>
              </div>
              
              <div className="relative">
-                <div className="absolute -inset-10 bg-primary/20 blur-[60px] rounded-full animate-pulse" />
+                <div className="absolute -inset-6 bg-primary/10 blur-[40px] rounded-full animate-pulse" />
                 <UserAvatar 
                   userId={user?.uid} 
-                  className={cn("h-44 w-44 border-[10px] border-[#0a0a0c] shadow-2xl relative z-10", isPremium && "border-primary/20")} 
+                  className={cn("h-32 w-32 border-[6px] border-[#0a0a0c] shadow-xl relative z-10", isPremium && "border-primary/20")} 
                   showOnlineStatus 
                 />
              </div>
              
-             <div className="text-center space-y-4 relative z-10">
-                <div className="flex items-center justify-center gap-4">
-                   <h2 className="text-4xl font-black text-white italic tracking-tighter uppercase leading-tight">
+             <div className="text-center space-y-3 relative z-10">
+                <div className="flex items-center justify-center gap-2.5">
+                   <h2 className="text-2xl font-black text-white uppercase tracking-tight">
                      {profile?.name ? formatDisplayName(profile.name) : 'Синхронизация...'}
                    </h2>
-                   {isPremium && <Star className="w-8 h-8 text-primary fill-primary animate-pulse" />}
+                   {isPremium && <Star className="w-5 h-5 text-primary fill-primary" />}
                 </div>
-                <div className="inline-flex bg-primary/10 border border-primary/20 px-6 py-2 rounded-full">
-                   <span className="text-xs font-black uppercase text-primary tracking-[0.3em] italic">{profile?.username}</span>
+                <div className="inline-flex bg-primary/5 border border-primary/10 px-4 py-1.5 rounded-full">
+                   <span className="text-[10px] font-black uppercase text-primary/60 tracking-widest italic">{profile?.username}</span>
                 </div>
              </div>
           </div>
 
-          {/* Account Slots */}
-          <div className="space-y-6">
-             <div className="flex items-center justify-between px-4">
-                <h3 className="text-[11px] font-black uppercase text-white/30 tracking-[0.4em] italic">Ваши Узлы Сети</h3>
-                <span className="text-[9px] font-bold text-primary/40 uppercase">5 слотов активно</span>
+          {/* Account Slots - Cleaner and proportionate */}
+          <div className="space-y-4">
+             <div className="flex items-center justify-between px-2">
+                <h3 className="text-[9px] font-black uppercase text-white/20 tracking-[0.3em]">Мои Узлы</h3>
+                <Activity className="w-3.5 h-3.5 text-primary/30" />
              </div>
              <ScrollArea className="w-full" orientation="horizontal">
-                <div className="flex gap-5 px-4 py-4">
+                <div className="flex gap-4 px-2 py-2">
                    {[0, 1, 2, 3, 4].map(i => (
                      <div 
                       key={i} 
-                      className="flex flex-col items-center gap-3 shrink-0 group cursor-pointer" 
+                      className="flex flex-col items-center gap-2.5 shrink-0 group cursor-pointer" 
                       onClick={() => { if (activeAccountIndex !== i) { if(confirm("Переключиться на другой узел?")) { setActiveAccountIndex(i); signOut(auth!); } } }}
                      >
                        <div className={cn(
-                         "h-22 w-22 rounded-[2.8rem] border-2 flex items-center justify-center transition-all active:scale-90 shadow-2xl relative",
-                         activeAccountIndex === i ? "border-primary bg-primary/10 shadow-[0_0_30px_rgba(var(--primary),0.3)]" : "border-white/5 bg-white/5 opacity-40 hover:opacity-100 hover:border-white/20"
+                         "h-16 w-16 rounded-2xl border-2 flex items-center justify-center transition-all active:scale-90 shadow-xl relative",
+                         activeAccountIndex === i ? "border-primary bg-primary/10" : "border-white/5 bg-white/5 opacity-40 hover:opacity-100 hover:border-white/20"
                        )}>
                          {activeAccountIndex === i ? (
-                           <UserAvatar userId={user?.uid} className="h-14 w-14 border-none" />
+                           <UserAvatar userId={user?.uid} className="h-10 w-10 border-none" />
                          ) : (
-                           <Plus className="w-8 h-8 text-white/20 group-hover:text-primary transition-colors" />
+                           <Plus className="w-5 h-5 text-white/20" />
                          )}
-                         {activeAccountIndex === i && <div className="absolute -top-1 -right-1 w-5 h-5 bg-primary rounded-full border-[3px] border-[#010103] shadow-[0_0_15px_rgba(var(--primary),1)]" />}
+                         {activeAccountIndex === i && <div className="absolute -top-1 -right-1 w-4 h-4 bg-primary rounded-full border-2 border-[#010103]" />}
                        </div>
                        <span className={cn(
-                         "text-[10px] font-black uppercase tracking-widest truncate w-24 text-center italic",
-                         activeAccountIndex === i ? "text-primary" : "text-white/20"
+                         "text-[8px] font-black uppercase tracking-widest truncate w-16 text-center",
+                         activeAccountIndex === i ? "text-primary" : "text-white/10"
                        )}>
-                         {activeAccountIndex === i ? (profile?.name || 'Node Active') : (slotNames[i] || `Пустой слот`)}
+                         {activeAccountIndex === i ? (profile?.name || 'Active') : (slotNames[i] || `Empty`)}
                        </span>
                      </div>
                    ))}
@@ -149,24 +150,24 @@ export default function ProfileView() {
              </ScrollArea>
           </div>
 
-          {/* Menu Items */}
-          <div className="bg-white/[0.02] border border-white/5 rounded-[4rem] overflow-hidden divide-y divide-white/[0.03] shadow-2xl backdrop-blur-2xl">
+          {/* Menu Items - Clean Modern List */}
+          <div className="bg-white/[0.015] border border-white/5 rounded-[2.5rem] overflow-hidden divide-y divide-white/[0.03] shadow-xl backdrop-blur-xl">
             {isAdmin && (
-              <ProfileItem icon={ShieldCheck} label="Контроль Системы" color="text-red-500" sub="Ручное управление Ядром" onClick={() => setIsAdminOpen(true)} />
+              <ProfileItem icon={ShieldCheck} label="Система Aegis" color="text-red-500" sub="Контроль безопасности сети" onClick={() => setIsAdminOpen(true)} />
             )}
-            <ProfileItem icon={Fingerprint} label="Безопасность" color="text-primary" sub="Биометрия и защита доступа" onClick={() => { setSettingsTab('privacy'); setIsSettingsOpen(true); }} />
-            <ProfileItem icon={Palette} label="Визуальный Код" color="text-accent" sub="Настройка интерфейса и тем" onClick={() => { setSettingsTab('style'); setIsSettingsOpen(true); }} />
-            <ProfileItem icon={Share2} label="Передать Сигнал" color="text-green-500" sub="Пригласить друга в Ядро" onClick={handleShare} />
-            <ProfileItem icon={ShieldAlert} label="Юридический Узел" color="text-orange-400" sub="Права и условия использования" onClick={() => setIsLegalOpen(true)} />
+            <ProfileItem icon={Fingerprint} label="Безопасность" color="text-primary" sub="Биометрия и 2FA" onClick={() => { setSettingsTab('privacy'); setIsSettingsOpen(true); }} />
+            <ProfileItem icon={Palette} label="Визуальный код" color="text-accent" sub="Интерфейс и темы" onClick={() => { setSettingsTab('style'); setIsSettingsOpen(true); }} />
+            <ProfileItem icon={Share2} label="Передать сигнал" color="text-green-500" sub="Пригласить в Ядро" onClick={handleShare} />
+            <ProfileItem icon={ShieldAlert} label="Legal" color="text-orange-400" sub="Правовой узел" onClick={() => setIsLegalOpen(true)} />
           </div>
 
-          <div className="px-2">
+          <div className="px-2 pt-2">
             <Button 
               variant="ghost" 
-              className="w-full h-24 bg-red-500/5 hover:bg-red-500/10 text-red-500 font-black uppercase italic tracking-[0.3em] rounded-[3rem] gap-8 transition-all border border-red-500/10 shadow-2xl active:scale-95" 
+              className="w-full h-16 bg-red-500/5 hover:bg-red-500/10 text-red-500 font-black uppercase text-[10px] tracking-widest rounded-2xl gap-4 transition-all border border-red-500/10 active:scale-95" 
               onClick={() => signOut(auth!)}
             >
-              <LogOut className="w-10 h-10" />
+              <LogOut className="w-5 h-5" />
               Отключиться от Системы
             </Button>
           </div>
@@ -175,17 +176,17 @@ export default function ProfileView() {
 
       {/* QR Dialog */}
       <Dialog open={isQrOpen} onOpenChange={setIsQrOpen}>
-        <DialogContent className="max-w-xs bg-[#0a0a0c]/98 border-white/10 rounded-[3.5rem] p-12 text-center shadow-2xl outline-none z-[1000]">
+        <DialogContent className="max-w-xs bg-[#0a0a0c]/98 border-white/10 rounded-[3rem] p-10 text-center shadow-2xl outline-none z-[1000]">
           <DialogHeader>
-             <DialogTitle className="text-3xl font-black uppercase italic text-white text-center w-full">QR Identity</DialogTitle>
+             <DialogTitle className="text-xl font-black uppercase text-white text-center w-full">Node ID</DialogTitle>
              <DialogDescription className="sr-only">Your unique node identity QR code</DialogDescription>
           </DialogHeader>
-          <div className="py-10 flex justify-center">
-            <div className="bg-white p-8 rounded-[3.5rem] shadow-[0_30px_60px_rgba(255,255,255,0.1)] border-4 border-primary/20">
-              <QRCodeSVG value={user?.uid || ''} size={200} fgColor="#010103" />
+          <div className="py-8 flex justify-center">
+            <div className="bg-white p-6 rounded-[2.5rem] shadow-xl border-2 border-primary/20">
+              <QRCodeSVG value={user?.uid || ''} size={160} fgColor="#010103" />
             </div>
           </div>
-          <div className="text-[10px] font-black text-white/30 uppercase tracking-[0.5em] text-center w-full italic">UID: {user?.uid?.slice(0, 16)}...</div>
+          <div className="text-[8px] font-black text-white/20 uppercase tracking-[0.4em] text-center w-full italic">UID: {user?.uid?.slice(0, 12)}...</div>
         </DialogContent>
       </Dialog>
 
@@ -196,17 +197,17 @@ export default function ProfileView() {
 
 function ProfileItem({ icon: Icon, label, color, sub, onClick }: any) {
   return (
-    <div onClick={onClick} className="flex items-center justify-between p-10 cursor-pointer hover:bg-white/[0.04] transition-all group active:bg-white/[0.06]">
-      <div className="flex items-center gap-8">
-        <div className="p-5 rounded-[2rem] bg-white/5 border border-white/10 group-hover:bg-primary/20 group-hover:border-primary/40 transition-all shadow-xl">
-          <Icon className={cn("w-8 h-8", color)} />
+    <div onClick={onClick} className="flex items-center justify-between p-7 cursor-pointer hover:bg-white/[0.03] transition-all group active:bg-white/[0.05]">
+      <div className="flex items-center gap-6">
+        <div className="p-3.5 rounded-xl bg-white/5 border border-white/10 group-hover:bg-primary/20 group-hover:border-primary/30 transition-all">
+          <Icon className={cn("w-5 h-5", color)} />
         </div>
         <div className="flex flex-col text-left">
-          <span className="text-white font-black uppercase italic tracking-tight text-2xl leading-none">{label}</span>
-          <span className="text-[11px] font-bold text-white/20 uppercase tracking-[0.4em] mt-2">{sub}</span>
+          <span className="text-white font-black uppercase tracking-tight text-sm leading-none">{label}</span>
+          <span className="text-[9px] font-bold text-white/20 uppercase tracking-widest mt-1.5">{sub}</span>
         </div>
       </div>
-      <ChevronRight className="w-8 h-8 text-white/10 group-hover:text-primary transition-all translate-x-0 group-hover:translate-x-2" />
+      <ChevronRight className="w-5 h-5 text-white/5 group-hover:text-primary transition-all translate-x-0 group-hover:translate-x-1" />
     </div>
   );
 }
