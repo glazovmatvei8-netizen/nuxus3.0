@@ -1,8 +1,8 @@
 'use server';
 /**
- * NX-AI Neural Nexus Flow v2.2
+ * NX-AI Neural Nexus Flow v2.5
  * ПОДДЕРЖКА: Google Gemini, YandexGPT (OpenAI Protocol), DeepSeek.
- * ОБНОВЛЕНО: Строгое соответствие спецификации Yandex OpenAI SDK (output_text).
+ * ОБНОВЛЕНО: Синхронизация с .env и спецификацией Yandex responses.create.
  */
 
 import { ai } from '@/ai/genkit';
@@ -64,13 +64,13 @@ async function callDeepSeek(prompt: string, history: any[]) {
 
 /**
  * Вызов API Yandex Cloud (через OpenAI SDK)
- * ОБНОВЛЕНО: Использование baseURL и OpenAI-Project согласно вашим данным.
+ * ОБНОВЛЕНО: Строгое соответствие вашему коду и .env.
  */
 async function callYandex(promptText: string, history: any[]) {
   const apiKey = process.env.YANDEX_API_KEY;
   const projectId = process.env.YANDEX_PROJECT_ID || 'b1gjfj178i38ae393ieb';
 
-  if (!apiKey) return "Ошибка: YANDEX_API_KEY отсутствует в конфигурации Ядра (.env).";
+  if (!apiKey) return "Ошибка: YANDEX_API_KEY отсутствует в .env. Пожалуйста, пропишите его.";
 
   try {
     const client = new OpenAI({
@@ -81,7 +81,7 @@ async function callYandex(promptText: string, history: any[]) {
       }
     });
 
-    // Согласно вашей спецификации на скриншоте:
+    // Согласно вашей спецификации (метод responses.create):
     const response = await (client as any).responses.create({
       prompt: {
         id: 'fvt6koqsf13kvd2bkrmc'
@@ -89,7 +89,7 @@ async function callYandex(promptText: string, history: any[]) {
       input: promptText
     });
 
-    // Результат берем из output_text, как указано в вашем коде
+    // Результат берем из output_text
     return response.output_text || "Сигнал получен, но расшифровка пуста.";
   } catch (e: any) {
     console.error("[NUXUS AI] Yandex Error:", e.message || e);
@@ -122,7 +122,7 @@ const nuxusIntelligenceFlow = ai.defineFlow(
         });
         result = output?.text || "Сигнал получен, но декодирование пусто.";
       } catch (e) {
-        result = "Внешний узел Google временно недоступен.";
+        result = "Внешний узел Google (Gemini) временно недоступен. Проверьте API ключ в .env.";
       }
     }
 

@@ -18,8 +18,8 @@ import { isUserActuallyBanned, isUserAnomaly } from '@/lib/utils';
 import { NuxusLogo } from '@/components/nuxus-logo';
 
 /**
- * HOME GATE V31.0 «STABILITY RECOVERY»
- * FIXED: 'otplib' hydration error. All crypto/auth logic deferred to useEffect.
+ * HOME GATE V32.0 «HYDRATION SHIELD»
+ * FIXED: Extreme hydration safety. All crypto and local storage logic is strictly in useEffect.
  */
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -51,25 +51,29 @@ export default function Home() {
   const handleVerify2FA = async () => {
     if (!profile) return;
     
-    // Динамический импорт для предотвращения SSR ошибок
-    const { authenticator } = await import('otplib');
-    
-    if (profile.totpEnabled && profile.totpSecret) {
-       if (authenticator.check(twoFactorInput, profile.totpSecret)) {
-          setIs2FAVerified(true);
-          toast({ title: "Доступ подтвержден" });
-          return;
-       }
-    }
+    // Dynamic import to prevent SSR errors with 'crypto' or 'otplib'
+    try {
+      const { authenticator } = await import('otplib');
+      
+      if (profile.totpEnabled && profile.totpSecret) {
+         if (authenticator.check(twoFactorInput, profile.totpSecret)) {
+            setIs2FAVerified(true);
+            toast({ title: "Доступ подтвержден" });
+            return;
+         }
+      }
 
-    if (profile.twoFactorEnabled && twoFactorInput === profile.twoFactorPin) {
-      setIs2FAVerified(true);
-      toast({ title: "Доступ разрешен" });
-      return;
-    }
+      if (profile.twoFactorEnabled && twoFactorInput === profile.twoFactorPin) {
+        setIs2FAVerified(true);
+        toast({ title: "Доступ разрешен" });
+        return;
+      }
 
-    toast({ title: "Неверный код доступа", variant: "destructive" });
-    setTwoFactorInput('');
+      toast({ title: "Неверный код доступа", variant: "destructive" });
+      setTwoFactorInput('');
+    } catch (e) {
+      toast({ title: "Ошибка модуля защиты", variant: "destructive" });
+    }
   };
 
   const handleSendAppeal = async () => {
@@ -95,7 +99,14 @@ export default function Home() {
     }
   };
 
-  if (!mounted) return null;
+  // Prevent any rendering until mounted to avoid hydration mismatch
+  if (!mounted) {
+    return (
+      <div className="h-[100dvh] w-full bg-[#010103] flex items-center justify-center">
+        <NuxusLogo size={80} className="animate-pulse opacity-20" />
+      </div>
+    );
+  }
 
   if (isUserLoading || (user && isProfileLoading)) {
     return (
@@ -150,7 +161,7 @@ export default function Home() {
             <div className="space-y-4 max-w-sm">
               <h1 className="text-4xl font-black text-white tracking-tighter uppercase italic leading-tight">Доступ <br/> ограничен</h1>
               <p className="text-[13px] text-white/40 font-bold uppercase tracking-widest leading-relaxed">
-                Ваш аккаунт был заблокирован за нарушение правил мессенджера Nuxus.
+                Ваш аккаунт был заблокиров за нарушение правил мессенджера Nuxus.
               </p>
             </div>
             <div className="flex flex-col gap-3 w-full max-w-xs">
