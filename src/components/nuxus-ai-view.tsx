@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { 
   Sparkles, Loader2, Send, 
-  BrainCircuit, RotateCcw, Mic, ShieldCheck, Globe, Cpu, Wrench
+  BrainCircuit, RotateCcw, Mic, ShieldCheck, Globe, Cpu, Wrench, ChevronDown, Zap
 } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase/provider';
 import { collection, query, orderBy, addDoc, serverTimestamp, limit, getDocs, writeBatch, doc } from 'firebase/firestore';
@@ -14,12 +14,16 @@ import { askNexusAI } from '@/ai/flows/nuxus-intelligence-flow';
 import { cn, isGlobalAdmin } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { NuxusLogo } from './nuxus-logo';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { User } from '@/lib/types';
 
-/**
- * NEXUS AI TERMINAL V8.5.0 «MAINTENANCE MODE»
- * Доступ только для Администраторов.
- */
+type AINode = 'gemini' | 'yandex' | 'deepseek';
+
 export default function NuxusAiView() {
   const { user } = useUser();
   const db = useFirestore();
@@ -27,6 +31,7 @@ export default function NuxusAiView() {
   
   const [input, setInput] = useState('');
   const [isThinking, setIsThinking] = useState(false);
+  const [activeNode, setActiveNode] = useState<AINode>('gemini');
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const userProfileRef = useMemo(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user?.uid]);
@@ -62,7 +67,8 @@ export default function NuxusAiView() {
       await addDoc(historyRef, {
         role: 'user',
         content: userMsg,
-        createdAt: serverTimestamp()
+        createdAt: serverTimestamp(),
+        node: activeNode
       });
 
       const flowHistory = (messages || []).map(m => ({
@@ -70,12 +76,13 @@ export default function NuxusAiView() {
         content: m.content
       }));
 
-      const { response } = await askNexusAI(userMsg, flowHistory);
+      const { response } = await askNexusAI(userMsg, flowHistory, activeNode);
 
       await addDoc(historyRef, {
         role: 'model',
         content: response,
-        createdAt: serverTimestamp()
+        createdAt: serverTimestamp(),
+        node: activeNode
       });
 
     } catch (e: any) {
@@ -115,25 +122,41 @@ export default function NuxusAiView() {
     );
   }
 
+  const nodeLabels = {
+    gemini: "Gemini 1.5 Flash",
+    yandex: "Yandex AI Studio",
+    deepseek: "DeepSeek 4 Flash"
+  };
+
   return (
     <div className="flex flex-col h-full bg-[#020205] overflow-hidden relative">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(168,85,247,0.1)_0%,transparent_60%)] pointer-events-none" />
       
-      <header className="px-6 pt-12 pb-6 shrink-0 z-20 flex items-center justify-between">
+      <header className="px-6 pt-12 pb-6 shrink-0 z-30 flex items-center justify-between">
          <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-xl bg-white/[0.03] border border-white/10 flex items-center justify-center">
                <BrainCircuit className="w-5 h-5 text-primary animate-pulse" />
             </div>
             <div className="flex flex-col text-left">
-               <h1 className="text-xl font-black text-white italic tracking-tighter uppercase">Nexus AI</h1>
-               <span className="text-[7px] font-black text-primary/40 uppercase tracking-[0.4em]">ADMIN ACCESS ACTIVE</span>
+               <h1 className="text-xl font-black text-white italic tracking-tighter uppercase leading-none">Nexus AI</h1>
+               <DropdownMenu>
+                 <DropdownMenuTrigger asChild>
+                   <button className="flex items-center gap-1.5 mt-1 group">
+                     <span className="text-[7px] font-black text-primary uppercase tracking-[0.4em] group-hover:text-white transition-colors">{nodeLabels[activeNode]}</span>
+                     <ChevronDown className="w-2.5 h-2.5 text-primary/40 group-hover:text-white transition-colors" />
+                   </button>
+                 </DropdownMenuTrigger>
+                 <DropdownMenuContent className="bg-black/90 backdrop-blur-xl border-white/10 rounded-xl p-2 w-48 shadow-2xl">
+                    <DropdownMenuItem onClick={() => setActiveNode('gemini')} className="text-[9px] font-black uppercase tracking-widest gap-2 py-3 rounded-lg"><Cpu className="w-3.5 h-3.5" /> Gemini Node</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setActiveNode('yandex')} className="text-[9px] font-black uppercase tracking-widest gap-2 py-3 rounded-lg"><Zap className="w-3.5 h-3.5 text-yellow-500" /> Yandex Node</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setActiveNode('deepseek')} className="text-[9px] font-black uppercase tracking-widest gap-2 py-3 rounded-lg"><Globe className="w-3.5 h-3.5 text-blue-500" /> DeepSeek Node</DropdownMenuItem>
+                 </DropdownMenuContent>
+               </DropdownMenu>
             </div>
          </div>
-         {messages && messages.length > 0 && (
-           <Button variant="ghost" size="icon" onClick={clearHistory} className="h-10 w-10 rounded-xl text-white/20 hover:text-red-500 hover:bg-red-500/10 transition-all">
-             <RotateCcw className="w-4 h-4" />
-           </Button>
-         )}
+         <Button variant="ghost" size="icon" onClick={clearHistory} className="h-10 w-10 rounded-xl text-white/20 hover:text-red-500 hover:bg-red-500/10 transition-all">
+           <RotateCcw className="w-4 h-4" />
+         </Button>
       </header>
 
       <ScrollArea className="flex-1">
@@ -201,7 +224,7 @@ export default function NuxusAiView() {
                 <Mic className="w-6 h-6" />
              </Button>
              <Textarea 
-               placeholder="Спросите Nexus AI..." 
+               placeholder={`Спросите через ${activeNode}...`} 
                value={input}
                onChange={e => setInput(e.target.value)}
                onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())}
@@ -221,19 +244,5 @@ export default function NuxusAiView() {
         </div>
       </div>
     </div>
-  );
-}
-
-function QuickCommand({ icon: Icon, text, onClick }: { icon: any, text: string, onClick: (t: string) => void }) {
-  return (
-    <button 
-      onClick={() => onClick(text)}
-      className="p-5 bg-white/[0.02] border border-white/10 rounded-[2rem] text-[10px] font-black uppercase tracking-widest text-white/40 hover:bg-primary/10 hover:text-primary hover:border-primary/20 transition-all text-left flex flex-col gap-4 group shadow-xl"
-    >
-      <div className="h-10 w-10 rounded-2xl bg-white/5 flex items-center justify-center group-hover:scale-110 group-hover:bg-primary/10 transition-all">
-         <Icon className="w-5 h-5" />
-      </div>
-      <span className="italic truncate">{text}</span>
-    </button>
   );
 }
