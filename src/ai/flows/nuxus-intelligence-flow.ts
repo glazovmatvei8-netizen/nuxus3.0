@@ -1,6 +1,6 @@
 'use server';
 /**
- * NX-AI Neural Nexus Flow v6.5
+ * NX-AI Neural Nexus Flow v6.6
  * ПОДДЕРЖКА: Yandex AI Studio (Agent Integration).
  * МОДЕЛЬ: DeepSeek 4 Flash.
  * ПРОТОКОЛ: OpenAI Custom (Yandex Cloud).
@@ -23,16 +23,10 @@ const IntelligenceOutputSchema = z.object({
   nodeUsed: z.string(),
 });
 
-/**
- * Основная функция вызова ИИ через вашего Агента в Yandex AI Studio.
- */
 export async function askNexusAI(prompt: string, history: any[] = []) {
   return nuxusIntelligenceFlow({ prompt, history });
 }
 
-/**
- * ПРЯМОЙ ВЫЗОВ АГЕНТА ПО ВАШЕМУ КОДУ
- */
 async function callYandexAgent(promptText: string) {
   const apiKey = process.env.YANDEX_API_KEY;
   const folderId = process.env.YANDEX_FOLDER_ID || 'b1gjfj178i38ae393ieb'; 
@@ -51,9 +45,6 @@ async function callYandexAgent(promptText: string) {
       }
     });
 
-    /**
-     * ВЫЗОВ АГЕНТА СТРОГО ПО ШАБЛОНУ С ФОТО
-     */
     const response = await (client as any).responses.create({
       prompt: {
         id: agentId
@@ -61,11 +52,10 @@ async function callYandexAgent(promptText: string) {
       input: promptText
     });
 
-    // Извлекаем ответ строго из output_text
     return response.output_text || "Сигнал получен, но ответ пуст.";
   } catch (e: any) {
     console.error("[NUXUS AI] Yandex Agent Error:", e.message || e);
-    return `Сбой связи с DeepSeek (Yandex): ${e.message || 'Проверьте настройки ключа и баланс в Yandex Cloud'}`;
+    return `Сбой связи с DeepSeek (Yandex): ${e.message || 'Проверьте настройки ключа в .env'}`;
   }
 }
 

@@ -25,13 +25,12 @@ import { UserAvatar } from './user-avatar';
 import type { Call } from '@/lib/types';
 import { 
   MessageSquare, Settings, Phone, Wallet, 
-  Globe, Sparkles
+  Globe, Sparkles, LayoutGrid
 } from 'lucide-react';
 
 /**
- * CHAT MAIN V60.0 «OMNI-DOCK»
- * ОБНОВЛЕНИЕ: Все кнопки навигации возвращены и сбалансированы.
- * Добавлена кнопка AI в общий ряд.
+ * CHAT MAIN V61.0 «UNIVERSAL HUB»
+ * ОБНОВЛЕНИЕ: Внедрена навигация для ПК (Side Rail) и исправлен Dock для мобильных.
  */
 export default function ChatMain() {
   const { 
@@ -60,6 +59,15 @@ export default function ChatMain() {
     }
   }, [incomingCalls, activeCallId, setActiveCallId]);
 
+  const NAV_ITEMS = [
+    { id: 'discovery', icon: Globe, label: 'Explore' },
+    { id: 'calls', icon: Phone, label: 'Calls' },
+    { id: 'ai', icon: Sparkles, label: 'AI', isAi: true },
+    { id: 'chats', icon: MessageSquare, label: 'Chats' },
+    { id: 'wallet', icon: Wallet, label: 'Wallet' },
+    { id: 'profile', icon: Settings, label: 'Node' },
+  ];
+
   return (
     <div className="fixed inset-0 flex flex-col w-screen bg-[#010103] overflow-hidden h-[100dvh]">
       <NotificationListener />
@@ -72,10 +80,45 @@ export default function ChatMain() {
       </div>
 
       <div className="flex-1 flex overflow-hidden w-full relative h-full z-10">
+        
+        {/* DESKTOP SIDE NAVIGATION RAIL */}
+        <nav className="hidden md:flex flex-col items-center py-8 w-20 bg-black/60 border-r border-white/5 shrink-0 z-[100] gap-8">
+           <div className="p-2.5 rounded-2xl bg-primary/10 border border-primary/20 mb-4">
+              <LayoutGrid className="w-6 h-6 text-primary" />
+           </div>
+           
+           <div className="flex flex-col gap-6 flex-1 items-center">
+              {NAV_ITEMS.map((item) => (
+                <button 
+                  key={item.id}
+                  onClick={() => setActiveView(item.id as any)}
+                  className={cn(
+                    "relative group p-3 rounded-2xl transition-all duration-300",
+                    activeView === item.id ? "bg-primary text-white shadow-[0_0_20px_rgba(var(--primary),0.3)]" : "text-white/20 hover:text-white/60 hover:bg-white/5"
+                  )}
+                >
+                  <item.icon className={cn("w-6 h-6", activeView === item.id && !item.isAi && "fill-current")} />
+                  
+                  {/* Tooltip */}
+                  <div className="absolute left-full ml-4 px-3 py-1.5 bg-white text-black text-[10px] font-black uppercase tracking-widest rounded-lg opacity-0 group-hover:opacity-100 translate-x-[-10px] group-hover:translate-x-0 transition-all pointer-events-none whitespace-nowrap shadow-2xl z-[200]">
+                    {item.label}
+                  </div>
+                </button>
+              ))}
+           </div>
+
+           <button 
+             onClick={() => setIsSettingsOpen(true)}
+             className="p-3 rounded-2xl text-white/20 hover:text-white transition-all hover:bg-white/5"
+           >
+              <UserAvatar userId={user?.uid} className="h-7 w-7 rounded-lg" />
+           </button>
+        </nav>
+
         <div className="flex-1 flex overflow-hidden h-full relative">
           <div className={cn(
-            "w-full md:w-[420px] lg:w-[480px] h-full flex-shrink-0 z-30 bg-black/40 backdrop-blur-[120px] border-r border-white/5 relative overflow-hidden transition-all duration-500", 
-            (currentChatId && !['profile', 'contacts', 'calls', 'wallet', 'discovery', 'ai', 'partner'].includes(activeView)) ? "hidden md:block" : "block"
+            "w-full md:w-[400px] lg:w-[440px] h-full flex-shrink-0 z-30 bg-black/20 backdrop-blur-[120px] border-r border-white/5 relative overflow-hidden transition-all duration-500", 
+            (currentChatId && activeView === 'chats') ? "hidden md:block" : "block"
           )}>
             <div className="h-full w-full">
               {activeView === 'chats' && <ChatSidebar />}
@@ -92,7 +135,7 @@ export default function ChatMain() {
           
           <div className={cn(
             "flex-1 h-full flex flex-col min-w-0 bg-transparent relative z-20 overflow-hidden transition-all duration-500 md:p-6 lg:p-10", 
-            (!currentChatId || ['profile', 'wallet', 'ai', 'partner'].includes(activeView)) ? "hidden md:flex" : "flex"
+            (!currentChatId || ['profile', 'wallet', 'ai', 'partner', 'discovery', 'calls'].includes(activeView)) ? "hidden md:flex" : "flex"
           )}>
             <div className="h-full w-full overflow-hidden flex flex-col bg-white/[0.01] md:rounded-[4rem] border border-white/5 shadow-[0_50px_150px_rgba(0,0,0,0.8)]">
               {currentChatId ? <ChatArea /> : (
@@ -114,18 +157,16 @@ export default function ChatMain() {
         </div>
       </div>
 
-      {/* Floating Bottom Nav (Mobile) - BALANCED OMNI-DOCK */}
-      {!currentChatId && (
+      {/* MOBILE BOTTOM NAVIGATION - VISIBLE WHEN NOT IN CHAT */}
+      {(!currentChatId || activeView !== 'chats') && (
         <div className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[1000] w-[94%] max-w-[440px] animate-in slide-in-from-bottom-6 duration-700">
           <div className="bg-[#0c0c0e]/95 backdrop-blur-3xl rounded-[2.5rem] h-20 flex items-center justify-around px-1 shadow-[0_30px_60px_rgba(0,0,0,0.8)] border border-white/10 relative">
             
             <NavButton icon={Globe} active={activeView === 'discovery'} onClick={() => setActiveView('discovery')} label="Explore" />
             <NavButton icon={Phone} active={activeView === 'calls'} onClick={() => setActiveView('calls')} label="Calls" />
             
-            {/* AI BUTTON */}
             <NavButton icon={Sparkles} active={activeView === 'ai'} onClick={() => setActiveView('ai')} label="AI" isAi />
 
-            {/* CENTRAL CHATS BUTTON */}
             <div className="relative -mt-12 flex flex-col items-center group">
               <button 
                 onClick={() => setActiveView('chats')}
