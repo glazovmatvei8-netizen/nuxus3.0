@@ -1,7 +1,7 @@
 
 'use server';
 /**
- * NX-AI Neural Nexus Flow v5.0
+ * NX-AI Neural Nexus Flow v6.0
  * ПОДДЕРЖКА: Yandex AI Studio (Agent Integration).
  * МОДЕЛЬ: DeepSeek 4 Flash.
  * ПРОТОКОЛ: OpenAI Custom (Yandex Cloud).
@@ -32,12 +32,14 @@ export async function askNexusAI(prompt: string, history: any[] = []) {
 }
 
 /**
- * ПРЯМОЙ ВЫЗОВ АГЕНТА ИЗ ВАШЕГО СКРИНШОТА
+ * ПРЯМОЙ ВЫЗОВ АГЕНТА ИЗ ВАШЕГО ПРИМЕРА
+ * Использует Folder ID: b1gjfj178i38ae393ieb
+ * Использует Agent ID: fvt6koqsf13kvd2bkrmc
  */
 async function callYandexAgent(promptText: string) {
   const apiKey = process.env.YANDEX_API_KEY;
-  const folderId = process.env.YANDEX_PROJECT_ID || 'b1gjfj178i38ae393ieb';
-  const agentId = 'fvt6koqsf13kvd2bkrmc';
+  const folderId = 'b1gjfj178i38ae393ieb'; // Ваш Project ID (Folder ID)
+  const agentId = 'fvt6koqsf13kvd2bkrmc';   // Ваш Agent ID
 
   if (!apiKey || apiKey.trim() === '') {
     return "ОШИБКА: API ключ Yandex не найден в .env. Пожалуйста, пропишите его.";
@@ -53,7 +55,8 @@ async function callYandexAgent(promptText: string) {
     });
 
     /**
-     * ВЫЗОВ АГЕНТА (Метод из вашего примера)
+     * ВЫЗОВ АГЕНТА ПО ВАШЕМУ КОДУ
+     * Мы кастуем к any, так как это специфичный метод Yandex SDK для Агентов
      */
     const response = await (client as any).responses.create({
       prompt: {
@@ -62,7 +65,7 @@ async function callYandexAgent(promptText: string) {
       input: promptText
     });
 
-    // Результат берем строго из output_text, как на вашем фото
+    // Извлекаем ответ строго из output_text, как в вашем примере
     return response.output_text || "Сигнал получен, но ответ пуст.";
   } catch (e: any) {
     console.error("[NUXUS AI] Yandex Agent Error:", e.message || e);
