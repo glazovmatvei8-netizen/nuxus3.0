@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -15,11 +14,11 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Settings2, Camera, ShieldCheck, Loader2, Fingerprint, Palette, 
   ChevronRight, Globe, Trash2, Mail, Phone, Lock, 
-  Info, HelpCircle, UserCheck, ShieldAlert, ImageIcon, Type, LayoutGrid
+  Info, HelpCircle, UserCheck, ShieldAlert, ImageIcon, Type, LayoutGrid, MessageSquare, Headphones
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
-import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { doc, updateDoc, deleteDoc, addDoc, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppState } from '@/lib/store';
 import { isUserPremium, cn } from '@/lib/utils';
@@ -27,15 +26,15 @@ import type { User } from '@/lib/types';
 import versions from '@/app/versions.json';
 
 /**
- * SETTINGS MODAL V50.0 «PERFECT HARMONY»
- * РЕДИЗАЙН: Элементы стали компактнее, кнопки уменьшены, отступы сбалансированы.
+ * SETTINGS MODAL V52.0 «STABILITY & EXPANSION»
+ * UPDATED: More themes, support button, and improved style settings.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
   const db = useFirestore();
   const { user } = useUser();
   const { toast } = useToast();
-  const { settingsTab, setSettingsTab, setIsLegalOpen } = useAppState();
+  const { settingsTab, setSettingsTab, setIsLegalOpen, setCurrentChatId, setActiveView } = useAppState();
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user?.uid]);
@@ -104,6 +103,39 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     finally { setIsSaving(false); }
   };
 
+  const openSupport = async () => {
+    if (!db || !user) return;
+    const supportNodeId = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1'; // Admin Node as Support
+    try {
+      const q = query(collection(db, 'chats'), where('type', '==', 'private'), where('participantIds', 'array-contains', user.uid));
+      const snap = await getDocs(q);
+      const existing = snap.docs.find(d => d.data().participantIds.includes(supportNodeId));
+      
+      if (existing) {
+        setCurrentChatId(existing.id);
+      } else {
+        const newChat = await addDoc(collection(db, 'chats'), {
+          type: 'private',
+          participantIds: [user.uid, supportNodeId],
+          ownerId: user.uid,
+          createdAt: new Date().toISOString(),
+          name: "Поддержка Nuxus",
+          username: "@support",
+          metadata: {
+            [user.uid]: { name: profile?.name || 'Node', username: profile?.username || '?' },
+            [supportNodeId]: { name: "Поддержка Nuxus", username: "@support", isPremium: true }
+          }
+        });
+        setCurrentChatId(newChat.id);
+      }
+      onOpenChange(false);
+      setActiveView('chats');
+      toast({ title: "Связь с Оператором установлена" });
+    } catch (e) {
+      toast({ title: "Сбой связи с Поддержкой", variant: "destructive" });
+    }
+  };
+
   const handleAnnihilate = async () => {
     if (!confirm("ВНИМАНИЕ: Это действие безвозвратно удалит ваш аккаунт. Продолжить?")) return;
     if (!db || !user) return;
@@ -123,8 +155,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                <Settings2 className="w-6 h-6 text-primary animate-pulse" />
             </div>
             <div className="flex flex-col">
-              <DialogTitle className="text-2xl font-black italic uppercase text-white tracking-tighter">Настройки</DialogTitle>
-              <DialogDescription className="text-[9px] font-bold uppercase text-primary/60 mt-0.5 tracking-widest">Nuxus Control V{versions.latestVersion}</DialogDescription>
+              <DialogTitle className="text-2xl font-black italic uppercase text-white tracking-tighter">Контроль</DialogTitle>
+              <DialogDescription className="text-[9px] font-bold uppercase text-primary/60 mt-0.5 tracking-widest">Nuxus Core V{versions.latestVersion}</DialogDescription>
             </div>
           </div>
         </DialogHeader>
@@ -217,16 +249,15 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
                     <div className="grid grid-cols-2 gap-4">
                        <div className="space-y-2">
-                          <Label className="text-[9px] font-black uppercase text-white/40 ml-2 flex items-center gap-2 tracking-widest"><LayoutGrid className="w-3.5 h-3.5" /> Пузыри</Label>
-                          <Select value={form.bubbleStyle} onValueChange={v => setForm({...form, bubbleStyle: v})}>
+                          <Label className="text-[9px] font-black uppercase text-white/40 ml-2 flex items-center gap-2 tracking-widest"><LayoutGrid className="w-3.5 h-3.5" /> Тема</Label>
+                          <Select value={form.theme} onValueChange={v => setForm({...form, theme: v})}>
                              <SelectTrigger className="bg-black/40 border-white/10 rounded-xl h-11 text-[9px] font-black uppercase tracking-widest">
                                 <SelectValue />
                              </SelectTrigger>
                              <SelectContent className="bg-[#0a0a0c]/98 border-white/10 rounded-xl">
-                                <SelectItem value="default" className="text-[9px] font-bold uppercase tracking-widest">Default</SelectItem>
-                                <SelectItem value="neon" className="text-[9px] font-bold uppercase tracking-widest">Neon</SelectItem>
-                                <SelectItem value="gold" className="text-[9px] font-bold uppercase tracking-widest">Gold</SelectItem>
-                                <SelectItem value="ocean" className="text-[9px] font-bold uppercase tracking-widest">Ocean</SelectItem>
+                                <SelectItem value="default" className="text-[9px] font-bold uppercase tracking-widest">Nuxus Classic</SelectItem>
+                                <SelectItem value="glass" className="text-[9px] font-bold uppercase tracking-widest">Infinite Glass</SelectItem>
+                                <SelectItem value="midnight" className="text-[9px] font-bold uppercase tracking-widest">Midnight Void</SelectItem>
                              </SelectContent>
                           </Select>
                        </div>
@@ -244,6 +275,21 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                           </Select>
                        </div>
                     </div>
+
+                    <div className="space-y-3">
+                       <Label className="text-[9px] font-black uppercase text-white/40 ml-2 tracking-widest">Стиль пузырей</Label>
+                       <div className="grid grid-cols-4 gap-2">
+                          {['default', 'neon', 'gold', 'ocean'].map(s => (
+                            <button 
+                              key={s} 
+                              onClick={() => setForm({...form, bubbleStyle: s})}
+                              className={cn("h-10 rounded-lg text-[8px] font-black uppercase tracking-widest border transition-all", form.bubbleStyle === s ? "bg-primary border-primary text-white" : "bg-black/40 border-white/5 text-white/20")}
+                            >
+                               {s}
+                            </button>
+                          ))}
+                       </div>
+                    </div>
                  </div>
               </TabsContent>
 
@@ -252,11 +298,16 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20"><Info className="w-8 h-8 text-primary animate-pulse" /></div>
                     <div className="space-y-1">
                        <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Nuxus Kernel</h3>
-                       <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.4em]">Версия {versions.latestVersion}</p>
+                       <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.4em]">Версия {versions.latestVersion} • {versions.build}</p>
                     </div>
-                    <div className="grid grid-cols-2 gap-3 w-full">
-                       <Button variant="ghost" onClick={() => setIsLegalOpen(true)} className="h-12 rounded-xl bg-white/5 font-black uppercase text-[8px] tracking-widest gap-2"><HelpCircle className="w-3 h-3 text-primary" /> Право</Button>
-                       <Button variant="ghost" className="h-12 rounded-xl bg-red-500/10 text-red-500 font-black uppercase text-[8px] tracking-widest gap-2" onClick={handleAnnihilate}><Trash2 className="w-3 h-3" /> Стереть</Button>
+                    <div className="grid grid-cols-1 gap-3 w-full">
+                       <Button onClick={openSupport} className="h-14 rounded-2xl bg-white/5 border border-white/10 font-black uppercase text-[10px] tracking-widest gap-3 shadow-xl hover:bg-primary/10 hover:border-primary/20 transition-all">
+                          <MessageSquare className="w-5 h-5 text-primary" /> Поддержка Nuxus
+                       </Button>
+                       <div className="grid grid-cols-2 gap-3">
+                          <Button variant="ghost" onClick={() => setIsLegalOpen(true)} className="h-12 rounded-xl bg-white/5 font-black uppercase text-[8px] tracking-widest gap-2"><HelpCircle className="w-3 h-3 text-primary" /> Право</Button>
+                          <Button variant="ghost" className="h-12 rounded-xl bg-red-500/10 text-red-500 font-black uppercase text-[8px] tracking-widest gap-2" onClick={handleAnnihilate}><Trash2 className="w-3 h-3" /> Стереть</Button>
+                       </div>
                     </div>
                  </div>
               </TabsContent>

@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState } from 'react';
@@ -39,8 +38,8 @@ const COUNTRIES = [
 ];
 
 /**
- * AUTH SCREEN V50.0 «PERFECT HARMONY»
- * РЕДИЗАЙН: Максимальная адаптивность и компактность. Всё помещается в экран.
+ * AUTH SCREEN V52.0 «STABILITY & EXPANSION»
+ * FIXED: Phone auth reliability and improved layout.
  */
 export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'login' | 'register' }) {
   const auth = useAuth();
@@ -76,9 +75,16 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
       
       let finalEmail = email.trim().toLowerCase();
       if (authMethod === 'phone') {
-        const cleanPhone = phoneNumber.replace(/\D/g, '');
-        if (cleanPhone.length < 5) throw new Error("Введите корректный номер");
+        const cleanPhoneInput = phoneNumber.replace(/\D/g, '');
         const cleanCountryCode = country.code.replace('+', '');
+        
+        // Ensure we don't double the country code if user typed it
+        let cleanPhone = cleanPhoneInput;
+        if (cleanPhone.startsWith(cleanCountryCode)) {
+          cleanPhone = cleanPhone.substring(cleanCountryCode.length);
+        }
+
+        if (cleanPhone.length < 5) throw new Error("Введите корректный номер");
         finalEmail = `${cleanCountryCode}${cleanPhone}@nuxus.app`;
       }
 
@@ -97,12 +103,19 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
         const userCred = await createUserWithEmailAndPassword(auth, finalEmail, password);
         await updateProfile(userCred.user, { displayName: name.trim() });
         
+        const cleanPhoneInput = phoneNumber.replace(/\D/g, '');
+        const cleanCountryCode = country.code.replace('+', '');
+        let cleanPhone = cleanPhoneInput;
+        if (cleanPhone.startsWith(cleanCountryCode)) {
+          cleanPhone = cleanPhone.substring(cleanCountryCode.length);
+        }
+
         const userData = {
           id: userCred.user.uid,
           name: name.trim(),
           username: usernameWithAt,
           usernameLowercase: usernameWithAt,
-          phone: authMethod === 'phone' ? country.code + phoneNumber.replace(/\D/g, '') : '',
+          phone: authMethod === 'phone' ? country.code + cleanPhone : '',
           email: authMethod === 'email' ? email.trim() : null,
           createdAt: new Date().toISOString(),
           balance: 0,
@@ -126,7 +139,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
       if (e.code === 'auth/user-not-found') msg = "Узел не найден";
       if (e.code === 'auth/wrong-password') msg = "Неверный пароль";
       if (e.code === 'auth/email-already-in-use') msg = "ID уже занят";
-      toast({ title: "Сбой", description: msg, variant: "destructive" });
+      toast({ title: "Сбой", description: e.message || msg, variant: "destructive" });
     } finally {
       setIsLoading(false);
     }

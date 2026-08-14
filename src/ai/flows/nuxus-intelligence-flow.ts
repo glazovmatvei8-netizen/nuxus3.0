@@ -1,11 +1,13 @@
 'use server';
 /**
- * NX-AI Neural Nexus Flow v2.0
- * Поддержка мульти-узлов: Google Gemini, YandexGPT, DeepSeek.
+ * NX-AI Neural Nexus Flow v2.1
+ * ПОДДЕРЖКА: Google Gemini, YandexGPT (OpenAI Compatible), DeepSeek.
+ * ОБНОВЛЕНО: Интеграция нового протокола Yandex Cloud через OpenAI SDK.
  */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
+import OpenAI from 'openai';
 
 const IntelligenceInputSchema = z.object({
   prompt: z.string(),
@@ -43,7 +45,7 @@ async function callDeepSeek(prompt: string, history: any[]) {
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: "deepseek-chat", // DeepSeek-V3 или указанный вами Flash
+        model: "deepseek-chat",
         messages: [
           { role: "system", content: "Вы — NX-AI (DeepSeek Node), интеллектуальный модуль Nuxus." },
           ...history.map(h => ({ role: h.role === 'model' ? 'assistant' : 'user', content: h.content })),
@@ -56,46 +58,43 @@ async function callDeepSeek(prompt: string, history: any[]) {
     const data = await response.json();
     return data.choices[0].message.content;
   } catch (e) {
-    return "Сбой связи с узлом DeepSeek. Проверьте API ключ.";
+    return "Сбой связи с узлом DeepSeek.";
   }
 }
 
 /**
- * Вызов API Yandex Cloud (YandexGPT / Assistants)
+ * Вызов API Yandex Cloud (через OpenAI SDK)
+ * ОБНОВЛЕНО: Согласно спецификации пользователя v51.0
  */
-async function callYandex(prompt: string, history: any[]) {
+async function callYandex(promptText: string, history: any[]) {
   const apiKey = process.env.YANDEX_API_KEY;
-  const folderId = process.env.YANDEX_CATALOG_ID;
+  const projectId = process.env.YANDEX_PROJECT_ID || 'b1gjfj178i38ae393ieb';
 
-  if (!apiKey || !folderId) return "Ошибка: Yandex API Key или Catalog ID отсутствуют.";
+  if (!apiKey) return "Ошибка: YANDEX_API_KEY отсутствует в конфигурации Ядра.";
 
   try {
-    const response = await fetch('https://llm.api.cloud.yandex.net/foundationModels/v1/completion', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Api-Key ${apiKey}`,
-        'x-folder-id': folderId
-      },
-      body: JSON.stringify({
-        modelUri: `gpt://${folderId}/yandexgpt/latest`,
-        completionOptions: {
-          stream: false,
-          temperature: 0.6,
-          maxTokens: "2000"
-        },
-        messages: [
-          { role: "system", content: "Вы — NX-AI (Yandex Node), ассистент мессенджера Nuxus." },
-          ...history.map(h => ({ role: h.role === 'model' ? 'assistant' : 'user', content: h.content })),
-          { role: "user", content: prompt }
-        ]
-      })
+    const client = new OpenAI({
+      apiKey: apiKey,
+      baseURL: 'https://ai.api.cloud.yandex.net/v1',
+      defaultHeaders: {
+        'OpenAI-Project': projectId
+      }
     });
 
-    const data = await response.json();
-    return data.result.alternatives[0].message.text;
-  } catch (e) {
-    return "Сбой связи с узлом Yandex AI Studio.";
+    // Используем предоставленную вами структуру client.responses.create
+    // Примечание: В стандартном OpenAI SDK это может быть client.chat.completions, 
+    // но мы следуем вашему коду с использованием Yandex-специфичного метода.
+    const response = await (client as any).responses.create({
+      prompt: {
+        id: 'fvt6koqsf13kvd2bkrmc'
+      },
+      input: promptText
+    });
+
+    return response.output_text || "Сигнал получен, но расшифровка пуста.";
+  } catch (e: any) {
+    console.error("[NUXUS AI] Yandex Error:", e.message || e);
+    return `Сбой связи с узлом Yandex AI: ${e.message || 'Unknown Protocol Error'}`;
   }
 }
 
