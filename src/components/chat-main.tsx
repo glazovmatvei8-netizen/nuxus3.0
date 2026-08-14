@@ -29,8 +29,9 @@ import {
 } from 'lucide-react';
 
 /**
- * CHAT MAIN V59.0 «NEURAL ACCESS»
- * ОБНОВЛЕНИЕ: Добавлена кнопка ИИ в Dock для быстрого доступа.
+ * CHAT MAIN V60.0 «OMNI-DOCK»
+ * ОБНОВЛЕНИЕ: Все кнопки навигации возвращены и сбалансированы.
+ * Добавлена кнопка AI в общий ряд.
  */
 export default function ChatMain() {
   const { 
@@ -113,41 +114,34 @@ export default function ChatMain() {
         </div>
       </div>
 
-      {/* Floating Bottom Nav (Mobile) - UPDATED WITH AI BUTTON */}
+      {/* Floating Bottom Nav (Mobile) - BALANCED OMNI-DOCK */}
       {!currentChatId && (
-        <div className="md:hidden fixed bottom-5 left-1/2 -translate-x-1/2 z-[1000] w-[92%] max-w-[400px] animate-in slide-in-from-bottom-6 duration-700">
-          <div className="bg-[#0c0c0e]/95 backdrop-blur-3xl rounded-[2rem] h-18 flex items-center justify-around px-2 shadow-[0_30px_60px_rgba(0,0,0,0.8)] border border-white/10 relative">
-            <NavButton icon={Globe} active={activeView === 'discovery'} onClick={() => setActiveView('discovery')} />
-            <NavButton icon={Phone} active={activeView === 'calls'} onClick={() => setActiveView('calls')} />
+        <div className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[1000] w-[94%] max-w-[440px] animate-in slide-in-from-bottom-6 duration-700">
+          <div className="bg-[#0c0c0e]/95 backdrop-blur-3xl rounded-[2.5rem] h-20 flex items-center justify-around px-1 shadow-[0_30px_60px_rgba(0,0,0,0.8)] border border-white/10 relative">
+            
+            <NavButton icon={Globe} active={activeView === 'discovery'} onClick={() => setActiveView('discovery')} label="Explore" />
+            <NavButton icon={Phone} active={activeView === 'calls'} onClick={() => setActiveView('calls')} label="Calls" />
             
             {/* AI BUTTON */}
-            <div className="flex flex-col items-center justify-center flex-1">
-               <button 
-                onClick={() => setActiveView('ai')}
-                className={cn(
-                  "h-10 w-10 rounded-xl flex items-center justify-center transition-all duration-300 border active:scale-90",
-                  activeView === 'ai' ? "bg-primary/20 border-primary text-primary shadow-[0_0_15px_rgba(var(--primary),0.4)]" : "bg-white/5 border-white/5 text-white/20"
-                )}
-               >
-                 <Sparkles className={cn("w-5 h-5", activeView === 'ai' && "fill-current")} />
-               </button>
-               <span className={cn("text-[7px] font-black uppercase tracking-widest mt-1", activeView === 'ai' ? "text-primary" : "text-white/20")}>AI</span>
-            </div>
+            <NavButton icon={Sparkles} active={activeView === 'ai'} onClick={() => setActiveView('ai')} label="AI" isAi />
 
-            <div className="relative -mt-10">
+            {/* CENTRAL CHATS BUTTON */}
+            <div className="relative -mt-12 flex flex-col items-center group">
               <button 
                 onClick={() => setActiveView('chats')}
                 className={cn(
-                  "h-16 w-16 rounded-2xl flex items-center justify-center transition-all duration-300 relative z-20 border shadow-[0_15px_40px_rgba(var(--primary),0.5)] active:scale-90",
-                  activeView === 'chats' ? "bg-primary text-white border-white/20" : "bg-[#161618] text-white/20 border-white/5"
+                  "h-16 w-16 rounded-[1.8rem] flex items-center justify-center transition-all duration-300 relative z-20 border shadow-[0_15px_40px_rgba(var(--primary),0.5)] active:scale-90",
+                  activeView === 'chats' ? "bg-primary text-white border-white/20" : "bg-[#161618] text-white/40 border-white/10"
                 )}
               >
                 <MessageSquare className={cn("w-7 h-7", activeView === 'chats' && "fill-current")} />
               </button>
+              <span className={cn("text-[7px] font-black uppercase tracking-widest mt-2 transition-colors", activeView === 'chats' ? "text-primary" : "text-white/20")}>Chats</span>
             </div>
 
-            <NavButton icon={Wallet} active={activeView === 'wallet'} onClick={() => setActiveView('wallet')} />
-            <NavButton icon={Settings} active={activeView === 'profile'} onClick={() => setActiveView('profile')} isProfile userId={user?.uid} />
+            <NavButton icon={Wallet} active={activeView === 'wallet'} onClick={() => setActiveView('wallet')} label="Wallet" />
+            <NavButton icon={Settings} active={activeView === 'profile'} onClick={() => setActiveView('profile')} isProfile userId={user?.uid} label="Node" />
+          
           </div>
         </div>
       )}
@@ -161,17 +155,39 @@ export default function ChatMain() {
   );
 }
 
-function NavButton({ icon: Icon, active, onClick, isProfile, userId }: any) {
+function NavButton({ icon: Icon, active, onClick, isProfile, userId, label, isAi }: any) {
   return (
-    <button onClick={onClick} className={cn("flex flex-col items-center justify-center h-full transition-all relative flex-1 min-w-0", active ? "text-primary scale-110" : "text-white/20 hover:text-white/40")}>
-      {isProfile ? (
-        <div className={cn("rounded-lg p-[1.5px] transition-all", active ? "bg-primary shadow-lg shadow-primary/20" : "bg-transparent")}>
-           <UserAvatar userId={userId} className="h-7 w-7 rounded-lg" />
-        </div>
-      ) : (
-        <Icon className={cn("w-6 h-6 transition-transform duration-300", active && "fill-current")} />
+    <button 
+      onClick={onClick} 
+      className={cn(
+        "flex flex-col items-center justify-center h-full transition-all relative flex-1 min-w-0 gap-1.5", 
+        active ? "text-primary" : "text-white/20 hover:text-white/40"
       )}
-      {active && !isProfile && <div className="absolute -bottom-1.5 w-1 h-1 bg-primary rounded-full shadow-[0_0_8px_rgba(var(--primary),1)]" />}
+    >
+      <div className={cn(
+        "p-2 rounded-xl transition-all duration-300",
+        active && !isProfile && "bg-primary/10 shadow-lg shadow-primary/5",
+        active && isAi && "bg-primary/20"
+      )}>
+        {isProfile ? (
+          <div className={cn("rounded-lg p-[1px] transition-all", active ? "bg-primary shadow-lg shadow-primary/20" : "bg-transparent")}>
+             <UserAvatar userId={userId} className="h-6 w-6 rounded-lg" />
+          </div>
+        ) : (
+          <Icon className={cn("w-5 h-5 transition-transform duration-300", active && "scale-110", active && !isAi && "fill-current")} />
+        )}
+      </div>
+      
+      <span className={cn(
+        "text-[7px] font-black uppercase tracking-widest transition-colors",
+        active ? "text-primary opacity-100" : "opacity-40"
+      )}>
+        {label}
+      </span>
+
+      {active && (
+        <div className="absolute -bottom-1 w-1 h-1 bg-primary rounded-full shadow-[0_0_8px_rgba(var(--primary),1)] animate-in fade-in zoom-in" />
+      )}
     </button>
   );
 }
