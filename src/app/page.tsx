@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useEffect, useState, useMemo } from 'react';
@@ -17,11 +16,10 @@ import { signOut } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { isUserActuallyBanned, isUserAnomaly } from '@/lib/utils';
 import { NuxusLogo } from '@/components/nuxus-logo';
-import { authenticator } from 'otplib';
 
 /**
- * HOME GATE V30.0 «MODERN STANDARD»
- * Главный экран управления сессиями.
+ * HOME GATE V31.0 «STABILITY RECOVERY»
+ * FIXED: 'otplib' hydration error. All crypto/auth logic deferred to useEffect.
  */
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -50,8 +48,11 @@ export default function Home() {
   const isBanned = isUserActuallyBanned(profile);
   const isAnomaly = isUserAnomaly(profile);
 
-  const handleVerify2FA = () => {
+  const handleVerify2FA = async () => {
     if (!profile) return;
+    
+    // Динамический импорт для предотвращения SSR ошибок
+    const { authenticator } = await import('otplib');
     
     if (profile.totpEnabled && profile.totpSecret) {
        if (authenticator.check(twoFactorInput, profile.totpSecret)) {
@@ -99,7 +100,10 @@ export default function Home() {
   if (isUserLoading || (user && isProfileLoading)) {
     return (
       <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#010103] text-white">
-        <NuxusLogo size={120} className="animate-pulse" />
+        <NuxusLogo size={100} className="animate-pulse" />
+        <div className="mt-8 flex flex-col items-center gap-2 opacity-20">
+           <p className="text-[8px] font-black uppercase tracking-[0.5em]">Syncing Kernel</p>
+        </div>
       </div>
     );
   }
@@ -112,16 +116,16 @@ export default function Home() {
         {isAppealing ? (
           <div className="w-full max-w-lg bg-white/[0.02] border border-white/10 rounded-[3rem] p-10 space-y-8 shadow-2xl relative z-10 animate-in zoom-in-95">
              <div className="flex items-center justify-between">
-                <h2 className="text-3xl font-bold text-white">Апелляция</h2>
+                <h2 className="text-3xl font-bold text-white uppercase italic">Апелляция</h2>
                 <Button variant="ghost" size="icon" onClick={() => setIsAppealing(false)} className="rounded-full h-10 w-10"><X size={24} /></Button>
              </div>
              <div className="space-y-6 text-left">
                 <div className="space-y-2">
-                   <Label className="text-sm font-bold text-white/40 ml-1">UID аккаунта</Label>
+                   <Label className="text-[10px] font-black uppercase text-white/40 ml-1 tracking-widest">UID аккаунта</Label>
                    <Input value={user.uid} readOnly className="bg-white/5 border-white/5 h-12 rounded-xl font-mono text-sm" />
                 </div>
                 <div className="space-y-2">
-                   <Label className="text-sm font-bold text-blue-500 ml-1">Причина разблокировки</Label>
+                   <Label className="text-[10px] font-black uppercase text-primary ml-1 tracking-widest">Причина разблокировки</Label>
                    <Textarea 
                      value={appealReason} 
                      onChange={e => setAppealReason(e.target.value.slice(0, 2000))}
@@ -133,7 +137,7 @@ export default function Home() {
              <Button 
                onClick={handleSendAppeal} 
                disabled={isSendingAppeal || !appealReason.trim()}
-               className="w-full h-16 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-bold text-lg transition-all"
+               className="w-full h-16 bg-primary hover:bg-primary/80 text-white rounded-2xl font-black uppercase italic tracking-widest transition-all shadow-xl"
              >
                 {isSendingAppeal ? <Loader2 className="animate-spin" /> : 'Отправить запрос'}
              </Button>
@@ -141,19 +145,19 @@ export default function Home() {
         ) : (
           <>
             <div className="bg-red-500/10 p-8 rounded-[3rem] border border-red-500/20 relative shadow-2xl">
-              <AlertTriangle className="w-24 h-24 text-red-500" />
+              <AlertTriangle className="w-20 h-20 text-red-500" />
             </div>
             <div className="space-y-4 max-w-sm">
-              <h1 className="text-5xl font-bold text-white tracking-tight leading-tight">Доступ <br/> ограничен</h1>
-              <p className="text-lg text-white/40 font-medium leading-relaxed">
+              <h1 className="text-4xl font-black text-white tracking-tighter uppercase italic leading-tight">Доступ <br/> ограничен</h1>
+              <p className="text-[13px] text-white/40 font-bold uppercase tracking-widest leading-relaxed">
                 Ваш аккаунт был заблокирован за нарушение правил мессенджера Nuxus.
               </p>
             </div>
             <div className="flex flex-col gap-3 w-full max-w-xs">
-              <Button onClick={() => setIsAppealing(true)} className="h-16 rounded-2xl bg-white text-black font-bold text-lg shadow-xl hover:scale-105 transition-all">
+              <Button onClick={() => setIsAppealing(true)} className="h-16 rounded-2xl bg-white text-black font-black uppercase italic tracking-widest shadow-xl hover:scale-105 transition-all">
                 Подать апелляцию
               </Button>
-              <Button variant="ghost" onClick={() => signOut(auth!)} className="h-14 rounded-2xl border border-white/5 text-white/40 font-bold hover:text-white transition-all">
+              <Button variant="ghost" onClick={() => signOut(auth!)} className="h-14 rounded-2xl border border-white/5 text-white/40 font-black uppercase tracking-widest hover:text-white transition-all">
                 Выйти из системы
               </Button>
             </div>
@@ -169,25 +173,25 @@ export default function Home() {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-[#010103] relative px-6">
         <div className="w-full max-w-[380px] space-y-12 text-center relative z-10">
-          <div className="bg-white/[0.03] border border-white/10 w-28 h-28 rounded-[3rem] flex items-center justify-center mx-auto shadow-2xl relative overflow-hidden">
-            <Fingerprint className="w-12 h-12 text-blue-500 z-10" />
-            <div className="absolute inset-0 bg-blue-500/10 animate-pulse" />
+          <div className="bg-white/[0.03] border border-white/10 w-24 h-24 rounded-[2.5rem] flex items-center justify-center mx-auto shadow-2xl relative overflow-hidden">
+            <Fingerprint className="w-10 h-10 text-primary z-10 animate-pulse" />
+            <div className="absolute inset-0 bg-primary/10 animate-pulse" />
           </div>
           <div className="space-y-8">
             <div className="space-y-2">
-              <h2 className="text-3xl font-bold text-white tracking-tight">{profile?.totpEnabled ? 'Облачный код' : 'Пароль защиты'}</h2>
-              <p className="text-white/40 font-medium">Введите код доступа к вашему аккаунту</p>
+              <h2 className="text-3xl font-black uppercase italic text-white tracking-tighter">{profile?.totpEnabled ? 'Облачный код' : 'Пароль защиты'}</h2>
+              <p className="text-[10px] text-white/30 font-bold uppercase tracking-widest">Введите код доступа к вашему аккаунту</p>
             </div>
             <Input 
               type="password" placeholder="••••••" maxLength={6} autoFocus
-              className="bg-white/[0.04] border-white/10 h-20 text-4xl tracking-[0.8em] text-center rounded-3xl font-bold focus:border-blue-500/50 transition-all"
+              className="bg-white/[0.04] border-white/10 h-20 text-4xl tracking-[0.8em] text-center rounded-3xl font-bold focus:border-primary/50 transition-all text-white"
               value={twoFactorInput}
               onChange={e => setTwoFactorInput(e.target.value.replace(/\D/g, ''))}
               onKeyDown={e => e.key === 'Enter' && handleVerify2FA()}
             />
             <div className="space-y-4 pt-4">
-              <Button onClick={handleVerify2FA} className="w-full h-16 rounded-2xl bg-blue-600 text-white font-bold text-lg shadow-xl active:scale-95 transition-all">Подтвердить личность</Button>
-              <Button variant="ghost" onClick={() => signOut(auth!)} className="w-full h-12 text-red-500/60 font-bold gap-2"><LogOut className="w-4 h-4" /> Выйти</Button>
+              <Button onClick={handleVerify2FA} className="w-full h-16 rounded-2xl bg-primary text-white font-black uppercase italic tracking-widest shadow-xl active:scale-95 transition-all">Подтвердить личность</Button>
+              <Button variant="ghost" onClick={() => signOut(auth!)} className="w-full h-12 text-red-500/60 font-black uppercase tracking-widest gap-2"><LogOut className="w-4 h-4" /> Выйти</Button>
             </div>
           </div>
         </div>

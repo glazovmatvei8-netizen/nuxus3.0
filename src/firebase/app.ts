@@ -3,14 +3,19 @@
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, FirebaseApp, getApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
-import { getFirestore, Firestore, enableIndexedDbPersistence, terminate } from 'firebase/firestore';
+import { getFirestore, Firestore } from 'firebase/firestore';
 
 /**
- * NUXUS QUANTUM INITIALIZER V10.0
- * Максимальная оптимизация инстансов для исключения конфликтов Webpack.
+ * NUXUS QUANTUM INITIALIZER V11.0
+ * Добавлена проверка на наличие конфига перед инициализацией.
  */
 export function initializeFirebase(instanceName: string = '[DEFAULT]') {
   if (typeof window === 'undefined') {
+    return { firebaseApp: null, auth: null, firestore: null };
+  }
+
+  if (!firebaseConfig.apiKey) {
+    console.error("NUXUS ENGINE: Missing Firebase Configuration!");
     return { firebaseApp: null, auth: null, firestore: null };
   }
 

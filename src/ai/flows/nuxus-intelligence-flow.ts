@@ -1,8 +1,8 @@
 'use server';
 /**
- * NX-AI Neural Nexus Flow v2.1
- * ПОДДЕРЖКА: Google Gemini, YandexGPT (OpenAI Compatible), DeepSeek.
- * ОБНОВЛЕНО: Интеграция нового протокола Yandex Cloud через OpenAI SDK.
+ * NX-AI Neural Nexus Flow v2.2
+ * ПОДДЕРЖКА: Google Gemini, YandexGPT (OpenAI Protocol), DeepSeek.
+ * ОБНОВЛЕНО: Строгое соответствие спецификации Yandex OpenAI SDK (output_text).
  */
 
 import { ai } from '@/ai/genkit';
@@ -64,13 +64,13 @@ async function callDeepSeek(prompt: string, history: any[]) {
 
 /**
  * Вызов API Yandex Cloud (через OpenAI SDK)
- * ОБНОВЛЕНО: Согласно спецификации пользователя v51.0
+ * ОБНОВЛЕНО: Использование baseURL и OpenAI-Project согласно вашим данным.
  */
 async function callYandex(promptText: string, history: any[]) {
   const apiKey = process.env.YANDEX_API_KEY;
   const projectId = process.env.YANDEX_PROJECT_ID || 'b1gjfj178i38ae393ieb';
 
-  if (!apiKey) return "Ошибка: YANDEX_API_KEY отсутствует в конфигурации Ядра.";
+  if (!apiKey) return "Ошибка: YANDEX_API_KEY отсутствует в конфигурации Ядра (.env).";
 
   try {
     const client = new OpenAI({
@@ -81,9 +81,7 @@ async function callYandex(promptText: string, history: any[]) {
       }
     });
 
-    // Используем предоставленную вами структуру client.responses.create
-    // Примечание: В стандартном OpenAI SDK это может быть client.chat.completions, 
-    // но мы следуем вашему коду с использованием Yandex-специфичного метода.
+    // Согласно вашей спецификации на скриншоте:
     const response = await (client as any).responses.create({
       prompt: {
         id: 'fvt6koqsf13kvd2bkrmc'
@@ -91,10 +89,11 @@ async function callYandex(promptText: string, history: any[]) {
       input: promptText
     });
 
+    // Результат берем из output_text, как указано в вашем коде
     return response.output_text || "Сигнал получен, но расшифровка пуста.";
   } catch (e: any) {
     console.error("[NUXUS AI] Yandex Error:", e.message || e);
-    return `Сбой связи с узлом Yandex AI: ${e.message || 'Unknown Protocol Error'}`;
+    return `Сбой связи с узлом Yandex AI: ${e.message || 'Проверьте API ключ в .env'}`;
   }
 }
 
