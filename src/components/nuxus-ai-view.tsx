@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
@@ -22,7 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { User } from '@/lib/types';
 
-type AINode = 'gemini' | 'yandex' | 'deepseek';
+type AINode = 'yandex'; // Упрощено до Yandex
 
 export default function NuxusAiView() {
   const { user } = useUser();
@@ -31,7 +32,7 @@ export default function NuxusAiView() {
   
   const [input, setInput] = useState('');
   const [isThinking, setIsThinking] = useState(false);
-  const [activeNode, setActiveNode] = useState<AINode>('gemini');
+  const [activeNode, setActiveNode] = useState<AINode>('yandex');
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const userProfileRef = useMemo(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user?.uid]);
@@ -76,6 +77,7 @@ export default function NuxusAiView() {
         content: m.content
       }));
 
+      // Вызываем поток, который теперь настроен только на Yandex
       const { response } = await askNexusAI(userMsg, flowHistory, activeNode);
 
       await addDoc(historyRef, {
@@ -115,18 +117,12 @@ export default function NuxusAiView() {
         <div className="space-y-4 max-w-sm">
           <h2 className="text-3xl font-black text-white uppercase italic tracking-tighter">NODE MAINTENANCE</h2>
           <p className="text-[10px] text-white/40 font-bold uppercase tracking-[0.3em] leading-relaxed">
-            Узел «Nexus AI» находится на плановом обслуживании. <br/>Доступ будет восстановлен после завершения синхронизации Ядра.
+            Узел «Nexus AI» доступен только для администраторов сети. <br/>Используйте Yandex AI Studio для управления моделями.
           </p>
         </div>
       </div>
     );
   }
-
-  const nodeLabels = {
-    gemini: "Gemini 1.5 Flash",
-    yandex: "Yandex AI Studio",
-    deepseek: "DeepSeek 4 Flash"
-  };
 
   return (
     <div className="flex flex-col h-full bg-[#020205] overflow-hidden relative">
@@ -138,20 +134,8 @@ export default function NuxusAiView() {
                <BrainCircuit className="w-5 h-5 text-primary animate-pulse" />
             </div>
             <div className="flex flex-col text-left">
-               <h1 className="text-xl font-black text-white italic tracking-tighter uppercase leading-none">Nexus AI</h1>
-               <DropdownMenu>
-                 <DropdownMenuTrigger asChild>
-                   <button className="flex items-center gap-1.5 mt-1 group">
-                     <span className="text-[7px] font-black text-primary uppercase tracking-[0.4em] group-hover:text-white transition-colors">{nodeLabels[activeNode]}</span>
-                     <ChevronDown className="w-2.5 h-2.5 text-primary/40 group-hover:text-white transition-colors" />
-                   </button>
-                 </DropdownMenuTrigger>
-                 <DropdownMenuContent className="bg-black/90 backdrop-blur-xl border-white/10 rounded-xl p-2 w-48 shadow-2xl">
-                    <DropdownMenuItem onClick={() => setActiveNode('gemini')} className="text-[9px] font-black uppercase tracking-widest gap-2 py-3 rounded-lg"><Cpu className="w-3.5 h-3.5" /> Gemini Node</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setActiveNode('yandex')} className="text-[9px] font-black uppercase tracking-widest gap-2 py-3 rounded-lg"><Zap className="w-3.5 h-3.5 text-yellow-500" /> Yandex Node</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setActiveNode('deepseek')} className="text-[9px] font-black uppercase tracking-widest gap-2 py-3 rounded-lg"><Globe className="w-3.5 h-3.5 text-blue-500" /> DeepSeek Node</DropdownMenuItem>
-                 </DropdownMenuContent>
-               </DropdownMenu>
+               <h1 className="text-xl font-black text-white italic tracking-tighter uppercase leading-none">Yandex AI Studio</h1>
+               <span className="text-[7px] font-black text-primary uppercase tracking-[0.4em] mt-1">ACTIVE NODE: fvt6koqsf...</span>
             </div>
          </div>
          <Button variant="ghost" size="icon" onClick={clearHistory} className="h-10 w-10 rounded-xl text-white/20 hover:text-red-500 hover:bg-red-500/10 transition-all">
@@ -174,7 +158,7 @@ export default function NuxusAiView() {
                </div>
                <div className="space-y-6 max-w-lg relative z-10">
                   <h3 className="text-4xl md:text-5xl font-black text-white uppercase italic tracking-tighter leading-tight drop-shadow-2xl">
-                    Чем я могу <br/><span className="text-primary">помочь</span> сегодня?
+                    Я — твой узел <br/><span className="text-primary">Yandex AI</span>
                   </h3>
                </div>
             </div>
@@ -192,7 +176,7 @@ export default function NuxusAiView() {
                    </div>
                    <div className="flex items-center gap-2 px-6">
                       <span className="text-[8px] font-black uppercase text-white/20 tracking-[0.2em]">
-                        {msg.role === 'user' ? 'Узел' : 'Nexus AI'}
+                        {msg.role === 'user' ? 'Узел' : 'Yandex GPT'}
                       </span>
                    </div>
                 </div>
@@ -206,7 +190,7 @@ export default function NuxusAiView() {
                          <div className="w-2.5 h-2.5 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]" />
                          <div className="w-2.5 h-2.5 bg-primary rounded-full animate-bounce" />
                       </div>
-                      <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60">Нейронный резонанс...</span>
+                      <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60">Yandex резонанс...</span>
                    </div>
                 </div>
               )}
@@ -224,7 +208,7 @@ export default function NuxusAiView() {
                 <Mic className="w-6 h-6" />
              </Button>
              <Textarea 
-               placeholder={`Спросите через ${activeNode}...`} 
+               placeholder="Спросите у Yandex AI..." 
                value={input}
                onChange={e => setInput(e.target.value)}
                onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())}

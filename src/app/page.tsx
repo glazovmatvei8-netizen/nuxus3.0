@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useEffect, useState, useMemo } from 'react';
@@ -18,7 +19,7 @@ import { isUserActuallyBanned, isUserAnomaly } from '@/lib/utils';
 import { NuxusLogo } from '@/components/nuxus-logo';
 
 /**
- * HOME GATE V32.0 «HYDRATION SHIELD»
+ * HOME GATE V33.0 «HYDRATION SHIELD»
  * FIXED: Extreme hydration safety. All crypto and local storage logic is strictly in useEffect.
  */
 export default function Home() {
@@ -51,7 +52,7 @@ export default function Home() {
   const handleVerify2FA = async () => {
     if (!profile) return;
     
-    // Dynamic import to prevent SSR errors with 'crypto' or 'otplib'
+    // Динамический импорт для предотвращения ошибок SSR (White Screen)
     try {
       const { authenticator } = await import('otplib');
       
@@ -99,13 +100,9 @@ export default function Home() {
     }
   };
 
-  // Prevent any rendering until mounted to avoid hydration mismatch
+  // Предотвращаем любой рендеринг до монтирования, чтобы избежать White Screen
   if (!mounted) {
-    return (
-      <div className="h-[100dvh] w-full bg-[#010103] flex items-center justify-center">
-        <NuxusLogo size={80} className="animate-pulse opacity-20" />
-      </div>
-    );
+    return null;
   }
 
   if (isUserLoading || (user && isProfileLoading)) {

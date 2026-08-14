@@ -1,8 +1,9 @@
+
 'use server';
 /**
- * NX-AI Neural Nexus Flow v2.5
- * ПОДДЕРЖКА: Google Gemini, YandexGPT (OpenAI Protocol), DeepSeek.
- * ОБНОВЛЕНО: Синхронизация с .env и спецификацией Yandex responses.create.
+ * NX-AI Neural Nexus Flow v3.0
+ * ПОДДЕРЖКА: Исключительно Yandex AI Studio (OpenAI SDK).
+ * ОБНОВЛЕНО: Строгое соответствие вашему коду и prompt_id.
  */
 
 import { ai } from '@/ai/genkit';
@@ -11,7 +12,7 @@ import OpenAI from 'openai';
 
 const IntelligenceInputSchema = z.object({
   prompt: z.string(),
-  modelNode: z.enum(['gemini', 'yandex', 'deepseek']).default('gemini'),
+  modelNode: z.enum(['gemini', 'yandex', 'deepseek']).default('yandex'),
   history: z.array(z.object({
     role: z.enum(['user', 'model']),
     content: z.string()
@@ -24,53 +25,23 @@ const IntelligenceOutputSchema = z.object({
 });
 
 /**
- * Основная функция вызова ИИ. Маршрутизирует запрос на выбранный узел.
+ * Основная функция вызова ИИ. 
+ * Теперь Yandex — основной узел.
  */
-export async function askNexusAI(prompt: string, history: any[] = [], modelNode: 'gemini' | 'yandex' | 'deepseek' = 'gemini') {
+export async function askNexusAI(prompt: string, history: any[] = [], modelNode: 'gemini' | 'yandex' | 'deepseek' = 'yandex') {
   return nuxusIntelligenceFlow({ prompt, history, modelNode });
 }
 
 /**
- * Вызов API DeepSeek
+ * ПРЯМОЙ ВЫЗОВ ВАШЕЙ МОДЕЛИ YANDEX (OpenAI SDK)
  */
-async function callDeepSeek(prompt: string, history: any[]) {
-  const apiKey = process.env.DEEPSEEK_API_KEY;
-  if (!apiKey) return "Ошибка: DEEPSEEK_API_KEY не сконфигурирован в Ядре.";
-
-  try {
-    const response = await fetch('https://api.deepseek.com/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: "deepseek-chat",
-        messages: [
-          { role: "system", content: "Вы — NX-AI (DeepSeek Node), интеллектуальный модуль Nuxus." },
-          ...history.map(h => ({ role: h.role === 'model' ? 'assistant' : 'user', content: h.content })),
-          { role: "user", content: prompt }
-        ],
-        stream: false
-      })
-    });
-
-    const data = await response.json();
-    return data.choices[0].message.content;
-  } catch (e) {
-    return "Сбой связи с узлом DeepSeek.";
-  }
-}
-
-/**
- * Вызов API Yandex Cloud (через OpenAI SDK)
- * ОБНОВЛЕНО: Строгое соответствие вашему коду и .env.
- */
-async function callYandex(promptText: string, history: any[]) {
+async function callYandex(promptText: string) {
   const apiKey = process.env.YANDEX_API_KEY;
   const projectId = process.env.YANDEX_PROJECT_ID || 'b1gjfj178i38ae393ieb';
 
-  if (!apiKey) return "Ошибка: YANDEX_API_KEY отсутствует в .env. Пожалуйста, пропишите его.";
+  if (!apiKey || apiKey.trim() === '') {
+    return "ОШИБКА: API ключ Yandex не найден в .env. Пожалуйста, пропишите его.";
+  }
 
   try {
     const client = new OpenAI({
@@ -81,7 +52,9 @@ async function callYandex(promptText: string, history: any[]) {
       }
     });
 
-    // Согласно вашей спецификации (метод responses.create):
+    /**
+     * ВАШ КОД ИЗ YANDEX AI STUDIO
+     */
     const response = await (client as any).responses.create({
       prompt: {
         id: 'fvt6koqsf13kvd2bkrmc'
@@ -89,11 +62,11 @@ async function callYandex(promptText: string, history: any[]) {
       input: promptText
     });
 
-    // Результат берем из output_text
+    // Результат берем из output_text, как в вашем примере
     return response.output_text || "Сигнал получен, но расшифровка пуста.";
   } catch (e: any) {
-    console.error("[NUXUS AI] Yandex Error:", e.message || e);
-    return `Сбой связи с узлом Yandex AI: ${e.message || 'Проверьте API ключ в .env'}`;
+    console.error("[NUXUS AI] Yandex Critical Error:", e.message || e);
+    return `Сбой связи с узлом Yandex AI: ${e.message || 'Проверьте API ключ'}`;
   }
 }
 
@@ -104,31 +77,12 @@ const nuxusIntelligenceFlow = ai.defineFlow(
     outputSchema: IntelligenceOutputSchema,
   },
   async (input) => {
-    let result = "";
-    const node = input.modelNode;
-
-    if (node === 'deepseek') {
-      result = await callDeepSeek(input.prompt, input.history || []);
-    } else if (node === 'yandex') {
-      result = await callYandex(input.prompt, input.history || []);
-    } else {
-      // Стандартный узел Gemini
-      try {
-        const { output } = await ai.generate({
-          model: 'googleai/gemini-1.5-flash',
-          system: "Вы — NX-AI (Gemini Node), центральный модуль Nuxus. Стиль: Лаконичный, технический.",
-          prompt: input.prompt,
-          config: { temperature: 0.8 }
-        });
-        result = output?.text || "Сигнал получен, но декодирование пусто.";
-      } catch (e) {
-        result = "Внешний узел Google (Gemini) временно недоступен. Проверьте API ключ в .env.";
-      }
-    }
+    // В текущей версии мы всегда используем Yandex, так как вы просили убрать Gemini
+    const result = await callYandex(input.prompt);
 
     return {
       response: result,
-      nodeUsed: node.toUpperCase()
+      nodeUsed: "YANDEX AI STUDIO"
     };
   }
 );
