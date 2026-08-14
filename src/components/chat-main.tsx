@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useEffect, useMemo } from 'react';
@@ -23,16 +22,15 @@ import { GlobalSearchModal } from './modals/global-search-modal';
 import { ForwardModal } from './modals/forward-modal';
 import { UserProfileModal } from './modals/user-profile-modal';
 import { UserAvatar } from './user-avatar';
-import { useAuth } from '@/firebase/provider';
 import type { Call } from '@/lib/types';
 import { 
   MessageSquare, Settings, Phone, Wallet, 
-  Globe, Activity
+  Globe, Sparkles
 } from 'lucide-react';
 
 /**
- * CHAT MAIN V50.0 «PERFECT HARMONY»
- * ОБНОВЛЕНИЕ: Dock стал компактнее, устранены наложения.
+ * CHAT MAIN V59.0 «NEURAL ACCESS»
+ * ОБНОВЛЕНИЕ: Добавлена кнопка ИИ в Dock для быстрого доступа.
  */
 export default function ChatMain() {
   const { 
@@ -115,22 +113,36 @@ export default function ChatMain() {
         </div>
       </div>
 
-      {/* Floating Bottom Nav (Mobile) - COMPACT & BALANCED */}
+      {/* Floating Bottom Nav (Mobile) - UPDATED WITH AI BUTTON */}
       {!currentChatId && (
-        <div className="md:hidden fixed bottom-5 left-1/2 -translate-x-1/2 z-[1000] w-[90%] max-w-[380px] animate-in slide-in-from-bottom-6 duration-700">
-          <div className="bg-[#0c0c0e]/90 backdrop-blur-3xl rounded-[2rem] h-18 flex items-center justify-around px-2 shadow-[0_30px_60px_rgba(0,0,0,0.8)] border border-white/10 relative">
+        <div className="md:hidden fixed bottom-5 left-1/2 -translate-x-1/2 z-[1000] w-[92%] max-w-[400px] animate-in slide-in-from-bottom-6 duration-700">
+          <div className="bg-[#0c0c0e]/95 backdrop-blur-3xl rounded-[2rem] h-18 flex items-center justify-around px-2 shadow-[0_30px_60px_rgba(0,0,0,0.8)] border border-white/10 relative">
             <NavButton icon={Globe} active={activeView === 'discovery'} onClick={() => setActiveView('discovery')} />
             <NavButton icon={Phone} active={activeView === 'calls'} onClick={() => setActiveView('calls')} />
             
-            <div className="relative -mt-8">
+            {/* AI BUTTON */}
+            <div className="flex flex-col items-center justify-center flex-1">
+               <button 
+                onClick={() => setActiveView('ai')}
+                className={cn(
+                  "h-10 w-10 rounded-xl flex items-center justify-center transition-all duration-300 border active:scale-90",
+                  activeView === 'ai' ? "bg-primary/20 border-primary text-primary shadow-[0_0_15px_rgba(var(--primary),0.4)]" : "bg-white/5 border-white/5 text-white/20"
+                )}
+               >
+                 <Sparkles className={cn("w-5 h-5", activeView === 'ai' && "fill-current")} />
+               </button>
+               <span className={cn("text-[7px] font-black uppercase tracking-widest mt-1", activeView === 'ai' ? "text-primary" : "text-white/20")}>AI</span>
+            </div>
+
+            <div className="relative -mt-10">
               <button 
                 onClick={() => setActiveView('chats')}
                 className={cn(
-                  "h-14 w-14 rounded-2xl flex items-center justify-center transition-all duration-300 relative z-20 border shadow-[0_10px_30px_rgba(var(--primary),0.4)] active:scale-90",
+                  "h-16 w-16 rounded-2xl flex items-center justify-center transition-all duration-300 relative z-20 border shadow-[0_15px_40px_rgba(var(--primary),0.5)] active:scale-90",
                   activeView === 'chats' ? "bg-primary text-white border-white/20" : "bg-[#161618] text-white/20 border-white/5"
                 )}
               >
-                <MessageSquare className={cn("w-6 h-6", activeView === 'chats' && "fill-current")} />
+                <MessageSquare className={cn("w-7 h-7", activeView === 'chats' && "fill-current")} />
               </button>
             </div>
 
@@ -159,7 +171,7 @@ function NavButton({ icon: Icon, active, onClick, isProfile, userId }: any) {
       ) : (
         <Icon className={cn("w-6 h-6 transition-transform duration-300", active && "fill-current")} />
       )}
-      {active && !isProfile && <div className="absolute -bottom-1.5 w-1 w-1 bg-primary rounded-full shadow-[0_0_8px_rgba(var(--primary),1)]" />}
+      {active && !isProfile && <div className="absolute -bottom-1.5 w-1 h-1 bg-primary rounded-full shadow-[0_0_8px_rgba(var(--primary),1)]" />}
     </button>
   );
 }
