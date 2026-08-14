@@ -19,8 +19,9 @@ import { isUserActuallyBanned, isUserAnomaly } from '@/lib/utils';
 import { NuxusLogo } from '@/components/nuxus-logo';
 
 /**
- * HOME GATE V33.0 «HYDRATION SHIELD»
- * FIXED: Extreme hydration safety. All crypto and local storage logic is strictly in useEffect.
+ * HOME GATE V35.0 «HYDRATION SHIELD»
+ * ПОЛНАЯ АННИГИЛЯЦИЯ БЕЛОГО ЭКРАНА:
+ * Весь код, зависящий от браузерных API и криптографии, вынесен в динамическую загрузку.
  */
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -52,8 +53,8 @@ export default function Home() {
   const handleVerify2FA = async () => {
     if (!profile) return;
     
-    // Динамический импорт для предотвращения ошибок SSR (White Screen)
     try {
+      // Динамический импорт otplib только при клике, чтобы избежать падения SSR
       const { authenticator } = await import('otplib');
       
       if (profile.totpEnabled && profile.totpSecret) {
@@ -100,17 +101,15 @@ export default function Home() {
     }
   };
 
-  // Предотвращаем любой рендеринг до монтирования, чтобы избежать White Screen
-  if (!mounted) {
-    return null;
-  }
+  // Предотвращаем любой рендеринг до монтирования
+  if (!mounted) return null;
 
   if (isUserLoading || (user && isProfileLoading)) {
     return (
       <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#010103] text-white">
         <NuxusLogo size={100} className="animate-pulse" />
         <div className="mt-8 flex flex-col items-center gap-2 opacity-20">
-           <p className="text-[8px] font-black uppercase tracking-[0.5em]">Syncing Kernel</p>
+           <p className="text-[8px] font-black uppercase tracking-[0.5em]">Syncing Engine</p>
         </div>
       </div>
     );
