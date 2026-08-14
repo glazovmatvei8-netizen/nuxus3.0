@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
@@ -9,7 +8,7 @@ import {
   Sparkles, Loader2, Send, 
   BrainCircuit, RotateCcw, Mic, ShieldCheck, Globe, Cpu, Wrench, ChevronDown, Zap
 } from 'lucide-react';
-import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase/provider';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase'; // FIXED IMPORT
 import { collection, query, orderBy, addDoc, serverTimestamp, limit, getDocs, writeBatch, doc } from 'firebase/firestore';
 import { askNexusAI } from '@/ai/flows/nuxus-intelligence-flow';
 import { cn, isGlobalAdmin } from '@/lib/utils';
@@ -23,7 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { User } from '@/lib/types';
 
-type AINode = 'yandex'; // Упрощено до Yandex
+type AINode = 'yandex';
 
 export default function NuxusAiView() {
   const { user } = useUser();
@@ -32,7 +31,6 @@ export default function NuxusAiView() {
   
   const [input, setInput] = useState('');
   const [isThinking, setIsThinking] = useState(false);
-  const [activeNode, setActiveNode] = useState<AINode>('yandex');
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const userProfileRef = useMemo(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user?.uid]);
@@ -69,7 +67,6 @@ export default function NuxusAiView() {
         role: 'user',
         content: userMsg,
         createdAt: serverTimestamp(),
-        node: activeNode
       });
 
       const flowHistory = (messages || []).map(m => ({
@@ -77,14 +74,12 @@ export default function NuxusAiView() {
         content: m.content
       }));
 
-      // Вызываем поток, который теперь настроен только на Yandex
-      const { response } = await askNexusAI(userMsg, flowHistory, activeNode);
+      const { response } = await askNexusAI(userMsg, flowHistory);
 
       await addDoc(historyRef, {
         role: 'model',
         content: response,
         createdAt: serverTimestamp(),
-        node: activeNode
       });
 
     } catch (e: any) {
@@ -117,7 +112,7 @@ export default function NuxusAiView() {
         <div className="space-y-4 max-w-sm">
           <h2 className="text-3xl font-black text-white uppercase italic tracking-tighter">NODE MAINTENANCE</h2>
           <p className="text-[10px] text-white/40 font-bold uppercase tracking-[0.3em] leading-relaxed">
-            Узел «Nexus AI» доступен только для администраторов сети. <br/>Используйте Yandex AI Studio для управления моделями.
+            Узел «Nexus AI» доступен только для администраторов сети. <br/>Инженеры Ядра проводят оптимизацию протоколов API.
           </p>
         </div>
       </div>
@@ -135,7 +130,7 @@ export default function NuxusAiView() {
             </div>
             <div className="flex flex-col text-left">
                <h1 className="text-xl font-black text-white italic tracking-tighter uppercase leading-none">Yandex AI Studio</h1>
-               <span className="text-[7px] font-black text-primary uppercase tracking-[0.4em] mt-1">ACTIVE NODE: fvt6koqsf...</span>
+               <span className="text-[7px] font-black text-primary uppercase tracking-[0.4em] mt-1">ACTIVE NODE: DEEPSEEK 4 FLASH</span>
             </div>
          </div>
          <Button variant="ghost" size="icon" onClick={clearHistory} className="h-10 w-10 rounded-xl text-white/20 hover:text-red-500 hover:bg-red-500/10 transition-all">
@@ -176,7 +171,7 @@ export default function NuxusAiView() {
                    </div>
                    <div className="flex items-center gap-2 px-6">
                       <span className="text-[8px] font-black uppercase text-white/20 tracking-[0.2em]">
-                        {msg.role === 'user' ? 'Узел' : 'Yandex GPT'}
+                        {msg.role === 'user' ? 'Узел' : 'DeepSeek 4'}
                       </span>
                    </div>
                 </div>
@@ -208,7 +203,7 @@ export default function NuxusAiView() {
                 <Mic className="w-6 h-6" />
              </Button>
              <Textarea 
-               placeholder="Спросите у Yandex AI..." 
+               placeholder="Спросите у ИИ..." 
                value={input}
                onChange={e => setInput(e.target.value)}
                onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())}

@@ -1,6 +1,6 @@
 'use server';
 /**
- * NX-AI Neural Nexus Flow v6.6
+ * NX-AI Neural Nexus Flow v7.0
  * ПОДДЕРЖКА: Yandex AI Studio (Agent Integration).
  * МОДЕЛЬ: DeepSeek 4 Flash.
  * ПРОТОКОЛ: OpenAI Custom (Yandex Cloud).
@@ -30,10 +30,10 @@ export async function askNexusAI(prompt: string, history: any[] = []) {
 async function callYandexAgent(promptText: string) {
   const apiKey = process.env.YANDEX_API_KEY;
   const folderId = process.env.YANDEX_FOLDER_ID || 'b1gjfj178i38ae393ieb'; 
-  const agentId = process.env.YANDEX_PROJECT_ID || 'fvt6koqsf13kvd2bkrmc';   
+  const agentId = process.env.YANDEX_AGENT_ID || 'fvt6koqsf13kvd2bkrmc';   
 
   if (!apiKey || apiKey.trim() === '') {
-    return "ОШИБКА: API ключ Yandex не найден в .env. Пожалуйста, проверьте конфигурацию.";
+    return "ОШИБКА: API ключ Yandex не найден в .env.";
   }
 
   try {
@@ -55,7 +55,7 @@ async function callYandexAgent(promptText: string) {
     return response.output_text || "Сигнал получен, но ответ пуст.";
   } catch (e: any) {
     console.error("[NUXUS AI] Yandex Agent Error:", e.message || e);
-    return `Сбой связи с DeepSeek (Yandex): ${e.message || 'Проверьте настройки ключа в .env'}`;
+    return `Сбой связи с Агентом (Yandex): ${e.message || 'Проверьте конфигурацию в .env'}`;
   }
 }
 
