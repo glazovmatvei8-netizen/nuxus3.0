@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useMemo } from 'react';
@@ -12,6 +11,7 @@ import {
 import { useFirestore, useUser } from '@/firebase/provider';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { useCollection } from '@/firebase/firestore/use-collection';
+import { useMemoFirebase } from '@/firebase/firestore/use-memo-firebase';
 import { doc, query, collection, limit, getDocs, addDoc, where, orderBy, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useAppState } from '@/lib/app-state';
@@ -26,8 +26,8 @@ const ADMIN_ID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 const ORIGIN_DATE = '2024-01-01T00:00:00Z'; 
 
 /**
- * USER PROFILE MODAL V5.2.0
- * ИСПРАВЛЕНО: Пути импорта useAppState и Firebase хуков.
+ * USER PROFILE MODAL V5.2.3 «TITANIUM SYNC»
+ * ИСПРАВЛЕНО: Прямые импорты хуков.
  */
 export function UserProfileModal() {
   const db = useFirestore();
@@ -38,15 +38,15 @@ export function UserProfileModal() {
   const [isGiftModalOpen, setIsGiftModalOpen] = useState(false);
   const [isAdminProcessing, setIsAdminProcessing] = useState(false);
 
-  const currentUserRef = useMemo(() => (!db || !currentUser) ? null : doc(db, 'users', currentUser.uid), [db, currentUser?.uid]);
+  const currentUserRef = useMemoFirebase(() => (!db || !currentUser) ? null : doc(db, 'users', currentUser.uid), [db, currentUser?.uid]);
   const { data: currentUserProfile } = useDoc<User>(currentUserRef);
 
-  const targetUserRef = useMemo(() => (!db || !inspectedUserId) ? null : doc(db, 'users', inspectedUserId), [db, inspectedUserId]);
+  const targetUserRef = useMemoFirebase(() => (!db || !inspectedUserId) ? null : doc(db, 'users', inspectedUserId), [db, inspectedUserId]);
   const { data: targetUser } = useDoc<User>(targetUserRef);
 
   const isViewerAdmin = useMemo(() => isGlobalAdmin(currentUserProfile), [currentUserProfile]);
 
-  const giftsQuery = useMemo(() => {
+  const giftsQuery = useMemoFirebase(() => {
     if (!db || !inspectedUserId) return null;
     return query(collection(db, 'users', inspectedUserId, 'receivedGifts'), limit(20));
   }, [db, inspectedUserId]);

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useUser, useFirestore } from '@/firebase/provider';
@@ -10,7 +9,7 @@ import type { User } from '@/lib/types';
 
 /**
  * TITANIUM SYNC HOOK: useTranslations
- * ИСПРАВЛЕНО: Прямые импорты Firebase.
+ * ИСПРАВЛЕНО: Прямые импорты для устранения ошибок 'is not a function'.
  */
 export function useTranslations() {
   const { user } = useUser();

@@ -1,9 +1,11 @@
-
 "use client"
 
 import React, { useMemo, useState } from 'react';
 import { useAppState } from '@/lib/app-state';
-import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase/provider';
+import { useUser, useFirestore } from '@/firebase/provider';
+import { useCollection } from '@/firebase/firestore/use-collection';
+import { useMemoFirebase } from '@/firebase/firestore/use-memo-firebase';
+import { useDoc } from '@/firebase/firestore/use-doc';
 import { collection, query, where, doc } from 'firebase/firestore';
 import { UserAvatar } from './user-avatar';
 import { Plus, Loader2, Archive } from 'lucide-react';
@@ -14,11 +16,11 @@ import { StoryArchiveModal } from './modals/story-archive-modal';
 import { useToast } from '@/hooks/use-toast';
 
 /**
- * NUXUS MOMENTS BAR V11.0.0 «HYPER-ENGINE READY»
- * ИСПРАВЛЕНО: Пути импорта useAppState и Firebase хуков.
+ * NUXUS MOMENTS BAR V11.0.0 «TITANIUM SYNC»
+ * ИСПРАВЛЕНО: Прямые импорты хуков для устранения ошибки 'is not a function'.
  */
 export function StoriesBar() {
-  const { user } = useUser();
+  const { user } = userUser();
   const db = useFirestore();
   const { toast } = useToast();
   const { setIsCreateStoryOpen, setStoriesToView } = useAppState();
@@ -54,6 +56,11 @@ export function StoriesBar() {
     }
     setIsCreateStoryOpen(true);
   };
+
+  function userUser() {
+    const { user, isUserLoading } = useUser();
+    return { user, isUserLoading };
+  }
 
   return (
     <div className="flex gap-4 p-4 overflow-x-auto scrollbar-hide bg-transparent border-b border-white/5 shrink-0 relative z-20">

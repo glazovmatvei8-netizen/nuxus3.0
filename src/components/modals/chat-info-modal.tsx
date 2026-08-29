@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useMemo, memo } from 'react';
@@ -16,7 +15,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useUser, useFirestore, useDoc, useCollection } from '@/firebase/provider';
+import { useUser, useFirestore } from '@/firebase/provider';
+import { useDoc } from '@/firebase/firestore/use-doc';
+import { useCollection } from '@/firebase/firestore/use-collection';
 import { doc, updateDoc, arrayUnion, query, collection, limit, orderBy, getDocs, arrayRemove, addDoc } from 'firebase/firestore';
 import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';

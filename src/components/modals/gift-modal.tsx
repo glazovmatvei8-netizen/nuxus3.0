@@ -1,20 +1,22 @@
-
 "use client"
 
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase/provider';
-import { doc, collection, writeBatch, increment, addDoc } from 'firebase/firestore';
+import { useUser, useFirestore } from '@/firebase/provider';
+import { useDoc } from '@/firebase/firestore/use-doc';
+import { useMemoFirebase } from '@/firebase/firestore/use-memo-firebase';
+import { useCollection } from '@/firebase/firestore/use-collection';
+import { doc, collection, writeBatch, increment, addDoc, query, where } from 'firebase/firestore';
 import { Gift, Sparkles, Loader2, Wallet, Zap, ChevronRight, Gem } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import type { User } from '@/lib/types';
+import type { User, StickerPack } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 
 /**
- * GIFT MODAL V5.2.1 «STABLE RESOLUTION»
- * ИСПРАВЛЕНО: Пути импорта хуков.
+ * GIFT MODAL V5.2.2 «TITANIUM SYNC»
+ * ИСПРАВЛЕНО: Прямые импорты хуков.
  */
 
 const PREDEFINED_GIFTS = [

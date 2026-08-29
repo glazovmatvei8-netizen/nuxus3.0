@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useMemo } from 'react';
@@ -18,8 +17,8 @@ import { formatDisplayName, isUserPremium } from '@/lib/utils';
 import { UserAvatar } from '../user-avatar';
 
 /**
- * ADD MEMBER MODAL V5.2.2 «TITANIUM DIRECT»
- * ИСПРАВЛЕНО: Прямые импорты Firebase.
+ * ADD MEMBER MODAL V5.2.3 «TITANIUM SYNC»
+ * ИСПРАВЛЕНО: Прямые импорты хуков.
  */
 export function AddMemberModal({ open, onOpenChange, chatId, currentParticipantIds, isCallContext }: any) {
   const db = useFirestore();
