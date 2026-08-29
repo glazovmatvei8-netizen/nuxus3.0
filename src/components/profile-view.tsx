@@ -2,7 +2,8 @@
 "use client"
 
 import React, { useState, useMemo } from 'react';
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { useUser, useFirestore, useAuth } from '@/firebase/provider';
+import { useDoc } from '@/firebase/firestore/use-doc';
 import { doc } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
 import { Button } from '@/components/ui/button';
@@ -10,7 +11,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   Pencil, ChevronRight, Star, Share2, QrCode, Fingerprint, Palette, Mail, ShieldAlert, LogOut, LayoutGrid, Crown, ShieldCheck, Plus, Wallet, Smartphone, Activity
 } from 'lucide-react';
-import { useAppState } from '@/lib/store';
+import { useAppState } from '@/lib/app-state';
 import { formatDisplayName, cn, isUserPremium, isGlobalAdmin } from '@/lib/utils';
 import type { User } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -18,14 +19,8 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogHeader } f
 import { QRCodeSVG } from 'qrcode.react';
 import { useTranslations } from '@/hooks/use-translations';
 import { signOut } from 'firebase/auth';
-import { useAuth } from '@/firebase/provider';
 import { AdminPanelModal } from './modals/admin-panel-modal';
 
-/**
- * PROFILE VIEW V47.0 «BALANCED ELEGANCE»
- * РЕДИЗАЙН: Устранена визуальная тяжесть. 
- * Элементы стали компактнее, шрифты — благороднее, баланс — идеальным.
- */
 export default function ProfileView() {
   const { user } = useUser();
   const db = useFirestore();
@@ -37,7 +32,7 @@ export default function ProfileView() {
   const [isQrOpen, setIsQrOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   
-  const userProfileRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user?.uid]);
+  const userProfileRef = useMemo(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user?.uid]);
   const { data: profile } = useDoc<User>(userProfileRef);
 
   const isAdmin = isGlobalAdmin(profile);
@@ -63,10 +58,8 @@ export default function ProfileView() {
 
   return (
     <div className="flex flex-col h-full bg-[#010103] overflow-hidden relative">
-      {/* Background Glows - Softened */}
       <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none z-0" />
       
-      {/* Header - More Elegant */}
       <div className="px-8 pt-12 pb-6 flex items-center justify-between shrink-0 relative z-30">
         <div className="flex flex-col text-left">
            <h1 className="text-2xl font-black text-white uppercase tracking-tight leading-none">Аккаунт</h1>
@@ -83,7 +76,6 @@ export default function ProfileView() {
       <ScrollArea className="flex-1 relative z-20">
         <div className="px-6 space-y-10 pb-40 pt-2 animate-in fade-in slide-in-from-bottom-2 duration-700">
           
-          {/* Profile Card - Balanced size */}
           <div className="flex flex-col items-center gap-6 py-10 bg-white/[0.015] border border-white/5 backdrop-blur-2xl rounded-[3rem] shadow-2xl relative overflow-hidden">
              <div className="absolute top-6 right-6 z-20">
                 <button onClick={() => setIsQrOpen(true)} className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-white/10 hover:text-primary transition-all">
@@ -113,7 +105,6 @@ export default function ProfileView() {
              </div>
           </div>
 
-          {/* Account Slots - Cleaner and proportionate */}
           <div className="space-y-4">
              <div className="flex items-center justify-between px-2">
                 <h3 className="text-[9px] font-black uppercase text-white/20 tracking-[0.3em]">Мои Узлы</h3>
@@ -150,7 +141,6 @@ export default function ProfileView() {
              </ScrollArea>
           </div>
 
-          {/* Menu Items - Clean Modern List */}
           <div className="bg-white/[0.015] border border-white/5 rounded-[2.5rem] overflow-hidden divide-y divide-white/[0.03] shadow-xl backdrop-blur-xl">
             {isAdmin && (
               <ProfileItem icon={ShieldCheck} label="Система Aegis" color="text-red-500" sub="Контроль безопасности сети" onClick={() => setIsAdminOpen(true)} />
@@ -174,7 +164,6 @@ export default function ProfileView() {
         </div>
       </ScrollArea>
 
-      {/* QR Dialog */}
       <Dialog open={isQrOpen} onOpenChange={setIsQrOpen}>
         <DialogContent className="max-w-xs bg-[#0a0a0c]/98 border-white/10 rounded-[3rem] p-10 text-center shadow-2xl outline-none z-[1000]">
           <DialogHeader>

@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useEffect, useMemo } from 'react';
@@ -8,9 +9,10 @@ import CallsView from './calls-view';
 import ProfileView from './profile-view';
 import WalletView from './wallet-view';
 import DiscoveryView from './discovery-view';
-import { useAppState } from '@/lib/store';
+import { useAppState } from '@/lib/app-state';
 import { cn } from '@/lib/utils';
-import { useUser, useFirestore, useCollection } from '@/firebase';
+import { useUser, useFirestore } from '@/firebase/provider';
+import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, query, where, limit } from 'firebase/firestore';
 import { CallOverlay } from './modals/call-overlay';
 import { NotificationListener } from './notification-listener';
@@ -25,10 +27,6 @@ import {
   Globe, LayoutGrid
 } from 'lucide-react';
 
-/**
- * CHAT MAIN V65.0 «AI ANNIHILATED»
- * ОБНОВЛЕНИЕ: ИИ удален навсегда. Док оптимизирован под 5 кнопок.
- */
 export default function ChatMain() {
   const { 
     currentChatId, activeCallId, setActiveCallId, 

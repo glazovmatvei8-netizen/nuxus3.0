@@ -1,5 +1,6 @@
+
 /**
- * REMOVED: Redundant duplicate file. 
- * All logic moved to src/lib/app-state.tsx
+ * DELETED: This file was causing circular dependency and "reading 'call'" error.
+ * Use src/lib/app-state.tsx instead.
  */
 export {};

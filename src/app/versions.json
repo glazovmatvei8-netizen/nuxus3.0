@@ -6,7 +6,7 @@
   "sizeMb": 74,
   "changelog": [
     "Titanium Core: Fixed originalFactory.call and White Screen on mobile.",
-    "Dynamic Bridge: Forced client-side initialization via SovereignProvider.",
+    "Import Fix: Resolved useAppState and Firebase hook undefined errors.",
     "Zero-Error: Annihilated barrel-file circular dependencies.",
     "Optimized: Removed all remaining AI neural node traces."
   ]

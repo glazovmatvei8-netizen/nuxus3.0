@@ -2,23 +2,20 @@
 "use client"
 
 import React, { useState, useMemo } from 'react';
-import { useFirestore, useUser, useCollection } from '@/firebase';
+import { useFirestore, useUser } from '@/firebase/provider';
+import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, query, where, limit, orderBy } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, Zap, Users, Radio, Star, Globe, Sparkles, Activity, Target, ShieldCheck, ArrowRight, CheckCircle2, Code2, Terminal } from 'lucide-react';
+import { Search, Globe, Sparkles, ShieldCheck, ArrowRight } from 'lucide-react';
 import { UserAvatar } from '@/components/user-avatar';
-import { useAppState } from '@/lib/store.tsx';
+import { useAppState } from '@/lib/app-state';
 import { cn, formatDisplayName, isUserPremium } from '@/lib/utils';
 import type { Chat, User } from '@/lib/types';
 
 const ADMIN_ID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
-/**
- * НАВИГАТОР V13.1 «STABLE RESOLUTION»
- * ИСПРАВЛЕНО: Корректный импорт хуков через Firebase Barrel.
- */
 export default function DiscoveryView() {
   const db = useFirestore();
   const { user: currentUser } = useUser();
@@ -157,7 +154,7 @@ export default function DiscoveryView() {
 
           <section className="space-y-5">
             <h3 className="text-[9px] font-black uppercase tracking-[0.4em] text-primary/60 flex items-center gap-2 px-1">
-              <Users className="w-3 h-3" /> Кластеры
+              <LayoutGrid className="w-3 h-3" /> Кластеры
             </h3>
             <div className="grid grid-cols-1 gap-3">
               {filteredChats.map(chat => (
@@ -184,4 +181,10 @@ export default function DiscoveryView() {
       </ScrollArea>
     </div>
   );
+}
+
+function LayoutGrid(props: any) {
+  return (
+    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-layout-grid"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+  )
 }

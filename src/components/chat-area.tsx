@@ -1,20 +1,23 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
-import { useAppState } from '@/lib/store';
+import { useAppState } from '@/lib/app-state';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, ChevronLeft, X, Paperclip, Mic, StopCircle, 
-  Smile, ImageIcon, Trash2, CornerUpLeft, Loader2
+  Smile, Trash2, CornerUpLeft, Loader2
 } from 'lucide-react';
 import { MessageItem } from './message-item';
 import { ChatInfoModal } from './modals/chat-info-modal';
 import { CreatePollModal } from './modals/create-poll-modal';
 import { EmojiPicker } from './emoji-picker';
 import { ImagePreviewModal } from './modals/image-preview-modal';
-import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
+import { useUser, useFirestore } from '@/firebase/provider';
+import { useCollection } from '@/firebase/firestore/use-collection';
+import { useDoc } from '@/firebase/firestore/use-doc';
 import { collection, query, orderBy, doc, addDoc, updateDoc } from 'firebase/firestore';
 import { formatDisplayName, cn, compressImage, encryptSignal, decryptSignal, isUserPremium } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
@@ -84,40 +87,10 @@ const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelRepl
         await onSendMessage(content, item.type, null);
       }
       setPendingFiles([]);
-      setIsPreviewOpen(false);
+      isPreviewOpen(false);
     } finally {
       setIsUploading(false);
     }
-  };
-
-  const startAudioRecording = async () => {
-    if (isRecording) return;
-    try {
-      chunksRef.current = []; 
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      streamRef.current = stream;
-      const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
-      mediaRecorderRef.current = recorder;
-      recorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) chunksRef.current.push(e.data); };
-      recorder.onstop = async () => {
-        if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-        const finalDur = Math.max(1, Math.floor((Date.now() - startTimeRef.current) / 1000));
-        const blob = new Blob(chunksRef.current, { type: 'audio/webm;codecs=opus' });
-        if (blob.size > 50) { 
-          const reader = new FileReader();
-          reader.onloadend = () => { if (reader.result) onSendMessage(reader.result as string, 'audio', { duration: finalDur }); };
-          reader.readAsDataURL(blob);
-        }
-        if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
-        setIsRecording(false);
-        setRecordingDuration(0);
-      };
-      startTimeRef.current = Date.now();
-      recorder.start(100); 
-      setIsRecording(true);
-      setRecordingDuration(0);
-      timerIntervalRef.current = setInterval(() => setRecordingDuration(Math.floor((Date.now() - startTimeRef.current) / 1000)), 500);
-    } catch (err) { console.error(err); }
   };
 
   const stopAudioRecording = () => { if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') mediaRecorderRef.current.stop(); };
@@ -163,7 +136,7 @@ const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelRepl
             {messageInput.trim() ? (
               <Button size="icon" className="h-12 w-12 rounded-2xl bg-primary text-white active:scale-90 shadow-[0_10px_30px_rgba(var(--primary),0.3)] transition-all border border-white/10" onClick={handleSend}><Send className="w-5 h-5" /></Button>
             ) : (
-              <button className="h-12 w-12 rounded-2xl flex items-center justify-center transition-all bg-white/5 text-white/30 hover:bg-primary hover:text-white active:scale-90 shadow-xl border border-white/5" onPointerDown={startAudioRecording} onPointerUp={stopAudioRecording}>
+              <button className="h-12 w-12 rounded-2xl flex items-center justify-center transition-all bg-white/5 text-white/30 hover:bg-primary hover:text-white active:scale-90 shadow-xl border border-white/5">
                 <Mic className="w-6 h-6" />
               </button>
             )}
@@ -174,7 +147,7 @@ const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelRepl
             <span className="text-base font-black flex-1 tabular-nums text-white italic">
               {Math.floor(recordingDuration / 60).toString().padStart(2, '0')}:{(recordingDuration % 60).toString().padStart(2, '0')}
             </span>
-            <Button variant="ghost" size="icon" className="h-9 w-9 text-white/30 hover:text-red-500 rounded-full" onClick={() => { setIsRecording(false); setRecordingDuration(0); if(timerIntervalRef.current) clearInterval(timerIntervalRef.current); if(streamRef.current) streamRef.current.getTracks().forEach(t => t.stop()); }}><Trash2 className="w-5 h-5" /></Button>
+            <Button variant="ghost" size="icon" className="h-9 w-9 text-white/30 hover:text-red-500 rounded-full" onClick={() => { setIsRecording(false); setRecordingDuration(0); }}><Trash2 className="w-5 h-5" /></Button>
             <Button variant="ghost" size="icon" className="h-10 w-10 text-primary active:scale-90" onPointerUp={stopAudioRecording}><StopCircle className="w-6 h-6 fill-current" /></Button>
           </div>
         )}

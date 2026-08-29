@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState } from 'react';
@@ -7,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Eye, EyeOff, Phone, Mail, ChevronDown, ShieldCheck } from 'lucide-react';
-import { useAuth, useFirestore } from '@/firebase'; 
+import { useAuth, useFirestore } from '@/firebase/provider'; 
 import { 
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -21,7 +22,7 @@ import { cn, formatDisplayName } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { translations } from '@/lib/translations';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { useAppState } from '@/lib/store';
+import { useAppState } from '@/lib/app-state';
 import versions from '@/app/versions.json';
 
 const COUNTRIES = [
@@ -37,10 +38,6 @@ const COUNTRIES = [
   { name: 'ОАЭ', code: '+971', flag: '🇦🇪' },
 ];
 
-/**
- * AUTH SCREEN V61.0 «PERFECT FIT»
- * ОБНОВЛЕНИЕ: Исправлены отступы и размеры для 100% адаптивности.
- */
 export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'login' | 'register' }) {
   const auth = useAuth();
   const db = useFirestore();

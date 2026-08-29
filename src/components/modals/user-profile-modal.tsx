@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useMemo } from 'react';
@@ -8,10 +9,12 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   MessageCircle, Star, Calendar, Phone, Video, Gift, Zap, Globe, ShieldCheck, Cpu, Sparkles, UserCheck, UserPlus, Ban, Crown, ShieldAlert, ShieldX
 } from 'lucide-react';
-import { useFirestore, useUser, useDoc, useCollection } from '@/firebase';
+import { useFirestore, useUser } from '@/firebase/provider';
+import { useDoc } from '@/firebase/firestore/use-doc';
+import { useCollection } from '@/firebase/firestore/use-collection';
 import { doc, query, collection, limit, getDocs, addDoc, where, orderBy, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import { useAppState } from '@/lib/store';
+import { useAppState } from '@/lib/app-state';
 import { formatDisplayName, isUserPremium, formatLastSeen, cn, isGlobalAdmin } from '@/lib/utils';
 import type { User, ReceivedGift } from '@/lib/types';
 import { format } from 'date-fns';
@@ -22,9 +25,6 @@ import versions from '@/app/versions.json';
 const ADMIN_ID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 const ORIGIN_DATE = '2024-01-01T00:00:00Z'; 
 
-/**
- * USER PROFILE MODAL V64.0 «STATIC READY»
- */
 export function UserProfileModal() {
   const db = useFirestore();
   const { user: currentUser } = useUser();
@@ -114,25 +114,6 @@ export function UserProfileModal() {
       setActiveView('chats');
     } catch (e: any) {
       toast({ title: "Ошибка открытия чата", variant: "destructive" });
-    }
-  };
-
-  const startCall = async (type: 'audio' | 'video') => {
-    if (!db || !currentUser || !targetUser) return;
-    try {
-      const callRef = await addDoc(collection(db, 'calls'), {
-        callerId: currentUser.uid,
-        receiverId: targetUser.id,
-        participantIds: [currentUser.uid, targetUser.id], 
-        chatId: 'global_profile',
-        type,
-        status: 'calling',
-        createdAt: new Date().toISOString()
-      });
-      setActiveCallId(callRef.id);
-      setInspectedUserId(null);
-    } catch (e) {
-      toast({ title: "Ошибка вызова", variant: "destructive" });
     }
   };
 
