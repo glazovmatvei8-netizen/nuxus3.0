@@ -5,7 +5,7 @@ import { useUser, useFirestore, useAuth, useDoc } from '@/firebase';
 import { useAppState } from '@/lib/store.tsx';
 import AuthScreen from '@/components/auth-screen';
 import ChatMain from '@/components/chat-main';
-import { Fingerprint, Loader2, LogOut, X, AlertTriangle } from 'lucide-react';
+import { Fingerprint, AlertTriangle } from 'lucide-react';
 import { doc } from 'firebase/firestore';
 import type { User as UserType } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -16,8 +16,8 @@ import { isUserActuallyBanned, isUserAnomaly } from '@/lib/utils';
 import { NuxusLogo } from '@/components/nuxus-logo';
 
 /**
- * HOME GATE V64.0 «PURE STATIC»
- * ФИКС ОШИБКИ 'call' и оптимизация под APK.
+ * HOME GATE V65.0 «HYDRATION SHIELD»
+ * ФИКС ОШИБКИ 'call' и полная очистка ИИ.
  */
 export default function Home() {
   const [mounted, setMounted] = useState(false);
@@ -90,7 +90,7 @@ function HomeContent() {
 
   if (isBanned || isAnomaly) {
     return (
-      <div className="h-screen flex flex-col items-center justify-center bg-[#010103] p-8 text-center text-white space-y-8 animate-in fade-in duration-700">
+      <div className="h-screen flex flex-col items-center justify-center bg-[#010103] p-8 text-center text-white space-y-8">
         <AlertTriangle className="w-20 h-20 text-red-500" />
         <h1 className="text-4xl font-black text-white tracking-tighter uppercase italic">Доступ ограничен</h1>
         <Button variant="ghost" onClick={() => signOut(auth!)} className="h-14 rounded-2xl text-white/40 font-black uppercase tracking-widest">Выйти</Button>

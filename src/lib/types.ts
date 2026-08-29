@@ -1,5 +1,4 @@
-
-export type MessageType = 'text' | 'image' | 'audio' | 'video' | 'video_note' | 'service' | 'gift' | 'payment_request' | 'album' | 'poll' | 'broadcast' | 'sticker' | 'music' | 'ai_video';
+export type MessageType = 'text' | 'image' | 'audio' | 'video' | 'video_note' | 'service' | 'gift' | 'payment_request' | 'album' | 'poll' | 'broadcast' | 'sticker' | 'music';
 
 export interface BotButton {
   text: string;
@@ -99,9 +98,6 @@ export interface Message {
   };
   metadata?: {
     bubbleStyle?: 'default' | 'neon' | 'gold' | 'ocean';
-    aiModel?: string;
-    translation?: string;
-    transcription?: string;
     senderTitle?: string;
     [key: string]: any;
   };

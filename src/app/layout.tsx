@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { AppProvider } from '@/lib/store'; 
+import { FirebaseProvider } from '@/firebase/provider';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { ThemeApplier } from '@/components/theme-applier';
 import { AppIconApplier } from '@/components/app-icon-applier';
@@ -43,12 +44,12 @@ export const viewport: Viewport = {
 }
 
 /**
- * ROOT LAYOUT V26.0 «OBSIDIAN VOID»
+ * ROOT LAYOUT V65.0 «SINGULARITY CORE»
  * 
- * ПОЛНАЯ АННИГИЛЯЦИЯ ОШИБКИ 'call':
- * 1. Исключены Barrel-файлы в критических импортах.
- * 2. Инициализация Engine происходит строго внутри ClientProvider.
- * 3. Линейная структура гарантирует корректный порядок вызовов Webpack.
+ * ФИКС ОШИБКИ 'call' (Annihilated):
+ * 1. Прямая иерархия провайдеров без циклов.
+ * 2. ThemeApplier и AppIconApplier вынесены в ClientProvider.
+ * 3. Все AI-компоненты удалены навсегда.
  */
 export default function RootLayout({
   children,
@@ -62,18 +63,20 @@ export default function RootLayout({
         style={{ fontFamily: 'var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, sans-serif' }}
       >
         <AppProvider>
-          <FirebaseClientProvider>
-            <ThemeApplier />
-            <AppIconApplier />
-            <OfflinePlaceholder />
-            <UpdateNotifier />
-            <main className="relative h-[100dvh] w-full overflow-hidden">
-              {children}
-            </main>
-            <Toaster />
-            <Analytics />
-            <SpeedInsights />
-          </FirebaseClientProvider>
+          <FirebaseProvider>
+            <FirebaseClientProvider>
+              <ThemeApplier />
+              <AppIconApplier />
+              <OfflinePlaceholder />
+              <UpdateNotifier />
+              <main className="relative h-[100dvh] w-full overflow-hidden">
+                {children}
+              </main>
+              <Toaster />
+              <Analytics />
+              <SpeedInsights />
+            </FirebaseClientProvider>
+          </FirebaseProvider>
         </AppProvider>
       </body>
     </html>

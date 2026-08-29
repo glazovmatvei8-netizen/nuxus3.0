@@ -26,8 +26,8 @@ import {
 } from 'lucide-react';
 
 /**
- * CHAT MAIN V64.0 «AI ANNIHILATION»
- * ОБНОВЛЕНИЕ: Удалены все следы ИИ. Оптимизирована навигация.
+ * CHAT MAIN V65.0 «AI ANNIHILATED»
+ * ОБНОВЛЕНИЕ: ИИ удален навсегда. Док оптимизирован под 5 кнопок.
  */
 export default function ChatMain() {
   const { 
@@ -68,7 +68,6 @@ export default function ChatMain() {
     <div className="fixed inset-0 flex flex-col w-screen bg-[#010103] overflow-hidden h-[100dvh]">
       <NotificationListener />
       
-      {/* Dynamic Background */}
       <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
          <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] bg-primary/5 blur-[140px] rounded-full animate-pulse" />
          <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-accent/5 blur-[140px] rounded-full animate-pulse" style={{ animationDelay: '2s' }} />
@@ -77,7 +76,6 @@ export default function ChatMain() {
 
       <div className="flex-1 flex overflow-hidden w-full relative h-full z-10">
         
-        {/* DESKTOP SIDE NAVIGATION RAIL */}
         <nav className="hidden md:flex flex-col items-center py-8 w-20 bg-black/60 border-r border-white/5 shrink-0 z-[100] gap-8">
            <div className="p-2.5 rounded-2xl bg-primary/10 border border-primary/20 mb-4">
               <LayoutGrid className="w-6 h-6 text-primary" />
@@ -94,8 +92,6 @@ export default function ChatMain() {
                   )}
                 >
                   <item.icon className={cn("w-6 h-6", activeView === item.id && "fill-current")} />
-                  
-                  {/* Tooltip */}
                   <div className="absolute left-full ml-4 px-3 py-1.5 bg-white text-black text-[10px] font-black uppercase tracking-widest rounded-lg opacity-0 group-hover:opacity-100 translate-x-[-10px] group-hover:translate-x-0 transition-all pointer-events-none whitespace-nowrap shadow-2xl z-[200]">
                     {item.label}
                   </div>
@@ -150,7 +146,6 @@ export default function ChatMain() {
         </div>
       </div>
 
-      {/* MOBILE BOTTOM NAVIGATION - VISIBLE WHEN NOT IN CHAT */}
       {(!currentChatId || activeView !== 'chats') && (
         <div className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[1000] w-[94%] max-w-[440px] animate-in slide-in-from-bottom-6 duration-700">
           <div className="bg-[#0c0c0e]/95 backdrop-blur-3xl rounded-[2.5rem] h-20 flex items-center justify-around px-1 shadow-[0_30px_60px_rgba(0,0,0,0.8)] border border-white/10 relative">

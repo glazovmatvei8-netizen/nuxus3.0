@@ -3,8 +3,7 @@
 import React from 'react';
 
 /**
- * NUXUS AI VIEW ANNIHILATED V64.0
- * Раздел удален по требованию Оператора.
+ * NUXUS AI VIEW ANNIHILATED V65.0
  */
 export default function NuxusAiView() {
   return null;

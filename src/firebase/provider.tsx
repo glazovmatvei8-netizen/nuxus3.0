@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
@@ -6,8 +5,8 @@ import { onAuthStateChanged, User } from 'firebase/auth';
 import { nuxus } from '@/lib/nuxus-engine';
 
 /**
- * NUXUS PROVIDER V30.0
- * Изолированный контекст авторизации.
+ * NUXUS PROVIDER V65.0 «FLAT CORE»
+ * Исключены любые внешние зависимости, вызывающие рекурсию.
  */
 
 export interface FirebaseContextState {
@@ -46,6 +45,7 @@ export const FirebaseProvider: React.FC<{ children: ReactNode }> = ({ children }
 };
 
 export const useFirebase = () => useContext(FirebaseContext);
+
 export const useUser = () => {
   const context = useContext(FirebaseContext);
   return { user: context.user, isUserLoading: context.isUserLoading };
