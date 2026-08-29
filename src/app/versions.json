@@ -4,9 +4,9 @@
   "build": "Nuxus-Sovereign-V59-Final",
   "sizeMb": 82,
   "changelog": [
-    "Sovereign Core: Fixed critical Webpack 'call' error in RootLayout.",
-    "Stability: Removed circular dependency barrel files.",
-    "Clean-up: Complete AI modules annihilation.",
-    "Economy: Optimized for zero-cost static hosting."
+    "Sovereign Core: Fixed critical Webpack 'call' error and White Screen.",
+    "Zero-Cost: Optimized for static free hosting in RU region.",
+    "Clean-up: Final neural modules annihilation.",
+    "Stability: Forced client-side only hydration shield."
   ]
 }

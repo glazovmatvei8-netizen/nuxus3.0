@@ -36,9 +36,7 @@ export const viewport: Viewport = {
 
 /**
  * ROOT LAYOUT V5.9.0 «ZERO ERROR»
- * 
- * ПОЛНЫЙ ФИКС ОШИБКИ 'call':
- * layout.tsx теперь является чистым серверным компонентом без клиентских зависимостей.
+ * ПОЛНЫЙ ФИКС: Layout теперь максимально прост, чтобы избежать ошибок Webpack.
  */
 export default function RootLayout({
   children,
@@ -47,14 +45,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ru" className={`dark ${font.variable}`} suppressHydrationWarning>
-      <body 
-        className="font-sans antialiased bg-[#010103] text-foreground overflow-hidden h-[100dvh] select-none" 
-        style={{ fontFamily: 'var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, sans-serif' }}
-      >
+      <body className="bg-[#010103] text-foreground antialiased overflow-hidden selection:bg-primary/30">
         <SovereignProvider>
-          <main className="relative h-[100dvh] w-full overflow-hidden">
-            {children}
-          </main>
+          {children}
         </SovereignProvider>
       </body>
     </html>

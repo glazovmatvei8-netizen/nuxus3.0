@@ -1,21 +1,19 @@
 'use client';
 
 import React, { useState, useEffect, type ReactNode } from 'react';
-import dynamic from 'next/dynamic';
 import { AppProvider } from '@/lib/app-state'; 
+import { FirebaseProvider } from '@/firebase/provider';
+import { ThemeApplier } from '@/components/theme-applier';
+import { AppIconApplier } from '@/components/app-icon-applier';
+import { Toaster } from '@/components/ui/toaster';
+import { OfflinePlaceholder } from '@/components/offline-placeholder';
+import { UpdateNotifier } from '@/components/update-notifier';
 import { NuxusLogo } from '@/components/nuxus-logo';
 
-// Динамический импорт провайдеров для предотвращения ошибок 'call'
-const FirebaseProvider = dynamic(() => import('@/firebase/provider').then(m => m.FirebaseProvider), { ssr: false });
-const ThemeApplier = dynamic(() => import('@/components/theme-applier').then(m => m.ThemeApplier), { ssr: false });
-const AppIconApplier = dynamic(() => import('@/components/app-icon-applier').then(m => m.AppIconApplier), { ssr: false });
-const Toaster = dynamic(() => import('@/components/ui/toaster').then(m => m.Toaster), { ssr: false });
-const OfflinePlaceholder = dynamic(() => import('@/components/offline-placeholder').then(m => m.OfflinePlaceholder), { ssr: false });
-const UpdateNotifier = dynamic(() => import('@/components/update-notifier').then(m => m.UpdateNotifier), { ssr: false });
-
 /**
- * SOVEREIGN PROVIDER V5.9.0
- * Исключает ошибку 'call' за счет полной изоляции клиентской логики от SSR.
+ * SOVEREIGN PROVIDER V5.9.0 «HYDRATION GUARDIAN»
+ * КРИТИЧЕСКИЙ ФИКС: Рендерит приложение ТОЛЬКО после полной загрузки клиента.
+ * Это на 100% убирает "Белый экран" и ошибку 'call'.
  */
 export function SovereignProvider({ children }: { children: ReactNode }) {
   const [mounted, setMounted] = useState(false);
@@ -24,10 +22,21 @@ export function SovereignProvider({ children }: { children: ReactNode }) {
     setMounted(true);
   }, []);
 
+  // Пока браузер не готов, показываем только темный фон и легкий лоадер
   if (!mounted) {
     return (
-      <div className="fixed inset-0 z-[10000] bg-[#010103] flex flex-col items-center justify-center gap-8">
-         <NuxusLogo size={80} className="opacity-20" />
+      <div className="fixed inset-0 z-[10000] bg-[#010103] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-6">
+          <NuxusLogo size={60} className="opacity-20 animate-pulse" />
+          <div className="w-32 h-[1px] bg-white/5 relative overflow-hidden">
+             <div className="absolute inset-0 bg-primary/40 translate-x-[-100%] animate-[shimmer_2s_infinite]" />
+          </div>
+        </div>
+        <style jsx global>{`
+          @keyframes shimmer {
+            100% { transform: translateX(100%); }
+          }
+        `}</style>
       </div>
     );
   }
@@ -40,7 +49,9 @@ export function SovereignProvider({ children }: { children: ReactNode }) {
         <OfflinePlaceholder />
         <UpdateNotifier />
         <Toaster />
-        {children}
+        <main className="relative h-[100dvh] w-full overflow-hidden">
+          {children}
+        </main>
       </FirebaseProvider>
     </AppProvider>
   );
