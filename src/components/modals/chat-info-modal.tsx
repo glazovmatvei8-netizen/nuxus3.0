@@ -16,21 +16,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useUser, useFirestore, useDoc, useCollection } from '@/firebase';
+import { useUser, useFirestore, useDoc, useCollection } from '@/firebase/provider';
 import { doc, updateDoc, arrayUnion, query, collection, limit, orderBy, getDocs, arrayRemove, addDoc } from 'firebase/firestore';
 import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
-import { useAppState } from '@/lib/store';
+import { useAppState } from '@/lib/app-state';
 import { formatDisplayName, isUserPremium, formatLastSeen, decryptSignal, cn, isGlobalAdmin } from '@/lib/utils';
 import type { User, Chat, ReceivedGift } from '@/lib/types';
 import { AddMemberModal } from './add-member-modal';
 import { GiftModal } from './gift-modal';
-import { chatConversationSummary } from '@/ai/flows/chat-conversation-summary-flow';
-
-/**
- * CHAT INFO MODAL V33.0 «MODERN HARMONY»
- * ENHANCED: Owner Panel UI and prominent management label.
- */
 
 const CustomTitleDialog = memo(({ 
   isOpen, 
@@ -89,7 +83,7 @@ const ParticipantItem = memo(({
          <div className="flex flex-col text-left min-w-0">
            <div className="flex items-center gap-2">
              <span className="text-[14px] font-black text-white italic tracking-tight truncate">
-               {userId === 'bot_nuxus_manager' ? 'Nuxus Manager 🛡️' : formatDisplayName(profile?.name, profile?.username)}
+               {formatDisplayName(profile?.name, profile?.username)}
              </span>
              {isOwner && <Star className="w-3.5 h-3.5 text-accent fill-accent animate-pulse" />}
              {isAdmin && !isOwner && <Shield className="w-3 h-3 text-primary" />}
@@ -104,7 +98,7 @@ const ParticipantItem = memo(({
          </div>
        </div>
 
-       {canManage && userId !== 'bot_nuxus_manager' && !isOwner && (
+       {canManage && !isOwner && (
          <DropdownMenu>
            <DropdownMenuTrigger asChild>
              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-white/20 hover:text-white group-hover:opacity-100 transition-opacity">
@@ -142,8 +136,6 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
 
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
   const [isGiftModalOpen, setIsGiftModalOpen] = useState(false);
-  const [isSummarizing, setIsSummarizing] = useState(false);
-  const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [titleModalUser, setTitleModalUser] = useState<string | null>(null);
 
   const userProfileRef = useMemo(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user?.uid]);
@@ -158,21 +150,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
   }, [chat, user?.uid, currentUserProfile]);
 
   const isOwner = useMemo(() => user && chat.ownerId === user.uid, [user, chat.ownerId]);
-  const isPremium = useMemo(() => isUserPremium(currentUserProfile), [currentUserProfile]);
   const isContact = useMemo(() => otherId && currentUserProfile?.contactIds?.includes(otherId), [otherId, currentUserProfile?.contactIds]);
-
-  const handleAiSummary = async () => {
-    if (!isPremium) { toast({ title: "Elite Only", variant: "destructive" }); return; }
-    setIsSummarizing(true);
-    try {
-      const q = query(collection(db!, 'chats', chat.id, 'messages'), orderBy('sentAt', 'desc'), limit(30));
-      const snap = await getDocs(q);
-      const history = snap.docs.map(d => ({ senderName: d.data().senderName, text: decryptSignal(d.data().content) })).reverse();
-      const { summary } = await chatConversationSummary({ chatMessages: history });
-      setAiSummary(summary);
-    } catch (e) { toast({ title: "Сбой ИИ", variant: "destructive" }); }
-    finally { setIsSummarizing(false); }
-  };
 
   const handlePromote = async (uid: string) => { if (!db) return; await updateDoc(doc(db, 'chats', chat.id), { adminIds: arrayUnion(uid) }); toast({ title: "Узел назначен администратором" }); };
   const handleDemote = async (uid: string) => { if (!db) return; await updateDoc(doc(db, 'chats', chat.id), { adminIds: arrayRemove(uid), [`metadata.${uid}.customTitle`]: null }); toast({ title: "Права администратора отозваны" }); };
@@ -229,8 +207,6 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
 
             <div className="flex flex-col gap-3">
                {isPrivate && (<Button onClick={toggleContact} variant={isContact ? "outline" : "default"} className={cn("w-full h-14 rounded-2xl font-black uppercase italic tracking-widest gap-2 shadow-xl", isContact ? "border-white/10 bg-white/5" : "bg-primary text-white")}>{isContact ? <><UserCheck className="w-5 h-5 text-primary" /> В контактах</> : <><UserPlus className="w-5 h-5" /> Добавить в контакты</>}</Button>)}
-               <Button onClick={handleAiSummary} disabled={isSummarizing} className="w-full h-14 bg-white/[0.03] border border-white/10 text-white rounded-2xl font-black uppercase italic tracking-widest gap-3 shadow-inner text-[10px] hover:bg-primary/10 transition-all">{isSummarizing ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Wand2 className="w-5 h-5 text-primary" /> ПЕРЕСКАЗ ДИАЛОГА (AI)</>}</Button>
-               {aiSummary && (<div className="bg-primary/5 p-5 rounded-3xl border border-primary/10 animate-in fade-in zoom-in-95 shadow-xl"><p className="text-[13px] text-white/90 leading-relaxed font-medium">{aiSummary}</p></div>)}
             </div>
             
             {isPrivate && (<div className="flex gap-3"><Button onClick={() => setIsGiftModalOpen(true)} variant="outline" className="flex-1 h-14 rounded-2xl border-white/10 bg-white/[0.02] text-white font-black uppercase italic text-[10px] tracking-widest gap-3 hover:bg-primary/5 transition-all"><Gift className="w-5 h-5 text-primary" /> Подарок</Button></div>)}

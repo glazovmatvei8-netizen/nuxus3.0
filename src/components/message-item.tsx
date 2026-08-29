@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { memo, useMemo } from 'react';
@@ -57,7 +58,6 @@ export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile }: a
                <span className="text-[11px] font-black text-primary/60 uppercase tracking-widest italic">
                  {message.senderName || 'User'}
                </span>
-               {message.metadata?.isBot && <span className="text-[7px] bg-primary/20 text-primary px-2 py-0.5 rounded-full font-black uppercase">AI</span>}
             </div>
           )}
           

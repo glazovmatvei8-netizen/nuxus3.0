@@ -1,12 +1,13 @@
+
 {
   "latestVersion": "5.9.0",
   "qesVersion": "26.0",
-  "build": "Nuxus-Sovereign-V59-Final",
-  "sizeMb": 82,
+  "build": "Nuxus-Sovereign-Titanium-V59",
+  "sizeMb": 74,
   "changelog": [
-    "Sovereign Core: Fixed critical Webpack 'call' error and White Screen.",
-    "Zero-Cost: Optimized for static free hosting in RU region.",
-    "Clean-up: Final neural modules annihilation.",
-    "Stability: Forced client-side only hydration shield."
+    "Titanium Core: Fixed originalFactory.call and White Screen on mobile.",
+    "Dynamic Bridge: Forced client-side initialization via SovereignProvider.",
+    "Zero-Error: Annihilated barrel-file circular dependencies.",
+    "Optimized: Removed all remaining AI neural node traces."
   ]
 }

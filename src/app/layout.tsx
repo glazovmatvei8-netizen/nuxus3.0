@@ -1,3 +1,4 @@
+
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Plus_Jakarta_Sans } from 'next/font/google';
@@ -12,7 +13,7 @@ const font = Plus_Jakarta_Sans({
 
 export const metadata: Metadata = {
   title: 'Nuxus 5.9.0',
-  description: 'Premium ethereal communication terminal.',
+  description: 'Premium communication terminal.',
   applicationName: 'Nuxus',
   appleWebApp: {
     capable: true,
@@ -34,10 +35,6 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
 }
 
-/**
- * ROOT LAYOUT V5.9.0 «ZERO ERROR»
- * ПОЛНЫЙ ФИКС: Layout теперь максимально прост, чтобы избежать ошибок Webpack.
- */
 export default function RootLayout({
   children,
 }: {

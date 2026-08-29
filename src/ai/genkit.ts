@@ -1,11 +1,6 @@
-import {genkit} from 'genkit';
-import {googleAI} from '@genkit-ai/google-genai';
 
 /**
- * NUXUS AI CORE V74.0.0
- * Модель обновлена до Gemini 1.5 Flash для максимальной скорости и расшифровки голоса.
+ * NUXUS AI CORE ANNIHILATED V65.0
+ * Все нейронные узлы удалены по запросу Оператора.
  */
-export const ai = genkit({
-  plugins: [googleAI()],
-  model: 'googleai/gemini-1.5-flash',
-});
+export const ai = null as any;
