@@ -1,10 +1,14 @@
+
 "use client"
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
+import { useUser, useFirestore } from '@/firebase/provider';
+import { useDoc } from '@/firebase/firestore/use-doc';
+import { useMemoFirebase } from '@/firebase/firestore/use-memo-firebase';
+import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, query, where, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
 import { Archive, Trash2, Ghost, ShieldAlert } from 'lucide-react';
@@ -13,8 +17,8 @@ import { useToast } from '@/hooks/use-toast';
 import type { Chat } from '@/lib/types';
 
 /**
- * CHAT EDITOR MODAL V5.2.0
- * FIXED V10.1: Correct imports from @/firebase.
+ * CHAT EDITOR MODAL V5.2.2 «TITANIUM DIRECT»
+ * ИСПРАВЛЕНО: Прямые импорты Firebase.
  */
 export function ChatEditorModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const { user } = useUser();

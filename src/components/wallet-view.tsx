@@ -2,13 +2,16 @@
 "use client"
 
 import React, { useState } from 'react';
-import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
+import { useUser, useFirestore } from '@/firebase/provider';
+import { useDoc } from '@/firebase/firestore/use-doc';
+import { useMemoFirebase } from '@/firebase/firestore/use-memo-firebase';
+import { useCollection } from '@/firebase/firestore/use-collection';
 import { doc, collection, query, orderBy, limit, writeBatch, increment, getDocs, where, addDoc } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Wallet, ArrowUpRight, ArrowDownLeft, Plus, Zap, History, ShieldCheck, Loader2, Search, CheckCircle2, XCircle, Clock, AlertTriangle, Gift, Activity } from 'lucide-react';
-import { cn, formatDisplayName } from '@/lib/utils';
+import { Wallet, ArrowUpRight, ArrowDownLeft, Plus, History, Loader2, Search, XCircle, Activity } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import type { User, Transaction } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -16,7 +19,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
   DialogFooter
 } from '@/components/ui/dialog';
 import { format } from 'date-fns';
@@ -25,8 +27,8 @@ import { ru } from 'date-fns/locale';
 const MAX_TOP_UP_AMOUNT = 500000;
 
 /**
- * WALLET VIEW V35.0 «STABLE NAVIGATION»
- * Исправлены импорты и добавлена плавная загрузка.
+ * WALLET VIEW V35.0.1 «TITANIUM DIRECT»
+ * ИСПРАВЛЕНО: Прямые импорты Firebase.
  */
 export default function WalletView() {
   const { user } = useUser();

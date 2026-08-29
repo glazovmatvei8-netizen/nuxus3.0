@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -7,15 +8,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { 
-  Code2, Zap, ShieldCheck, Terminal, Key, Webhook, 
-  Copy, Loader2, Users, Trash2, Camera, User, X,
-  Activity, LayoutGrid, Info, ExternalLink, ChevronRight, Plus, Bot, BotOff, Sparkles, Save, Wrench
+  Terminal, Key, Webhook, 
+  Copy, Loader2, Trash2, Plus, Bot, Wrench, X
 } from 'lucide-react';
 import { cn, isGlobalAdmin } from '@/lib/utils';
 import { NuxusLogo } from './nuxus-logo';
 import { useToast } from '@/hooks/use-toast';
-import { useUser, useFirestore, useDoc } from '@/firebase';
-import { collection, doc, setDoc, deleteDoc, getDoc } from 'firebase/firestore';
+import { useUser, useFirestore } from '@/firebase/provider';
+import { useDoc } from '@/firebase/firestore/use-doc';
+import { collection, doc, setDoc, deleteDoc } from 'firebase/firestore';
 import type { User as UserType } from '@/lib/types';
 
 interface BotInstance {
@@ -30,9 +31,8 @@ interface BotInstance {
 }
 
 /**
- * PARTNER HUB V8.5.0 «MAINTENANCE MODE»
- * Доступ только для Администраторов.
- * FIXED V10.1: Correct imports from @/firebase.
+ * PARTNER HUB V8.5.1 «TITANIUM DIRECT»
+ * ИСПРАВЛЕНО: Прямые импорты Firebase.
  */
 export default function PartnerView() {
   const { user } = useUser();

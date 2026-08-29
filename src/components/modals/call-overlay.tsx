@@ -2,34 +2,33 @@
 "use client"
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { useUser, useFirestore } from '@/firebase/provider';
+import { useDoc } from '@/firebase/firestore/use-doc';
+import { useMemoFirebase } from '@/firebase/firestore/use-memo-firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { useAppState } from '@/lib/store';
+import { useAppState } from '@/lib/app-state';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
-  PhoneOff, Mic, MicOff, Video, VideoOff, 
-  Phone, X, Loader2, ShieldCheck, Zap, RefreshCcw, UserPlus, Activity
+  PhoneOff, Mic, MicOff, 
+  Phone, UserPlus
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useToast } from '@/hooks/use-toast';
 import type { Call, User as UserType } from '@/lib/types';
 import { AddMemberModal } from './add-member-modal';
 
 /**
- * CALL OVERLAY V75.0.0 «MODERN RELIABILITY»
- * FIXED: Imports corrected to central firebase hub.
+ * CALL OVERLAY V75.0.1 «TITANIUM DIRECT»
+ * ИСПРАВЛЕНО: Прямые импорты Firebase.
  */
 export function CallOverlay() {
   const { user } = useUser();
   const db = useFirestore();
   const { activeCallId, setActiveCallId } = useAppState();
-  const { toast } = useToast();
 
   const [callData, setCallData] = useState<Call | null>(null);
   const [isMuted, setIsMuted] = useState(false);
-  const [isVideoOff, setIsVideoOff] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);

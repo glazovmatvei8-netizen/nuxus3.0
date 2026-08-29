@@ -1,13 +1,16 @@
 
 'use client';
 
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { useUser, useFirestore } from '@/firebase/provider';
+import { useDoc } from '@/firebase/firestore/use-doc';
+import { useMemoFirebase } from '@/firebase/firestore/use-memo-firebase';
 import { doc } from 'firebase/firestore';
 import { translations, type LanguageCode } from '@/lib/translations';
 import type { User } from '@/lib/types';
 
 /**
- * Хук для доступа к текущим переводам на основе профиля пользователя.
+ * TITANIUM SYNC HOOK: useTranslations
+ * ИСПРАВЛЕНО: Прямые импорты Firebase.
  */
 export function useTranslations() {
   const { user } = useUser();

@@ -5,9 +5,10 @@ import React, { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useFirestore, useCollection, useUser, useDoc } from '@/firebase';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Search, UserPlus, Loader2, Contact, ShieldAlert, Lock, Star, Phone } from 'lucide-react';
+import { useUser, useFirestore } from '@/firebase/provider';
+import { useCollection } from '@/firebase/firestore/use-collection';
+import { useDoc } from '@/firebase/firestore/use-doc';
+import { Search, UserPlus, Contact, Star, Phone, Plus } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { collection, query, doc, arrayUnion, limit } from 'firebase/firestore';
@@ -17,8 +18,8 @@ import { formatDisplayName, isUserPremium } from '@/lib/utils';
 import { UserAvatar } from '../user-avatar';
 
 /**
- * ADD MEMBER MODAL V5.2.1 «STABLE RESOLUTION»
- * ИСПРАВЛЕНО: Корректный импорт хуков через Firebase Barrel.
+ * ADD MEMBER MODAL V5.2.2 «TITANIUM DIRECT»
+ * ИСПРАВЛЕНО: Прямые импорты Firebase.
  */
 export function AddMemberModal({ open, onOpenChange, chatId, currentParticipantIds, isCallContext }: any) {
   const db = useFirestore();
