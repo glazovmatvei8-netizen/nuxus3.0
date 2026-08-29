@@ -2,7 +2,7 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  output: 'export', // АКТИВИРОВАНО ДЛЯ СБОРКИ APK/IPA
+  output: 'export', // АКТИВИРОВАНО ДЛЯ СБОРКИ ЧИСТОГО APK/IPA
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -10,7 +10,7 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   images: {
-    unoptimized: true,
+    unoptimized: true, // ОБЯЗАТЕЛЬНО ДЛЯ СТАТИЧЕСКОГО ЭКСПОРТА
     remotePatterns: [
       {
         protocol: 'https',

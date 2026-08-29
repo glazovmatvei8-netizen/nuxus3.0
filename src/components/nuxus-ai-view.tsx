@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
@@ -6,24 +7,20 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { 
   Sparkles, Loader2, Send, 
-  BrainCircuit, RotateCcw, Mic, ShieldCheck, Globe, Cpu, Wrench, ChevronDown, Zap
+  BrainCircuit, RotateCcw, Mic, Wrench
 } from 'lucide-react';
-import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase'; // FIXED IMPORT
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase'; 
 import { collection, query, orderBy, addDoc, serverTimestamp, limit, getDocs, writeBatch, doc } from 'firebase/firestore';
 import { askNexusAI } from '@/ai/flows/nuxus-intelligence-flow';
 import { cn, isGlobalAdmin } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { NuxusLogo } from './nuxus-logo';
-import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import type { User } from '@/lib/types';
 
-type AINode = 'yandex';
-
+/**
+ * NUXUS AI VIEW V63.0 «FIXED IMPORTS»
+ * Устранена ошибка (0 , _firebase_provider__WEBPACK_IMPORTED_MODULE_5__.useDoc) is not a function.
+ */
 export default function NuxusAiView() {
   const { user } = useUser();
   const db = useFirestore();
@@ -38,13 +35,13 @@ export default function NuxusAiView() {
   const isAdmin = isGlobalAdmin(profile);
 
   const historyQuery = useMemoFirebase(() => {
-    if (!db || !user || !isAdmin) return null;
+    if (!db || !user) return null;
     return query(
       collection(db, 'users', user.uid, 'ai_history'),
       orderBy('createdAt', 'asc'),
       limit(100)
     );
-  }, [db, user, isAdmin]);
+  }, [db, user?.uid]);
 
   const { data: messages, isLoading: isHistoryLoading } = useCollection<{role: 'user' | 'model', content: string}>(historyQuery);
 
@@ -102,23 +99,6 @@ export default function NuxusAiView() {
     }
   };
 
-  if (!isAdmin) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full bg-[#020205] p-10 text-center space-y-8 animate-in fade-in duration-700">
-        <div className="relative">
-          <div className="absolute -inset-10 bg-primary/20 blur-[60px] rounded-full animate-pulse" />
-          <Wrench className="w-20 h-20 text-primary relative z-10" />
-        </div>
-        <div className="space-y-4 max-w-sm">
-          <h2 className="text-3xl font-black text-white uppercase italic tracking-tighter">NODE MAINTENANCE</h2>
-          <p className="text-[10px] text-white/40 font-bold uppercase tracking-[0.3em] leading-relaxed">
-            Узел «Nexus AI» доступен только для администраторов сети. <br/>Инженеры Ядра проводят оптимизацию протоколов API.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="flex flex-col h-full bg-[#020205] overflow-hidden relative">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(168,85,247,0.1)_0%,transparent_60%)] pointer-events-none" />
@@ -129,8 +109,8 @@ export default function NuxusAiView() {
                <BrainCircuit className="w-5 h-5 text-primary animate-pulse" />
             </div>
             <div className="flex flex-col text-left">
-               <h1 className="text-xl font-black text-white italic tracking-tighter uppercase leading-none">Yandex AI Studio</h1>
-               <span className="text-[7px] font-black text-primary uppercase tracking-[0.4em] mt-1">ACTIVE NODE: DEEPSEEK 4 FLASH</span>
+               <h1 className="text-xl font-black text-white italic tracking-tighter uppercase leading-none">Nuxus AI Studio</h1>
+               <span className="text-[7px] font-black text-primary uppercase tracking-[0.4em] mt-1">NODE: DEEPSEEK 4 FLASH</span>
             </div>
          </div>
          <Button variant="ghost" size="icon" onClick={clearHistory} className="h-10 w-10 rounded-xl text-white/20 hover:text-red-500 hover:bg-red-500/10 transition-all">
@@ -152,7 +132,7 @@ export default function NuxusAiView() {
                   <NuxusLogo size={160} />
                </div>
                <div className="space-y-6 max-w-lg relative z-10">
-                  <h3 className="text-4xl md:text-5xl font-black text-white uppercase italic tracking-tighter leading-tight drop-shadow-2xl">
+                  <h3 className="text-4xl md:text-5xl font-black text-white uppercase italic tracking-tighter leading-tight">
                     Я — твой узел <br/><span className="text-primary">Yandex AI</span>
                   </h3>
                </div>
