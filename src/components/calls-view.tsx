@@ -2,12 +2,12 @@
 "use client"
 
 import React, { useState } from 'react';
-import { useAppState } from '@/lib/store';
+import { useAppState } from '@/lib/app-state';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { Phone, Link as LinkIcon, PhoneOff, Loader2, ArrowUpRight, ArrowDownLeft, ShieldCheck, Activity, UserPlus, ChevronRight } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from '@/firebase/provider';
 import { collection, query, where, orderBy, limit, doc } from 'firebase/firestore';
 import { formatDisplayName, cn } from '@/lib/utils';
 import type { Call, User } from '@/lib/types';
@@ -16,7 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 
 /**
  * CALL CENTER V45.0.1 «STABLE RESOLUTION»
- * ИСПРАВЛЕНО: Корректный импорт хуков через Firebase Barrel.
+ * ИСПРАВЛЕНО: Пути импорта useAppState и Firebase хуков.
  */
 export default function CallsView() {
   const { user } = useUser();

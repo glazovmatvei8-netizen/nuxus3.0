@@ -1,20 +1,21 @@
+
 "use client"
 
 import React, { useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase/provider';
 import { collection, query, where, orderBy, doc, updateDoc } from 'firebase/firestore';
 import { Archive, Zap, Loader2, Play, RefreshCcw } from 'lucide-react';
 import type { Story } from '@/lib/types';
-import { useAppState } from '@/lib/store';
+import { useAppState } from '@/lib/app-state';
 import { useToast } from '@/hooks/use-toast';
 import { addHours } from 'date-fns';
 
 /**
  * STORY ARCHIVE MODAL V11.0.0 «HYPER-ENGINE READY»
- * FIXED: Импорты переведены на центральный хаб.
+ * ИСПРАВЛЕНО: Пути импорта useAppState и Firebase хуков.
  */
 export function StoryArchiveModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const { user } = useUser();

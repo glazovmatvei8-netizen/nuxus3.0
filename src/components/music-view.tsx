@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useState } from 'react';
-import { useAppState } from '@/lib/store';
+import { useAppState } from '@/lib/app-state';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,7 @@ import type { Track } from '@/lib/types';
 
 /**
  * ГЛОБАЛЬНАЯ МЕДИАТЕКА NUXUS V3.0 (HI-FI STREAMS)
- * Обновлено: Реальные Hi-Fi треки без авторских прав.
+ * ИСПРАВЛЕНО: Путь импорта useAppState.
  */
 const NUXUS_LIBRARY: Track[] = [
   { 

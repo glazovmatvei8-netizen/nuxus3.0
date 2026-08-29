@@ -1,8 +1,9 @@
+
 "use client"
 
 import React, { useMemo, useState } from 'react';
-import { useAppState } from '@/lib/store';
-import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { useAppState } from '@/lib/app-state';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase/provider';
 import { collection, query, where, doc } from 'firebase/firestore';
 import { UserAvatar } from './user-avatar';
 import { Plus, Loader2, Archive } from 'lucide-react';
@@ -14,7 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 
 /**
  * NUXUS MOMENTS BAR V11.0.0 «HYPER-ENGINE READY»
- * FIXED: Импорты переведены на центральный хаб.
+ * ИСПРАВЛЕНО: Пути импорта useAppState и Firebase хуков.
  */
 export function StoriesBar() {
   const { user } = useUser();

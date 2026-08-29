@@ -25,6 +25,10 @@ import versions from '@/app/versions.json';
 const ADMIN_ID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 const ORIGIN_DATE = '2024-01-01T00:00:00Z'; 
 
+/**
+ * USER PROFILE MODAL V5.2.0
+ * ИСПРАВЛЕНО: Пути импорта useAppState и Firebase хуков.
+ */
 export function UserProfileModal() {
   const db = useFirestore();
   const { user: currentUser } = useUser();

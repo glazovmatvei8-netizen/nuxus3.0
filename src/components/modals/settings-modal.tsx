@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -9,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase/provider';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Settings2, Camera, ShieldCheck, Loader2, Fingerprint, Palette, 
@@ -20,14 +21,14 @@ import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
 import { doc, updateDoc, deleteDoc, addDoc, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useAppState } from '@/lib/store';
+import { useAppState } from '@/lib/app-state';
 import { isUserPremium, cn } from '@/lib/utils';
 import type { User } from '@/lib/types';
 import versions from '@/app/versions.json';
 
 /**
  * SETTINGS MODAL V52.0 «STABILITY & EXPANSION»
- * UPDATED: More themes, support button, and improved style settings.
+ * ИСПРАВЛЕНО: Пути импорта useAppState и Firebase хуков.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();

@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -9,7 +10,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Progress } from '@/components/ui/progress';
 import { Label } from '@/components/ui/label';
-import { useFirestore, useCollection } from '@/firebase'; // CORRECT IMPORT FROM CENTRAL INDEX
+import { useFirestore, useCollection } from '@/firebase/provider'; 
 import { collection, query, doc, limit, updateDoc, writeBatch, increment, orderBy, deleteDoc } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
@@ -28,8 +29,12 @@ import { formatDisplayName, cn, isUserAnomaly, isUserPremium } from '@/lib/utils
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
-import { useAppState } from '@/lib/store';
+import { useAppState } from '@/lib/app-state';
 
+/**
+ * ADMIN PANEL MODAL V5.2.0
+ * ИСПРАВЛЕНО: Пути импорта useAppState и Firebase хуков.
+ */
 export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const db = useFirestore();
   const { toast } = useToast();

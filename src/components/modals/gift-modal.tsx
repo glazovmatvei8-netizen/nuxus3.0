@@ -4,7 +4,7 @@
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase/provider';
 import { doc, collection, writeBatch, increment, addDoc } from 'firebase/firestore';
 import { Gift, Sparkles, Loader2, Wallet, Zap, ChevronRight, Gem } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -14,7 +14,7 @@ import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 
 /**
  * GIFT MODAL V5.2.1 «STABLE RESOLUTION»
- * ИСПРАВЛЕНО: Корректный импорт хуков через Firebase Barrel.
+ * ИСПРАВЛЕНО: Пути импорта хуков.
  */
 
 const PREDEFINED_GIFTS = [

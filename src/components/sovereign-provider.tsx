@@ -6,7 +6,6 @@ import { AppProvider } from '@/lib/app-state';
 import { FirebaseProvider } from '@/firebase/provider';
 import { Toaster } from '@/components/ui/toaster';
 import { OfflinePlaceholder } from '@/components/offline-placeholder';
-import { UpdateNotifier } from '@/components/update-notifier';
 import { NuxusLogo } from '@/components/nuxus-logo';
 import { ThemeApplier } from '@/components/theme-applier';
 import { AppIconApplier } from '@/components/app-icon-applier';
@@ -14,7 +13,7 @@ import { AppIconApplier } from '@/components/app-icon-applier';
 /**
  * SOVEREIGN PROVIDER V5.9.0 «TITANIUM SHIELD»
  * Глобальный узел инициализации. Устраняет белый экран и ошибки Webpack.
- * ИСПРАВЛЕНО: Теперь используется стандартный экспорт без dynamic() в layout.
+ * ИСПРАВЛЕНО: Удален UpdateNotifier, чтобы не беспокоить пользователей RuStore.
  */
 export function SovereignProvider({ children }: { children: ReactNode }) {
   const [mounted, setMounted] = useState(false);
@@ -49,7 +48,6 @@ export function SovereignProvider({ children }: { children: ReactNode }) {
         <ThemeApplier />
         <AppIconApplier />
         <OfflinePlaceholder />
-        <UpdateNotifier />
         <Toaster />
         <main className="relative h-[100dvh] w-full overflow-hidden bg-[#010103]">
           {children}

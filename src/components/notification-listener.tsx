@@ -4,13 +4,13 @@
 import { useEffect, useRef } from 'react';
 import { useUser, useFirestore } from '@/firebase/provider';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
-import { useAppState } from '@/lib/store';
+import { useAppState } from '@/lib/app-state';
 import { useToast } from '@/hooks/use-toast';
 import type { Call } from '@/lib/types';
 
 /**
  * NUXUS NOTIFICATION CORE V74.0.0
- * FIXED: Direct imports from provider.
+ * ИСПРАВЛЕНО: Путь импорта useAppState.
  */
 export function NotificationListener() {
   const { user } = useUser();

@@ -1,10 +1,11 @@
+
 "use client"
 
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase/provider';
 import { doc, collection, writeBatch, query, where, getDocs, limit } from 'firebase/firestore';
 import { ArrowRightLeft, Search, Loader2, Zap, User as UserIcon, ShieldCheck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -14,7 +15,7 @@ import { formatDisplayName } from '@/lib/utils';
 
 /**
  * TRADE MODAL V5.2.0
- * FIXED V10.1: Correct imports from @/firebase.
+ * ИСПРАВЛЕНО: Пути импорта хуков.
  */
 export function TradeModal({ open, onOpenChange, gift }: { open: boolean, onOpenChange: (o: boolean) => void, gift: ReceivedGift | null }) {
   const { user } = useUser();

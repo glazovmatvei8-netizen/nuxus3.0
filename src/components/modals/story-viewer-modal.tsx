@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogTitle, DialogOverlay, DialogPortal } from 
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { X, Eye, Heart, Smile, Loader2, Share2, Send } from 'lucide-react';
-import { useAppState } from '@/lib/store';
+import { useAppState } from '@/lib/app-state';
 import { useUser, useFirestore } from '@/firebase/provider';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
@@ -21,7 +21,7 @@ const STORY_REACTIONS = ['❤️', '🔥', '😂', '😮', '😢', '💯', '👏
 
 /**
  * STORY VIEWER MODAL V12.0.0 «HYPER-ENGINE READY»
- * FIXED: Direct hook imports for stability.
+ * ИСПРАВЛЕНО: Пути импорта useAppState и Firebase хуков.
  */
 export function StoryViewerModal() {
   const { user } = useUser();

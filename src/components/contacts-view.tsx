@@ -2,13 +2,13 @@
 "use client"
 
 import React, { useState, useMemo } from 'react';
-import { useAppState } from '@/lib/store';
+import { useAppState } from '@/lib/app-state';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { Search, UserPlus, Star, Contact as ContactIcon, MessageCircle } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useFirestore, useUser, useCollection, useDoc } from '@/firebase';
+import { useFirestore, useUser, useCollection, useDoc } from '@/firebase/provider';
 import { collection, query, where, doc, getDocs, addDoc } from 'firebase/firestore';
 import { formatDisplayName, cn, isUserPremium } from '@/lib/utils';
 import type { User, Chat } from '@/lib/types';
@@ -16,7 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 
 /**
  * CONTACTS VIEW V5.1.1 «STABLE RESOLUTION»
- * ИСПРАВЛЕНО: Корректный импорт хуков через Firebase Barrel.
+ * ИСПРАВЛЕНО: Пути импорта useAppState и Firebase хуков.
  */
 export default function ContactsView() {
   const { user } = useUser();

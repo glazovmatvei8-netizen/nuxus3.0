@@ -2,12 +2,16 @@
 "use client"
 
 import React, { useRef, useEffect, useState } from 'react';
-import { useAppState } from '@/lib/store';
+import { useAppState } from '@/lib/app-state';
 import { Button } from '@/components/ui/button';
 import { Play, Pause, SkipBack, SkipForward, Volume2, X, Maximize2, Music, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Slider } from '@/components/ui/slider';
 
+/**
+ * MUSIC PLAYER V5.9.0
+ * ИСПРАВЛЕНО: Путь импорта useAppState.
+ */
 export function MusicPlayer() {
   const { currentTrack, setCurrentTrack, isPlayingMusic, setIsPlayingMusic } = useAppState();
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -115,7 +119,7 @@ export function MusicPlayer() {
         </div>
         
         <div className="w-full max-w-[150px] md:max-w-[200px] h-[2px] md:h-[3px] bg-white/5 rounded-full overflow-hidden mt-1">
-          <div className="h-full bg-primary shadow-[0_0_10px_rgba(139,92,246,0.8)] transition-all duration-300" style={{ width: `${progress}%` }} />
+          <div className="h-full bg-primary shadow-[0_0_10px_rgba(139,92,247,0.8)] transition-all duration-300" style={{ width: `${progress}%` }} />
         </div>
       </div>
 
