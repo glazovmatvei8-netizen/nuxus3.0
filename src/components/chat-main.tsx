@@ -7,10 +7,7 @@ import ContactsView from './contacts-view';
 import CallsView from './calls-view';
 import ProfileView from './profile-view';
 import WalletView from './wallet-view';
-import GamesView from './games-view';
 import DiscoveryView from './discovery-view';
-import NuxusAiView from './nuxus-ai-view';
-import PartnerView from './partner-view';
 import { useAppState } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { useUser, useFirestore, useCollection } from '@/firebase';
@@ -25,12 +22,12 @@ import { UserAvatar } from './user-avatar';
 import type { Call } from '@/lib/types';
 import { 
   MessageSquare, Settings, Phone, Wallet, 
-  Globe, Sparkles, LayoutGrid
+  Globe, LayoutGrid
 } from 'lucide-react';
 
 /**
- * CHAT MAIN V61.0 «UNIVERSAL HUB»
- * ОБНОВЛЕНИЕ: Внедрена навигация для ПК (Side Rail) и исправлен Dock для мобильных.
+ * CHAT MAIN V64.0 «AI ANNIHILATION»
+ * ОБНОВЛЕНИЕ: Удалены все следы ИИ. Оптимизирована навигация.
  */
 export default function ChatMain() {
   const { 
@@ -62,7 +59,6 @@ export default function ChatMain() {
   const NAV_ITEMS = [
     { id: 'discovery', icon: Globe, label: 'Explore' },
     { id: 'calls', icon: Phone, label: 'Calls' },
-    { id: 'ai', icon: Sparkles, label: 'AI', isAi: true },
     { id: 'chats', icon: MessageSquare, label: 'Chats' },
     { id: 'wallet', icon: Wallet, label: 'Wallet' },
     { id: 'profile', icon: Settings, label: 'Node' },
@@ -97,7 +93,7 @@ export default function ChatMain() {
                     activeView === item.id ? "bg-primary text-white shadow-[0_0_20px_rgba(var(--primary),0.3)]" : "text-white/20 hover:text-white/60 hover:bg-white/5"
                   )}
                 >
-                  <item.icon className={cn("w-6 h-6", activeView === item.id && !item.isAi && "fill-current")} />
+                  <item.icon className={cn("w-6 h-6", activeView === item.id && "fill-current")} />
                   
                   {/* Tooltip */}
                   <div className="absolute left-full ml-4 px-3 py-1.5 bg-white text-black text-[10px] font-black uppercase tracking-widest rounded-lg opacity-0 group-hover:opacity-100 translate-x-[-10px] group-hover:translate-x-0 transition-all pointer-events-none whitespace-nowrap shadow-2xl z-[200]">
@@ -126,16 +122,13 @@ export default function ChatMain() {
               {activeView === 'calls' && <CallsView />}
               {activeView === 'profile' && <ProfileView />}
               {activeView === 'wallet' && <WalletView />}
-              {activeView === 'games' && <GamesView />}
               {activeView === 'discovery' && <DiscoveryView />}
-              {activeView === 'ai' && <NuxusAiView />}
-              {activeView === 'partner' && <PartnerView />}
             </div>
           </div>
           
           <div className={cn(
             "flex-1 h-full flex flex-col min-w-0 bg-transparent relative z-20 overflow-hidden transition-all duration-500 md:p-6 lg:p-10", 
-            (!currentChatId || ['profile', 'wallet', 'ai', 'partner', 'discovery', 'calls'].includes(activeView)) ? "hidden md:flex" : "flex"
+            (!currentChatId || ['profile', 'wallet', 'discovery', 'calls'].includes(activeView)) ? "hidden md:flex" : "flex"
           )}>
             <div className="h-full w-full overflow-hidden flex flex-col bg-white/[0.01] md:rounded-[4rem] border border-white/5 shadow-[0_50px_150px_rgba(0,0,0,0.8)]">
               {currentChatId ? <ChatArea /> : (
@@ -165,8 +158,6 @@ export default function ChatMain() {
             <NavButton icon={Globe} active={activeView === 'discovery'} onClick={() => setActiveView('discovery')} label="Explore" />
             <NavButton icon={Phone} active={activeView === 'calls'} onClick={() => setActiveView('calls')} label="Calls" />
             
-            <NavButton icon={Sparkles} active={activeView === 'ai'} onClick={() => setActiveView('ai')} label="AI" isAi />
-
             <div className="relative -mt-12 flex flex-col items-center group">
               <button 
                 onClick={() => setActiveView('chats')}
@@ -196,7 +187,7 @@ export default function ChatMain() {
   );
 }
 
-function NavButton({ icon: Icon, active, onClick, isProfile, userId, label, isAi }: any) {
+function NavButton({ icon: Icon, active, onClick, isProfile, userId, label }: any) {
   return (
     <button 
       onClick={onClick} 
@@ -207,15 +198,14 @@ function NavButton({ icon: Icon, active, onClick, isProfile, userId, label, isAi
     >
       <div className={cn(
         "p-2 rounded-xl transition-all duration-300",
-        active && !isProfile && "bg-primary/10 shadow-lg shadow-primary/5",
-        active && isAi && "bg-primary/20"
+        active && !isProfile && "bg-primary/10 shadow-lg shadow-primary/5"
       )}>
         {isProfile ? (
           <div className={cn("rounded-lg p-[1px] transition-all", active ? "bg-primary shadow-lg shadow-primary/20" : "bg-transparent")}>
              <UserAvatar userId={userId} className="h-6 w-6 rounded-lg" />
           </div>
         ) : (
-          <Icon className={cn("w-5 h-5 transition-transform duration-300", active && "scale-110", active && !isAi && "fill-current")} />
+          <Icon className={cn("w-5 h-5 transition-transform duration-300", active && "scale-110", active && "fill-current")} />
         )}
       </div>
       

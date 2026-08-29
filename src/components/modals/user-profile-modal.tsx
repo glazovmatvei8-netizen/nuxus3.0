@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useMemo } from 'react';
@@ -24,8 +23,7 @@ const ADMIN_ID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 const ORIGIN_DATE = '2024-01-01T00:00:00Z'; 
 
 /**
- * USER PROFILE MODAL V31.0 «ACCESSIBILITY SYNC»
- * FIXED: Added missing DialogTitle to fix console errors.
+ * USER PROFILE MODAL V64.0 «STATIC READY»
  */
 export function UserProfileModal() {
   const db = useFirestore();
@@ -114,7 +112,6 @@ export function UserProfileModal() {
       
       setInspectedUserId(null);
       setActiveView('chats');
-      toast({ title: "Диалог открыт" });
     } catch (e: any) {
       toast({ title: "Ошибка открытия чата", variant: "destructive" });
     }
@@ -139,14 +136,6 @@ export function UserProfileModal() {
     }
   };
 
-  const copyId = async () => {
-    if (!inspectedUserId) return;
-    try {
-      await navigator.clipboard.writeText(inspectedUserId);
-      toast({ title: "ID скопирован" });
-    } catch (err) { toast({ title: "Ошибка", variant: "destructive" }); }
-  };
-
   const registrationDate = useMemo(() => {
     if (!inspectedUserId) return '';
     const rawDate = inspectedUserId === ADMIN_ID ? ORIGIN_DATE : (targetUser?.createdAt);
@@ -155,8 +144,6 @@ export function UserProfileModal() {
   }, [targetUser?.createdAt, inspectedUserId]);
 
   if (!inspectedUserId) return null;
-
-  const hasActivePremium = isUserPremium(targetUser);
 
   return (
     <>
@@ -172,10 +159,9 @@ export function UserProfileModal() {
           </DialogDescription>
           
           <div className="relative mb-6 mt-6">
-            <div className="absolute -inset-4 bg-primary/20 blur-3xl rounded-full animate-pulse" />
             <UserAvatar 
               userId={inspectedUserId} 
-              className="h-32 w-32 border-[6px] border-[#030306] shadow-[0_20px_50px_rgba(0,0,0,0.5)] relative z-10" 
+              className="h-32 w-32 border-[6px] border-[#030306] shadow-xl relative z-10" 
               manualAvatarUrl={targetUser?.avatarUrl}
               fallbackName={targetUser?.name}
               showOnlineStatus
@@ -186,13 +172,6 @@ export function UserProfileModal() {
         <ScrollArea className="flex-1 w-full h-full">
           <div className="flex flex-col min-h-full pb-24">
             <div className="mt-6 px-8 text-center">
-              {targetUser?.statusText && (
-                <div className="mt-4 px-6 py-2.5 bg-primary/10 rounded-2xl border border-primary/20 inline-flex items-center gap-3 max-w-full shadow-lg">
-                  <Sparkles className="w-4 h-4 text-primary shrink-0 animate-pulse" />
-                  <p className="text-[11px] text-white font-black uppercase tracking-[0.2em] truncate">{targetUser.statusText}</p>
-                </div>
-              )}
-
               <p className="text-[9px] text-muted-foreground uppercase font-black tracking-widest mt-4 opacity-40">
                 {formatLastSeen(targetUser?.lastSeen, targetUser?.settings?.privacy?.lastSeenVisibility)}
               </p>
@@ -200,16 +179,16 @@ export function UserProfileModal() {
 
             <div className="px-6 mt-10 space-y-6">
               {isViewerAdmin && inspectedUserId !== currentUser?.uid && (
-                <div className="space-y-3 p-6 bg-red-500/5 rounded-[2.2rem] border border-red-500/20 shadow-xl">
+                <div className="space-y-3 p-6 bg-red-500/5 rounded-[2.2rem] border border-red-500/20">
                   <h3 className="text-[10px] font-black uppercase text-red-500 tracking-widest flex items-center gap-2 mb-2">
                     <ShieldAlert className="w-4 h-4" /> Администрирование
                   </h3>
                   <div className="grid grid-cols-2 gap-2">
-                    <Button onClick={() => handleAdminAction({ isPremium: !targetUser?.isPremium }, "Premium статус изменен")} variant="ghost" className="h-11 rounded-xl bg-white/5 text-[9px] font-black uppercase gap-2 hover:bg-primary/20 border border-white/5">
-                      <Crown className="w-3.5 h-3.5" /> {targetUser?.isPremium ? 'REVOKE PREM' : 'GIVE PREM'}
+                    <Button onClick={() => handleAdminAction({ isPremium: !targetUser?.isPremium }, "Premium статус изменен")} variant="ghost" className="h-11 rounded-xl bg-white/5 text-[9px] font-black uppercase">
+                      {targetUser?.isPremium ? 'REVOKE PREM' : 'GIVE PREM'}
                     </Button>
-                    <Button onClick={() => handleAdminAction({ isAdmin: !targetUser?.isAdmin }, "Права админа изменены")} variant="ghost" className="h-11 rounded-xl bg-white/5 text-[9px] font-black uppercase gap-2 hover:bg-primary/20 border border-white/5">
-                      <ShieldCheck className="w-3.5 h-3.5" /> {targetUser?.isAdmin ? 'REVOKE ADMIN' : 'GIVE ADMIN'}
+                    <Button onClick={() => handleAdminAction({ isAdmin: !targetUser?.isAdmin }, "Права админа изменены")} variant="ghost" className="h-11 rounded-xl bg-white/5 text-[9px] font-black uppercase">
+                      {targetUser?.isAdmin ? 'REVOKE ADMIN' : 'GIVE ADMIN'}
                     </Button>
                   </div>
                 </div>
@@ -224,7 +203,7 @@ export function UserProfileModal() {
               </Button>
 
               <div className="flex gap-3">
-                <Button onClick={handleStartChat} className="flex-1 h-14 bg-white/[0.03] border border-white/5 text-white rounded-2xl font-black uppercase italic tracking-widest gap-2 shadow-xl hover:bg-primary/10 hover:border-primary/40 transition-all">
+                <Button onClick={handleStartChat} className="flex-1 h-14 bg-white/[0.03] border border-white/5 text-white rounded-2xl font-black uppercase italic tracking-widest gap-2 shadow-xl">
                   <MessageCircle className="w-5 h-5 text-primary" /> Сообщение
                 </Button>
                 <Button onClick={() => setIsGiftModalOpen(true)} variant="outline" className="flex-1 h-14 border-white/10 bg-white/[0.03] text-white rounded-2xl font-black uppercase italic tracking-widest gap-2">
@@ -232,27 +211,18 @@ export function UserProfileModal() {
                 </Button>
               </div>
 
-              {targetUser?.bio && (
-                <div className="space-y-2">
-                  <h3 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 px-1">О себе</h3>
-                  <div className="bg-white/[0.02] p-5 rounded-[2rem] border border-white/[0.05]">
-                    <p className="text-[13px] text-white/90 leading-relaxed font-medium">{targetUser.bio}</p>
-                  </div>
-                </div>
-              )}
-
               <div className="space-y-2">
                 <h3 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 px-1">Данные аккаунта</h3>
-                <div className="bg-white/[0.02] rounded-[2rem] border border-white/[0.05] overflow-hidden divide-y divide-white/[0.02] shadow-xl">
-                  <InfoRow icon={Calendar} label="Регистрация" value={registrationDate} />
-                  <InfoRow icon={ShieldCheck} label="Статус" value={hasActivePremium ? "Elite" : "Стандарт"} color={hasActivePremium ? "text-primary" : "text-white/30"} />
-                  <InfoRow icon={Cpu} label="Версия" value={`V${versions.latestVersion}`} />
+                <div className="bg-white/[0.02] rounded-[2rem] border border-white/[0.05] overflow-hidden divide-y divide-white/[0.02]">
+                  <div className="flex items-center justify-between p-4 px-6">
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-widest">Регистрация</span>
+                    <span className="text-[11px] font-black text-white/90">{registrationDate}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-4 px-6">
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-widest">Версия</span>
+                    <span className="text-[11px] font-black text-white/90">V{versions.latestVersion}</span>
+                  </div>
                 </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 pb-4">
-                <Button variant="ghost" onClick={() => startCall('audio')} className="h-14 rounded-2xl bg-white/[0.02] border border-white/[0.05] text-[10px] font-black uppercase tracking-widest gap-2 hover:bg-primary/10 transition-all"><Phone className="w-4 h-4" /> Аудио</Button>
-                <Button variant="ghost" onClick={() => startCall('video')} className="h-14 rounded-2xl bg-white/[0.02] border border-white/[0.05] text-[10px] font-black uppercase tracking-widest gap-2 hover:bg-primary/10 transition-all"><Video className="w-4 h-4" /> Видео</Button>
               </div>
             </div>
           </div>
@@ -261,17 +231,5 @@ export function UserProfileModal() {
     </Dialog>
     <GiftModal open={isGiftModalOpen} onOpenChange={setIsGiftModalOpen} targetUser={targetUser || null} />
     </>
-  );
-}
-
-function InfoRow({ icon: Icon, label, value, color }: any) {
-  return (
-    <div className="flex items-center justify-between p-4 px-6 hover:bg-white/[0.01] transition-colors">
-      <div className="flex items-center gap-3">
-        <Icon className="w-4 h-4 text-primary/40" />
-        <span className="text-[10px] text-muted-foreground/60 font-black uppercase tracking-widest">{label}</span>
-      </div>
-      <span className={`text-[11px] font-black italic ${color || 'text-white/90'}`}>{value}</span>
-    </div>
   );
 }
