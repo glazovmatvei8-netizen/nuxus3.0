@@ -1,6 +1,7 @@
+
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
-import { formatDistanceToNow, parseISO, differenceInSeconds, isAfter } from 'date-fns';
+import { formatDistanceToNow, parseISO, differenceInSeconds } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import type { User, PrivacyOption } from './types';
 
@@ -10,7 +11,6 @@ export function cn(...inputs: ClassValue[]) {
 
 /**
  * АБСОЛЮТНЫЙ ИДЕНТИФИКАТОР V40.4 «IDENTITY PRESERVATION»
- * Приоритет: Реальное имя из базы -> Юзернейм. 
  */
 export function formatDisplayName(name: string | undefined | null, username?: string | null): string {
   if (
@@ -69,8 +69,7 @@ export function isGlobalAdmin(user: User | null | undefined): boolean {
 export function isUserPremium(user: User | null | undefined): boolean {
   if (!user) return false;
   if (isGlobalAdmin(user)) return true;
-  if (!user.isPremium) return false;
-  return true;
+  return !!user.isPremium;
 }
 
 export function isUserActuallyBanned(user: User | null | undefined): boolean {

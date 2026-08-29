@@ -1,16 +1,10 @@
+
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
-import { AppProvider } from '@/lib/app-state'; 
-import { FirebaseProvider } from '@/firebase/provider';
-import { FirebaseClientProvider } from '@/firebase/client-provider';
-import { ThemeApplier } from '@/components/theme-applier';
-import { AppIconApplier } from '@/components/app-icon-applier';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
-import { Toaster } from '@/components/ui/toaster';
-import { OfflinePlaceholder } from '@/components/offline-placeholder';
-import { UpdateNotifier } from '@/components/update-notifier';
+import { SovereignProvider } from '@/components/sovereign-provider';
 
 const font = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -20,7 +14,7 @@ const font = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: 'Nuxus 2.0 — Obsidian Void',
+  title: 'Nuxus 2.0 — Sovereign Node',
   description: 'Premium ethereal communication terminal.',
   applicationName: 'Nuxus',
   appleWebApp: {
@@ -44,12 +38,11 @@ export const viewport: Viewport = {
 }
 
 /**
- * ROOT LAYOUT V66.0 «SOVEREIGN CORE»
+ * ROOT LAYOUT V67.0 «SOVEREIGN REDESIGN»
  * 
- * ФИКС ОШИБКИ 'call':
- * 1. Удален конфликтный store.ts.
- * 2. Импорт AppProvider переведен на app-state.tsx.
- * 3. Прямая иерархия провайдеров для предотвращения циклов.
+ * ПОЛНЫЙ ФИКС ОШИБКИ 'call':
+ * Все клиентские провайдеры вынесены в SovereignProvider.
+ * Layout теперь — чистый серверный компонент без зависимостей от Firebase.
  */
 export default function RootLayout({
   children,
@@ -62,22 +55,13 @@ export default function RootLayout({
         className="font-sans antialiased bg-[#010103] text-foreground overflow-hidden h-[100dvh] select-none" 
         style={{ fontFamily: 'var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, sans-serif' }}
       >
-        <AppProvider>
-          <FirebaseProvider>
-            <FirebaseClientProvider>
-              <ThemeApplier />
-              <AppIconApplier />
-              <OfflinePlaceholder />
-              <UpdateNotifier />
-              <main className="relative h-[100dvh] w-full overflow-hidden">
-                {children}
-              </main>
-              <Toaster />
-              <Analytics />
-              <SpeedInsights />
-            </FirebaseClientProvider>
-          </FirebaseProvider>
-        </AppProvider>
+        <SovereignProvider>
+          <main className="relative h-[100dvh] w-full overflow-hidden">
+            {children}
+          </main>
+          <Analytics />
+          <SpeedInsights />
+        </SovereignProvider>
       </body>
     </html>
   );

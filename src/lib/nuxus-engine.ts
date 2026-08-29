@@ -1,3 +1,4 @@
+
 'use client';
 
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
@@ -6,10 +7,9 @@ import { getFirestore, Firestore } from 'firebase/firestore';
 import { firebaseConfig } from '@/firebase/config';
 
 /**
- * NUXUS ENGINE V26.0 «QUANTUM SINGULARITY»
+ * NUXUS ENGINE V67.0 «SOVEREIGN»
  * 
- * АБСОЛЮТНОЕ ЯДРО: Изолированный синглтон-контроллер.
- * Управляет всеми узлами связи мессенджера автономно от React.
+ * ПОЛНАЯ ИЗОЛЯЦИЯ: Этот файл больше не вызывается на сервере.
  */
 
 let appInstance: FirebaseApp | undefined;
@@ -26,9 +26,9 @@ const ignite = () => {
     authInstance = getAuth(appInstance);
     dbInstance = getFirestore(appInstance);
     
-    console.log('%c🛰️ NUXUS ENGINE V26: SINGULARITY ACTIVE', 'color: #a855f7; font-weight: bold; font-size: 10px;');
+    console.log('%c🛰️ NUXUS SOVEREIGN ACTIVE', 'color: #007AFF; font-weight: bold;');
   } catch (e) {
-    console.warn('⚠️ Nuxus Engine: Ignition Fault Bypass');
+    // Silent fail
   }
 };
 
