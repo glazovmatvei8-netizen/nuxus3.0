@@ -1,13 +1,13 @@
 {
   "name": "nextn",
-  "version": "5.8.0",
+  "version": "5.9.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
     "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
     "build": "next build",
-    "export": "next build && next export",
+    "export": "next build",
     "build:desktop": "npm run build && npx cap copy",
     "start": "next start",
     "lint": "next lint",

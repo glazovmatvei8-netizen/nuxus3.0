@@ -1,21 +1,24 @@
-
 'use client';
 
 import React, { useState, useEffect, type ReactNode } from 'react';
+import dynamic from 'next/dynamic';
 import { AppProvider } from '@/lib/app-state'; 
-import { FirebaseProvider } from '@/firebase/provider';
-import { ThemeApplier } from '@/components/theme-applier';
-import { AppIconApplier } from '@/components/app-icon-applier';
-import { Toaster } from '@/components/ui/toaster';
-import { OfflinePlaceholder } from '@/components/offline-placeholder';
-import { UpdateNotifier } from '@/components/update-notifier';
 import { NuxusLogo } from '@/components/nuxus-logo';
 
+// Динамический импорт провайдеров для предотвращения ошибок 'call' и проблем с гидратацией
+const FirebaseProvider = dynamic(() => import('@/firebase/provider').then(m => m.FirebaseProvider), { ssr: false });
+const ThemeApplier = dynamic(() => import('@/components/theme-applier').then(m => m.ThemeApplier), { ssr: false });
+const AppIconApplier = dynamic(() => import('@/components/app-icon-applier').then(m => m.AppIconApplier), { ssr: false });
+const Toaster = dynamic(() => import('@/components/ui/toaster').then(m => m.Toaster), { ssr: false });
+const OfflinePlaceholder = dynamic(() => import('@/components/offline-placeholder').then(m => m.OfflinePlaceholder), { ssr: false });
+const UpdateNotifier = dynamic(() => import('@/components/update-notifier').then(m => m.UpdateNotifier), { ssr: false });
+
 /**
- * SOVEREIGN PROVIDER V1.0
+ * SOVEREIGN PROVIDER V5.9.0
  * 
  * Единый клиентский узел, который предотвращает ошибку 'call' в layout.tsx.
- * Инкапсулирует всю логику инициализации Ядра.
+ * Использование dynamic импортов с { ssr: false } гарантирует, что Firebase-зависимости 
+ * не будут загружаться на стороне сервера, что полностью убирает TypeError.
  */
 export function SovereignProvider({ children }: { children: ReactNode }) {
   const [mounted, setMounted] = useState(false);

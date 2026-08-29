@@ -1,13 +1,12 @@
 {
-  "latestVersion": "8.5.0",
+  "latestVersion": "5.9.0",
   "qesVersion": "26.0",
-  "build": "Nuxus-Engine-V40-Final",
-  "sizeMb": 124,
+  "build": "Nuxus-Sovereign-V59-Final",
+  "sizeMb": 86,
   "changelog": [
-    "Engine V40.0: Total UI/UX Redesign with Fluid Glassmorphism.",
-    "Identity Preservation: User names prioritized over generic IDs.",
-    "Stability: Fixed chat opening errors and version sync loops.",
-    "Personalization: Active font and background style management.",
-    "Security: Enhanced 2FA and Ghost Mode stability."
+    "Sovereign Core: Fixed critical Webpack 'call' error in RootLayout.",
+    "Performance: Complete AI modules removal for maximum speed.",
+    "Compatibility: Full support for Russian Hosting providers.",
+    "Stability: Enhanced Hydration Shield for static APK builds."
   ]
 }

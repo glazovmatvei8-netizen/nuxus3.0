@@ -1,4 +1,3 @@
-
 import { NextResponse } from 'next/server';
 
 /**
@@ -7,7 +6,7 @@ import { NextResponse } from 'next/server';
 export async function GET() {
   return NextResponse.json({
     status: "active",
-    kernel: "5.8.0",
+    kernel: "5.9.0",
     protocol: "QES 24.1",
     uptime: process.uptime(),
     timestamp: new Date().toISOString()

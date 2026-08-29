@@ -1,4 +1,3 @@
-
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Plus_Jakarta_Sans } from 'next/font/google';
@@ -14,7 +13,7 @@ const font = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: 'Nuxus 2.0 — Sovereign Node',
+  title: 'Nuxus 5.9 — Sovereign Node',
   description: 'Premium ethereal communication terminal.',
   applicationName: 'Nuxus',
   appleWebApp: {
@@ -38,17 +37,17 @@ export const viewport: Viewport = {
 }
 
 /**
- * ROOT LAYOUT V67.0 «SOVEREIGN REDESIGN»
+ * ROOT LAYOUT V5.9.0 «TOTAL STABILITY»
  * 
  * ПОЛНЫЙ ФИКС ОШИБКИ 'call':
- * Все клиентские провайдеры вынесены в SovereignProvider.
- * Layout теперь — чистый серверный компонент без зависимостей от Firebase.
+ * layout.tsx теперь является чистым серверным компонентом.
+ * Вся логика Firebase и Client-провайдеров инкапсулирована в SovereignProvider.
  */
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="ru" className={`dark ${font.variable}`} suppressHydrationWarning>
       <body 
