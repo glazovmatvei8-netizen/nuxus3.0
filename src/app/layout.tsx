@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
-import { AppProvider } from '@/lib/store'; 
+import { AppProvider } from '@/lib/app-state'; 
 import { FirebaseProvider } from '@/firebase/provider';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { ThemeApplier } from '@/components/theme-applier';
@@ -44,12 +44,12 @@ export const viewport: Viewport = {
 }
 
 /**
- * ROOT LAYOUT V65.0 «SINGULARITY CORE»
+ * ROOT LAYOUT V66.0 «SOVEREIGN CORE»
  * 
- * ФИКС ОШИБКИ 'call' (Annihilated):
- * 1. Прямая иерархия провайдеров без циклов.
- * 2. ThemeApplier и AppIconApplier вынесены в ClientProvider.
- * 3. Все AI-компоненты удалены навсегда.
+ * ФИКС ОШИБКИ 'call':
+ * 1. Удален конфликтный store.ts.
+ * 2. Импорт AppProvider переведен на app-state.tsx.
+ * 3. Прямая иерархия провайдеров для предотвращения циклов.
  */
 export default function RootLayout({
   children,

@@ -1,8 +1,4 @@
-'use client';
-
 /**
- * DEPRECATED V22.0
- * Файл очищен для предотвращения конфликта с store.tsx.
- * Все импорты должны использовать @/lib/store.tsx напрямую.
+ * DELETED: This file was causing circular dependency and "reading 'call'" error.
+ * All logic moved to src/lib/app-state.tsx
  */
-export {};
