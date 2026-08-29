@@ -2,11 +2,11 @@
   "latestVersion": "5.9.0",
   "qesVersion": "26.0",
   "build": "Nuxus-Sovereign-V59-Final",
-  "sizeMb": 86,
+  "sizeMb": 82,
   "changelog": [
     "Sovereign Core: Fixed critical Webpack 'call' error in RootLayout.",
-    "Performance: Complete AI modules removal for maximum speed.",
-    "Compatibility: Full support for Russian Hosting providers.",
-    "Stability: Enhanced Hydration Shield for static APK builds."
+    "Stability: Removed circular dependency barrel files.",
+    "Clean-up: Complete AI modules annihilation.",
+    "Economy: Optimized for zero-cost static hosting."
   ]
 }

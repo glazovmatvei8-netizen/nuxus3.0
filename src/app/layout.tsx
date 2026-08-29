@@ -1,8 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Plus_Jakarta_Sans } from 'next/font/google';
-import { Analytics } from "@vercel/analytics/react";
-import { SpeedInsights } from "@vercel/speed-insights/next";
 import { SovereignProvider } from '@/components/sovereign-provider';
 
 const font = Plus_Jakarta_Sans({
@@ -13,7 +11,7 @@ const font = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: 'Nuxus 5.9 — Sovereign Node',
+  title: 'Nuxus 5.9.0',
   description: 'Premium ethereal communication terminal.',
   applicationName: 'Nuxus',
   appleWebApp: {
@@ -37,11 +35,10 @@ export const viewport: Viewport = {
 }
 
 /**
- * ROOT LAYOUT V5.9.0 «TOTAL STABILITY»
+ * ROOT LAYOUT V5.9.0 «ZERO ERROR»
  * 
  * ПОЛНЫЙ ФИКС ОШИБКИ 'call':
- * layout.tsx теперь является чистым серверным компонентом.
- * Вся логика Firebase и Client-провайдеров инкапсулирована в SovereignProvider.
+ * layout.tsx теперь является чистым серверным компонентом без клиентских зависимостей.
  */
 export default function RootLayout({
   children,
@@ -58,8 +55,6 @@ export default function RootLayout({
           <main className="relative h-[100dvh] w-full overflow-hidden">
             {children}
           </main>
-          <Analytics />
-          <SpeedInsights />
         </SovereignProvider>
       </body>
     </html>

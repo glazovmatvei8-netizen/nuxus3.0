@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import type { Message, Story, Track } from './types';
 
-export type MainView = 'chats' | 'contacts' | 'calls' | 'profile' | 'archive' | 'music' | 'wallet' | 'games' | 'discovery' | 'ai' | 'partner';
+export type MainView = 'chats' | 'contacts' | 'calls' | 'profile' | 'archive' | 'music' | 'wallet' | 'games' | 'discovery';
 
 interface AppState {
   currentChatId: string | null;
@@ -61,25 +61,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const savedIndex = localStorage.getItem('nuxus_active_account_v31');
+      const savedIndex = localStorage.getItem('nuxus_active_account_v59');
       if (savedIndex) setActiveAccountIndex(parseInt(savedIndex));
       
       const savedNames = localStorage.getItem('nuxus_slot_names');
       if (savedNames) {
         try {
           setSlotNames(JSON.parse(savedNames));
-        } catch (e) {
-          console.error("Failed to parse slot names");
-        }
+        } catch (e) {}
       }
     }
   }, []);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('nuxus_active_account_v31', activeAccountIndex.toString());
-    }
-  }, [activeAccountIndex]);
 
   const setSlotName = (index: number, name: string) => {
     setSlotNames(prev => {

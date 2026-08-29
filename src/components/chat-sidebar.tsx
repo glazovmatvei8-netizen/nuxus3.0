@@ -1,23 +1,23 @@
 "use client"
 
 import React, { useState, useMemo, memo } from 'react';
-import { useAppState } from '@/lib/store';
+import { useAppState } from '@/lib/app-state';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
-import { 
-  Plus, Search, Star, Pin, MessageSquare, ShieldCheck, Loader2
-} from 'lucide-react';
+import { Plus, Search, Star, Pin, MessageSquare, ShieldCheck, Loader2 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CreateChatModal } from './modals/create-chat-modal';
 import { StoriesBar } from './stories-bar';
 import type { User as UserType, Message, Chat } from '@/lib/types';
-import { useFirestore, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase';
+import { useFirestore, useUser, useAuth } from '@/firebase/provider';
+import { useCollection } from '@/firebase/firestore/use-collection';
+import { useDoc } from '@/firebase/firestore/use-doc';
+import { useMemoFirebase } from '@/firebase/firestore/use-memo-firebase';
 import { collection, query, where, doc, limit, orderBy } from 'firebase/firestore';
 import { formatDisplayName, cn, decryptSignal, isUserPremium, isGlobalAdmin } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useTranslations } from '@/hooks/use-translations';
 import { signOut } from 'firebase/auth';
-import { useAuth } from '@/firebase/provider';
 import { AdminPanelModal } from './modals/admin-panel-modal';
 
 const ChatListItem = memo(({ 
@@ -130,7 +130,6 @@ export default function ChatSidebar() {
     <div className="flex flex-col h-full bg-transparent overflow-hidden">
       <ScrollArea className="flex-1 no-scrollbar">
         <div className="flex flex-col min-h-full pb-60">
-          {/* HEADER (Now part of the scroll flow) */}
           <div className="px-6 pt-12 pb-6 space-y-6">
             <div className="flex items-center justify-between">
                <h1 className="text-4xl font-black text-white italic tracking-tighter uppercase leading-none opacity-90">{t('app.chats')}</h1>
@@ -155,7 +154,6 @@ export default function ChatSidebar() {
             </div>
           </div>
 
-          {/* SLOTS (Now part of the scroll flow) */}
           <div className="px-4 pb-4">
             <ScrollArea className="w-full" orientation="horizontal">
                <div className="flex gap-4 px-2 py-1">
@@ -195,7 +193,6 @@ export default function ChatSidebar() {
 
           <StoriesBar />
 
-          {/* CHAT LIST */}
           <div className="mt-2">
              {isChatsLoading ? (
                <div className="flex flex-col items-center justify-center py-20 gap-4 opacity-10">

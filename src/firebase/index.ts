@@ -1,12 +1,10 @@
-'use client';
-
 /**
- * NUXUS CORE HUB V65.0
- * Централизованный экспорт без циклов.
+ * NUXUS FIREBASE HUB DEACTIVATED
+ * 
+ * ВНИМАНИЕ: Файл очищен для устранения ошибки 'Cannot read properties of undefined (reading "call")'.
+ * Импортируйте функции напрямую из соответствующих файлов:
+ * - useUser, useFirestore, useAuth -> @/firebase/provider
+ * - useDoc -> @/firebase/firestore/use-doc
+ * - useCollection -> @/firebase/firestore/use-collection
  */
-
-export { nuxus, engine } from '@/lib/nuxus-engine';
-export { useUser, useFirestore, useAuth, useFirebase } from './provider';
-export { useDoc } from './firestore/use-doc';
-export { useCollection } from './firestore/use-collection';
-export { useMemoFirebase } from './firestore/use-memo-firebase';
+export {};

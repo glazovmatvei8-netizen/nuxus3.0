@@ -1,8 +1,9 @@
 "use client"
 
 import React, { useEffect, useState, useMemo } from 'react';
-import { useUser, useFirestore, useAuth, useDoc } from '@/firebase';
-import { useAppState } from '@/lib/store.tsx';
+import { useUser, useFirestore, useAuth } from '@/firebase/provider';
+import { useDoc } from '@/firebase/firestore/use-doc';
+import { useAppState } from '@/lib/app-state';
 import AuthScreen from '@/components/auth-screen';
 import ChatMain from '@/components/chat-main';
 import { Fingerprint, AlertTriangle } from 'lucide-react';
@@ -16,8 +17,8 @@ import { isUserActuallyBanned, isUserAnomaly } from '@/lib/utils';
 import { NuxusLogo } from '@/components/nuxus-logo';
 
 /**
- * HOME GATE V65.0 «HYDRATION SHIELD»
- * ФИКС ОШИБКИ 'call' и полная очистка ИИ.
+ * HOME GATE V5.9.0
+ * ФИКС ОШИБКИ 'call' и прямые импорты провайдеров.
  */
 export default function Home() {
   const [mounted, setMounted] = useState(false);
