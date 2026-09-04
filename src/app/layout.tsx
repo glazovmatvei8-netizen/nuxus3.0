@@ -1,20 +1,15 @@
 
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
-import { Plus_Jakarta_Sans } from 'next/font/google';
 import { SovereignProvider } from '@/components/sovereign-provider';
 
-const font = Plus_Jakarta_Sans({
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-jakarta',
-  preload: true,
-});
-
+/**
+ * NUXUS LAYOUT V68.0 «ABSOLUTE STABILITY»
+ * FIXED: Удалены все импорты, вызывающие ошибку originalFactory.call.
+ */
 export const metadata: Metadata = {
   title: 'Nuxus 5.9.0',
-  description: 'Premium communication terminal.',
-  applicationName: 'Nuxus',
+  description: 'Premium Communication Kernel',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
@@ -33,16 +28,12 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: 'cover',
-}
+};
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ru" className={`dark ${font.variable}`} suppressHydrationWarning>
-      <body className="bg-[#010103] text-foreground antialiased overflow-hidden selection:bg-primary/30">
+    <html lang="ru" className="dark" suppressHydrationWarning>
+      <body className="bg-[#010103] text-white antialiased overflow-hidden selection:bg-primary/30">
         <SovereignProvider>
           {children}
         </SovereignProvider>

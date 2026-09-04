@@ -1,7 +1,13 @@
+
 "use client"
 
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import type { Message, Story, Track } from './types';
+
+/**
+ * APP STATE ENGINE V68.0
+ * Изолирован от Firebase для предотвращения ошибок импорта.
+ */
 
 export type MainView = 'chats' | 'contacts' | 'calls' | 'profile' | 'archive' | 'music' | 'wallet' | 'games' | 'discovery';
 

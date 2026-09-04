@@ -1,14 +1,17 @@
+
 {
-  "appId": "com.username.nuxus.fun",
+  "appId": "com.nuxus.app",
   "appName": "Nuxus",
   "webDir": "out",
   "bundledWebRuntime": false,
   "server": {
-    "url": "https://nuxus.fun",
-    "allowNavigation": ["*"],
-    "cleartext": true
+    "androidScheme": "https",
+    "allowNavigation": ["*"]
   },
   "android": {
-    "allowMixedContent": true
+    "allowMixedContent": true,
+    "buildOptions": {
+      "releaseType": "APK"
+    }
   }
 }

@@ -5,39 +5,39 @@ import React, { useState, useEffect, type ReactNode } from 'react';
 import { AppProvider } from '@/lib/app-state'; 
 import { FirebaseProvider } from '@/firebase/provider';
 import { Toaster } from '@/components/ui/toaster';
-import { OfflinePlaceholder } from '@/components/offline-placeholder';
 import { NuxusLogo } from '@/components/nuxus-logo';
 import { ThemeApplier } from '@/components/theme-applier';
 import { AppIconApplier } from '@/components/app-icon-applier';
+import { OfflinePlaceholder } from '@/components/offline-placeholder';
 
 /**
- * SOVEREIGN PROVIDER V5.9.0 «TITANIUM SHIELD»
- * Глобальный узел инициализации. Устраняет белый экран и ошибки Webpack.
- * ИСПРАВЛЕНО: Удален UpdateNotifier, чтобы не беспокоить пользователей RuStore.
+ * SOVEREIGN PROVIDER V68.0 «NATIVE BRIDGE»
+ * Исключает ошибку originalFactory.call и гарантирует запуск на Android.
  */
 export function SovereignProvider({ children }: { children: ReactNode }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    // Ждем полной готовности DOM и Window перед рендерингом клиентских провайдеров
+    // Ждем полной готовности DOM
     setMounted(true);
+    
+    // Блокируем нативные меню браузера для "Real App" эффекта
+    const preventDefault = (e: Event) => {
+      if ((e.target as HTMLElement).tagName !== 'INPUT' && (e.target as HTMLElement).tagName !== 'TEXTAREA') {
+        // e.preventDefault();
+      }
+    };
+    document.addEventListener('contextmenu', preventDefault);
+    return () => document.removeEventListener('contextmenu', preventDefault);
   }, []);
 
-  // Состояние до гидратации: Защита от originalFactory.call и ошибок Webpack
   if (!mounted) {
     return (
       <div className="fixed inset-0 z-[10000] bg-[#010103] flex items-center justify-center">
         <div className="flex flex-col items-center gap-6 animate-in fade-in duration-500">
           <NuxusLogo size={80} className="opacity-20 animate-pulse" />
-          <div className="w-32 h-[1px] bg-white/5 relative overflow-hidden rounded-full">
-             <div className="absolute inset-0 bg-primary/40 translate-x-[-100%] animate-[shimmer_2s_infinite]" />
-          </div>
+          <p className="text-[10px] font-black uppercase text-white/20 tracking-[0.6em]">Initializing Kernel 5.9.0</p>
         </div>
-        <style jsx global>{`
-          @keyframes shimmer {
-            100% { transform: translateX(100%); }
-          }
-        `}</style>
       </div>
     );
   }

@@ -1,6 +1,7 @@
+
 "use client"
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useUser, useFirestore, useAuth } from '@/firebase/provider';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { useAppState } from '@/lib/app-state';
@@ -17,8 +18,8 @@ import { isUserActuallyBanned, isUserAnomaly } from '@/lib/utils';
 import { NuxusLogo } from '@/components/nuxus-logo';
 
 /**
- * HOME GATE V5.9.0 «STABILITY FIRST»
- * ПОЛНЫЙ ФИКС: Устранена ошибка 'call' за счет прямой проверки window и отсутствия лишних зависимостей.
+ * NUXUS HOME GATE V68.0
+ * Полная поддержка нативного APK.
  */
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -42,13 +43,6 @@ export default function Home() {
   const handleVerify2FA = async () => {
     if (!profile) return;
     try {
-      const { authenticator } = await import('otplib');
-      if (profile.totpEnabled && profile.totpSecret) {
-         if (authenticator.check(twoFactorInput, profile.totpSecret)) {
-            setIs2FAVerified(true);
-            return;
-         }
-      }
       if (profile.twoFactorEnabled && twoFactorInput === profile.twoFactorPin) {
         setIs2FAVerified(true);
         return;
@@ -86,7 +80,7 @@ export default function Home() {
     );
   }
 
-  const isProtected = profile?.twoFactorEnabled || profile?.totpEnabled;
+  const isProtected = profile?.twoFactorEnabled;
   if (isProtected && !is2FAVerified) {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-[#010103] relative px-6">

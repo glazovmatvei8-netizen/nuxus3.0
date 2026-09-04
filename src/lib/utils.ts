@@ -10,7 +10,8 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * АБСОЛЮТНЫЙ ИДЕНТИФИКАТОР V40.4 «IDENTITY PRESERVATION»
+ * АБСОЛЮТНЫЙ ИДЕНТИФИКАТОР V68.0
+ * Удалены все зацепки на AI.
  */
 export function formatDisplayName(name: string | undefined | null, username?: string | null): string {
   if (
