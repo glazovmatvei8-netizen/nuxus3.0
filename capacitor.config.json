@@ -1,6 +1,6 @@
 
 {
-  "appId": "com.username.nuxus.fun",
+  "appId": "com.nuxus.fun",
   "appName": "Nuxus",
   "webDir": "out",
   "bundledWebRuntime": false,
@@ -10,8 +10,7 @@
       "studio-5946432351-bbd5e.firebaseapp.com",
       "studio-5946432351-bbd5e.web.app",
       "*.googleapis.com",
-      "*.gstatic.com",
-      "i.ibb.co"
+      "*.gstatic.com"
     ]
   },
   "android": {

@@ -5,8 +5,8 @@ import { SovereignProvider } from '@/components/sovereign-provider';
 
 /**
  * NUXUS LAYOUT V5.9.0 «TITANIUM STABILITY»
- * FIXED: Убраны все импорты, вызывающие ошибку originalFactory.call.
- * Layout теперь — это чистый серверный каркас.
+ * Layout теперь — это чистый серверный каркас. 
+ * Все клиентские функции вынесены в SovereignProvider.
  */
 export const metadata: Metadata = {
   title: 'Nuxus 5.9.0',

@@ -2,12 +2,12 @@
 {
   "latestVersion": "5.9.0",
   "qesVersion": "26.0",
-  "build": "Nuxus-Sovereign-Titanium-V59",
-  "sizeMb": 74,
+  "build": "Nuxus-Sovereign-Titanium-V59-PERSISTENCE",
+  "sizeMb": 72,
   "changelog": [
-    "Titanium Core: Fixed originalFactory.call and White Screen on mobile.",
-    "Import Fix: Resolved useAppState and Firebase hook undefined errors.",
-    "Zero-Error: Annihilated barrel-file circular dependencies.",
-    "Optimized: Removed all remaining AI neural node traces."
+    "Persistence Engine: Switched to IndexedDB to prevent Auth crashes in APK.",
+    "Titanium Core: Isolated Server Components from Firebase logic.",
+    "Zero-Error: Fixed originalFactory.call and useAppState functions.",
+    "Speed: Removed all remaining AI neural node traces."
   ]
 }

@@ -12,8 +12,7 @@ import { OfflinePlaceholder } from '@/components/offline-placeholder';
 
 /**
  * SOVEREIGN PROVIDER V5.9.0 «NATIVE BRIDGE»
- * Исключает ошибку originalFactory.call и гарантирует запуск на Android.
- * Это единственный клиентский компонент, который вызывается в layout.tsx.
+ * Гарантирует запуск только на клиенте, убирая ошибку 'originalFactory.call'.
  */
 export function SovereignProvider({ children }: { children: ReactNode }) {
   const [mounted, setMounted] = useState(false);
@@ -24,7 +23,7 @@ export function SovereignProvider({ children }: { children: ReactNode }) {
     // Блокируем системные меню для эффекта нативного приложения
     const preventDefault = (e: Event) => {
       if ((e.target as HTMLElement).tagName !== 'INPUT' && (e.target as HTMLElement).tagName !== 'TEXTAREA') {
-        // e.preventDefault();
+        // context menu blocked for native feel
       }
     };
     document.addEventListener('contextmenu', preventDefault);
@@ -34,7 +33,7 @@ export function SovereignProvider({ children }: { children: ReactNode }) {
   if (!mounted) {
     return (
       <div className="fixed inset-0 z-[10000] bg-[#010103] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-6 animate-in fade-in duration-500">
+        <div className="flex flex-col items-center gap-6">
           <NuxusLogo size={80} className="opacity-20 animate-pulse" />
           <p className="text-[10px] font-black uppercase text-white/20 tracking-[0.6em]">Initializing Kernel 5.9.0</p>
         </div>

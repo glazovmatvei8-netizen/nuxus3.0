@@ -68,7 +68,11 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
     setIsLoading(true);
 
     try {
-      // КРИТИЧЕСКИ ВАЖНО: Установка персистентности для Android
+      /**
+       * КРИТИЧЕСКИЙ ФИКС ДЛЯ APK:
+       * Принудительная установка Persistence в IndexedDB.
+       * Это предотвращает сброс авторизации при очистке памяти Android.
+       */
       await setPersistence(auth, browserLocalPersistence);
       
       let finalEmail = "";
