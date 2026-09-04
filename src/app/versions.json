@@ -1,13 +1,12 @@
-
 {
   "latestVersion": "5.9.0",
   "qesVersion": "26.0",
-  "build": "Nuxus-Sovereign-Titanium-V59-PERSISTENCE",
+  "build": "Nuxus-Sovereign-Titanium-V68.5-AUTO-APK",
   "sizeMb": 72,
   "changelog": [
-    "Persistence Engine: Switched to IndexedDB to prevent Auth crashes in APK.",
-    "Titanium Core: Isolated Server Components from Firebase logic.",
-    "Zero-Error: Fixed originalFactory.call and useAppState functions.",
-    "Speed: Removed all remaining AI neural node traces."
+    "Auto-Build Engine: GitHub Actions integrated for automatic APK generation.",
+    "Persistence Fix: Forced IndexedDB storage for zero-error auth.",
+    "Clean-Up: Resolved deprecation warnings in Vercel build logs.",
+    "Native-Bridge: Fixed getReactNativePersistence conflict."
   ]
 }

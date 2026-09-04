@@ -1,4 +1,3 @@
-
 'use client';
 
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
@@ -7,7 +6,7 @@ import { getFirestore, Firestore } from 'firebase/firestore';
 import { firebaseConfig } from '@/firebase/config';
 
 /**
- * NUXUS ENGINE V68.4 «TITANIUM SOVEREIGN»
+ * NUXUS ENGINE V68.5 «TITANIUM SOVEREIGN»
  * 
  * ФИКС ОШИБКИ 500: Использование IndexedDB для хранения сессий.
  * Это самый стабильный метод для Android WebView (Capacitor).
