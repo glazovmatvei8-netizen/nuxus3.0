@@ -1,12 +1,12 @@
 {
-  "latestVersion": "5.9.0",
+  "latestVersion": "5.9.1",
   "qesVersion": "26.0",
-  "build": "Nuxus-Sovereign-Titanium-V68.5-AUTO-APK",
+  "build": "Nuxus-Sovereign-Titanium-V68.5.1-NATIVE-BRIDGE",
   "sizeMb": 72,
   "changelog": [
-    "Auto-Build Engine: GitHub Actions integrated for automatic APK generation.",
-    "Persistence Fix: Forced IndexedDB storage for zero-error auth.",
-    "Clean-Up: Resolved deprecation warnings in Vercel build logs.",
-    "Native-Bridge: Fixed getReactNativePersistence conflict."
+    "Native-Bridge Fix: Implemented @capacitor/preferences adapter for Firebase Auth.",
+    "Error 500 Resolution: Session persistence moved to SharedPreferences/UserDefaults.",
+    "Type Stability: Resolved getReactNativePersistence conflicts in Web Project builds.",
+    "Persistence Hierarchy: Native Preferences -> IndexedDB -> LocalStorage."
   ]
 }

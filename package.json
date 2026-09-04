@@ -1,6 +1,6 @@
 {
   "name": "nuxus-sovereign",
-  "version": "68.5.0",
+  "version": "68.5.1",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -44,9 +44,9 @@
     "date-fns": "^3.6.0",
     "dotenv": "^16.5.0",
     "embla-carousel-react": "^8.5.2",
-    "firebase": "^11.9.1",
+    "firebase": "^11.1.0",
     "lucide-react": "^0.475.0",
-    "next": "15.5.9",
+    "next": "15.1.0",
     "node-fetch": "^3.3.2",
     "qrcode.react": "^3.2.0",
     "react": "^19.0.0",
