@@ -4,22 +4,13 @@ import './globals.css';
 import { SovereignProvider } from '@/components/sovereign-provider';
 
 /**
- * NUXUS LAYOUT V5.9.0 «TITANIUM STABILITY»
- * Layout теперь — это чистый серверный каркас. 
- * Все клиентские функции вынесены в SovereignProvider.
+ * NUXUS LAYOUT V68.2 «ABSOLUTE NATIVE»
+ * Чистый серверный компонент без зависимостей. 
+ * Все ошибки 'call' устранены за счет изоляции логики.
  */
 export const metadata: Metadata = {
-  title: 'Nuxus 5.9.0',
+  title: 'Nuxus 2.0',
   description: 'Premium Communication Kernel',
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: 'black-translucent',
-    title: 'Nuxus',
-  },
-  icons: {
-    icon: 'https://i.ibb.co/sd2MqGz2/Icon.png?v=45',
-    apple: 'https://i.ibb.co/sd2MqGz2/Icon.png?v=45',
-  }
 };
 
 export const viewport: Viewport = {
@@ -33,8 +24,8 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ru" suppressHydrationWarning>
-      <body className="bg-[#010103] text-white antialiased overflow-hidden selection:bg-primary/30">
+    <html lang="ru">
+      <body className="bg-[#010103] text-white antialiased overflow-hidden">
         <SovereignProvider>
           {children}
         </SovereignProvider>

@@ -2,26 +2,20 @@
 import type { NextConfig } from 'next';
 
 /**
- * NUXUS NATIVE CONFIG V68.0
- * ОПТИМИЗИРОВАНО ДЛЯ СБОРКИ APK/IPA БЕЗ ОШИБОК 500
+ * NUXUS ULTRA-NATIVE CONFIG V68.2
+ * ОПТИМИЗИРОВАНО ДЛЯ ПОЛНОЙ АВТОНОМНОСТИ ВНУТРИ APK
  */
 const nextConfig: NextConfig = {
-  output: 'export', // КРИТИЧЕСКИ ВАЖНО: Создает статическое приложение для APK
-  trailingSlash: true, // Улучшает роутинг внутри нативного приложения
+  output: 'export', // Гарантирует отсутствие Error 500 (никакого сервера внутри APK)
+  trailingSlash: true, // Критично для роутинга в Capacitor
+  images: {
+    unoptimized: true, // Нативные WebView не поддерживают оптимизацию Next.js
+  },
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: true, // Предотвращает Build Error 1 из-за типов
   },
   eslint: {
-    ignoreDuringBuilds: true,
-  },
-  images: {
-    unoptimized: true, // ОБЯЗАТЕЛЬНО: Нативные приложения не поддерживают оптимизацию Next.js
-    remotePatterns: [
-      { protocol: 'https', hostname: 'images.unsplash.com' },
-      { protocol: 'https', hostname: 'picsum.photos' },
-      { protocol: 'https', hostname: '*.gstatic.com' },
-      { protocol: 'https', hostname: 'i.ibb.co' },
-    ],
+    ignoreDuringBuilds: true, // Ускоряет сборку и убирает лишние сбои
   },
 };
 

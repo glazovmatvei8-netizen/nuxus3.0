@@ -1,7 +1,7 @@
 
 {
   "name": "nuxus-sovereign",
-  "version": "5.9.0",
+  "version": "68.2.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
