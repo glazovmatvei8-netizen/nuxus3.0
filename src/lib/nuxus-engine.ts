@@ -2,16 +2,16 @@
 'use client';
 
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
-import { initializeAuth, getReactNativePersistence, Auth } from 'firebase/auth';
+import { initializeAuth, indexedDBLocalPersistence, browserLocalPersistence, Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
 import { firebaseConfig } from '@/firebase/config';
-import { Preferences } from '@capacitor/preferences';
 
 /**
- * NUXUS ENGINE V68.3 «TITANIUM SOVEREIGN»
+ * NUXUS ENGINE V68.4 «TITANIUM SOVEREIGN»
  * 
- * ФИКС ОШИБКИ 500: Использование нативной памяти Capacitor для хранения сессий.
- * Это предотвращает сброс авторизации при очистке памяти Android.
+ * ФИКС ОШИБКИ 500: Использование IndexedDB для хранения сессий.
+ * Это самый стабильный метод для Android WebView (Capacitor).
+ * В отличие от localStorage, IndexedDB не очищается системой при нехватке памяти.
  */
 
 let appInstance: FirebaseApp | undefined;
@@ -26,15 +26,18 @@ const ignite = () => {
     const apps = getApps();
     appInstance = apps.length > 0 ? apps[0] : initializeApp(firebaseConfig);
     
-    // ПРАВИЛЬНАЯ НАДЁЖНАЯ МОБИЛЬНАЯ АВТОРИЗАЦИЯ ДЛЯ APK
-    // Используем мост Preferences для эмуляцииReactNativePersistence внутри Capacitor
+    /**
+     * ПРАВИЛЬНАЯ НАДЁЖНАЯ АВТОРИЗАЦИЯ ДЛЯ APK (Capacitor)
+     * Используем массив приоритетов: IndexedDB (самый надежный) -> LocalStorage.
+     * Это предотвращает "вылеты" и ошибку 500 при сворачивании приложения.
+     */
     authInstance = initializeAuth(appInstance, {
-      persistence: getReactNativePersistence(Preferences as any)
+      persistence: [indexedDBLocalPersistence, browserLocalPersistence]
     });
 
     dbInstance = getFirestore(appInstance);
     
-    console.log('%c🛰️ NUXUS SOVEREIGN ACTIVE [TITANIUM PERSISTENCE]', 'color: #007AFF; font-weight: bold;');
+    console.log('%c🛰️ NUXUS SOVEREIGN ACTIVE [INDEXED_DB PERSISTENCE]', 'color: #007AFF; font-weight: bold;');
   } catch (e) {
     console.error("NUXUS ENGINE IGNITION FAILED:", e);
   }
