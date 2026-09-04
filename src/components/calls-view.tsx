@@ -1,6 +1,7 @@
+
 "use client"
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAppState } from '@/lib/app-state';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
@@ -17,8 +18,8 @@ import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 
 /**
- * CALL CENTER V45.0.2 «TITANIUM SYNC»
- * ИСПРАВЛЕНО: Прямые импорты хуков для устранения ошибок 'is not a function'.
+ * CALL CENTER V45.0.3 «TITANIUM SYNC»
+ * FIXED: Hydration mismatch by deferring date formatting to client-side.
  */
 export default function CallsView() {
   const { user } = useUser();
@@ -137,6 +138,12 @@ export default function CallsView() {
 
 function CallItem({ call, currentUserId }: { call: Call, currentUserId?: string }) {
   const db = useFirestore();
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const otherId = call.callerId === currentUserId ? call.receiverId : call.callerId;
   const userRef = useMemoFirebase(() => (!db ? null : doc(db, 'users', otherId)), [db, otherId]);
   const { data: otherUser } = useDoc<User>(userRef);
@@ -145,12 +152,13 @@ function CallItem({ call, currentUserId }: { call: Call, currentUserId?: string 
   const isMissed = call.status === 'missed';
 
   const displayDate = React.useMemo(() => {
+    if (!mounted || !call.createdAt) return '';
     try {
       return format(new Date(call.createdAt), 'dd MMM HH:mm');
     } catch (e) {
       return 'Недавно';
     }
-  }, [call.createdAt]);
+  }, [call.createdAt, mounted]);
 
   return (
     <div className="p-4 obsidian-glass rounded-3xl border-white/5 hover:bg-white/[0.04] transition-all group relative overflow-hidden shadow-lg">

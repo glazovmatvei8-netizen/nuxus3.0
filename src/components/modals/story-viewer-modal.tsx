@@ -20,14 +20,19 @@ import { useToast } from '@/hooks/use-toast';
 const STORY_REACTIONS = ['❤️', '🔥', '😂', '😮', '😢', '💯', '👏'];
 
 /**
- * STORY VIEWER MODAL V12.0.0 «HYPER-ENGINE READY»
- * ИСПРАВЛЕНО: Пути импорта useAppState и Firebase хуков.
+ * STORY VIEWER MODAL V12.0.1 «HYPER-ENGINE READY»
+ * FIXED: Hydration mismatch by deferring relative date formatting to client-side.
  */
 export function StoryViewerModal() {
   const { user } = useUser();
   const db = useFirestore();
   const { storiesToView, setStoriesToView } = useAppState();
   const { toast } = useToast();
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   
   const [index, setIndex] = useState(0);
   const [progress, setProgress] = useState(0);
@@ -121,7 +126,9 @@ export function StoryViewerModal() {
                 <UserAvatar userId={currentStory.userId} className="h-10 w-10 border-2 border-white/20" manualAvatarUrl={storyUser?.avatarUrl} />
                 <div className="flex flex-col text-left">
                   <span className="text-white font-black text-sm uppercase tracking-wider">{formatDisplayName(storyUser?.name || '...')}</span>
-                  <span className="text-[9px] text-white/60 font-bold uppercase">{formatDistanceToNow(new Date(currentStory.createdAt), { addSuffix: true, locale: ru })}</span>
+                  <span className="text-[9px] text-white/60 font-bold uppercase">
+                    {mounted ? formatDistanceToNow(new Date(currentStory.createdAt), { addSuffix: true, locale: ru }) : '...'}
+                  </span>
                 </div>
               </div>
               <Button variant="ghost" size="icon" className="text-white h-10 w-10 rounded-full" onClick={() => setStoriesToView(null)}><X className="w-6 h-6" /></Button>

@@ -1,7 +1,7 @@
 
 "use client"
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useUser, useFirestore } from '@/firebase/provider';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { useMemoFirebase } from '@/firebase/firestore/use-memo-firebase';
@@ -27,13 +27,18 @@ import { ru } from 'date-fns/locale';
 const MAX_TOP_UP_AMOUNT = 500000;
 
 /**
- * WALLET VIEW V35.0.1 «TITANIUM DIRECT»
- * ИСПРАВЛЕНО: Прямые импорты Firebase.
+ * WALLET VIEW V35.0.2 «TITANIUM DIRECT»
+ * FIXED: Hydration mismatch by deferring date formatting to client-side.
  */
 export default function WalletView() {
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const [isTopUpOpen, setIsTopUpOpen] = useState(false);
   const [isTransferOpen, setIsTransferOpen] = useState(false);
@@ -172,7 +177,7 @@ export default function WalletView() {
               <span className="text-xl font-bold text-primary italic">NX</span>
             </div>
             <div className="flex gap-4 mt-10">
-              <Button onClick={() => setIsTopUpOpen(true)} className="flex-1 bg-primary text-white rounded-2xl h-16 font-black uppercase text-[10px] tracking-widest gap-2 shadow-2xl shadow-primary/20 hover:scale-105 transition-all">
+              <Button onClick={() => setIsTopUpOpen(true)} className="flex-1 bg-primary text-white rounded-2xl h-16 font-black uppercase text-[10px] tracking-widest gap-2 shadow-2xl shadow-primary/30 hover:scale-105 transition-all">
                 <Plus className="w-5 h-5" /> Пополнить
               </Button>
               <Button onClick={() => setIsTransferOpen(true)} variant="outline" className="flex-1 border-white/10 bg-white/5 rounded-2xl h-16 font-black uppercase text-[10px] tracking-widest gap-2 hover:bg-white/10 transition-all">
@@ -206,7 +211,7 @@ export default function WalletView() {
                           {tx.type === 'deposit' ? 'Пополнение' : (tx.otherPartyName || 'Транзакция')}
                         </span>
                         <span className="text-[9px] text-white/20 uppercase font-black tracking-widest mt-1">
-                          {tx.createdAt ? format(new Date(tx.createdAt), 'dd MMMM, HH:mm', { locale: ru }) : 'Недавно'}
+                          {mounted && tx.createdAt ? format(new Date(tx.createdAt), 'dd MMMM, HH:mm', { locale: ru }) : '...'}
                         </span>
                       </div>
                     </div>

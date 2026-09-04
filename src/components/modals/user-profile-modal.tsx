@@ -1,6 +1,7 @@
+
 "use client"
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
@@ -26,14 +27,19 @@ const ADMIN_ID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 const ORIGIN_DATE = '2024-01-01T00:00:00Z'; 
 
 /**
- * USER PROFILE MODAL V5.2.3 «TITANIUM SYNC»
- * ИСПРАВЛЕНО: Прямые импорты хуков.
+ * USER PROFILE MODAL V5.2.4 «TITANIUM SYNC»
+ * FIXED: Hydration mismatch by deferring registration date formatting to client-side.
  */
 export function UserProfileModal() {
   const db = useFirestore();
   const { user: currentUser } = useUser();
   const { inspectedUserId, setInspectedUserId, setCurrentChatId, setActiveView, setActiveCallId } = useAppState();
   const { toast } = useToast();
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const [isGiftModalOpen, setIsGiftModalOpen] = useState(false);
   const [isAdminProcessing, setIsAdminProcessing] = useState(false);
@@ -122,11 +128,11 @@ export function UserProfileModal() {
   };
 
   const registrationDate = useMemo(() => {
-    if (!inspectedUserId) return '';
+    if (!mounted || !inspectedUserId) return '...';
     const rawDate = inspectedUserId === ADMIN_ID ? ORIGIN_DATE : (targetUser?.createdAt);
     if (!rawDate) return '...';
     try { return format(new Date(rawDate), 'dd.MM.yyyy', { locale: ru }); } catch (e) { return '...'; }
-  }, [targetUser?.createdAt, inspectedUserId]);
+  }, [targetUser?.createdAt, inspectedUserId, mounted]);
 
   if (!inspectedUserId) return null;
 
@@ -158,7 +164,7 @@ export function UserProfileModal() {
           <div className="flex flex-col min-h-full pb-24">
             <div className="mt-6 px-8 text-center">
               <p className="text-[9px] text-muted-foreground uppercase font-black tracking-widest mt-4 opacity-40">
-                {formatLastSeen(targetUser?.lastSeen, targetUser?.settings?.privacy?.lastSeenVisibility)}
+                {mounted ? formatLastSeen(targetUser?.lastSeen, targetUser?.settings?.privacy?.lastSeenVisibility) : '...'}
               </p>
             </div>
 

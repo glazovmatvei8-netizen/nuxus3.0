@@ -1,6 +1,7 @@
+
 "use client"
 
-import React, { useState, useMemo, memo } from 'react';
+import React, { useState, useMemo, memo, useEffect } from 'react';
 import { useAppState } from '@/lib/app-state';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
@@ -24,6 +25,12 @@ const ChatListItem = memo(({
   chat, isActive, otherId, isPinned, onClick, currentUserId
 }: any) => {
   const db = useFirestore();
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const userProfileRef = useMemoFirebase(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
   const { data: otherProfile } = useDoc<UserType>(userProfileRef);
 
@@ -38,10 +45,19 @@ const ChatListItem = memo(({
   const isUnread = (lastMsg && !lastMsg.isRead && lastMsg.senderId !== currentUserId) || chat.isManualUnread;
 
   const decryptedPreview = useMemo(() => {
-    if (!lastMsg) return 'Нет сообщений';
+    if (!mounted || !lastMsg) return 'Нет сообщений';
     if (lastMsg.contentType !== 'text') return `[Вложение]`;
     return decryptSignal(lastMsg.content);
-  }, [lastMsg]);
+  }, [lastMsg, mounted]);
+
+  const displayTime = useMemo(() => {
+    if (!mounted || !chat.lastMessageAt) return '';
+    try {
+      return format(new Date(chat.lastMessageAt), 'HH:mm');
+    } catch (e) {
+      return '';
+    }
+  }, [chat.lastMessageAt, mounted]);
 
   return (
     <div className="px-4 py-1">
@@ -77,7 +93,7 @@ const ChatListItem = memo(({
               {isPinned && <Pin className="w-3 h-3 text-white/20" />}
             </div>
             <span className="text-[9px] text-white/10 font-black whitespace-nowrap tracking-widest">
-              {chat.lastMessageAt ? format(new Date(chat.lastMessageAt), 'HH:mm') : ''}
+              {displayTime}
             </span>
           </div>
           <p className="text-[13px] text-white/30 truncate font-medium tracking-tight">
@@ -168,7 +184,7 @@ export default function ChatSidebar() {
                         ) : (
                           <Plus className="w-6 h-6 text-white/20 group-hover:text-primary transition-colors" />
                         )}
-                        {activeAccountIndex === i && <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-primary rounded-full border-2 border-[#010103] shadow-[0_0_10px_rgba(var(--primary),1)]" />}
+                        {activeAccountIndex === i && <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-primary rounded-full border-2 border-[#010103] shadow-[0_0_100px_rgba(var(--primary),1)]" />}
                       </div>
                       <span className={cn(
                         "text-[8px] font-black uppercase tracking-widest truncate w-16 text-center italic",

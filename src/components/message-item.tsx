@@ -1,23 +1,38 @@
 
 "use client"
 
-import React, { memo, useMemo } from 'react';
+import React, { memo, useMemo, useState, useEffect } from 'react';
 import { UserAvatar } from '@/components/user-avatar';
 import { format } from 'date-fns';
 import { 
   Check, CheckCheck, Play, MoreHorizontal
 } from 'lucide-react';
 import { cn, decryptSignal } from '@/lib/utils';
-import { useAppState } from '@/lib/store';
+import { useAppState } from '@/lib/app-state';
 
+/**
+ * MESSAGE ITEM V6.5.8 «TITANIUM DIRECT»
+ * FIXED: Hydration error by deferring date formatting and decryption to client-side.
+ */
 export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile }: any) => {
   const { setInspectedUserId } = useAppState();
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   
   const displayContent = useMemo(() => {
+    if (!mounted) return '...';
     return message.contentType === 'text' ? decryptSignal(message.content) : message.content;
-  }, [message.content, message.contentType]);
+  }, [message.content, message.contentType, mounted]);
 
-  const formattedTime = message.sentAt ? format(new Date(message.sentAt), 'HH:mm') : '';
+  const formattedTime = useMemo(() => {
+    if (!mounted || !message.sentAt) return '';
+    try {
+      return format(new Date(message.sentAt), 'HH:mm');
+    } catch (e) { return ''; }
+  }, [message.sentAt, mounted]);
 
   const bubbleStyle = viewerProfile?.settings?.bubbleStyle || message.metadata?.bubbleStyle || 'default';
   const textSize = viewerProfile?.settings?.messageSize || 'medium';

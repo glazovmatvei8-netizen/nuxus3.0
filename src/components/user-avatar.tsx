@@ -1,7 +1,7 @@
 
 "use client"
 
-import React, { useState, memo, useMemo } from 'react';
+import React, { useState, memo, useMemo, useEffect } from 'react';
 import { useFirestore } from '@/firebase/provider';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { doc } from 'firebase/firestore';
@@ -12,13 +12,18 @@ import { differenceInMinutes, parseISO } from 'date-fns';
 import Image from 'next/image';
 
 /**
- * USER AVATAR V6.5.6 «TITANIUM DIRECT»
- * ИСПРАВЛЕНО: Прямые импорты Firebase.
+ * USER AVATAR V6.5.7 «TITANIUM DIRECT»
+ * FIXED: Hydration error by deferring online status calculation to client-side.
  */
 export const UserAvatar = memo(({ userId, className, fallbackName, manualAvatarUrl, showOnlineStatus = false, onClick }: any) => {
   const db = useFirestore();
   const [imgError, setImgError] = useState(false);
+  const [mounted, setMounted] = useState(false);
   
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const userRef = useMemo(() => {
     if (!db || !userId) return null;
     return doc(db, 'users', userId);
@@ -28,12 +33,13 @@ export const UserAvatar = memo(({ userId, className, fallbackName, manualAvatarU
 
   const displayAvatar = useMemo(() => manualAvatarUrl || profile?.avatarUrl || null, [profile, manualAvatarUrl]);
   const premium = useMemo(() => isUserPremium(profile), [profile]);
+  
   const isOnline = useMemo(() => {
-    if (!profile?.lastSeen || profile?.settings?.privacy?.isGhostMode) return false;
+    if (!mounted || !profile?.lastSeen || profile?.settings?.privacy?.isGhostMode) return false;
     try {
       return differenceInMinutes(new Date(), parseISO(profile.lastSeen)) < 2;
     } catch (e) { return false; }
-  }, [profile]);
+  }, [profile, mounted]);
 
   return (
     <div onClick={onClick} className={cn("relative inline-flex items-center justify-center shrink-0 rounded-full", className)}>
