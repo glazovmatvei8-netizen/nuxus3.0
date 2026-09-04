@@ -11,17 +11,17 @@ import { AppIconApplier } from '@/components/app-icon-applier';
 import { OfflinePlaceholder } from '@/components/offline-placeholder';
 
 /**
- * SOVEREIGN PROVIDER V68.0 «NATIVE BRIDGE»
+ * SOVEREIGN PROVIDER V5.9.0 «NATIVE BRIDGE»
  * Исключает ошибку originalFactory.call и гарантирует запуск на Android.
+ * Это единственный клиентский компонент, который вызывается в layout.tsx.
  */
 export function SovereignProvider({ children }: { children: ReactNode }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    // Ждем полной готовности DOM
     setMounted(true);
     
-    // Блокируем нативные меню браузера для "Real App" эффекта
+    // Блокируем системные меню для эффекта нативного приложения
     const preventDefault = (e: Event) => {
       if ((e.target as HTMLElement).tagName !== 'INPUT' && (e.target as HTMLElement).tagName !== 'TEXTAREA') {
         // e.preventDefault();

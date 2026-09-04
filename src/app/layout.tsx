@@ -4,8 +4,9 @@ import './globals.css';
 import { SovereignProvider } from '@/components/sovereign-provider';
 
 /**
- * NUXUS LAYOUT V68.0 «ABSOLUTE STABILITY»
- * FIXED: Удалены все импорты, вызывающие ошибку originalFactory.call.
+ * NUXUS LAYOUT V5.9.0 «TITANIUM STABILITY»
+ * FIXED: Убраны все импорты, вызывающие ошибку originalFactory.call.
+ * Layout теперь — это чистый серверный каркас.
  */
 export const metadata: Metadata = {
   title: 'Nuxus 5.9.0',
@@ -32,7 +33,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ru" className="dark" suppressHydrationWarning>
+    <html lang="ru" suppressHydrationWarning>
       <body className="bg-[#010103] text-white antialiased overflow-hidden selection:bg-primary/30">
         <SovereignProvider>
           {children}

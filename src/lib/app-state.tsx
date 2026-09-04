@@ -5,8 +5,8 @@ import React, { createContext, useContext, useState, useEffect, useMemo } from '
 import type { Message, Story, Track } from './types';
 
 /**
- * APP STATE ENGINE V68.0
- * Изолирован от Firebase для предотвращения ошибок импорта.
+ * APP STATE ENGINE V5.9.0
+ * Централизованное хранилище состояния, изолированное от Firebase.
  */
 
 export type MainView = 'chats' | 'contacts' | 'calls' | 'profile' | 'archive' | 'music' | 'wallet' | 'games' | 'discovery';
@@ -48,7 +48,7 @@ interface AppState {
   setStoriesToView: (stories: Story[] | null) => void;
 }
 
-export const AppContext = createContext<AppState | undefined>(undefined);
+const AppContext = createContext<AppState | undefined>(undefined);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
