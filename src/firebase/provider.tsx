@@ -2,13 +2,7 @@
 'use client';
 
 import React, { createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
-import { 
-  onAuthStateChanged, 
-  User, 
-  setPersistence, 
-  indexedDBLocalPersistence,
-  getAuth
-} from 'firebase/auth';
+import { onAuthStateChanged, User } from 'firebase/auth';
 import { nuxus } from '@/lib/nuxus-engine';
 
 export interface FirebaseContextState {
@@ -22,8 +16,8 @@ export const FirebaseContext = createContext<FirebaseContextState>({
 });
 
 /**
- * ПРЯМОЙ ПРОВАЙДЕР FIREBASE V68.2 «HARDENED»
- * Использует IndexedDB для предотвращения вылетов (Error 500) в APK.
+ * ПРЯМОЙ ПРОВАЙДЕР FIREBASE V68.3 «HARDENED»
+ * ОПТИМИЗИРОВАНО: Инициализация памяти перенесена в Ядро (nuxus-engine).
  */
 export const FirebaseProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -36,27 +30,13 @@ export const FirebaseProvider: React.FC<{ children: ReactNode }> = ({ children }
       return;
     }
 
-    // ИНИЦИАЛИЗАЦИЯ ПАМЯТИ: Заставляем Firebase использовать IndexedDB вместо localStorage.
-    // Это ключевое решение проблемы вылетов в Android WebView.
-    const initAuth = async () => {
-      try {
-        await setPersistence(auth, indexedDBLocalPersistence);
-        
-        const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-          setUser(firebaseUser);
-          setIsUserLoading(false);
-        });
-        return unsubscribe;
-      } catch (e) {
-        console.error("Nuxus Auth Engine: Persistence failed", e);
-        setIsUserLoading(false);
-      }
-    };
+    // Слушатель состояния теперь работает на базе нативного хранилища Preferences
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser);
+      setIsUserLoading(false);
+    });
 
-    const unsubPromise = initAuth();
-    return () => {
-      unsubPromise.then(unsub => unsub && unsub());
-    };
+    return () => unsubscribe();
   }, []);
 
   const value = useMemo(() => ({

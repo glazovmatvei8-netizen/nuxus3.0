@@ -2,14 +2,16 @@
 'use client';
 
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
-import { getAuth, Auth } from 'firebase/auth';
+import { initializeAuth, getReactNativePersistence, Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
 import { firebaseConfig } from '@/firebase/config';
+import { Preferences } from '@capacitor/preferences';
 
 /**
- * NUXUS ENGINE V67.0 «SOVEREIGN»
+ * NUXUS ENGINE V68.3 «TITANIUM SOVEREIGN»
  * 
- * ПОЛНАЯ ИЗОЛЯЦИЯ: Этот файл больше не вызывается на сервере.
+ * ФИКС ОШИБКИ 500: Использование нативной памяти Capacitor для хранения сессий.
+ * Это предотвращает сброс авторизации при очистке памяти Android.
  */
 
 let appInstance: FirebaseApp | undefined;
@@ -23,12 +25,18 @@ const ignite = () => {
   try {
     const apps = getApps();
     appInstance = apps.length > 0 ? apps[0] : initializeApp(firebaseConfig);
-    authInstance = getAuth(appInstance);
+    
+    // ПРАВИЛЬНАЯ НАДЁЖНАЯ МОБИЛЬНАЯ АВТОРИЗАЦИЯ ДЛЯ APK
+    // Используем мост Preferences для эмуляцииReactNativePersistence внутри Capacitor
+    authInstance = initializeAuth(appInstance, {
+      persistence: getReactNativePersistence(Preferences as any)
+    });
+
     dbInstance = getFirestore(appInstance);
     
-    console.log('%c🛰️ NUXUS SOVEREIGN ACTIVE', 'color: #007AFF; font-weight: bold;');
+    console.log('%c🛰️ NUXUS SOVEREIGN ACTIVE [TITANIUM PERSISTENCE]', 'color: #007AFF; font-weight: bold;');
   } catch (e) {
-    // Silent fail
+    console.error("NUXUS ENGINE IGNITION FAILED:", e);
   }
 };
 
