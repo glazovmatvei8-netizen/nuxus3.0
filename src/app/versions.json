@@ -1,12 +1,13 @@
+
 {
-  "latestVersion": "5.9.1",
-  "qesVersion": "26.0",
-  "build": "Nuxus-Sovereign-Titanium-V68.5.1-NATIVE-BRIDGE",
-  "sizeMb": 72,
+  "latestVersion": "6.0.0",
+  "qesVersion": "27.0",
+  "build": "Nuxus-Sovereign-Absolute-Native-V69.0",
+  "sizeMb": 65,
   "changelog": [
-    "Native-Bridge Fix: Implemented @capacitor/preferences adapter for Firebase Auth.",
-    "Error 500 Resolution: Session persistence moved to SharedPreferences/UserDefaults.",
-    "Type Stability: Resolved getReactNativePersistence conflicts in Web Project builds.",
-    "Persistence Hierarchy: Native Preferences -> IndexedDB -> LocalStorage."
+    "Absolute Native: Fully migrated to native shell architecture.",
+    "Stability: Forced static export eliminates Error 500 permanently.",
+    "Persistence: Implemented native SharedPreferences bridge for user sessions.",
+    "UX: Browser elements suppressed, safe area insets enabled."
   ]
 }

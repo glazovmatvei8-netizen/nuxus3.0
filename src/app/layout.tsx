@@ -4,13 +4,12 @@ import './globals.css';
 import { SovereignProvider } from '@/components/sovereign-provider';
 
 /**
- * NUXUS LAYOUT V68.2 «ABSOLUTE NATIVE»
- * Чистый серверный компонент без зависимостей. 
- * Все ошибки 'call' устранены за счет изоляции логики.
+ * NUXUS LAYOUT V69.0 «ABSOLUTE NATIVE SHELL»
+ * Полная изоляция интерфейса для APK/IPA.
  */
 export const metadata: Metadata = {
-  title: 'Nuxus 2.0',
-  description: 'Premium Communication Kernel',
+  title: 'Nuxus Native',
+  description: 'Premium Communication Kernel for Android & iOS',
 };
 
 export const viewport: Viewport = {
@@ -19,13 +18,13 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  viewportFit: 'cover',
+  viewportFit: 'cover', // Растягиваем на весь экран под челку
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ru">
-      <body className="bg-[#010103] text-white antialiased overflow-hidden">
+      <body className="bg-[#010103] text-white antialiased overflow-hidden select-none">
         <SovereignProvider>
           {children}
         </SovereignProvider>

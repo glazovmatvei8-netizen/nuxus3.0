@@ -2,20 +2,21 @@
 import type { NextConfig } from 'next';
 
 /**
- * NUXUS ULTRA-NATIVE CONFIG V68.2
+ * NUXUS ABSOLUTE NATIVE CONFIG V69.0
  * ОПТИМИЗИРОВАНО ДЛЯ ПОЛНОЙ АВТОНОМНОСТИ ВНУТРИ APK
+ * ВНИМАНИЕ: Web-версия отключена, только статический экспорт для мобильных оболочек.
  */
 const nextConfig: NextConfig = {
-  output: 'export', // Гарантирует отсутствие Error 500 (никакого сервера внутри APK)
-  trailingSlash: true, // Критично для роутинга в Capacitor
+  output: 'export', // Полная статика: интерфейс живет внутри APK
+  trailingSlash: true, // Необходимо для корректной навигации в Capacitor
   images: {
-    unoptimized: true, // Нативные WebView не поддерживают оптимизацию Next.js
+    unoptimized: true, // Нативные WebView не поддерживают серверную оптимизацию изображений
   },
   typescript: {
-    ignoreBuildErrors: true, // Предотвращает Build Error 1 из-за типов
+    ignoreBuildErrors: true, // Игнорируем ошибки типов для ускорения сборки APK
   },
   eslint: {
-    ignoreDuringBuilds: true, // Ускоряет сборку и убирает лишние сбои
+    ignoreDuringBuilds: true, // Игнорируем линтинг при деплое
   },
 };
 
