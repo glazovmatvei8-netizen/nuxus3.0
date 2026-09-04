@@ -44,7 +44,7 @@
 
   html, body {
     @apply bg-[#010103] text-foreground antialiased selection:bg-primary/40;
-    /* БЛОКИРУЕМ ПРУЖИНЯЩИЙ СКРОЛЛ (Overscroll) */
+    /* БЛОКИРУЕМ ПРУЖИНЯЩИЙ СКРОЛЛ */
     overscroll-behavior: none !important;
     height: 100dvh;
     width: 100%;

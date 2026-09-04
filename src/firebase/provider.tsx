@@ -16,8 +16,8 @@ export const FirebaseContext = createContext<FirebaseContextState>({
 });
 
 /**
- * ПРЯМОЙ ПРОВАЙДЕР FIREBASE V68.3 «HARDENED»
- * ОПТИМИЗИРОВАНО: Инициализация памяти перенесена в Ядро (nuxus-engine).
+ * NUXUS FIREBASE PROVIDER V70.0
+ * ОПТИМИЗИРОВАНО: Память теперь управляется нативным Ядром.
  */
 export const FirebaseProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -30,7 +30,7 @@ export const FirebaseProvider: React.FC<{ children: ReactNode }> = ({ children }
       return;
     }
 
-    // Слушатель состояния теперь работает на базе нативного хранилища Preferences
+    // Слушатель состояния на базе нативной памяти OS
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser);
       setIsUserLoading(false);
