@@ -1,15 +1,22 @@
 
 {
-  "appId": "com.nuxus.app",
+  "appId": "com.username.nuxus.fun",
   "appName": "Nuxus",
   "webDir": "out",
   "bundledWebRuntime": false,
   "server": {
     "androidScheme": "https",
-    "allowNavigation": ["*"]
+    "allowNavigation": [
+      "studio-5946432351-bbd5e.firebaseapp.com",
+      "studio-5946432351-bbd5e.web.app",
+      "*.googleapis.com",
+      "*.gstatic.com",
+      "i.ibb.co"
+    ]
   },
   "android": {
-    "allowMixedContent": true,
+    "allowMixedContent": false,
+    "captureInput": true,
     "buildOptions": {
       "releaseType": "APK"
     }

@@ -18,8 +18,9 @@ import { isUserActuallyBanned, isUserAnomaly } from '@/lib/utils';
 import { NuxusLogo } from '@/components/nuxus-logo';
 
 /**
- * NUXUS HOME GATE V68.0
- * Полная поддержка нативного APK.
+ * NUXUS HOME GATE V68.1 «HARDENED»
+ * Основная точка входа мессенджера (Entry Point).
+ * Обеспечивает безопасность, 2FA и проверку на аномалии.
  */
 export default function Home() {
   const { user, isUserLoading } = useUser();

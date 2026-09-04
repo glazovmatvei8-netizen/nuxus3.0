@@ -68,6 +68,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
     setIsLoading(true);
 
     try {
+      // КРИТИЧЕСКИ ВАЖНО: Установка персистентности для Android
       await setPersistence(auth, browserLocalPersistence);
       
       let finalEmail = "";
