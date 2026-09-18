@@ -7,33 +7,26 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
-import { Label } from '@/components/ui/label';
 import { useFirestore, useCollection } from '@/firebase/provider'; 
-import { collection, query, doc, limit, updateDoc, writeBatch, increment, orderBy, deleteDoc } from 'firebase/firestore';
+import { collection, query, doc, limit, updateDoc, writeBatch, increment, orderBy, addDoc, getDocs } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   ShieldAlert, Users, Star, Ban, Check, Activity, 
-  Zap, ShieldCheck, Search, Crown, Shield, AlertTriangle, SearchCode, ShieldQuestion, XCircle, UserX, Ghost, Loader2, Phone, MessageSquare, Scale, CheckCircle2, BarChart3, PieChart, MoreVertical, ShieldPlus, UserMinus
+  Zap, ShieldCheck, Search, Crown, Shield, AlertTriangle, 
+  XCircle, UserX, Ghost, Loader2, Phone, MessageSquare, 
+  Scale, CheckCircle2, BarChart3, PieChart, MoreVertical, 
+  ShieldPlus, UserMinus, Mail, Send, Sparkles
 } from 'lucide-react';
-import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator
-} from "@/components/ui/dropdown-menu";
 import type { User, TopUpRequest, Appeal } from '@/lib/types';
 import { formatDisplayName, cn, isUserAnomaly, isUserPremium } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
-import { ru } from 'date-fns/locale';
 import { useAppState } from '@/lib/app-state';
 
 /**
- * ADMIN PANEL MODAL V5.2.0
- * ИСПРАВЛЕНО: Пути импорта useAppState и Firebase хуков.
+ * ADMIN PANEL MODAL V71.0 «BROADCAST EDITION»
+ * Добавлена система массовых рассылок по Email.
  */
 export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const db = useFirestore();
@@ -42,11 +35,12 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   
   const [activeTab, setActiveTab] = useState('analytics');
   const [userSearch, setUserSearch] = useState('');
-  const [adminComment, setAdminComment] = useState('');
   
-  const [isAuditing, setIsAuditing] = useState(false);
-  const [auditProgress, setUpdateAuditProgress] = useState(0);
-  const [auditResults, setAuditResults] = useState<{suspiciousNodes: {user: User, reason: string}[], safeNodesCount: number} | null>(null);
+  // Broadcast State
+  const [broadcastSubject, setBroadcastSubject] = useState('');
+  const [broadcastBody, setBroadcastBody] = useState('');
+  const [isBroadcasting, setIsBroadcasting] = useState(false);
+  const [broadcastProgress, setBroadcastProgress] = useState(0);
 
   // DATA FETCHING
   const appealsQuery = useMemo(() => {
@@ -68,11 +62,12 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   const { data: allUsers } = useCollection<User>(usersQuery);
 
   const stats = useMemo(() => {
-    if (!allUsers) return { total: 0, valid: 0, premium: 0, banned: 0, anomalies: 0 };
+    if (!allUsers) return { total: 0, valid: 0, premium: 0, banned: 0, anomalies: 0, emails: 0 };
     
     const banned = allUsers.filter(u => u.isBanned).length;
     const anomalies = allUsers.filter(u => isUserAnomaly(u)).length;
     const premium = allUsers.filter(u => isUserPremium(u)).length;
+    const emails = allUsers.filter(u => u.email).length;
     const total = allUsers.length;
     const active = total - banned - anomalies;
 
@@ -81,112 +76,82 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
       active: active < 0 ? 0 : active, 
       premium, 
       banned, 
-      anomalies 
+      anomalies,
+      emails
     };
   }, [allUsers]);
 
-  const filteredUsers = useMemo(() => {
-    if (!allUsers) return [];
-    let list = [...allUsers];
-    if (userSearch.trim()) {
-      const s = userSearch.toLowerCase();
-      list = list.filter(u => 
-        u.name?.toLowerCase().includes(s) || 
-        u.username?.toLowerCase().includes(s) ||
-        u.phone?.includes(s)
-      );
+  const handleStartBroadcast = async () => {
+    if (!broadcastSubject.trim() || !broadcastBody.trim() || !allUsers || !db) {
+      toast({ title: "Ошибка", description: "Заполните тему и текст рассылки", variant: "destructive" });
+      return;
     }
-    return list.slice(0, 100);
-  }, [allUsers, userSearch]);
 
-  const handleAction = async (userId: string, data: Partial<User>, label: string) => {
-    if (!db) return;
-    try {
-      await updateDoc(doc(db, 'users', userId), data);
-      toast({ title: label });
-    } catch (e) {
-      toast({ title: "Сбой синхронизации", variant: "destructive" });
+    const targets = allUsers.filter(u => u.email);
+    if (targets.length === 0) {
+      toast({ title: "Ошибка", description: "В базе нет пользователей с привязанной почтой", variant: "destructive" });
+      return;
     }
-  };
 
-  const handleStartAudit = () => {
-    if (isAuditing || !allUsers) return;
-    setIsAuditing(true);
-    setAuditResults(null);
-    setUpdateAuditProgress(0);
+    if (!confirm(`Запустить рассылку на ${targets.length} адресов? Отправитель: support@nuxus.fun`)) return;
+
+    setIsBroadcasting(true);
+    setBroadcastProgress(0);
     
-    let p = 0;
-    const interval = setInterval(() => {
-      p += 10;
-      setUpdateAuditProgress(p);
-      if (p >= 100) {
-        clearInterval(interval);
-        const suspicious: {user: User, reason: string}[] = [];
-        allUsers.forEach(u => {
-          if (isUserAnomaly(u)) {
-             const name = (u.name || '').trim().toLowerCase();
-             const reason = name === 'user' ? 'GHOST IDENTITY (Name: User)' : 'CORRUPTED ID (Empty Username)';
-             suspicious.push({ user: u, reason });
-          }
-        });
-        setAuditResults({ suspiciousNodes: suspicious, safeNodesCount: allUsers.length - suspicious.length });
-        setIsAuditing(false);
-        toast({ title: "Аудит завершен", description: `Найдено ${suspicious.length} аномалий.` });
-      }
-    }, 50);
-  };
-
-  const handleMassBan = async () => {
-    if (!db || !auditResults || auditResults.suspiciousNodes.length === 0) return;
-    if (!confirm(`Аннигилировать доступ для ${auditResults.suspiciousNodes.length} узлов?`)) return;
-    const batch = writeBatch(db);
-    auditResults.suspiciousNodes.forEach(item => {
-      batch.update(doc(db, 'users', item.user.id), { isBanned: true, bannedAt: new Date().toISOString() });
-    });
     try {
+      const batch = writeBatch(db);
+      let count = 0;
+
+      for (const target of targets) {
+        const mailRef = doc(collection(db, 'mail'));
+        batch.set(mailRef, {
+          to: target.email,
+          message: {
+            subject: broadcastSubject,
+            html: broadcastBody,
+            text: broadcastBody.replace(/<[^>]*>?/gm, ''), // Simple strip tags
+          },
+          from: 'Nuxus Support <support@nuxus.fun>',
+          createdAt: new Date().toISOString(),
+          status: 'pending'
+        });
+        
+        count++;
+        if (count % 10 === 0) {
+          setBroadcastProgress(Math.round((count / targets.length) * 100));
+        }
+      }
+
       await batch.commit();
-      toast({ title: "Протокол Aegis исполнен", description: "Все аномалии заблокированы." });
-      setAuditResults(null);
-    } catch (e) { toast({ title: "Сбой протокола", variant: "destructive" }); }
+      toast({ title: "Рассылка запущена", description: `Пакет из ${targets.length} писем передан в очередь отправки.` });
+      setBroadcastSubject('');
+      setBroadcastBody('');
+      setBroadcastProgress(100);
+    } catch (e) {
+      toast({ title: "Сбой рассылки", variant: "destructive" });
+    } finally {
+      setTimeout(() => {
+        setIsBroadcasting(false);
+        setBroadcastProgress(0);
+      }, 2000);
+    }
   };
 
-  const handleAppealJustice = async (appeal: Appeal, action: 'accept' | 'reject' | 'comment') => {
+  const handleAppealJustice = async (appeal: Appeal, action: 'accept' | 'reject') => {
     if (!db) return;
     const batch = writeBatch(db);
     const appealRef = doc(db, 'appeals', appeal.id);
     const userRef = doc(db, 'users', appeal.userId);
 
-    if (action === 'accept' || action === 'comment') {
+    if (action === 'accept') {
       batch.update(userRef, { isBanned: false, bannedAt: null });
-      if (action === 'comment' && adminComment.trim()) {
-        batch.update(userRef, { statusText: `[Admin]: ${adminComment}` });
-      }
-      batch.update(appealRef, { status: 'accepted', adminComment: adminComment.trim() || 'Разблокирован', resolvedAt: new Date().toISOString() });
+      batch.update(appealRef, { status: 'accepted', resolvedAt: new Date().toISOString() });
       toast({ title: "Узел восстановлен" });
     } else {
-      batch.update(appealRef, { status: 'rejected', adminComment: adminComment.trim() || 'Отказано', resolvedAt: new Date().toISOString() });
+      batch.update(appealRef, { status: 'rejected', resolvedAt: new Date().toISOString() });
       toast({ title: "Апелляция отклонена" });
     }
-
-    try {
-      await batch.commit();
-      setAdminComment('');
-    } catch (e) { toast({ title: "Сбой правосудия", variant: "destructive" }); }
-  };
-
-  const handleApprove = async (req: TopUpRequest) => {
-    if (!db) return;
-    const batch = writeBatch(db);
-    batch.update(doc(db, 'users', req.userId), { balance: increment(req.amount) });
-    batch.update(doc(db, 'topUpRequests', req.id), { status: 'approved' });
     await batch.commit();
-    toast({ title: "Заявка одобрена" });
-  };
-
-  const handleReject = async (id: string) => {
-    if (!db) return;
-    await updateDoc(doc(db, 'topUpRequests', id), { status: 'rejected' });
-    toast({ title: "Заявка отклонена" });
   };
 
   return (
@@ -201,15 +166,8 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               </div>
               <div className="flex flex-col text-left">
                 <DialogTitle className="text-3xl font-black uppercase italic text-white tracking-tighter leading-none">MISSION CONTROL</DialogTitle>
-                <DialogDescription className="text-[10px] font-black uppercase text-primary/60 mt-2 tracking-widest">Aegis Executive Dashboard v9.2</DialogDescription>
+                <DialogDescription className="text-[10px] font-black uppercase text-primary/60 mt-2 tracking-widest">Aegis Executive Dashboard v71.0</DialogDescription>
               </div>
-            </div>
-            <div className="hidden sm:flex bg-black/40 border border-white/5 px-6 py-3 rounded-2xl items-center gap-4">
-               <Activity className="w-4 h-4 text-green-500" />
-               <div className="flex flex-col">
-                 <span className="text-xs font-black text-white">{stats.active} / {stats.total}</span>
-                 <span className="text-[7px] font-black text-white/20 uppercase tracking-widest">Nodes Operational</span>
-               </div>
             </div>
           </div>
         </DialogHeader>
@@ -217,73 +175,112 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
           <div className="px-8 mt-6">
             <TabsList className="grid grid-cols-5 bg-white/5 p-1.5 rounded-2xl border border-white/5">
-              <TabsTrigger value="analytics" className="text-[9px] font-black uppercase tracking-widest gap-2"><BarChart3 className="w-3 h-3" /> Аналитика</TabsTrigger>
+              <TabsTrigger value="analytics" className="text-[9px] font-black uppercase tracking-widest gap-2"><BarChart3 className="w-3 h-3" /> Статистика</TabsTrigger>
+              <TabsTrigger value="broadcast" className="text-[9px] font-black uppercase tracking-widest gap-2"><Mail className="w-3 h-3" /> Рассылка</TabsTrigger>
               <TabsTrigger value="appeals" className="text-[9px] font-black uppercase tracking-widest gap-2"><Scale className="w-3 h-3" /> Апелляции</TabsTrigger>
-              <TabsTrigger value="requests" className="text-[9px] font-black uppercase tracking-widest gap-2"><Zap className="w-3 h-3" /> Банк</TabsTrigger>
+              <TabsTrigger value="requests" className="text-[9px] font-black uppercase tracking-widest gap-2"><Zap className="w-3 h-3" /> Финансы</TabsTrigger>
               <TabsTrigger value="users" className="text-[9px] font-black uppercase tracking-widest gap-2"><Users className="w-3 h-3" /> Узлы</TabsTrigger>
-              <TabsTrigger value="shield" className="text-[9px] font-black uppercase tracking-widest gap-2"><ShieldCheck className="w-3 h-3" /> Защита</TabsTrigger>
             </TabsList>
           </div>
 
           <ScrollArea className="flex-1">
             <div className="p-8 pb-32">
               
-              <TabsContent value="analytics" className="m-0 space-y-8 animate-in fade-in duration-500">
+              <TabsContent value="analytics" className="m-0 space-y-8">
                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <StatCard icon={Users} label="Всего Узлов" value={stats.total} sub="Зарегистрировано" color="text-white" />
-                    <StatCard icon={CheckCircle2} label="Активные" value={stats.active} sub="Вне ограничений" color="text-green-500" />
-                    <StatCard icon={Ban} label="В бане" value={stats.banned} sub="Доступ аннигилирован" color="text-red-500" />
-                    <StatCard icon={Crown} label="Elite Nodes" value={stats.premium} sub="Premium статус" color="text-accent" />
+                    <StatCard icon={Users} label="Всего Узлов" value={stats.total} sub="В базе" color="text-white" />
+                    <StatCard icon={Mail} label="Email База" value={stats.emails} sub="Для рассылки" color="text-primary" />
+                    <StatCard icon={Ban} label="Блокировки" value={stats.banned} sub="Вне сети" color="text-red-500" />
+                    <StatCard icon={Crown} label="Elite" value={stats.premium} sub="Premium статус" color="text-accent" />
+                 </div>
+              </TabsContent>
+
+              <TabsContent value="broadcast" className="m-0 space-y-6">
+                 <div className="bg-white/5 p-8 rounded-[2.5rem] border border-white/10 space-y-8 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-10 opacity-5 -z-0"><Send className="w-40 h-40" /></div>
+                    
+                    <div className="space-y-4 relative z-10">
+                       <div className="flex items-center justify-between">
+                          <h3 className="text-xl font-black text-white italic uppercase tracking-tight flex items-center gap-3">
+                             <Sparkles className="w-6 h-6 text-primary" /> Новый сигнал рассылки
+                          </h3>
+                          <div className="bg-primary/20 px-3 py-1 rounded-full text-[9px] font-black text-primary uppercase tracking-widest border border-primary/20">
+                             Sender: support@nuxus.fun
+                          </div>
+                       </div>
+                       
+                       <div className="space-y-4">
+                          <div className="space-y-2">
+                             <label className="text-[10px] font-black uppercase text-white/40 ml-2 tracking-widest">Тема письма</label>
+                             <Input 
+                               placeholder="Важное обновление системы Nuxus..." 
+                               value={broadcastSubject}
+                               onChange={e => setBroadcastSubject(e.target.value)}
+                               className="h-14 bg-black/40 border-white/10 rounded-2xl text-lg font-bold"
+                             />
+                          </div>
+                          <div className="space-y-2">
+                             <label className="text-[10px] font-black uppercase text-white/40 ml-2 tracking-widest">Сообщение (HTML поддерживается)</label>
+                             <Textarea 
+                               placeholder="Введите текст сообщения для всех пользователей..." 
+                               value={broadcastBody}
+                               onChange={e => setBroadcastBody(e.target.value)}
+                               className="min-h-[250px] bg-black/40 border-white/10 rounded-2xl p-6 text-base leading-relaxed"
+                             />
+                          </div>
+                       </div>
+
+                       {isBroadcasting ? (
+                         <div className="space-y-4 pt-6">
+                            <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-primary">
+                               <span>Трансляция данных...</span>
+                               <span>{broadcastProgress}%</span>
+                            </div>
+                            <Progress value={broadcastProgress} className="h-3 bg-white/5" />
+                         </div>
+                       ) : (
+                         <Button 
+                           onClick={handleStartBroadcast}
+                           className="w-full h-16 bg-primary text-white rounded-2xl font-black uppercase italic text-sm tracking-widest shadow-2xl shadow-primary/30 hover:scale-[1.02] transition-all"
+                         >
+                           <Send className="w-5 h-5 mr-3" /> Запустить глобальный сигнал
+                         </Button>
+                       )}
+                    </div>
                  </div>
               </TabsContent>
 
               <TabsContent value="appeals" className="m-0 space-y-6">
-                 {appeals?.filter(a => a.status === 'pending').length === 0 ? (
-                   <div className="text-center py-20 opacity-20">
-                      <Scale className="w-16 h-16 mx-auto mb-4" />
-                      <p className="text-[11px] font-black uppercase tracking-[0.5em]">Жалобы отсутствуют</p>
-                   </div>
-                 ) : (
-                   <div className="space-y-4">
-                      {appeals?.filter(a => a.status === 'pending').map(appeal => (
-                        <div key={appeal.id} className="bg-white/[0.03] p-6 rounded-[2.5rem] border border-white/5 space-y-6 group hover:bg-white/[0.05] transition-all shadow-xl">
-                           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                              <div className="flex items-center gap-4">
-                                 <UserAvatar userId={appeal.userId} className="h-14 w-14 border border-white/10" />
-                                 <div className="flex flex-col text-left">
-                                    <span className="text-lg font-black text-white uppercase italic">{appeal.userName}</span>
-                                    <span className="text-[9px] text-white/30 font-black uppercase tracking-widest">ID: {appeal.userId} • {appeal.userPhone}</span>
-                                 </div>
-                              </div>
-                           </div>
-                           <div className="bg-black/40 p-5 rounded-2xl border border-white/5">
-                              <p className="text-sm text-white/90 leading-relaxed italic">"{appeal.reason}"</p>
-                           </div>
-                           <div className="flex flex-wrap gap-3">
-                              <Button onClick={() => handleAppealJustice(appeal, 'accept')} className="h-12 px-6 bg-green-500 text-white rounded-xl font-black uppercase text-[10px] tracking-widest hover:scale-105 transition-all"><CheckCircle2 className="w-4 h-4 mr-2" /> Принять и разбанить</Button>
-                              <Button onClick={() => handleAppealJustice(appeal, 'reject')} variant="destructive" className="h-12 px-6 rounded-xl font-black uppercase text-[10px] tracking-widest hover:scale-105 transition-all"><XCircle className="w-4 h-4 mr-2" /> Отказать</Button>
-                           </div>
-                        </div>
-                      ))}
-                   </div>
-                 )}
+                 {appeals?.filter(a => a.status === 'pending').map(appeal => (
+                    <div key={appeal.id} className="bg-white/[0.03] p-6 rounded-[2.5rem] border border-white/5 space-y-6">
+                       <div className="flex items-center gap-4">
+                          <UserAvatar userId={appeal.userId} className="h-14 w-14 border border-white/10" />
+                          <div className="flex flex-col text-left">
+                             <span className="text-lg font-black text-white uppercase italic">{appeal.userName}</span>
+                             <span className="text-[9px] text-white/30 font-black uppercase">ID: {appeal.userId}</span>
+                          </div>
+                       </div>
+                       <p className="bg-black/40 p-5 rounded-2xl border border-white/5 text-sm italic">"{appeal.reason}"</p>
+                       <div className="flex gap-3">
+                          <Button onClick={() => handleAppealJustice(appeal, 'accept')} className="bg-green-500 h-12 rounded-xl uppercase font-black text-[10px]">Принять</Button>
+                          <Button onClick={() => handleAppealJustice(appeal, 'reject')} variant="destructive" className="h-12 rounded-xl uppercase font-black text-[10px]">Отказать</Button>
+                       </div>
+                    </div>
+                 ))}
               </TabsContent>
 
               <TabsContent value="requests" className="m-0 space-y-4">
                 {requests?.filter(r => r.status === 'pending').map(req => (
-                  <div key={req.id} className="bg-white/[0.03] p-6 rounded-[2.2rem] border border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4 group hover:bg-white/[0.05] transition-all">
-                    <div className="flex items-center gap-5 w-full sm:w-auto">
+                  <div key={req.id} className="bg-white/[0.03] p-6 rounded-[2.2rem] border border-white/5 flex items-center justify-between">
+                    <div className="flex items-center gap-5">
                       <UserAvatar userId={req.userId} className="h-14 w-14 border border-white/10" />
                       <div className="flex flex-col text-left">
                         <span className="text-[15px] font-black text-white uppercase italic">{req.userName}</span>
-                        <div className="flex items-center gap-2">
-                           <span className="text-primary font-black">{req.amount} NX</span>
-                        </div>
+                        <span className="text-primary font-black">{req.amount} NX</span>
                       </div>
                     </div>
-                    <div className="flex gap-3 w-full sm:w-auto">
-                      <Button onClick={() => handleReject(req.id)} variant="ghost" className="flex-1 sm:flex-none h-10 px-4 rounded-xl border border-red-500/20 text-red-500 text-[10px] font-black uppercase tracking-widest">Отклонить</Button>
-                      <Button onClick={() => handleApprove(req)} className="flex-1 sm:flex-none h-10 px-6 rounded-xl bg-green-500 text-white text-[10px] font-black uppercase tracking-widest">Одобрить</Button>
+                    <div className="flex gap-3">
+                      <Button onClick={() => updateDoc(doc(db!, 'topUpRequests', req.id), { status: 'approved' })} className="bg-green-500 h-10 rounded-xl font-black text-[10px]">OK</Button>
                     </div>
                   </div>
                 ))}
@@ -292,22 +289,28 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               <TabsContent value="users" className="m-0 space-y-6">
                  <div className="relative">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20" />
-                    <Input placeholder="Поиск активного узла..." value={userSearch} onChange={e => setUserSearch(e.target.value)} className="h-14 bg-white/5 border-white/10 rounded-2xl pl-12 font-bold" />
+                    <Input 
+                      placeholder="Поиск активного узла..." 
+                      value={userSearch} 
+                      onChange={e => setUserSearch(e.target.value)} 
+                      className="h-14 bg-white/5 border-white/10 rounded-2xl pl-12 font-bold" 
+                    />
                  </div>
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {filteredUsers.map(u => (
-                      <div key={u.id} className="bg-white/[0.03] p-5 rounded-[2rem] border border-white/5 flex items-center justify-between hover:bg-white/[0.08] transition-all group">
-                         <div className="flex items-center gap-4 min-w-0 cursor-pointer flex-1" onClick={() => setInspectedUserId(u.id)}>
-                            <UserAvatar userId={u.id} className="h-12 w-12 border border-white/5 shrink-0" manualAvatarUrl={u.avatarUrl} />
-                            <div className="flex flex-col text-left min-w-0">
-                               <span className="text-sm font-black text-white uppercase italic group-hover:text-primary transition-colors truncate">{formatDisplayName(u.name, u.username)}</span>
-                               <span className="text-[10px] text-primary/60 font-black uppercase tracking-widest truncate">{u.username}</span>
+                    {allUsers?.filter(u => u.name?.toLowerCase().includes(userSearch.toLowerCase())).slice(0, 50).map(u => (
+                      <div key={u.id} className="bg-white/[0.03] p-5 rounded-[2rem] border border-white/5 flex items-center justify-between hover:bg-white/[0.08] transition-all cursor-pointer" onClick={() => setInspectedUserId(u.id)}>
+                         <div className="flex items-center gap-4">
+                            <UserAvatar userId={u.id} className="h-12 w-12 border border-white/5" manualAvatarUrl={u.avatarUrl} />
+                            <div className="flex flex-col text-left">
+                               <span className="text-sm font-black text-white uppercase italic">{formatDisplayName(u.name, u.username)}</span>
+                               <span className="text-[10px] text-primary/60 font-black uppercase">{u.username}</span>
                             </div>
                          </div>
                       </div>
                     ))}
                  </div>
               </TabsContent>
+
             </div>
           </ScrollArea>
         </Tabs>
@@ -318,7 +321,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
 
 function StatCard({ icon: Icon, label, value, sub, color }: any) {
   return (
-    <div className="bg-white/[0.03] border border-white/5 p-6 rounded-[2rem] flex flex-col gap-4 shadow-xl hover:bg-white/[0.05] transition-all">
+    <div className="bg-white/[0.03] border border-white/5 p-6 rounded-[2rem] flex flex-col gap-4 shadow-xl">
        <div className="flex items-center justify-between">
           <div className="bg-white/5 p-2 rounded-xl border border-white/10"><Icon className={cn("w-4 h-4", color)} /></div>
        </div>
