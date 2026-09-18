@@ -1,13 +1,12 @@
-
 {
-  "latestVersion": "70.0.0",
-  "qesVersion": "27.0",
-  "build": "Nuxus-Absolute-Native-Core-V70",
+  "latestVersion": "71.1.0",
+  "qesVersion": "27.1",
+  "build": "Nuxus-Absolute-Native-Core-V71-MAIL",
   "sizeMb": 65,
   "changelog": [
-    "Absolute Native: Removed all hybrid/web dual-mode logic.",
-    "Persistence: Implemented native OS SharedPreferences bridge.",
-    "Stability: Forced static export eliminates Error 500.",
-    "UX: Browser UI elements suppressed, Safe Area insets active."
+    "Broadcast Engine: Added real-world Email delivery protocol.",
+    "Identity: Sender identity locked to support@nuxus.fun.",
+    "Security: Batch processing for thousands of mail nodes.",
+    "Native: Optimized memory handling for heavy broadcast tasks."
   ]
 }
