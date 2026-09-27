@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -6,7 +7,7 @@ import { useDoc } from '@/firebase/firestore/use-doc';
 import { useAppState } from '@/lib/app-state';
 import AuthScreen from '@/components/auth-screen';
 import ChatMain from '@/components/chat-main';
-import { Fingerprint, AlertTriangle, KeyRound, Smartphone, ShieldCheck, Loader2 } from 'lucide-react';
+import { Fingerprint, AlertTriangle, KeyRound, Smartphone, ShieldCheck, Loader2, Lock } from 'lucide-react';
 import { doc } from 'firebase/firestore';
 import type { User as UserType } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -18,9 +19,9 @@ import { NuxusLogo } from '@/components/nuxus-logo';
 import { checkBiometric } from '@/services/biometric-service';
 
 /**
- * NUXUS HOME GATE V72.0 «BIOMETRIC SECURE»
+ * NUXUS HOME GATE V73.0 «STABILITY PATCH»
  * Основная точка входа мессенджера (Entry Point).
- * Интегрирована поддержка Face ID и динамической длины PIN.
+ * ИСПРАВЛЕНО: Импорты иконок для предотвращения краха рендеринга.
  */
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -41,7 +42,6 @@ export default function Home() {
   const { data: profile, isLoading: isProfileLoading } = useDoc<UserType>(userProfileRef);
   
   useEffect(() => {
-    // Проверка поддержки биометрии устройством
     if (typeof window !== 'undefined' && (window as any).PublicKeyCredential) {
       setIsBiometricAvailable(true);
     }
@@ -57,7 +57,6 @@ export default function Home() {
         setIs2FAVerified(true);
         return;
       }
-      // Визуальный и тактильный отклик при ошибке
       if (window.navigator?.vibrate) window.navigator.vibrate(200);
       toast({ title: "Неверный код доступа", variant: "destructive" });
       setTwoFactorInput('');
@@ -81,19 +80,11 @@ export default function Home() {
     }
   };
 
-  // Автоматический Face ID при входе в защищенный режим
-  useEffect(() => {
-    if (profile?.twoFactorEnabled && !is2FAVerified && isBiometricAvailable && !isAuthenticating) {
-       // Мы не вызываем его автоматически, чтобы не пугать пользователя, 
-       // но кнопка будет доступна.
-    }
-  }, [profile?.twoFactorEnabled, is2FAVerified, isBiometricAvailable]);
-
   if (isUserLoading || (user && isProfileLoading)) {
     return (
       <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#010103] text-white">
         <NuxusLogo size={60} className="animate-pulse opacity-40" />
-        <p className="mt-8 text-[8px] font-black uppercase tracking-[0.6em] text-primary/40">Syncing Engine V72.0</p>
+        <p className="mt-8 text-[8px] font-black uppercase tracking-[0.6em] text-primary/40">Syncing Engine V73.0</p>
       </div>
     );
   }
@@ -121,7 +112,6 @@ export default function Home() {
 
     return (
       <div className="h-screen w-full flex items-center justify-center bg-[#010103] relative px-6 overflow-hidden">
-        {/* Background Effects */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.1)_0%,transparent_70%)] pointer-events-none" />
         
         <div className="w-full max-w-[380px] space-y-12 text-center animate-in fade-in zoom-in-95 duration-700 relative z-10">
@@ -149,7 +139,6 @@ export default function Home() {
                    const val = e.target.value.replace(/\D/g, '');
                    setTwoFactorInput(val);
                    if (val.length === pinLength) {
-                      // Автоматическая проверка при заполнении всех цифр
                       setTimeout(() => {
                          if (val === profile.twoFactorPin) {
                             setIs2FAVerified(true);

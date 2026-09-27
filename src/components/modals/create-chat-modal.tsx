@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useAppState } from '@/lib/store';
+import { useAppState } from '@/lib/app-state';
 import { useFirestore, useUser } from '@/firebase/provider';
 import { Users, Radio, MessageSquarePlus, ArrowRight, Loader2, Search, Zap, Globe, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -20,8 +20,8 @@ interface CreateChatModalProps {
 }
 
 /**
- * CREATE CHAT MODAL V5.3.0
- * FIXED: Direct imports from provider.
+ * CREATE CHAT MODAL V73.0 «STABILITY FIX»
+ * ИСПРАВЛЕНО: Импорт useAppState из корректного файла app-state.
  */
 export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
   const { user } = useUser();
@@ -105,7 +105,6 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
         {step === 'select' ? (
           <div className="p-8 pt-2 space-y-8 relative z-10">
             <div className="grid grid-cols-2 gap-4">
-              {/* GROUP CARD */}
               <button 
                 onClick={() => { setType('group'); setStep('details'); }}
                 className="group relative h-40 rounded-[2.2rem] overflow-hidden border border-white/5 bg-white/[0.02] hover:bg-primary/5 hover:border-primary/40 transition-all duration-500 active:scale-95"
@@ -122,7 +121,6 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
                 </div>
               </button>
 
-              {/* CHANNEL CARD */}
               <button 
                 onClick={() => { setType('channel'); setStep('details'); }}
                 className="group relative h-40 rounded-[2.2rem] overflow-hidden border border-white/5 bg-white/[0.02] hover:bg-accent/5 hover:border-accent/40 transition-all duration-500 active:scale-95"
@@ -152,7 +150,7 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
                 className="w-full h-14 bg-white/[0.03] border border-white/10 rounded-2xl flex items-center justify-center gap-3 group hover:bg-white/[0.06] hover:border-white/20 transition-all active:scale-98 shadow-xl"
               >
                 <Search className="w-4 h-4 text-primary group-hover:scale-110 transition-transform" />
-                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/80">Найти пользователя</span>
+                <span className="text-10px font-black uppercase tracking-[0.3em] text-white/80">Найти пользователя</span>
               </button>
             </div>
           </div>

@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useFirestore, useUser } from '@/firebase/provider';
 import { collection, query, where, getDocs, limit, addDoc } from 'firebase/firestore';
-import { useAppState } from '@/lib/store.tsx';
+import { useAppState } from '@/lib/app-state';
 import { useToast } from '@/hooks/use-toast';
 import { Search, Loader2, ArrowRight, Globe, User, Bot, BotOff } from 'lucide-react';
 import { UserAvatar } from '@/components/user-avatar';
@@ -16,8 +16,8 @@ import { cn } from '@/lib/utils';
 type SearchFilter = 'all' | 'users' | 'groups' | 'bots';
 
 /**
- * ГЛОБАЛЬНЫЙ ПОИСК V9.1.0 «ACCESSIBILITY SYNC»
- * FIXED: Proper DialogTitle hierarchy to prevent console errors.
+ * ГЛОБАЛЬНЫЙ ПОИСК V73.0 «STABILITY FIX»
+ * ИСПРАВЛЕНО: Импорт useAppState из корректного файла.
  */
 export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const { user } = useUser();
@@ -44,7 +44,6 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
       
       const foundResults: any[] = [];
 
-      // 1. Search in Users (including bots registered as users)
       const userQ = query(
         collection(db, 'users'),
         where('usernameLowercase', '>=', searchTarget),
@@ -52,7 +51,6 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
         limit(20)
       );
 
-      // 2. Search in Bots collection specifically
       const botQ = query(
         collection(db, 'bots'),
         where('usernameLowercase', '>=', searchTarget),
@@ -73,7 +71,6 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
         }
       });
 
-      // 3. Groups search
       if (activeFilter === 'all' || activeFilter === 'groups') {
         const chatQ = query(collection(db, 'chats'), where('isPublic', '==', true), limit(10));
         const chatSnap = await getDocs(chatQ);
