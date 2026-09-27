@@ -8,7 +8,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
-import { useFirestore, useCollection } from '@/firebase/provider'; 
+import { useFirestore } from '@/firebase/provider'; 
+import { useCollection } from '@/firebase/firestore/use-collection';
+import { useMemoFirebase } from '@/firebase/firestore/use-memo-firebase';
 import { collection, query, doc, limit, writeBatch, orderBy } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
@@ -22,8 +24,9 @@ import { useToast } from '@/hooks/use-toast';
 import { useAppState } from '@/lib/app-state';
 
 /**
- * ADMIN PANEL MODAL V71.1 «REAL MAIL EDITION»
- * Реализована система рассылки на реальные почтовые ящики пользователей.
+ * ADMIN PANEL MODAL V73.1 «STABILITY PATCH»
+ * ИСПРАВЛЕНО: Прямые импорты хуков из файловой системы.
+ * Стабилизированы запросы Firestore для предотвращения бесконечных циклов рендеринга.
  */
 export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const db = useFirestore();
@@ -39,34 +42,34 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   const [isBroadcasting, setIsBroadcasting] = useState(false);
   const [broadcastProgress, setBroadcastProgress] = useState(0);
 
-  // DATA FETCHING
-  const appealsQuery = useMemo(() => {
+  // DATA FETCHING: Стабилизированные запросы через useMemoFirebase
+  const appealsQuery = useMemoFirebase(() => {
     if (!db) return null;
     return query(collection(db, 'appeals'), orderBy('createdAt', 'desc'), limit(50));
   }, [db]);
   const { data: appeals } = useCollection<Appeal>(appealsQuery);
 
-  const topUpRequestsQuery = useMemo(() => {
+  const topUpRequestsQuery = useMemoFirebase(() => {
     if (!db) return null;
     return query(collection(db, 'topUpRequests'), orderBy('createdAt', 'desc'), limit(50));
   }, [db]);
   const { data: requests } = useCollection<TopUpRequest>(topUpRequestsQuery);
 
-  const usersQuery = useMemo(() => {
+  const usersQuery = useMemoFirebase(() => {
     if (!db) return null;
     return query(collection(db, 'users'), limit(1000));
   }, [db]);
   const { data: allUsers } = useCollection<User>(usersQuery);
 
   const stats = useMemo(() => {
-    if (!allUsers) return { total: 0, valid: 0, premium: 0, banned: 0, anomalies: 0, emails: 0 };
+    if (!allUsers) return { total: 0, active: 0, premium: 0, banned: 0, anomalies: 0, emails: 0 };
     
     const banned = allUsers.filter(u => u.isBanned).length;
     const anomalies = allUsers.filter(u => isUserAnomaly(u)).length;
     const premium = allUsers.filter(u => isUserPremium(u)).length;
     const emails = allUsers.filter(u => u.email && u.email.includes('@')).length;
     const total = allUsers.length;
-    const active = total - banned - anomalies;
+    const active = total - banned;
 
     return { 
       total, 
@@ -78,24 +81,20 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     };
   }, [allUsers]);
 
-  /**
-   * ЗАПУСК ГЛОБАЛЬНОЙ РАССЫЛКИ НА РЕАЛЬНЫЕ ПОЧТЫ
-   */
   const handleStartBroadcast = async () => {
     if (!broadcastSubject.trim() || !broadcastBody.trim() || !allUsers || !db) {
-      toast({ title: "Ошибка", description: "Заполните тему и текст рассылки", variant: "destructive" });
+      toast({ title: "Ошибка", description: "Заполните все данные", variant: "destructive" });
       return;
     }
 
-    // Фильтруем только пользователей с настоящей почтой
     const targets = allUsers.filter(u => u.email && u.email.includes('@') && !u.email.includes('@nuxus.app'));
     
     if (targets.length === 0) {
-      toast({ title: "Ошибка", description: "В базе нет пользователей с реальной почтой", variant: "destructive" });
+      toast({ title: "Ошибка", description: "Нет реальных Email адресов", variant: "destructive" });
       return;
     }
 
-    if (!confirm(`ВНИМАНИЕ: Запустить рассылку на ${targets.length} реальных почтовых адресов? Отправитель: support@nuxus.fun`)) return;
+    if (!confirm(`ВНИМАНИЕ: Запустить рассылку на ${targets.length} адресов?`)) return;
 
     setIsBroadcasting(true);
     setBroadcastProgress(0);
@@ -105,50 +104,35 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
       let count = 0;
 
       for (const target of targets) {
-        // Создаем документ в коллекции 'mail' для триггера Firebase Email Extension
         const mailRef = doc(collection(db, 'mail'));
         batch.set(mailRef, {
           to: target.email,
           message: {
             subject: broadcastSubject,
-            html: `<div style="font-family: sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #eee; padding: 20px; border-radius: 10px;">
-                    <div style="text-align: center; margin-bottom: 20px;">
-                      <h1 style="color: #007AFF; margin: 0;">NUXUS KERNEL</h1>
-                      <p style="font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: #999;">Secure Communication System</p>
-                    </div>
-                    <div style="font-size: 16px; color: #444;">
-                      ${broadcastBody.replace(/\n/g, '<br/>')}
-                    </div>
-                    <hr style="border: 0; border-top: 1px solid #eee; margin: 30px 0;"/>
-                    <p style="font-size: 12px; color: #999; text-align: center;">
-                      Это официальное уведомление системы Nuxus. Вы получили это письмо, так как ваш узел зарегистрирован в сети.<br/>
-                      © 2024 Nuxus Sovereign Platforms.
-                    </p>
-                   </div>`,
-            text: broadcastBody.replace(/<[^>]*>?/gm, ''), // Чистый текст как запасной вариант
+            html: `<div style="font-family: sans-serif; padding: 20px;">${broadcastBody.replace(/\n/g, '<br/>')}</div>`,
+            text: broadcastBody,
           },
           from: 'Nuxus Support <support@nuxus.fun>',
           createdAt: new Date().toISOString()
         });
         
         count++;
-        // Обновляем прогресс каждые 5 писем
-        if (count % 5 === 0 || count === targets.length) {
+        if (count % 10 === 0 || count === targets.length) {
           setBroadcastProgress(Math.round((count / targets.length) * 100));
         }
       }
 
       await batch.commit();
-      toast({ title: "Рассылка активирована", description: `Пакет из ${targets.length} писем успешно передан на почтовый шлюз.` });
+      toast({ title: "Рассылка активирована", description: `Пакет из ${targets.length} писем отправлен.` });
       setBroadcastSubject('');
       setBroadcastBody('');
     } catch (e) {
-      toast({ title: "Сбой почтового шлюза", variant: "destructive" });
+      toast({ title: "Сбой шлюза", variant: "destructive" });
     } finally {
       setTimeout(() => {
         setIsBroadcasting(false);
         setBroadcastProgress(0);
-      }, 1500);
+      }, 1000);
     }
   };
 
@@ -164,7 +148,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               </div>
               <div className="flex flex-col text-left">
                 <DialogTitle className="text-3xl font-black uppercase italic text-white tracking-tighter leading-none">AEGIS BROADCAST</DialogTitle>
-                <DialogDescription className="text-[10px] font-black uppercase text-primary/60 mt-2 tracking-widest">Global Communication Terminal v71.1</DialogDescription>
+                <DialogDescription className="text-[10px] font-black uppercase text-primary/60 mt-2 tracking-widest">Global Communication Terminal v73.1</DialogDescription>
               </div>
             </div>
             <div className="hidden md:flex items-center gap-6 bg-black/40 px-6 py-3 rounded-2xl border border-white/5">
@@ -175,7 +159,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                <div className="w-px h-8 bg-white/10" />
                <div className="flex flex-col items-center">
                   <span className="text-xl font-black text-primary italic">{stats.total}</span>
-                  <span className="text-[7px] font-bold text-white/40 uppercase">Total Nodes</span>
+                  <span className="text-[7px] font-bold text-white/40 uppercase">Nodes</span>
                </div>
             </div>
           </div>
@@ -206,66 +190,77 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
 
               <TabsContent value="broadcast" className="m-0 space-y-6">
                  <div className="bg-white/5 p-8 rounded-[2.5rem] border border-white/10 space-y-8 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-10 opacity-5 -z-0"><Send className="w-40 h-40" /></div>
-                    
                     <div className="space-y-4 relative z-10">
-                       <div className="flex items-center justify-between">
-                          <div className="flex flex-col gap-1">
-                             <h3 className="text-xl font-black text-white italic uppercase tracking-tight flex items-center gap-3">
-                                <Sparkles className="w-6 h-6 text-primary" /> Реальная Email Рассылка
-                             </h3>
-                             <p className="text-[9px] text-white/30 font-bold uppercase tracking-widest">Сообщение уйдет на личные почты пользователей</p>
-                          </div>
-                          <div className="bg-primary/20 px-3 py-1.5 rounded-xl text-[9px] font-black text-primary uppercase tracking-widest border border-primary/20">
-                             Sender: support@nuxus.fun
-                          </div>
-                       </div>
-                       
+                       <h3 className="text-xl font-black text-white italic uppercase tracking-tight flex items-center gap-3">
+                          <Sparkles className="w-6 h-6 text-primary" /> Реальная Email Рассылка
+                       </h3>
                        <div className="space-y-6 pt-4">
                           <div className="space-y-2">
-                             <label className="text-[10px] font-black uppercase text-white/40 ml-2 tracking-widest">Тема письма (Subject)</label>
+                             <label className="text-[10px] font-black uppercase text-white/40 ml-2 tracking-widest">Тема письма</label>
                              <Input 
-                               placeholder="Пример: Важное обновление Nuxus Kernel..." 
+                               placeholder="Тема..." 
                                value={broadcastSubject}
                                onChange={e => setBroadcastSubject(e.target.value)}
-                               className="h-14 bg-black/40 border-white/10 rounded-2xl text-lg font-bold placeholder:text-white/5"
+                               className="h-14 bg-black/40 border-white/10 rounded-2xl text-lg font-bold"
                              />
                           </div>
                           <div className="space-y-2">
                              <label className="text-[10px] font-black uppercase text-white/40 ml-2 tracking-widest">Текст сообщения</label>
                              <Textarea 
-                               placeholder="Введите текст, который пользователи увидят в своих почтовых ящиках..." 
+                               placeholder="Текст..." 
                                value={broadcastBody}
                                onChange={e => setBroadcastBody(e.target.value)}
-                               className="min-h-[250px] bg-black/40 border-white/10 rounded-2xl p-6 text-base leading-relaxed placeholder:text-white/5"
+                               className="min-h-[250px] bg-black/40 border-white/10 rounded-2xl p-6 text-base"
                              />
                           </div>
                        </div>
 
                        {isBroadcasting ? (
                          <div className="space-y-4 pt-6">
-                            <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-primary animate-pulse">
-                               <span>Трансляция данных в почтовую сеть...</span>
-                               <span>{broadcastProgress}%</span>
-                            </div>
                             <Progress value={broadcastProgress} className="h-3 bg-white/5" />
+                            <p className="text-[10px] font-black text-primary uppercase text-center animate-pulse">Трансляция сигнала: {broadcastProgress}%</p>
                          </div>
                        ) : (
                          <Button 
                            onClick={handleStartBroadcast}
-                           className="w-full h-16 bg-primary text-white rounded-2xl font-black uppercase italic text-sm tracking-widest shadow-2xl shadow-primary/30 hover:scale-[1.01] active:scale-95 transition-all mt-4"
+                           className="w-full h-16 bg-primary text-white rounded-2xl font-black uppercase italic text-sm tracking-widest shadow-2xl active:scale-95 transition-all mt-4"
                          >
-                           <Send className="w-5 h-5 mr-3" /> Разослать по реальным почтам
+                           <Send className="w-5 h-5 mr-3" /> Запустить рассылку
                          </Button>
                        )}
                     </div>
                  </div>
               </TabsContent>
 
-              {/* Остальные вкладки без изменений для экономии места */}
               <TabsContent value="appeals" className="m-0 py-10 text-center opacity-20">
                  <ShieldAlert className="w-12 h-12 mx-auto mb-4" />
-                 <p className="text-[10px] font-black uppercase tracking-widest">Модуль апелляций в спящем режиме</p>
+                 <p className="text-[10px] font-black uppercase tracking-widest">Раздел в разработке</p>
+              </TabsContent>
+
+              <TabsContent value="users" className="m-0 space-y-4">
+                 <div className="relative mb-6">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20" />
+                    <Input 
+                      placeholder="Поиск узла..." 
+                      value={userSearch}
+                      onChange={e => setUserSearch(e.target.value)}
+                      className="pl-12 h-14 bg-white/5 border-white/10 rounded-2xl"
+                    />
+                 </div>
+                 <div className="grid grid-cols-1 gap-2">
+                    {allUsers?.filter(u => u.name?.toLowerCase().includes(userSearch.toLowerCase()) || u.username?.toLowerCase().includes(userSearch.toLowerCase())).slice(0, 20).map(u => (
+                      <div key={u.id} onClick={() => setInspectedUserId(u.id)} className="flex items-center justify-between p-4 bg-white/5 rounded-2xl hover:bg-white/10 cursor-pointer border border-white/5 transition-all">
+                         <div className="flex items-center gap-4">
+                            <UserAvatar userId={u.id} className="h-10 w-10" manualAvatarUrl={u.avatarUrl} />
+                            <div className="flex flex-col text-left">
+                               <span className="font-bold text-sm text-white">{u.name}</span>
+                               <span className="text-[10px] text-white/30 uppercase font-black">{u.username}</span>
+                            </div>
+                         </div>
+                         <Button variant="ghost" size="icon" className="text-white/20"><Zap className="w-4 h-4" /></Button>
+                      </div>
+                    ))}
+                 </div>
               </TabsContent>
             </div>
           </ScrollArea>
