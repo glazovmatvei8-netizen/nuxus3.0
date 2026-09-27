@@ -1,7 +1,7 @@
+
 /**
- * Nuxus Biometric Service v5.0 (Absolute Stability)
- * Использует WebAuthn API для вызова Face ID без внешних NPM пакетов.
- * Гарантирует работу в Safari и Capacitor WebView.
+ * NUXUS BIOMETRIC SERVICE V5.5 (Pulse Protocol)
+ * Восстановленная стабильная версия для Capacitor и Safari.
  */
 export async function checkBiometric(): Promise<boolean> {
   // Если браузер не поддерживает WebAuthn, считаем проверку пройденной (Legacy support)
@@ -36,7 +36,7 @@ export async function checkBiometric(): Promise<boolean> {
     return !!result;
   } catch (error: any) {
     console.warn("Nuxus Biometric Signal Rejected:", error.name);
-    // Если пользователь нажал "Отмена" или сбой датчика
+    // Ошибка NotAllowedError означает, что пользователь нажал "Отмена"
     return false;
   }
 }

@@ -1,7 +1,7 @@
 
 "use client"
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useUser, useFirestore, useAuth } from '@/firebase/provider';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { useAppState } from '@/lib/app-state';
@@ -19,9 +19,8 @@ import { NuxusLogo } from '@/components/nuxus-logo';
 import { checkBiometric } from '@/services/biometric-service';
 
 /**
- * NUXUS HOME GATE V73.0 «STABILITY PATCH»
- * Основная точка входа мессенджера (Entry Point).
- * ИСПРАВЛЕНО: Импорты иконок для предотвращения краха рендеринга.
+ * NUXUS HOME GATE V74.0 «PULSE BIOMETRIC»
+ * Восстановленная стабильная версия Face ID и 2FA.
  */
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -33,6 +32,15 @@ export default function Home() {
   const [twoFactorInput, setTwoFactorInput] = useState('');
   const [isBiometricAvailable, setIsBiometricAvailable] = useState(false);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+    // Проверка поддержки биометрии в браузере/WebView
+    if (typeof window !== 'undefined' && (window as any).PublicKeyCredential) {
+      setIsBiometricAvailable(true);
+    }
+  }, []);
 
   const userProfileRef = useMemo(() => {
     if (!db || !user) return null;
@@ -41,50 +49,62 @@ export default function Home() {
 
   const { data: profile, isLoading: isProfileLoading } = useDoc<UserType>(userProfileRef);
   
-  useEffect(() => {
-    if (typeof window !== 'undefined' && (window as any).PublicKeyCredential) {
-      setIsBiometricAvailable(true);
-    }
-  }, []);
+  const isBanned = useMemo(() => isUserActuallyBanned(profile), [profile]);
+  const isAnomaly = useMemo(() => isUserAnomaly(profile), [profile]);
 
-  const isBanned = isUserActuallyBanned(profile);
-  const isAnomaly = isUserAnomaly(profile);
-
-  const handleVerify2FA = async () => {
+  const handleVerify2FA = useCallback(async (manualInput?: string) => {
     if (!profile) return;
+    const inputToVerify = manualInput || twoFactorInput;
     try {
-      if (profile.twoFactorEnabled && twoFactorInput === profile.twoFactorPin) {
+      if (profile.twoFactorEnabled && inputToVerify === profile.twoFactorPin) {
         setIs2FAVerified(true);
+        toast({ title: "Доступ разрешен" });
         return;
       }
-      if (window.navigator?.vibrate) window.navigator.vibrate(200);
-      toast({ title: "Неверный код доступа", variant: "destructive" });
-      setTwoFactorInput('');
+      
+      if (inputToVerify.length >= (parseInt(profile.twoFactorPinLength || '6'))) {
+        if (window.navigator?.vibrate) window.navigator.vibrate(200);
+        toast({ title: "Неверный код доступа", variant: "destructive" });
+        setTwoFactorInput('');
+      }
     } catch (e) {
       toast({ title: "Ошибка модуля защиты", variant: "destructive" });
     }
-  };
+  }, [profile, twoFactorInput, setIs2FAVerified, toast]);
 
   const handleFaceID = async () => {
     setIsAuthenticating(true);
     try {
+      // Вызов нативного Face ID / Touch ID
       const ok = await checkBiometric();
       if (ok) {
         setIs2FAVerified(true);
         toast({ title: "Личность подтверждена" });
+      } else {
+        toast({ title: "Биометрия не распознана", variant: "destructive" });
       }
     } catch (e) {
-      console.warn("FaceID fail");
+      console.warn("Nuxus FaceID: Signal Rejected");
     } finally {
       setIsAuthenticating(false);
     }
   };
 
-  if (isUserLoading || (user && isProfileLoading)) {
+  // Эффект для автоматической проверки PIN при вводе
+  useEffect(() => {
+    if (profile?.twoFactorEnabled) {
+      const targetLength = parseInt(profile.twoFactorPinLength || '6');
+      if (twoFactorInput.length === targetLength) {
+        handleVerify2FA();
+      }
+    }
+  }, [twoFactorInput, profile, handleVerify2FA]);
+
+  if (!isMounted || isUserLoading || (user && isProfileLoading)) {
     return (
       <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#010103] text-white">
-        <NuxusLogo size={60} className="animate-pulse opacity-40" />
-        <p className="mt-8 text-[8px] font-black uppercase tracking-[0.6em] text-primary/40">Syncing Engine V73.0</p>
+        <NuxusLogo size={80} className="animate-pulse opacity-40" />
+        <p className="mt-8 text-[8px] font-black uppercase tracking-[0.6em] text-primary/40">Syncing Engine V74.0</p>
       </div>
     );
   }
@@ -94,7 +114,7 @@ export default function Home() {
   if (isBanned || isAnomaly) {
     return (
       <div className="h-screen flex flex-col items-center justify-center bg-[#010103] p-8 text-center text-white space-y-8">
-        <div className="w-24 h-24 rounded-3xl bg-red-500/10 flex items-center justify-center border border-red-500/20">
+        <div className="w-24 h-24 rounded-3xl bg-red-500/10 flex items-center justify-center border border-red-500/20 shadow-[0_0_50px_rgba(239,68,68,0.2)]">
            <AlertTriangle className="w-12 h-12 text-red-500" />
         </div>
         <div className="space-y-2">
@@ -112,51 +132,47 @@ export default function Home() {
 
     return (
       <div className="h-screen w-full flex items-center justify-center bg-[#010103] relative px-6 overflow-hidden">
+        {/* Background Aura */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.1)_0%,transparent_70%)] pointer-events-none" />
         
-        <div className="w-full max-w-[380px] space-y-12 text-center animate-in fade-in zoom-in-95 duration-700 relative z-10">
+        <div className="w-full max-w-[400px] space-y-12 text-center animate-in fade-in zoom-in-95 duration-700 relative z-10">
           <div className="flex flex-col items-center gap-6">
-             <div className="h-20 w-20 rounded-[2.2rem] bg-primary/10 border border-primary/20 flex items-center justify-center shadow-2xl relative overflow-hidden">
-                <div className="absolute inset-0 bg-primary/5 animate-pulse" />
-                <Lock className="w-10 h-10 text-primary relative z-10" />
+             <div className="h-24 w-24 rounded-[2.5rem] bg-primary/10 border border-primary/20 flex items-center justify-center shadow-[0_0_50px_rgba(168,85,247,0.2)] relative overflow-hidden group">
+                <div className="absolute inset-0 bg-primary/5 group-hover:animate-pulse" />
+                <Lock className="w-12 h-12 text-primary relative z-10" />
              </div>
              <div className="space-y-2">
                 <h2 className="text-3xl font-black uppercase italic text-white tracking-tighter">Личность</h2>
-                <p className="text-[9px] font-bold text-white/20 uppercase tracking-[0.4em]">Hardware Encryption Protocol Active</p>
+                <p className="text-[9px] font-bold text-white/20 uppercase tracking-[0.4em]">Pulse Protection Active</p>
              </div>
           </div>
 
-          <div className="space-y-8">
+          <div className="space-y-10">
             <div className="space-y-4">
-              <Input 
-                type="password" 
-                placeholder={"•".repeat(pinLength)} 
-                maxLength={pinLength} 
-                autoFocus
-                className="bg-white/[0.03] border-white/5 h-24 text-5xl tracking-[0.5em] text-center rounded-[2rem] font-black text-white focus:border-primary/40 transition-all shadow-inner"
-                value={twoFactorInput}
-                onChange={e => {
-                   const val = e.target.value.replace(/\D/g, '');
-                   setTwoFactorInput(val);
-                   if (val.length === pinLength) {
-                      setTimeout(() => {
-                         if (val === profile.twoFactorPin) {
-                            setIs2FAVerified(true);
-                         }
-                      }, 100);
-                   }
-                }}
-                onKeyDown={e => e.key === 'Enter' && handleVerify2FA()}
-              />
-              <p className="text-[7px] font-black text-white/10 uppercase tracking-widest">Введите {pinLength}-значный код авторизации</p>
+              <div className="relative">
+                <Input 
+                  type="password" 
+                  placeholder={"•".repeat(pinLength)} 
+                  maxLength={pinLength} 
+                  autoFocus
+                  className="bg-white/[0.03] border-white/5 h-24 text-5xl tracking-[0.5em] text-center rounded-[2.5rem] font-black text-white focus:border-primary/40 transition-all shadow-inner"
+                  value={twoFactorInput}
+                  onChange={e => {
+                     const val = e.target.value.replace(/\D/g, '');
+                     setTwoFactorInput(val);
+                  }}
+                  onKeyDown={e => e.key === 'Enter' && handleVerify2FA()}
+                />
+              </div>
+              <p className="text-[7px] font-black text-white/10 uppercase tracking-widest">Введите {pinLength}-значный код доступа</p>
             </div>
 
             <div className="flex flex-col gap-4">
               <Button 
-                onClick={handleVerify2FA} 
-                className="w-full h-16 rounded-[1.8rem] bg-primary text-white font-black uppercase italic tracking-widest shadow-2xl shadow-primary/30 active:scale-95 transition-all text-xs"
+                onClick={() => handleVerify2FA()} 
+                className="w-full h-16 rounded-2xl bg-primary text-white font-black uppercase italic tracking-widest shadow-2xl shadow-primary/30 active:scale-95 transition-all text-xs"
               >
-                Подтвердить Личность
+                Подтвердить код
               </Button>
 
               {isBiometricAvailable && (
@@ -164,13 +180,13 @@ export default function Home() {
                   variant="ghost" 
                   onClick={handleFaceID}
                   disabled={isAuthenticating}
-                  className="w-full h-16 rounded-[1.8rem] bg-white/5 border border-white/10 text-white font-black uppercase italic tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-3"
+                  className="w-full h-16 rounded-2xl bg-white/5 border border-white/10 text-white font-black uppercase italic tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-4 group"
                 >
                   {isAuthenticating ? (
-                    <Loader2 className="w-5 h-5 text-primary animate-spin" />
+                    <Loader2 className="w-6 h-6 text-primary animate-spin" />
                   ) : (
                     <>
-                      <Fingerprint className="w-5 h-5 text-primary" />
+                      <Fingerprint className="w-6 h-6 text-primary group-hover:scale-110 transition-transform" />
                       Использовать Face ID
                     </>
                   )}
@@ -182,7 +198,7 @@ export default function Home() {
 
         <div className="absolute bottom-10 left-0 right-0 flex flex-col items-center gap-3 opacity-20">
            <ShieldCheck className="w-5 h-5 text-primary" />
-           <span className="text-[7px] font-black uppercase tracking-[0.5em] text-white">Nuxus Secure Enclave Link established</span>
+           <span className="text-[7px] font-black uppercase tracking-[0.5em] text-white">Nuxus Secure Enclave Link Established</span>
         </div>
       </div>
     );

@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -9,7 +10,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase/provider';
+import { useAuth, useUser, useFirestore } from '@/firebase/provider';
+import { useDoc } from '@/firebase/firestore/use-doc';
+import { useMemoFirebase } from '@/firebase/firestore/use-memo-firebase';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Settings2, Camera, ShieldCheck, Loader2, Fingerprint, Palette, 
@@ -26,8 +29,8 @@ import type { User } from '@/lib/types';
 import versions from '@/app/versions.json';
 
 /**
- * SETTINGS MODAL V72.0 «BIOMETRIC SYNC»
- * Добавлен выбор длины PIN и настройки Face ID.
+ * SETTINGS MODAL V74.0 «PULSE PROTOCOL»
+ * Восстановлена настройка Face ID и длины PIN.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -78,11 +81,11 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     if (!db || !user) return;
     setIsSaving(true);
     try {
-      const usernameWithAt = '@' + form.username.trim().replace('@', '');
+      const usernameWithAt = '@' + form.username.trim().replace('@', '').toLowerCase();
       await updateDoc(doc(db, 'users', user.uid), {
         name: form.name.trim(),
         username: usernameWithAt,
-        usernameLowercase: usernameWithAt.toLowerCase(),
+        usernameLowercase: usernameWithAt,
         bio: form.bio.trim(),
         avatarUrl: form.avatarUrl,
         phone: form.phone.trim(),
@@ -99,7 +102,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         'settings.messageSize': form.messageSize,
         'settings.privacy.isGhostMode': form.isGhostMode,
       });
-      toast({ title: "Настройки синхронизированы" });
+      toast({ title: "Ядро синхронизировано" });
       onOpenChange(false);
     } catch (e: any) { toast({ title: "Ошибка сохранения", variant: "destructive" }); }
     finally { setIsSaving(false); }
@@ -132,33 +135,23 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       }
       onOpenChange(false);
       setActiveView('chats');
-      toast({ title: "Связь с Оператором установлена" });
+      toast({ title: "Канал с Поддержкой открыт" });
     } catch (e) {
-      toast({ title: "Сбой связи с Поддержкой", variant: "destructive" });
+      toast({ title: "Сбой связи", variant: "destructive" });
     }
-  };
-
-  const handleAnnihilate = async () => {
-    if (!confirm("ВНИМАНИЕ: Это действие безвозвратно удалит ваш аккаунт. Продолжить?")) return;
-    if (!db || !user) return;
-    try {
-      await deleteDoc(doc(db, 'users', user.uid));
-      signOut(auth!);
-      toast({ title: "Аккаунт аннигилирован" });
-    } catch (e) { toast({ title: "Ошибка протокола" }); }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg bg-[#0a0a0c]/98 backdrop-blur-[80px] border-white/10 p-0 overflow-hidden h-[85dvh] flex flex-col rounded-[2.5rem] shadow-2xl outline-none">
+      <DialogContent className="max-w-lg bg-[#0a0a0c]/98 backdrop-blur-[80px] border-white/10 p-0 overflow-hidden h-[85dvh] flex flex-col rounded-[3rem] shadow-2xl outline-none">
         <DialogHeader className="p-6 border-b border-white/5 shrink-0 text-left bg-gradient-to-b from-primary/10 to-transparent">
           <div className="flex items-center gap-4">
-            <div className="h-12 w-12 rounded-2xl bg-primary/20 flex items-center justify-center border border-primary/20">
+            <div className="h-12 w-12 rounded-2xl bg-primary/20 flex items-center justify-center border border-primary/20 shadow-lg">
                <Settings2 className="w-6 h-6 text-primary animate-pulse" />
             </div>
             <div className="flex flex-col">
-              <DialogTitle className="text-2xl font-black italic uppercase text-white tracking-tighter">Контроль</DialogTitle>
-              <DialogDescription className="text-[9px] font-bold uppercase text-primary/60 mt-0.5 tracking-widest">Nuxus Core V72.0</DialogDescription>
+              <DialogTitle className="text-2xl font-black italic uppercase text-white tracking-tighter">Настройки</DialogTitle>
+              <DialogDescription className="text-[9px] font-bold uppercase text-primary/60 mt-0.5 tracking-widest">Protocol V74.0</DialogDescription>
             </div>
           </div>
         </DialogHeader>
@@ -186,16 +179,16 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     <div className="w-full space-y-4">
                        <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5 space-y-4">
                           <div className="space-y-1.5">
-                             <Label className="text-[9px] font-black uppercase text-primary/60 ml-2 tracking-widest">Полное имя</Label>
-                             <Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="h-12 bg-black/40 border-white/10 rounded-xl font-bold text-base" />
+                             <Label className="text-[9px] font-black uppercase text-primary/60 ml-2 tracking-widest">Имя</Label>
+                             <Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="h-12 bg-black/40 border-white/10 rounded-xl font-bold" />
                           </div>
                           <div className="space-y-1.5">
-                             <Label className="text-[9px] font-black uppercase text-primary/60 ml-2 tracking-widest">Никнейм (@)</Label>
+                             <Label className="text-[9px] font-black uppercase text-primary/60 ml-2 tracking-widest">ID (@)</Label>
                              <Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="h-12 bg-black/40 border-white/10 rounded-xl font-mono text-primary" />
                           </div>
                           <div className="space-y-1.5">
-                             <Label className="text-[9px] font-black uppercase text-primary/60 ml-2 tracking-widest">О себе</Label>
-                             <Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} placeholder="Расскажите о себе..." className="bg-black/40 border-white/10 rounded-xl h-24 p-4 text-sm" />
+                             <Label className="text-[9px] font-black uppercase text-primary/60 ml-2 tracking-widest">Био</Label>
+                             <Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} placeholder="Описание вашего узла..." className="bg-black/40 border-white/10 rounded-xl h-24 text-sm" />
                           </div>
                        </div>
                     </div>
@@ -203,11 +196,11 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               </TabsContent>
 
               <TabsContent value="privacy" className="space-y-6 m-0">
-                 <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5 space-y-8">
+                 <div className="bg-white/5 p-6 rounded-[2.5rem] border border-white/5 space-y-8">
                     <div className="flex items-center justify-between">
                        <div className="flex flex-col gap-1">
                           <span className="text-sm font-black text-white uppercase tracking-tight flex items-center gap-2"><ShieldCheck className="w-4 h-4 text-green-500" /> Ghost Mode</span>
-                          <span className="text-[8px] text-white/30 font-bold uppercase tracking-widest ml-6">Скрыть статус в сети</span>
+                          <span className="text-[8px] text-white/30 font-bold uppercase tracking-widest ml-6">Скрыть активность в сети</span>
                        </div>
                        <Switch checked={form.isGhostMode} onCheckedChange={v => setForm({...form, isGhostMode: v})} />
                     </div>
@@ -216,43 +209,43 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                        <div className="flex items-center justify-between">
                           <div className="flex flex-col gap-1">
                              <span className="text-sm font-black text-white uppercase tracking-tight flex items-center gap-2"><Lock className="w-4 h-4 text-primary" /> Код защиты</span>
-                             <span className="text-[8px] text-white/30 font-bold uppercase tracking-widest ml-6">Дополнительный PIN</span>
+                             <span className="text-[8px] text-white/30 font-bold uppercase tracking-widest ml-6">Вход по PIN и Face ID</span>
                           </div>
                           <Switch checked={form.twoFactorEnabled} onCheckedChange={v => setForm({...form, twoFactorEnabled: v})} />
                        </div>
                        
                        {form.twoFactorEnabled && (
-                         <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                         <div className="space-y-5 animate-in fade-in slide-in-from-top-2 p-4 bg-black/40 rounded-3xl border border-white/5">
                            <div className="space-y-2">
-                              <Label className="text-[8px] font-black uppercase text-white/40 ml-2">Тип пароля</Label>
+                              <Label className="text-[8px] font-black uppercase text-white/40 ml-2">Формат пароля</Label>
                               <Select value={form.twoFactorPinLength} onValueChange={v => setForm({...form, twoFactorPinLength: v as '4' | '6'})}>
-                                 <SelectTrigger className="bg-black/40 border-white/10 rounded-xl h-11 text-[9px] font-black uppercase tracking-widest">
+                                 <SelectTrigger className="bg-white/5 border-white/10 rounded-xl h-11 text-[9px] font-black uppercase">
                                     <SelectValue />
                                  </SelectTrigger>
-                                 <SelectContent className="bg-[#0a0a0c]/98 border-white/10 rounded-xl">
-                                    <SelectItem value="4" className="text-[9px] font-bold uppercase">4 Цифры</SelectItem>
-                                    <SelectItem value="6" className="text-[9px] font-bold uppercase">6 Цифр</SelectItem>
+                                 <SelectContent className="bg-[#0a0a0c] border-white/10">
+                                    <SelectItem value="4" className="text-[9px] font-bold uppercase">4 Знака</SelectItem>
+                                    <SelectItem value="6" className="text-[9px] font-bold uppercase">6 Знаков</SelectItem>
                                  </SelectContent>
                               </Select>
                            </div>
                            <div className="space-y-2">
-                             <Label className="text-[8px] font-black uppercase text-white/40 ml-2">Введите код</Label>
+                             <Label className="text-[8px] font-black uppercase text-white/40 ml-2">Задать новый PIN</Label>
                              <Input 
                                type="password" 
                                placeholder={form.twoFactorPinLength === '4' ? "••••" : "••••••"}
                                maxLength={parseInt(form.twoFactorPinLength)}
                                value={form.twoFactorPin} 
                                onChange={e => setForm({...form, twoFactorPin: e.target.value.replace(/\D/g, '')})}
-                               className="h-14 bg-black/60 border-primary/40 rounded-xl text-center font-black tracking-[0.6em] text-2xl" 
+                               className="h-14 bg-black/60 border-primary/30 rounded-xl text-center font-black tracking-[0.5em] text-2xl" 
                              />
                            </div>
                            
-                           <div className="p-4 bg-primary/5 border border-primary/10 rounded-2xl flex items-center justify-between">
-                              <div className="flex flex-col gap-0.5">
-                                 <span className="text-[10px] font-black text-white uppercase tracking-tight">Нативный Face ID</span>
-                                 <p className="text-[7px] text-white/40 font-bold uppercase tracking-widest">Использовать биометрию для входа</p>
+                           <div className="p-4 bg-primary/10 border border-primary/20 rounded-2xl flex items-center justify-between">
+                              <div className="flex flex-col">
+                                 <span className="text-[10px] font-black text-white uppercase">Native Face ID</span>
+                                 <p className="text-[7px] text-white/30 font-bold uppercase">Использовать системный скан</p>
                               </div>
-                              <Fingerprint className="w-5 h-5 text-primary opacity-60" />
+                              <Fingerprint className="w-5 h-5 text-primary animate-pulse" />
                            </div>
                          </div>
                        )}
@@ -261,9 +254,9 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               </TabsContent>
 
               <TabsContent value="style" className="space-y-6 m-0">
-                 <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5 space-y-8">
+                 <div className="bg-white/5 p-6 rounded-[2.5rem] border border-white/5 space-y-8">
                     <div className="space-y-3">
-                       <Label className="text-[9px] font-black uppercase text-primary/60 ml-2 flex items-center gap-2 tracking-widest"><Palette className="w-4 h-4" /> Акцентный цвет (HEX)</Label>
+                       <Label className="text-[9px] font-black uppercase text-primary/60 ml-2 flex items-center gap-2 tracking-widest"><Palette className="w-4 h-4" /> Акцентный цвет</Label>
                        <div className="flex gap-4">
                           <Input value={form.customPrimaryColor} onChange={e => setForm({...form, customPrimaryColor: e.target.value})} placeholder="#A855F7" className="h-12 bg-black/40 border-white/10 font-mono text-center tracking-[0.1em] font-bold rounded-xl flex-1" />
                           <div className="w-12 h-12 rounded-xl shadow-xl border-2 border-[#0a0a0c] shrink-0" style={{ backgroundColor: form.customPrimaryColor || 'hsl(var(--primary))' }} />
@@ -271,34 +264,34 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     </div>
 
                     <div className="space-y-3">
-                       <Label className="text-[9px] font-black uppercase text-primary/60 ml-2 flex items-center gap-2 tracking-widest"><ImageIcon className="w-4 h-4" /> Фон чата (URL)</Label>
-                       <Input value={form.chatBackground} onChange={e => setForm({...form, chatBackground: e.target.value})} placeholder="https://..." className="h-12 bg-black/40 border-white/10 rounded-xl px-4 text-xs" />
+                       <Label className="text-[9px] font-black uppercase text-primary/60 ml-2 flex items-center gap-2 tracking-widest"><ImageIcon className="w-4 h-4" /> Фон чатов (URL)</Label>
+                       <Input value={form.chatBackground} onChange={e => setForm({...form, chatBackground: e.target.value})} placeholder="https://images..." className="h-12 bg-black/40 border-white/10 rounded-xl px-4 text-xs" />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                        <div className="space-y-2">
                           <Label className="text-[9px] font-black uppercase text-white/40 ml-2 flex items-center gap-2 tracking-widest"><LayoutGrid className="w-3.5 h-3.5" /> Тема</Label>
                           <Select value={form.theme} onValueChange={v => setForm({...form, theme: v})}>
-                             <SelectTrigger className="bg-black/40 border-white/10 rounded-xl h-11 text-[9px] font-black uppercase tracking-widest">
+                             <SelectTrigger className="bg-black/40 border-white/10 rounded-xl h-11 text-[9px] font-black uppercase">
                                 <SelectValue />
                              </SelectTrigger>
-                             <SelectContent className="bg-[#0a0a0c]/98 border-white/10 rounded-xl">
-                                <SelectItem value="default" className="text-[9px] font-bold uppercase tracking-widest">Nuxus Classic</SelectItem>
-                                <SelectItem value="glass" className="text-[9px] font-bold uppercase tracking-widest">Infinite Glass</SelectItem>
-                                <SelectItem value="midnight" className="text-[9px] font-bold uppercase tracking-widest">Midnight Void</SelectItem>
+                             <SelectContent className="bg-[#0a0a0c] border-white/10">
+                                <SelectItem value="default" className="text-[9px] font-bold uppercase">Pulse Classic</SelectItem>
+                                <SelectItem value="glass" className="text-[9px] font-bold uppercase">Glassmorphism</SelectItem>
+                                <SelectItem value="midnight" className="text-[9px] font-bold uppercase">Midnight</SelectItem>
                              </SelectContent>
                           </Select>
                        </div>
                        <div className="space-y-2">
                           <Label className="text-[9px] font-black uppercase text-white/40 ml-2 flex items-center gap-2 tracking-widest"><Type className="w-3.5 h-3.5" /> Шрифт</Label>
                           <Select value={form.fontFamily} onValueChange={v => setForm({...form, fontFamily: v})}>
-                             <SelectTrigger className="bg-black/40 border-white/10 rounded-xl h-11 text-[9px] font-black uppercase tracking-widest">
+                             <SelectTrigger className="bg-black/40 border-white/10 rounded-xl h-11 text-[9px] font-black uppercase">
                                 <SelectValue />
                              </SelectTrigger>
-                             <SelectContent className="bg-[#0a0a0c]/98 border-white/10 rounded-xl">
-                                <SelectItem value="jakarta" className="text-[9px] font-bold uppercase tracking-widest">Jakarta</SelectItem>
-                                <SelectItem value="inter" className="text-[9px] font-bold uppercase tracking-widest">Inter</SelectItem>
-                                <SelectItem value="system" className="text-[9px] font-bold uppercase tracking-widest">System</SelectItem>
+                             <SelectContent className="bg-[#0a0a0c] border-white/10">
+                                <SelectItem value="jakarta" className="text-[9px] font-bold uppercase">Plus Jakarta</SelectItem>
+                                <SelectItem value="inter" className="text-[9px] font-bold uppercase">Inter Pro</SelectItem>
+                                <SelectItem value="system" className="text-[9px] font-bold uppercase">System</SelectItem>
                              </SelectContent>
                           </Select>
                        </div>
@@ -308,18 +301,18 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
               <TabsContent value="data" className="space-y-6 m-0">
                  <div className="bg-white/5 p-8 rounded-[2.5rem] border border-white/5 flex flex-col items-center gap-6 text-center shadow-xl backdrop-blur-xl relative overflow-hidden">
-                    <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20"><Info className="w-8 h-8 text-primary animate-pulse" /></div>
+                    <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20"><Info className="w-8 h-8 text-primary" /></div>
                     <div className="space-y-1">
                        <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Nuxus Kernel</h3>
-                       <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.4em]">Версия {versions.latestVersion} • {versions.build}</p>
+                       <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.4em]">Версия {versions.latestVersion} • Pulse V74.0</p>
                     </div>
                     <div className="grid grid-cols-1 gap-3 w-full">
-                       <Button onClick={openSupport} className="h-14 rounded-2xl bg-white/5 border border-white/10 font-black uppercase text-[10px] tracking-widest gap-3 shadow-xl hover:bg-primary/10 hover:border-primary/20 transition-all">
-                          <MessageSquare className="w-5 h-5 text-primary" /> Поддержка Nuxus
+                       <Button onClick={openSupport} className="h-14 rounded-2xl bg-white/5 border border-white/10 font-black uppercase text-[10px] tracking-widest gap-3 hover:bg-primary/10 transition-all">
+                          <MessageSquare className="w-5 h-5 text-primary" /> Связь с Оператором
                        </Button>
                        <div className="grid grid-cols-2 gap-3">
-                          <Button variant="ghost" onClick={() => setIsLegalOpen(true)} className="h-12 rounded-xl bg-white/5 font-black uppercase text-[8px] tracking-widest gap-2"><HelpCircle className="w-3 h-3 text-primary" /> Право</Button>
-                          <Button variant="ghost" className="h-12 rounded-xl bg-red-500/10 text-red-500 font-black uppercase text-[8px] tracking-widest gap-2" onClick={handleAnnihilate}><Trash2 className="w-3 h-3" /> Стереть</Button>
+                          <Button variant="ghost" onClick={() => setIsLegalOpen(true)} className="h-12 rounded-xl bg-white/5 font-black uppercase text-[8px] tracking-widest gap-2">Правовой узел</Button>
+                          <Button variant="ghost" className="h-12 rounded-xl bg-red-500/10 text-red-500 font-black uppercase text-[8px] tracking-widest gap-2" onClick={() => { if(confirm("Стереть аккаунт навсегда?")) deleteDoc(doc(db!, 'users', user!.uid)); }}>Стереть данные</Button>
                        </div>
                     </div>
                  </div>
@@ -327,12 +320,12 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
             </div>
           </ScrollArea>
 
-          <div className="p-6 border-t border-white/5 bg-[#0a0a0c]/80 backdrop-blur-3xl shrink-0 flex gap-4 z-[100] pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+          <div className="p-6 border-t border-white/5 bg-[#0a0a0c]/90 backdrop-blur-3xl shrink-0 flex gap-4 z-[100] pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
             <Button variant="ghost" className="h-14 w-14 rounded-2xl bg-red-500/10 text-red-500 border border-red-500/20 shadow-lg" onClick={() => signOut(auth!)}>
                <LogOut className="w-6 h-6" />
             </Button>
-            <Button disabled={isSaving} className="flex-1 h-14 rounded-2xl font-black uppercase italic text-sm bg-primary text-white shadow-[0_15px_40px_rgba(var(--primary),0.4)]" onClick={handleSave}>
-              {isSaving ? <Loader2 className="animate-spin w-6 h-6" /> : 'Синхронизировать'}
+            <Button disabled={isSaving} className="flex-1 h-14 rounded-2xl font-black uppercase italic text-sm bg-primary text-white shadow-2xl shadow-primary/30 active:scale-95 transition-all" onClick={handleSave}>
+              {isSaving ? <Loader2 className="animate-spin w-6 h-6" /> : 'Записать изменения'}
             </Button>
           </div>
         </Tabs>
