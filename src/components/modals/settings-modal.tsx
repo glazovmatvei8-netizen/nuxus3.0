@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -15,7 +14,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Settings2, Camera, ShieldCheck, Loader2, Fingerprint, Palette, 
   ChevronRight, Globe, Trash2, Mail, Phone, Lock, 
-  Info, HelpCircle, UserCheck, ShieldAlert, ImageIcon, Type, LayoutGrid, MessageSquare, Headphones
+  Info, HelpCircle, UserCheck, ShieldAlert, ImageIcon, Type, LayoutGrid, MessageSquare, Headphones, KeyRound
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -27,8 +26,8 @@ import type { User } from '@/lib/types';
 import versions from '@/app/versions.json';
 
 /**
- * SETTINGS MODAL V52.0 «STABILITY & EXPANSION»
- * ИСПРАВЛЕНО: Пути импорта useAppState и Firebase хуков.
+ * SETTINGS MODAL V72.0 «BIOMETRIC SYNC»
+ * Добавлен выбор длины PIN и настройки Face ID.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -48,7 +47,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     customPrimaryColor: '', chatBackground: '',
     bubbleStyle: 'default' as any, fontFamily: 'jakarta' as any,
     messageSize: 'medium' as any,
-    isGhostMode: false, twoFactorEnabled: false, twoFactorPin: ''
+    isGhostMode: false, twoFactorEnabled: false, twoFactorPin: '', twoFactorPinLength: '6' as '4' | '6'
   });
 
   useEffect(() => {
@@ -69,7 +68,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         messageSize: profile.settings?.messageSize || 'medium',
         isGhostMode: !!profile.settings?.privacy?.isGhostMode,
         twoFactorEnabled: !!profile.twoFactorEnabled,
-        twoFactorPin: profile.twoFactorPin || ''
+        twoFactorPin: profile.twoFactorPin || '',
+        twoFactorPinLength: profile.twoFactorPinLength || '6'
       });
     }
   }, [profile, open]);
@@ -89,6 +89,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         email: form.email.trim(),
         twoFactorEnabled: form.twoFactorEnabled,
         twoFactorPin: form.twoFactorPin,
+        twoFactorPinLength: form.twoFactorPinLength,
         'settings.appearance': form.appearance,
         'settings.theme': form.theme,
         'settings.customPrimaryColor': form.customPrimaryColor,
@@ -106,7 +107,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
   const openSupport = async () => {
     if (!db || !user) return;
-    const supportNodeId = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1'; // Admin Node as Support
+    const supportNodeId = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
     try {
       const q = query(collection(db, 'chats'), where('type', '==', 'private'), where('participantIds', 'array-contains', user.uid));
       const snap = await getDocs(q);
@@ -157,7 +158,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
             </div>
             <div className="flex flex-col">
               <DialogTitle className="text-2xl font-black italic uppercase text-white tracking-tighter">Контроль</DialogTitle>
-              <DialogDescription className="text-[9px] font-bold uppercase text-primary/60 mt-0.5 tracking-widest">Nuxus Core V{versions.latestVersion}</DialogDescription>
+              <DialogDescription className="text-[9px] font-bold uppercase text-primary/60 mt-0.5 tracking-widest">Nuxus Core V72.0</DialogDescription>
             </div>
           </div>
         </DialogHeader>
@@ -211,7 +212,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                        <Switch checked={form.isGhostMode} onCheckedChange={v => setForm({...form, isGhostMode: v})} />
                     </div>
 
-                    <div className="space-y-4">
+                    <div className="space-y-6">
                        <div className="flex items-center justify-between">
                           <div className="flex flex-col gap-1">
                              <span className="text-sm font-black text-white uppercase tracking-tight flex items-center gap-2"><Lock className="w-4 h-4 text-primary" /> Код защиты</span>
@@ -219,15 +220,41 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                           </div>
                           <Switch checked={form.twoFactorEnabled} onCheckedChange={v => setForm({...form, twoFactorEnabled: v})} />
                        </div>
+                       
                        {form.twoFactorEnabled && (
-                         <Input 
-                           type="password" 
-                           placeholder="6 цифр" 
-                           maxLength={6}
-                           value={form.twoFactorPin} 
-                           onChange={e => setForm({...form, twoFactorPin: e.target.value.replace(/\D/g, '')})}
-                           className="h-14 bg-black/60 border-primary/40 rounded-xl text-center font-black tracking-[0.6em] text-2xl" 
-                         />
+                         <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                           <div className="space-y-2">
+                              <Label className="text-[8px] font-black uppercase text-white/40 ml-2">Тип пароля</Label>
+                              <Select value={form.twoFactorPinLength} onValueChange={v => setForm({...form, twoFactorPinLength: v as '4' | '6'})}>
+                                 <SelectTrigger className="bg-black/40 border-white/10 rounded-xl h-11 text-[9px] font-black uppercase tracking-widest">
+                                    <SelectValue />
+                                 </SelectTrigger>
+                                 <SelectContent className="bg-[#0a0a0c]/98 border-white/10 rounded-xl">
+                                    <SelectItem value="4" className="text-[9px] font-bold uppercase">4 Цифры</SelectItem>
+                                    <SelectItem value="6" className="text-[9px] font-bold uppercase">6 Цифр</SelectItem>
+                                 </SelectContent>
+                              </Select>
+                           </div>
+                           <div className="space-y-2">
+                             <Label className="text-[8px] font-black uppercase text-white/40 ml-2">Введите код</Label>
+                             <Input 
+                               type="password" 
+                               placeholder={form.twoFactorPinLength === '4' ? "••••" : "••••••"}
+                               maxLength={parseInt(form.twoFactorPinLength)}
+                               value={form.twoFactorPin} 
+                               onChange={e => setForm({...form, twoFactorPin: e.target.value.replace(/\D/g, '')})}
+                               className="h-14 bg-black/60 border-primary/40 rounded-xl text-center font-black tracking-[0.6em] text-2xl" 
+                             />
+                           </div>
+                           
+                           <div className="p-4 bg-primary/5 border border-primary/10 rounded-2xl flex items-center justify-between">
+                              <div className="flex flex-col gap-0.5">
+                                 <span className="text-[10px] font-black text-white uppercase tracking-tight">Нативный Face ID</span>
+                                 <p className="text-[7px] text-white/40 font-bold uppercase tracking-widest">Использовать биометрию для входа</p>
+                              </div>
+                              <Fingerprint className="w-5 h-5 text-primary opacity-60" />
+                           </div>
+                         </div>
                        )}
                     </div>
                  </div>
@@ -274,21 +301,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                                 <SelectItem value="system" className="text-[9px] font-bold uppercase tracking-widest">System</SelectItem>
                              </SelectContent>
                           </Select>
-                       </div>
-                    </div>
-
-                    <div className="space-y-3">
-                       <Label className="text-[9px] font-black uppercase text-white/40 ml-2 tracking-widest">Стиль пузырей</Label>
-                       <div className="grid grid-cols-4 gap-2">
-                          {['default', 'neon', 'gold', 'ocean'].map(s => (
-                            <button 
-                              key={s} 
-                              onClick={() => setForm({...form, bubbleStyle: s})}
-                              className={cn("h-10 rounded-lg text-[8px] font-black uppercase tracking-widest border transition-all", form.bubbleStyle === s ? "bg-primary border-primary text-white" : "bg-black/40 border-white/5 text-white/20")}
-                            >
-                               {s}
-                            </button>
-                          ))}
                        </div>
                     </div>
                  </div>

@@ -197,5 +197,6 @@ export interface User {
   isAdmin?: boolean;
   twoFactorEnabled?: boolean;
   twoFactorPin?: string;
+  twoFactorPinLength?: '4' | '6';
   balance?: number;
 }
