@@ -1,11 +1,12 @@
-
 "use client"
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase/provider';
+import { useUser, useFirestore } from '@/firebase/provider';
+import { useCollection } from '@/firebase/firestore/use-collection';
+import { useMemoFirebase } from '@/firebase/firestore/use-memo-firebase';
 import { collection, query, where, orderBy, doc, updateDoc } from 'firebase/firestore';
 import { Archive, Zap, Loader2, Play, RefreshCcw } from 'lucide-react';
 import type { Story } from '@/lib/types';
@@ -14,17 +15,23 @@ import { useToast } from '@/hooks/use-toast';
 import { addHours } from 'date-fns';
 
 /**
- * STORY ARCHIVE MODAL V11.0.0 «HYPER-ENGINE READY»
- * ИСПРАВЛЕНО: Пути импорта useAppState и Firebase хуков.
+ * STORY ARCHIVE MODAL V72.1 «STABILITY PATCH»
+ * ИСПРАВЛЕНО: Прямые импорты хуков для устранения ошибки 'is not a function'.
  */
 export function StoryArchiveModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
   const { setStoriesToView } = useAppState();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const archiveQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
+    // Используем фиксированную дату для запроса архива (все что истекло)
     const now = new Date().toISOString();
     return query(
       collection(db, 'stories'),
@@ -32,7 +39,7 @@ export function StoryArchiveModal({ open, onOpenChange }: { open: boolean, onOpe
       where('expiresAt', '<=', now),
       orderBy('expiresAt', 'desc')
     );
-  }, [db, user]);
+  }, [db, user?.uid]);
 
   const { data: archivedStories, isLoading } = useCollection<Story>(archiveQuery);
 
@@ -44,8 +51,12 @@ export function StoryArchiveModal({ open, onOpenChange }: { open: boolean, onOpe
         createdAt: new Date().toISOString()
       });
       toast({ title: "Момент восстановлен", description: "Он снова в сети на 24 часа." });
-    } catch (e) { toast({ title: "Сбой резонанса", variant: "destructive" }); }
+    } catch (e) { 
+      toast({ title: "Сбой резонанса", variant: "destructive" }); 
+    }
   };
+
+  if (!mounted) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

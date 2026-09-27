@@ -16,18 +16,18 @@ import { StoryArchiveModal } from './modals/story-archive-modal';
 import { useToast } from '@/hooks/use-toast';
 
 /**
- * NUXUS MOMENTS BAR V11.0.0 «TITANIUM SYNC»
- * ИСПРАВЛЕНО: Прямые импорты хуков для устранения ошибки 'is not a function'.
+ * NUXUS MOMENTS BAR V72.1 «STABILITY PATCH»
+ * ИСПРАВЛЕНО: Прямое использование useUser и корректные импорты.
  */
 export function StoriesBar() {
-  const { user } = userUser();
+  const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
   const { setIsCreateStoryOpen, setStoriesToView } = useAppState();
 
   const [isArchiveOpen, setIsArchiveOpen] = useState(false);
 
-  const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user]);
+  const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user?.uid]);
   const { data: profile } = useDoc<User>(userRef);
 
   const storiesQuery = useMemoFirebase(() => {
@@ -42,7 +42,10 @@ export function StoriesBar() {
     if (!allStories) return {};
     const groups: Record<string, Story[]> = {};
     const sorted = [...allStories].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-    sorted.forEach(s => { if (!groups[s.userId]) groups[s.userId] = []; groups[s.userId].push(s); });
+    sorted.forEach(s => { 
+      if (!groups[s.userId]) groups[s.userId] = []; 
+      groups[s.userId].push(s); 
+    });
     return groups;
   }, [allStories]);
 
@@ -56,11 +59,6 @@ export function StoriesBar() {
     }
     setIsCreateStoryOpen(true);
   };
-
-  function userUser() {
-    const { user, isUserLoading } = useUser();
-    return { user, isUserLoading };
-  }
 
   return (
     <div className="flex gap-4 p-4 overflow-x-auto scrollbar-hide bg-transparent border-b border-white/5 shrink-0 relative z-20">
@@ -99,6 +97,7 @@ function StoryCircle({ userId, stories, onView, currentUserId }: { userId: strin
   const userRef = useMemoFirebase(() => (!db ? null : doc(db, 'users', userId)), [db, userId]);
   const { data: profile } = useDoc<User>(userRef);
   const hasUnviewed = useMemo(() => stories?.some(s => !s.viewers?.includes(currentUserId || '')), [stories, currentUserId]);
+  
   return (
     <div className="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-transform" onClick={onView}>
       <div className={cn("h-[68px] w-[68px] rounded-full p-[2px] transition-all duration-500 flex items-center justify-center", hasUnviewed ? "bg-gradient-to-tr from-[#34C759] via-[#007AFF] to-[#AF52DE] scale-105 shadow-[0_0_20px_rgba(0,122,255,0.4)]" : "bg-white/20")}>
