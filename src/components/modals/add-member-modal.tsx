@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { useUser, useFirestore } from '@/firebase/provider';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { useDoc } from '@/firebase/firestore/use-doc';
+import { useMemoFirebase } from '@/firebase/firestore/use-memo-firebase';
 import { Search, UserPlus, Contact, Star, Phone, Plus } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
@@ -17,8 +18,8 @@ import { formatDisplayName, isUserPremium } from '@/lib/utils';
 import { UserAvatar } from '../user-avatar';
 
 /**
- * ADD MEMBER MODAL V5.2.3 «TITANIUM SYNC»
- * ИСПРАВЛЕНО: Прямые импорты хуков.
+ * ADD MEMBER MODAL V5.2.4 «ABSOLUTE STABILITY»
+ * FIXED: Устранена ошибка ca9 за счет использования useMemoFirebase для всех запросов.
  */
 export function AddMemberModal({ open, onOpenChange, chatId, currentParticipantIds, isCallContext }: any) {
   const db = useFirestore();
@@ -27,10 +28,10 @@ export function AddMemberModal({ open, onOpenChange, chatId, currentParticipantI
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const currentUserRef = useMemo(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user?.uid]);
+  const currentUserRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user?.uid]);
   const { data: currentUserProfile } = useDoc<User>(currentUserRef);
 
-  const usersQuery = useMemo(() => {
+  const usersQuery = useMemoFirebase(() => {
     if (!db || search.length < 2) return null;
     return query(collection(db, 'users'), limit(50));
   }, [db, search]);

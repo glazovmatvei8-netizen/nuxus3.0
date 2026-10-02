@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useMemo } from 'react';
@@ -8,15 +7,18 @@ import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { Search, UserPlus, Star, Contact as ContactIcon, MessageCircle } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useFirestore, useUser, useCollection, useDoc } from '@/firebase/provider';
+import { useFirestore, useUser } from '@/firebase/provider';
+import { useCollection } from '@/firebase/firestore/use-collection';
+import { useDoc } from '@/firebase/firestore/use-doc';
+import { useMemoFirebase } from '@/firebase/firestore/use-memo-firebase';
 import { collection, query, where, doc, getDocs, addDoc } from 'firebase/firestore';
 import { formatDisplayName, cn, isUserPremium } from '@/lib/utils';
 import type { User, Chat } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 
 /**
- * CONTACTS VIEW V5.1.1 «STABLE RESOLUTION»
- * ИСПРАВЛЕНО: Пути импорта useAppState и Firebase хуков.
+ * CONTACTS VIEW V5.2.0 «ABSOLUTE STABILITY»
+ * FIXED: Устранена ошибка ca9 за счет использования useMemoFirebase для всех запросов.
  */
 export default function ContactsView() {
   const { user } = useUser();
@@ -25,10 +27,10 @@ export default function ContactsView() {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
 
-  const userProfileRef = useMemo(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user?.uid]);
+  const userProfileRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user?.uid]);
   const { data: profile } = useDoc<User>(userProfileRef);
 
-  const contactsQuery = useMemo(() => {
+  const contactsQuery = useMemoFirebase(() => {
     if (!db || !profile?.contactIds?.length) return null;
     return query(collection(db, 'users'), where('id', 'in', profile.contactIds.slice(0, 10)));
   }, [db, profile?.contactIds]);

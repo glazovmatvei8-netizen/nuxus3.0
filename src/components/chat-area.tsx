@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
@@ -18,6 +17,7 @@ import { ImagePreviewModal } from './modals/image-preview-modal';
 import { useUser, useFirestore } from '@/firebase/provider';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { useDoc } from '@/firebase/firestore/use-doc';
+import { useMemoFirebase } from '@/firebase/firestore/use-memo-firebase';
 import { collection, query, orderBy, doc, addDoc, updateDoc } from 'firebase/firestore';
 import { formatDisplayName, cn, compressImage, encryptSignal, decryptSignal, isUserPremium } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
@@ -178,13 +178,13 @@ export default function ChatArea() {
   const [isPollModalOpen, setIsPollModalOpen] = useState(false);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
 
-  const userProfileRef = useMemo(() => (!db || !firebaseUser) ? null : doc(db, 'users', firebaseUser.uid), [db, firebaseUser?.uid]);
+  const userProfileRef = useMemoFirebase(() => (!db || !firebaseUser) ? null : doc(db, 'users', firebaseUser.uid), [db, firebaseUser?.uid]);
   const { data: userProfile } = useDoc<UserType>(userProfileRef);
 
-  const chatRef = useMemo(() => (!db || !currentChatId) ? null : doc(db, 'chats', currentChatId), [db, currentChatId]);
+  const chatRef = useMemoFirebase(() => (!db || !currentChatId) ? null : doc(db, 'chats', currentChatId), [db, currentChatId]);
   const { data: chat } = useDoc<Chat>(chatRef);
 
-  const messagesQuery = useMemo(() => (!db || !currentChatId) ? null : query(collection(db, 'chats', currentChatId, 'messages'), orderBy('sentAt', 'asc')), [db, currentChatId]);
+  const messagesQuery = useMemoFirebase(() => (!db || !currentChatId) ? null : query(collection(db, 'chats', currentChatId, 'messages'), orderBy('sentAt', 'asc')), [db, currentChatId]);
   const { data: messages } = useCollection<Message>(messagesQuery);
 
   const isPremium = useMemo(() => isUserPremium(userProfile), [userProfile]);

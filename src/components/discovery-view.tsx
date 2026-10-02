@@ -1,9 +1,9 @@
-
 "use client"
 
 import React, { useState, useMemo } from 'react';
 import { useFirestore, useUser } from '@/firebase/provider';
 import { useCollection } from '@/firebase/firestore/use-collection';
+import { useMemoFirebase } from '@/firebase/firestore/use-memo-firebase';
 import { collection, query, where, limit, orderBy } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
@@ -23,19 +23,19 @@ export default function DiscoveryView() {
   
   const [search, setSearch] = useState('');
 
-  const publicChatsQuery = useMemo(() => {
+  const publicChatsQuery = useMemoFirebase(() => {
     if (!db) return null;
     return query(collection(db, 'chats'), where('isPublic', '==', true), limit(20));
   }, [db]);
   const { data: publicChats } = useCollection<Chat>(publicChatsQuery);
 
-  const topUsersQuery = useMemo(() => {
+  const topUsersQuery = useMemoFirebase(() => {
     if (!db) return null;
     return query(collection(db, 'users'), orderBy('referralCount', 'desc'), limit(30));
   }, [db]);
   const { data: rawTopUsers } = useCollection<User>(topUsersQuery);
 
-  const allUsersQuery = useMemo(() => {
+  const allUsersQuery = useMemoFirebase(() => {
     if (!db) return null;
     return query(collection(db, 'users'));
   }, [db]);
