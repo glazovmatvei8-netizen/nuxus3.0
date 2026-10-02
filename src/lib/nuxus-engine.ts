@@ -3,15 +3,13 @@
 
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
 import { initializeAuth, indexedDBLocalPersistence, browserLocalPersistence, Auth } from 'firebase/auth';
-// @ts-ignore
-import { getReactNativePersistence } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
 import { firebaseConfig } from '@/firebase/config';
 import { Preferences } from '@capacitor/preferences';
 
 /**
- * NUXUS ENGINE V74.1 «STABILITY CORE»
- * ОПТИМИЗИРОВАНО: Защищенная инициализация для предотвращения "Белого экрана".
+ * NUXUS ENGINE V75.0 «ABSOLUTE STABILITY»
+ * ОПТИМИЗИРОВАНО: Защищенный запуск с отказоустойчивым мостом памяти.
  */
 
 let appInstance: FirebaseApp | undefined;
@@ -42,23 +40,25 @@ const ignite = () => {
       }
     };
 
-    // БЕЗОПАСНАЯ ПРОВЕРКА CAPACITOR (Фикс Белого экрана)
-    const isNative = typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.();
+    // Проверяем наличие Capacitor безопасно
+    const isNative = !!(window as any).Capacitor?.isNativePlatform?.();
     
-    // Принудительная нативная память для APK
-    const persistenceMethod = isNative 
-      ? getReactNativePersistence(capacitorPersistence as any)
-      : [indexedDBLocalPersistence, browserLocalPersistence];
-
+    // Инициализируем Auth с лучшим доступным методом хранения
     authInstance = initializeAuth(appInstance, {
-      persistence: persistenceMethod
+      // @ts-ignore
+      persistence: isNative && typeof window !== 'undefined' && (window as any).getReactNativePersistence 
+        // @ts-ignore
+        ? (window as any).getReactNativePersistence(capacitorPersistence)
+        : [indexedDBLocalPersistence, browserLocalPersistence]
     });
 
     dbInstance = getFirestore(appInstance);
     
-    console.log('%c🛰️ NUXUS ABSOLUTE NATIVE CORE ACTIVE', 'color: #A855F7; font-weight: bold;');
+    console.log('%c🛰️ NUXUS KERNEL: IGNITION SUCCESSFUL', 'color: #34C759; font-weight: bold;');
   } catch (e) {
-    console.error("NUXUS ENGINE IGNITION FAILED:", e);
+    console.error("NUXUS KERNEL: IGNITION CRASHED", e);
+    // Резервная инициализация при крахе
+    if (!appInstance) appInstance = initializeApp(firebaseConfig);
   }
 };
 

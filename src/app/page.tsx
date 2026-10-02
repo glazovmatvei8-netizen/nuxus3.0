@@ -7,7 +7,7 @@ import { useDoc } from '@/firebase/firestore/use-doc';
 import { useAppState } from '@/lib/app-state';
 import AuthScreen from '@/components/auth-screen';
 import ChatMain from '@/components/chat-main';
-import { Fingerprint, AlertTriangle, KeyRound, Smartphone, ShieldCheck, Loader2, Lock } from 'lucide-react';
+import { Fingerprint, AlertTriangle, Lock, ShieldCheck, Loader2, RefreshCcw } from 'lucide-react';
 import { doc } from 'firebase/firestore';
 import type { User as UserType } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -19,8 +19,8 @@ import { NuxusLogo } from '@/components/nuxus-logo';
 import { checkBiometric } from '@/services/biometric-service';
 
 /**
- * NUXUS HOME GATE V74.1 «PULSE STABILITY»
- * ОПТИМИЗИРОВАНО: Защита от белого экрана и стабильный Face ID.
+ * NUXUS HOME GATE V75.0 «STABILITY CORE»
+ * ИСПРАВЛЕНО: Предотвращение зависания на черном экране.
  */
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -33,13 +33,20 @@ export default function Home() {
   const [isBiometricAvailable, setIsBiometricAvailable] = useState(false);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [loadTimeout, setLoadTimeout] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
-    // Проверка поддержки биометрии
     if (typeof window !== 'undefined' && window.PublicKeyCredential) {
       setIsBiometricAvailable(true);
     }
+
+    // Предохранитель черного экрана (10 секунд)
+    const timer = setTimeout(() => {
+      setLoadTimeout(true);
+    }, 10000);
+
+    return () => clearTimeout(timer);
   }, []);
 
   const userProfileRef = useMemo(() => {
@@ -101,8 +108,6 @@ export default function Home() {
     }
   }, [twoFactorInput, profile, handleVerify2FA]);
 
-  // ФУНДАМЕНТАЛЬНЫЙ ФИКС БЕЛОГО ЭКРАНА:
-  // Если компонент еще не примонтирован, показываем черный экран загрузки.
   if (!isMounted) {
     return (
       <div className="h-[100dvh] w-full bg-[#010103] flex flex-col items-center justify-center">
@@ -111,11 +116,29 @@ export default function Home() {
     );
   }
 
+  // Если загрузка затянулась, даем возможность сбросить состояние
+  if (loadTimeout && (isUserLoading || (user && isProfileLoading))) {
+    return (
+      <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#010103] text-white p-8 text-center">
+        <NuxusLogo size={80} className="opacity-20 mb-8" />
+        <h2 className="text-xl font-black uppercase italic tracking-tighter mb-2">Задержка синхронизации</h2>
+        <p className="text-[10px] text-white/30 uppercase tracking-widest mb-8">Ядро ожидает ответ от узлов сети...</p>
+        <Button 
+          variant="outline" 
+          onClick={() => window.location.reload()}
+          className="rounded-2xl border-white/10 bg-white/5 font-black uppercase text-[10px] tracking-widest gap-2"
+        >
+          <RefreshCcw className="w-4 h-4" /> Перезагрузить Ядро
+        </Button>
+      </div>
+    );
+  }
+
   if (isUserLoading || (user && isProfileLoading)) {
     return (
       <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#010103] text-white">
         <NuxusLogo size={80} className="animate-pulse opacity-40" />
-        <p className="mt-8 text-[8px] font-black uppercase tracking-[0.6em] text-primary/40">Syncing Engine V74.1</p>
+        <p className="mt-8 text-[8px] font-black uppercase tracking-[0.6em] text-primary/40">Syncing Engine V75.0</p>
       </div>
     );
   }

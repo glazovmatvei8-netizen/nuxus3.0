@@ -1,44 +1,17 @@
+
 'use client';
 
-import { firebaseConfig } from '@/firebase/config';
-import { initializeApp, getApps, FirebaseApp, getApp } from 'firebase/app';
-import { getAuth, Auth } from 'firebase/auth';
-import { getFirestore, Firestore } from 'firebase/firestore';
-
 /**
- * NUXUS QUANTUM INITIALIZER V11.0
- * Добавлена проверка на наличие конфига перед инициализацией.
+ * DEPRECATED V75.0
+ * Используйте src/lib/nuxus-engine.ts для инициализации.
+ * Этот файл сохранен как заглушка для предотвращения ошибок импорта.
  */
-export function initializeFirebase(instanceName: string = '[DEFAULT]') {
-  if (typeof window === 'undefined') {
-    return { firebaseApp: null, auth: null, firestore: null };
-  }
+import { nuxus } from '@/lib/nuxus-engine';
 
-  if (!firebaseConfig.apiKey) {
-    console.error("NUXUS ENGINE: Missing Firebase Configuration!");
-    return { firebaseApp: null, auth: null, firestore: null };
-  }
-
-  let app: FirebaseApp;
-  const existingApps = getApps();
-  const existing = existingApps.find(a => a.name === instanceName);
-
-  if (existing) {
-    app = existing;
-  } else {
-    try {
-      app = initializeApp(firebaseConfig, instanceName);
-    } catch (e) {
-      app = getApp(instanceName);
-    }
-  }
-  
-  const auth: Auth = getAuth(app);
-  const db: Firestore = getFirestore(app);
-
+export function initializeFirebase() {
   return {
-    firebaseApp: app,
-    auth: auth,
-    firestore: db
+    firebaseApp: nuxus.app,
+    auth: nuxus.auth,
+    firestore: nuxus.db
   };
 }

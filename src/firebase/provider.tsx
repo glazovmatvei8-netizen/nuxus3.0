@@ -16,8 +16,8 @@ export const FirebaseContext = createContext<FirebaseContextState>({
 });
 
 /**
- * NUXUS FIREBASE PROVIDER V70.0
- * ОПТИМИЗИРОВАНО: Память теперь управляется нативным Ядром.
+ * NUXUS FIREBASE PROVIDER V75.0
+ * ОПТИМИЗИРОВАНО: Гарантированный выход из состояния загрузки.
  */
 export const FirebaseProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -26,17 +26,29 @@ export const FirebaseProvider: React.FC<{ children: ReactNode }> = ({ children }
   useEffect(() => {
     const auth = nuxus.auth;
     if (!auth) {
+      console.warn("NUXUS PROVIDER: Auth engine not responding");
       setIsUserLoading(false);
       return;
     }
 
-    // Слушатель состояния на базе нативной памяти OS
+    // Слушатель состояния
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser);
       setIsUserLoading(false);
+    }, (error) => {
+      console.error("NUXUS PROVIDER: Auth error", error);
+      setIsUserLoading(false);
     });
 
-    return () => unsubscribe();
+    // Резервный сброс через 5 секунд если слушатель молчит
+    const fallback = setTimeout(() => {
+      setIsUserLoading(false);
+    }, 5000);
+
+    return () => {
+      unsubscribe();
+      clearTimeout(fallback);
+    };
   }, []);
 
   const value = useMemo(() => ({
