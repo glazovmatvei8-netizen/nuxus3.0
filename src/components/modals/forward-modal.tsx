@@ -6,18 +6,20 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase/provider';
-import { collection, query, where, doc, addDoc } from 'firebase/firestore';
+import { useUser, useFirestore } from '@/firebase/provider';
+import { useCollection } from '@/firebase/firestore/use-collection';
+import { useMemoFirebase } from '@/firebase/firestore/use-memo-firebase';
+import { collection, query, where, addDoc } from 'firebase/firestore';
 import { useAppState } from '@/lib/app-state';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Loader2, ArrowRight, Share2 } from 'lucide-react';
+import { Search, ArrowRight, Share2 } from 'lucide-react';
 import { UserAvatar } from '@/components/user-avatar';
 import { formatDisplayName } from '@/lib/utils';
-import type { Chat, Message, User } from '@/lib/types';
+import type { Chat, Message } from '@/lib/types';
 
 /**
- * FORWARD MODAL V5.2.0
- * ИСПРАВЛЕНО: Пути импорта useAppState и Firebase хуков.
+ * FORWARD MODAL V75.1 «STABILITY FINAL»
+ * FIXED: Direct imports for Firestore hooks to eliminate React Fiber errors.
  */
 export function ForwardModal() {
   const { user } = useUser();
@@ -30,7 +32,8 @@ export function ForwardModal() {
   const chatsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
     return query(collection(db, 'chats'), where('participantIds', 'array-contains', user.uid));
-  }, [db, user]);
+  }, [db, user?.uid]);
+  
   const { data: chats } = useCollection<Chat>(chatsQuery);
 
   const filteredChats = (chats || []).filter(c => 
@@ -42,7 +45,7 @@ export function ForwardModal() {
     if (!db || !user || !forwardingMessage) return;
     setIsLoading(true);
     try {
-      const msgData: Partial<Message> = {
+      const msgData: any = {
         chatId: targetChat.id,
         senderId: user.uid,
         senderName: user.displayName || 'Nuxus User',
@@ -66,44 +69,51 @@ export function ForwardModal() {
 
   return (
     <Dialog open={!!forwardingMessage} onOpenChange={(o) => !o && setForwardingMessage(null)}>
-      <DialogContent className="max-w-md bg-card border-white/10 rounded-[2.5rem] p-0 overflow-hidden shadow-2xl h-[70vh] flex flex-col">
-        <DialogHeader className="p-6 pb-2 text-left">
-          <DialogTitle className="text-xl font-black uppercase italic text-white flex items-center gap-2">
-            <Share2 className="w-5 h-5 text-primary" /> Переслать сообщение
+      <DialogContent className="max-w-md bg-[#0a0a0c]/98 backdrop-blur-3xl border-white/10 rounded-[2.5rem] p-0 overflow-hidden shadow-2xl h-[70vh] flex flex-col outline-none">
+        <DialogHeader className="p-8 pb-4 text-left border-b border-white/5 bg-primary/5">
+          <DialogTitle className="text-2xl font-black uppercase italic text-white flex items-center gap-3 tracking-tighter">
+            <Share2 className="w-6 h-6 text-primary" /> Переслать
           </DialogTitle>
-          <DialogDescription className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/60">
-            Выберите чат для отправки
+          <DialogDescription className="text-[10px] font-black uppercase tracking-widest text-primary/40 mt-1">
+            Выберите узел для передачи сигнала
           </DialogDescription>
         </DialogHeader>
 
-        <div className="px-6 py-2">
+        <div className="px-8 py-6">
           <div className="relative group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
             <Input 
               placeholder="Поиск чатов..." 
               value={search} 
               onChange={e => setSearch(e.target.value)} 
-              className="bg-white/5 border-white/10 h-10 rounded-xl pl-9 focus:border-primary/40 transition-all"
+              className="bg-white/5 border-white/10 h-12 rounded-2xl pl-12 focus:border-primary/40 transition-all font-bold"
             />
           </div>
         </div>
 
-        <ScrollArea className="flex-1 px-4 py-2">
-          <div className="space-y-1">
+        <ScrollArea className="flex-1 px-4">
+          <div className="space-y-2 pb-10">
             {filteredChats.map(chat => (
               <div 
                 key={chat.id} 
-                className="flex items-center justify-between p-3 rounded-2xl hover:bg-white/5 cursor-pointer transition-all group"
+                className="flex items-center justify-between p-4 bg-white/[0.02] border border-white/5 rounded-[1.8rem] hover:bg-primary/5 hover:border-primary/20 cursor-pointer transition-all group shadow-lg"
                 onClick={() => handleForward(chat)}
               >
-                <div className="flex items-center gap-3">
-                  <UserAvatar userId={chat.type === 'private' ? chat.participantIds.find(id => id !== user?.uid) : null} manualAvatarUrl={chat.avatarUrl} className="h-10 w-10" fallbackName={chat.name} />
-                  <div className="flex flex-col text-left">
-                    <span className="font-bold text-sm text-white">{formatDisplayName(chat.name)}</span>
-                    <span className="text-[9px] text-muted-foreground uppercase">{chat.type}</span>
+                <div className="flex items-center gap-4 min-w-0">
+                  <UserAvatar 
+                    userId={chat.type === 'private' ? chat.participantIds.find(id => id !== user?.uid) : null} 
+                    manualAvatarUrl={chat.avatarUrl} 
+                    className="h-12 w-12 border border-white/10" 
+                    fallbackName={chat.name} 
+                  />
+                  <div className="flex flex-col text-left min-w-0">
+                    <span className="font-black text-[15px] text-white italic tracking-tight uppercase truncate">{formatDisplayName(chat.name)}</span>
+                    <span className="text-[9px] text-primary/60 font-black uppercase tracking-widest">{chat.type}</span>
                   </div>
                 </div>
-                <ArrowRight className="w-4 h-4 text-primary/40 group-hover:text-primary transition-colors" />
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all">
+                  <ArrowRight className="w-5 h-5" />
+                </div>
               </div>
             ))}
           </div>
