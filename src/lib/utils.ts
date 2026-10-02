@@ -10,8 +10,8 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * АБСОЛЮТНЫЙ ИДЕНТИФИКАТОР V68.0
- * Удалены все зацепки на AI.
+ * АБСОЛЮТНЫЙ ИДЕНТИФИКАТОР V74.1
+ * Защищенный дешифратор для предотвращения крахов UI.
  */
 export function formatDisplayName(name: string | undefined | null, username?: string | null): string {
   if (
@@ -52,12 +52,20 @@ export function encryptSignal(text: string): string {
 
 export function decryptSignal(content: string | undefined | null): string {
   if (!content || typeof content !== 'string') return content || '';
-  const prefix = content.startsWith('NX_SECURE_') ? 'NX_SECURE_' : content.startsWith('NX_') ? 'NX_' : null;
-  if (!prefix) return content;
+  
+  // Распознаем только наши префиксы
+  const isEncoded = content.startsWith('NX_SECURE_') || content.startsWith('NX_');
+  if (!isEncoded) return content;
+
   try {
+    const prefix = content.startsWith('NX_SECURE_') ? 'NX_SECURE_' : 'NX_';
     const raw = content.replace(prefix, '');
+    // Проверка валидности base64 перед декодированием
+    if (!/^[A-Za-z0-9+/=]+$/.test(raw)) return content;
     return decodeURIComponent(atob(raw));
-  } catch (e) { return content; }
+  } catch (e) { 
+    return "Сигнал зашифрован"; 
+  }
 }
 
 export function isGlobalAdmin(user: User | null | undefined): boolean {

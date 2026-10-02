@@ -10,7 +10,8 @@ import { firebaseConfig } from '@/firebase/config';
 import { Preferences } from '@capacitor/preferences';
 
 /**
- * NUXUS ENGINE V70.0 «ABSOLUTE NATIVE BRIDGE»
+ * NUXUS ENGINE V74.1 «STABILITY CORE»
+ * ОПТИМИЗИРОВАНО: Защищенная инициализация для предотвращения "Белого экрана".
  */
 
 let appInstance: FirebaseApp | undefined;
@@ -28,18 +29,21 @@ const ignite = () => {
     // Адаптер для нативного хранилища Preferences (Android/iOS)
     const capacitorPersistence = {
       getItem: async (key: string) => {
-        const { value } = await Preferences.get({ key });
-        return value;
+        try {
+          const { value } = await Preferences.get({ key });
+          return value;
+        } catch (e) { return null; }
       },
       setItem: async (key: string, value: string) => {
-        await Preferences.set({ key, value });
+        try { await Preferences.set({ key, value }); } catch (e) {}
       },
       removeItem: async (key: string) => {
-        await Preferences.remove({ key });
+        try { await Preferences.remove({ key }); } catch (e) {}
       }
     };
 
-    const isNative = (window as any).Capacitor?.isNativePlatform();
+    // БЕЗОПАСНАЯ ПРОВЕРКА CAPACITOR (Фикс Белого экрана)
+    const isNative = typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.();
     
     // Принудительная нативная память для APK
     const persistenceMethod = isNative 

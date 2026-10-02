@@ -19,8 +19,8 @@ import { NuxusLogo } from '@/components/nuxus-logo';
 import { checkBiometric } from '@/services/biometric-service';
 
 /**
- * NUXUS HOME GATE V74.0 «PULSE BIOMETRIC»
- * Восстановленная стабильная версия Face ID и 2FA.
+ * NUXUS HOME GATE V74.1 «PULSE STABILITY»
+ * ОПТИМИЗИРОВАНО: Защита от белого экрана и стабильный Face ID.
  */
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -36,8 +36,8 @@ export default function Home() {
 
   useEffect(() => {
     setIsMounted(true);
-    // Проверка поддержки биометрии в браузере/WebView
-    if (typeof window !== 'undefined' && (window as any).PublicKeyCredential) {
+    // Проверка поддержки биометрии
+    if (typeof window !== 'undefined' && window.PublicKeyCredential) {
       setIsBiometricAvailable(true);
     }
   }, []);
@@ -62,8 +62,11 @@ export default function Home() {
         return;
       }
       
-      if (inputToVerify.length >= (parseInt(profile.twoFactorPinLength || '6'))) {
-        if (window.navigator?.vibrate) window.navigator.vibrate(200);
+      const pinLimit = parseInt(profile.twoFactorPinLength || '6');
+      if (inputToVerify.length >= pinLimit) {
+        if (typeof window !== 'undefined' && window.navigator?.vibrate) {
+          window.navigator.vibrate(200);
+        }
         toast({ title: "Неверный код доступа", variant: "destructive" });
         setTwoFactorInput('');
       }
@@ -75,7 +78,6 @@ export default function Home() {
   const handleFaceID = async () => {
     setIsAuthenticating(true);
     try {
-      // Вызов нативного Face ID / Touch ID
       const ok = await checkBiometric();
       if (ok) {
         setIs2FAVerified(true);
@@ -90,7 +92,6 @@ export default function Home() {
     }
   };
 
-  // Эффект для автоматической проверки PIN при вводе
   useEffect(() => {
     if (profile?.twoFactorEnabled) {
       const targetLength = parseInt(profile.twoFactorPinLength || '6');
@@ -100,11 +101,21 @@ export default function Home() {
     }
   }, [twoFactorInput, profile, handleVerify2FA]);
 
-  if (!isMounted || isUserLoading || (user && isProfileLoading)) {
+  // ФУНДАМЕНТАЛЬНЫЙ ФИКС БЕЛОГО ЭКРАНА:
+  // Если компонент еще не примонтирован, показываем черный экран загрузки.
+  if (!isMounted) {
+    return (
+      <div className="h-[100dvh] w-full bg-[#010103] flex flex-col items-center justify-center">
+         <NuxusLogo size={80} className="opacity-20 animate-pulse" />
+      </div>
+    );
+  }
+
+  if (isUserLoading || (user && isProfileLoading)) {
     return (
       <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#010103] text-white">
         <NuxusLogo size={80} className="animate-pulse opacity-40" />
-        <p className="mt-8 text-[8px] font-black uppercase tracking-[0.6em] text-primary/40">Syncing Engine V74.0</p>
+        <p className="mt-8 text-[8px] font-black uppercase tracking-[0.6em] text-primary/40">Syncing Engine V74.1</p>
       </div>
     );
   }
@@ -132,7 +143,6 @@ export default function Home() {
 
     return (
       <div className="h-screen w-full flex items-center justify-center bg-[#010103] relative px-6 overflow-hidden">
-        {/* Background Aura */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.1)_0%,transparent_70%)] pointer-events-none" />
         
         <div className="w-full max-w-[400px] space-y-12 text-center animate-in fade-in zoom-in-95 duration-700 relative z-10">
