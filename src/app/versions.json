@@ -1,12 +1,13 @@
+
 {
-  "latestVersion": "71.1.0",
+  "latestVersion": "76.0.0",
   "qesVersion": "27.1",
-  "build": "Nuxus-Absolute-Native-Core-V71-MAIL",
+  "build": "Nuxus-Absolute-Native-Core-V76-STABILITY",
   "sizeMb": 65,
   "changelog": [
-    "Broadcast Engine: Added real-world Email delivery protocol.",
-    "Identity: Sender identity locked to support@nuxus.fun.",
-    "Security: Batch processing for thousands of mail nodes.",
-    "Native: Optimized memory handling for heavy broadcast tasks."
+    "Fiber Shield: Fixed ForwardModal render crash.",
+    "Hydration: Added mounting guards for all interactive modals.",
+    "Architecture: Enforced non-blocking signal protocol for chat actions.",
+    "Native: Improved reliability of cross-component state transitions."
   ]
 }
