@@ -17,10 +17,10 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Settings2, Camera, ShieldCheck, Loader2, Fingerprint, Palette, 
   ChevronRight, Globe, Trash2, Mail, Phone, Lock, 
-  Info, HelpCircle, UserCheck, ShieldAlert, ImageIcon, Type, LayoutGrid, MessageSquare, Headphones, KeyRound
+  Info, HelpCircle, UserCheck, ShieldAlert, ImageIcon, Type, LayoutGrid, MessageSquare, Headphones, KeyRound, RefreshCw, AlertTriangle
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { signOut } from 'firebase/auth';
+import { signOut, updateEmail } from 'firebase/auth';
 import { doc, updateDoc, deleteDoc, addDoc, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppState } from '@/lib/app-state';
@@ -30,6 +30,10 @@ import versions from '@/app/versions.json';
 
 const ADMIN_ID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
+/**
+ * SETTINGS MODAL V84.0 «IDENTITY REPAIR»
+ * ADDED: Synchronize Auth Signal button to fix email mismatches.
+ */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
   const db = useFirestore();
@@ -42,6 +46,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const { data: profile } = useDoc<User>(userRef);
 
   const [isSaving, setIsSaving] = useState(false);
+  const [isSyncingAuth, setIsSyncingAuth] = useState(false);
+  
   const [form, setForm] = useState({
     name: '', username: '', bio: '', avatarUrl: '', phone: '', email: '',
     appearance: 'dark' as 'light' | 'dark', theme: 'default',
@@ -106,11 +112,34 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     finally { setIsSaving(false); }
   };
 
+  const syncAuthIdentity = async () => {
+    if (!auth?.currentUser || !profile?.email) return;
+    
+    if (auth.currentUser.email === profile.email) {
+      toast({ title: "Синхронизация не требуется", description: "Ваша личность в порядке." });
+      return;
+    }
+
+    setIsSyncingAuth(true);
+    try {
+      await updateEmail(auth.currentUser, profile.email);
+      toast({ title: "Личность исправлена", description: "Теперь вы можете входить по новой почте." });
+    } catch (e: any) {
+      console.error(e);
+      if (e.code === 'auth/requires-recent-login') {
+        toast({ title: "Требуется перевход", description: "Перезайдите в аккаунт для подтверждения прав.", variant: "destructive" });
+        setTimeout(() => signOut(auth), 2000);
+      } else {
+        toast({ title: "Сбой синхронизации", description: e.message, variant: "destructive" });
+      }
+    } finally {
+      setIsSyncingAuth(false);
+    }
+  };
+
   const openSupport = async () => {
     if (!db || !user) return;
-    
     const isUserAdmin = isGlobalAdmin(profile);
-    
     if (isUserAdmin || user.uid === ADMIN_ID) {
       toast({ title: "Вы являетесь оператором Ядра" });
       return;
@@ -153,6 +182,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     }
   };
 
+  const isAuthMismatch = auth?.currentUser && profile?.email && auth.currentUser.email !== profile.email;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg bg-[#0a0a0c]/98 backdrop-blur-[80px] border-white/10 p-0 overflow-hidden h-[85dvh] flex flex-col rounded-[3rem] shadow-2xl outline-none">
@@ -163,7 +194,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
             </div>
             <div className="flex flex-col">
               <DialogTitle className="text-2xl font-black italic uppercase text-white tracking-tighter">Настройки</DialogTitle>
-              <DialogDescription className="text-[9px] font-bold uppercase text-primary/60 mt-0.5 tracking-widest">Protocol V79.0</DialogDescription>
+              <DialogDescription className="text-[9px] font-bold uppercase text-primary/60 mt-0.5 tracking-widest">Protocol V84.0</DialogDescription>
             </div>
           </div>
         </DialogHeader>
@@ -189,6 +220,27 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     </div>
                     
                     <div className="w-full space-y-4">
+                       {isAuthMismatch && (
+                         <div className="p-6 bg-red-500/10 border border-red-500/20 rounded-[2rem] space-y-4 animate-in fade-in zoom-in-95">
+                            <div className="flex items-center gap-3 text-red-500">
+                               <AlertTriangle className="w-5 h-5 animate-pulse" />
+                               <span className="text-[10px] font-black uppercase tracking-widest">Разрыв Личности Обнаружен</span>
+                            </div>
+                            <p className="text-[9px] text-white/60 font-bold uppercase leading-relaxed">
+                               Почта в системе входа ({auth?.currentUser?.email}) не совпадает с вашим профилем ({profile?.email}). 
+                               Вы не сможете войти под новой почтой, пока не синхронизируете их.
+                            </p>
+                            <Button 
+                              onClick={syncAuthIdentity} 
+                              disabled={isSyncingAuth}
+                              className="w-full h-11 bg-red-500 text-white rounded-xl font-black uppercase text-[9px] tracking-widest gap-2 shadow-xl shadow-red-500/20"
+                            >
+                              {isSyncingAuth ? <Loader2 className="animate-spin w-4 h-4" /> : <RefreshCw className="w-4 h-4" />}
+                              Синхронизировать Auth-сигнал
+                            </Button>
+                         </div>
+                       )}
+
                        <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5 space-y-4">
                           <div className="space-y-1.5">
                              <Label className="text-[9px] font-black uppercase text-primary/60 ml-2 tracking-widest">Имя</Label>
@@ -316,7 +368,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20"><Info className="w-8 h-8 text-primary" /></div>
                     <div className="space-y-1">
                        <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Nuxus Kernel</h3>
-                       <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.4em]">Версия {versions.latestVersion} • Pulse V79.0</p>
+                       <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.4em]">Версия {versions.latestVersion} • Pulse V84.0</p>
                     </div>
                     <div className="grid grid-cols-1 gap-3 w-full">
                        <Button onClick={openSupport} className="h-14 rounded-2xl bg-white/5 border border-white/10 font-black uppercase text-[10px] tracking-widest gap-3 hover:bg-primary/10 transition-all">

@@ -37,6 +37,10 @@ const COUNTRIES = [
   { name: 'Украина', code: '+380', flag: '🇺🇦' },
 ];
 
+/**
+ * AUTH SCREEN V84.0 «IDENTITY ENFORCER»
+ * UPDATED: SMS Confirmation result persistence and domain restrictions.
+ */
 export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'login' | 'register' }) {
   const auth = useAuth();
   const db = useFirestore();
@@ -67,20 +71,22 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
   // Инициализация Recaptcha
   const initRecaptcha = useCallback(() => {
     if (typeof window === 'undefined' || !auth) return;
-    if (window.recaptchaVerifier) return window.recaptchaVerifier;
+    
+    // Если уже есть - возвращаем
+    if ((window as any).recaptchaVerifier) return (window as any).recaptchaVerifier;
 
     try {
       const container = document.getElementById('recaptcha-container');
       if (container) {
-        window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
           size: 'invisible',
-          callback: () => { console.log('Recaptcha solved'); }
+          callback: () => { console.log('Recaptcha Signal Established'); }
         });
       }
     } catch (e) {
       console.error("Recaptcha Init Error:", e);
     }
-    return window.recaptchaVerifier;
+    return (window as any).recaptchaVerifier;
   }, [auth]);
 
   const handleSendSms = async () => {
@@ -99,7 +105,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
 
       const confirmation = await signInWithPhoneNumber(auth, normalizedPhone, verifier);
       setVerificationId(confirmation.verificationId);
-      // Важно: сохраняем глобально для доступа из handleVerifySms
+      // КРИТИЧЕСКИ ВАЖНО: Храним объект подтверждения глобально
       (window as any).confirmationResult = confirmation;
       
       toast({ title: "Код отправлен", description: `На номер ${normalizedPhone}` });
@@ -158,9 +164,9 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
       if (authMethod === 'email') {
         const cleanEmail = email.trim().toLowerCase();
         
-        // Валидация только для регистрации
-        if (mode === 'register' && !cleanEmail.endsWith('@nuxus.fun')) {
-          throw new Error("Регистрация разрешена только для @nuxus.fun");
+        // СТРОГАЯ ВАЛИДАЦИЯ ДОМЕНА @NUXUS.FUN
+        if (!cleanEmail.endsWith('@nuxus.fun')) {
+          throw new Error("Регистрация и вход разрешены только для @nuxus.fun");
         }
 
         if (mode === 'login') {
@@ -195,7 +201,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
       }
     } catch (e: any) {
       let msg = e.message;
-      if (e.code === 'auth/user-not-found') msg = "Узел с такой почтой не зарегистрирован в системе Auth";
+      if (e.code === 'auth/user-not-found') msg = "Узел не зарегистрирован в системе Auth. Используйте старую почту или регистрацию.";
       if (e.code === 'auth/wrong-password') msg = "Неверный пароль доступа";
       toast({ title: "Ошибка", description: msg, variant: "destructive" });
     } finally {
@@ -225,7 +231,9 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
 
   return (
     <div className="h-[100dvh] w-full flex flex-col bg-[#010103] relative overflow-hidden">
+      {/* Контейнер рекапчи ВСЕГДА в DOM */}
       <div id="recaptcha-container" className="fixed top-[-100px] left-[-100px] opacity-0 pointer-events-none"></div>
+      
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(59,130,246,0.1)_0%,transparent_70%)]" />
       <ScrollArea className="w-full h-full">
         <div className="min-h-full w-full flex flex-col items-center justify-center p-6 py-12">
