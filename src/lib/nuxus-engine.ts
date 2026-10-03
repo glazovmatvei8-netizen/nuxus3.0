@@ -3,13 +3,13 @@
 
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
 import { initializeAuth, indexedDBLocalPersistence, browserLocalPersistence, Auth } from 'firebase/auth';
-import { getFirestore, Firestore } from 'firebase/firestore';
+import { initializeFirestore, Firestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
 import { firebaseConfig } from '@/firebase/config';
 import { Preferences } from '@capacitor/preferences';
 
 /**
- * NUXUS ENGINE V75.0 «ABSOLUTE STABILITY»
- * ОПТИМИЗИРОВАНО: Защищенный запуск с отказоустойчивым мостом памяти.
+ * NUXUS ENGINE V86.0 «ALWAYS ON PROTOCOL»
+ * ОПТИМИЗИРОВАНО: Включено полноценное оффлайн-кэширование данных (Persistence).
  */
 
 let appInstance: FirebaseApp | undefined;
@@ -52,12 +52,16 @@ const ignite = () => {
         : [indexedDBLocalPersistence, browserLocalPersistence]
     });
 
-    dbInstance = getFirestore(appInstance);
+    // ВКЛЮЧАЕМ ОФФЛАЙН-ПЕРСИСТЕНТНОСТЬ (КЭШИРОВАНИЕ)
+    dbInstance = initializeFirestore(appInstance, {
+      localCache: persistentLocalCache({
+        tabManager: persistentMultipleTabManager()
+      })
+    });
     
-    console.log('%c🛰️ NUXUS KERNEL: IGNITION SUCCESSFUL', 'color: #34C759; font-weight: bold;');
+    console.log('%c🛰️ NUXUS KERNEL: PERSISTENCE ENGINE ACTIVE', 'color: #34C759; font-weight: bold;');
   } catch (e) {
     console.error("NUXUS KERNEL: IGNITION CRASHED", e);
-    // Резервная инициализация при крахе
     if (!appInstance) appInstance = initializeApp(firebaseConfig);
   }
 };

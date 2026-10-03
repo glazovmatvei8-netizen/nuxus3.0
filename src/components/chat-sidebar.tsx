@@ -5,7 +5,7 @@ import React, { useState, useMemo, memo, useEffect } from 'react';
 import { useAppState } from '@/lib/app-state';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
-import { Plus, Search, Star, Pin, MessageSquare, ShieldCheck, Loader2 } from 'lucide-react';
+import { Plus, Search, Star, Pin, MessageSquare, ShieldCheck, Loader2, Loader } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CreateChatModal } from './modals/create-chat-modal';
 import { StoriesBar } from './stories-bar';
@@ -123,6 +123,20 @@ export default function ChatSidebar() {
   
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    setIsOnline(navigator.onLine);
+    const hO = () => setIsOnline(true);
+    const hF = () => setIsOnline(false);
+    window.addEventListener('online', hO);
+    window.addEventListener('offline', hF);
+    return () => {
+      window.removeEventListener('online', hO);
+      window.removeEventListener('offline', hF);
+    };
+  }, []);
 
   const userProfileRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user?.uid]);
   const { data: profile } = useDoc<UserType>(userProfileRef);
@@ -156,7 +170,17 @@ export default function ChatSidebar() {
         <div className="flex flex-col min-h-full pb-60">
           <div className="px-6 pt-12 pb-6 space-y-6">
             <div className="flex items-center justify-between">
-               <h1 className="text-4xl font-black text-white italic tracking-tighter uppercase leading-none opacity-90">{t('app.chats')}</h1>
+               {isOnline ? (
+                 <h1 className="text-4xl font-black text-white italic tracking-tighter uppercase leading-none opacity-90 animate-in fade-in duration-500">{t('app.chats')}</h1>
+               ) : (
+                 <div className="flex flex-col gap-1 animate-in slide-in-from-left-4 duration-500">
+                    <div className="flex items-center gap-3">
+                       <h1 className="text-4xl font-black text-primary italic tracking-tighter uppercase leading-none">Nuxus</h1>
+                       <Loader className="w-6 h-6 text-primary animate-spin" />
+                    </div>
+                    <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60 italic animate-pulse">Подключение...</span>
+                 </div>
+               )}
                <Button 
                  variant="ghost" 
                  size="icon" 
@@ -218,7 +242,7 @@ export default function ChatSidebar() {
           <StoriesBar />
 
           <div className="mt-2">
-             {isChatsLoading ? (
+             {isChatsLoading && filteredChats.length === 0 ? (
                <div className="flex flex-col items-center justify-center py-20 gap-4 opacity-10">
                   <Loader2 className="w-10 h-10 animate-spin text-primary" />
                   <p className="text-[10px] font-black uppercase tracking-widest italic">Syncing...</p>

@@ -73,6 +73,18 @@
   50% { opacity: 0.6; filter: blur(120px); }
 }
 
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
 .animate-pulse-glow {
   animation: pulse-glow 8s infinite ease-in-out;
+}
+
+/* CUSTOM NUXUS ANIMATIONS */
+.liquid-shimmer {
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 2.5s infinite;
 }
