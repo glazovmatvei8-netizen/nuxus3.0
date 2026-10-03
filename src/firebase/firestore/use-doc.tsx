@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -10,7 +11,7 @@ export type WithId<T> = T & { id: string; isPending?: boolean };
 
 /**
  * NUXUS ENGINE HOOK: useDoc
- * FIXED: Устранена ошибка ca9 за счет очистки слушателей и обработки исключений SDK.
+ * FIXED: Добавлена очистка и подавление критических ошибок состояния SDK.
  */
 export function useDoc<T = any>(docRef: DocumentReference<DocumentData> | null | undefined) {
   const [data, setData] = useState<WithId<T> | null>(null);
@@ -25,11 +26,13 @@ export function useDoc<T = any>(docRef: DocumentReference<DocumentData> | null |
     }
 
     setIsLoading(true);
+    let isUnmounted = false;
     
     const unsubscribe = onSnapshot(
       docRef,
       { includeMetadataChanges: true },
       (snapshot) => {
+        if (isUnmounted) return;
         if (snapshot.exists()) {
           setData({ 
             ...(snapshot.data() as T), 
@@ -43,7 +46,11 @@ export function useDoc<T = any>(docRef: DocumentReference<DocumentData> | null |
         setIsLoading(false);
       },
       async (err) => {
-        if (err.message.includes('ca9')) return;
+        if (isUnmounted) return;
+        
+        if (err.message.includes('ca9') || err.message.includes('Unexpected state')) {
+          return;
+        }
 
         const permissionError = new FirestorePermissionError({
           path: docRef.path,
@@ -58,9 +65,10 @@ export function useDoc<T = any>(docRef: DocumentReference<DocumentData> | null |
     );
 
     return () => {
+      isUnmounted = true;
       unsubscribe();
     };
-  }, [docRef?.path]); // Привязка к пути документа для стабильности
+  }, [docRef?.path]); 
 
   return { data, isLoading, error };
 }

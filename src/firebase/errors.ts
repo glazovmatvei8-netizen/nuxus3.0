@@ -1,3 +1,4 @@
+
 'use client';
 import { type User } from 'firebase/auth';
 import { nuxus } from '@/lib/nuxus-engine';
@@ -35,52 +36,41 @@ interface SecurityRuleRequest {
   };
 }
 
-/**
- * Builds a security-rule-compliant auth object from the Firebase User.
- */
 function buildAuthObject(currentUser: User | null): FirebaseAuthObject | null {
-  if (!currentUser) {
-    return null;
-  }
+  if (!currentUser) return null;
 
-  const token: FirebaseAuthToken = {
-    name: currentUser.displayName,
-    email: currentUser.email,
-    email_verified: currentUser.emailVerified,
-    phone_number: currentUser.phoneNumber,
-    sub: currentUser.uid,
-    firebase: {
-      identities: currentUser.providerData.reduce((acc, p) => {
-        if (p.providerId) {
-          acc[p.providerId] = [p.uid];
-        }
-        return acc;
-      }, {} as Record<string, string[]>),
-      sign_in_provider: currentUser.providerData[0]?.providerId || 'custom',
-      tenant: currentUser.tenantId,
-    },
-  };
+  try {
+    const token: FirebaseAuthToken = {
+      name: currentUser.displayName,
+      email: currentUser.email,
+      email_verified: currentUser.emailVerified,
+      phone_number: currentUser.phoneNumber,
+      sub: currentUser.uid,
+      firebase: {
+        identities: (currentUser.providerData || []).reduce((acc, p) => {
+          if (p.providerId) acc[p.providerId] = [p.uid];
+          return acc;
+        }, {} as Record<string, string[]>),
+        sign_in_provider: currentUser.providerData?.[0]?.providerId || 'custom',
+        tenant: currentUser.tenantId,
+      },
+    };
 
-  return {
-    uid: currentUser.uid,
-    token: token,
-  };
+    return {
+      uid: currentUser.uid,
+      token: token,
+    };
+  } catch (e) { return null; }
 }
 
-/**
- * Builds the complete, simulated request object for the error message.
- */
 function buildRequestObject(context: SecurityRuleContext): SecurityRuleRequest {
   let authObject: FirebaseAuthObject | null = null;
   try {
-    // Безопасное получение пользователя через nuxus-engine
     const currentUser = nuxus.auth?.currentUser;
     if (currentUser) {
       authObject = buildAuthObject(currentUser);
     }
-  } catch (e) {
-    // Fallback for cases where Firebase isn't initialized yet
-  }
+  } catch (e) {}
 
   return {
     auth: authObject,

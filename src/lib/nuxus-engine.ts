@@ -3,13 +3,13 @@
 
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
 import { initializeAuth, indexedDBLocalPersistence, browserLocalPersistence, Auth } from 'firebase/auth';
-import { initializeFirestore, Firestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
+import { initializeFirestore, Firestore, persistentLocalCache, persistentSingleTabManager } from 'firebase/firestore';
 import { firebaseConfig } from '@/firebase/config';
 import { Preferences } from '@capacitor/preferences';
 
 /**
- * NUXUS ENGINE V86.0 «ALWAYS ON PROTOCOL»
- * ОПТИМИЗИРОВАНО: Включено полноценное оффлайн-кэширование данных (Persistence).
+ * NUXUS ENGINE V87.0 «STABILITY MAXIMUS»
+ * ОПТИМИЗИРОВАНО: Переход на persistentSingleTabManager для устранения ошибки ca9 в APK.
  */
 
 let appInstance: FirebaseApp | undefined;
@@ -24,7 +24,6 @@ const ignite = () => {
     const apps = getApps();
     appInstance = apps.length > 0 ? apps[0] : initializeApp(firebaseConfig);
     
-    // Адаптер для нативного хранилища Preferences (Android/iOS)
     const capacitorPersistence = {
       getItem: async (key: string) => {
         try {
@@ -40,10 +39,8 @@ const ignite = () => {
       }
     };
 
-    // Проверяем наличие Capacitor безопасно
     const isNative = !!(window as any).Capacitor?.isNativePlatform?.();
     
-    // Инициализируем Auth с лучшим доступным методом хранения
     authInstance = initializeAuth(appInstance, {
       // @ts-ignore
       persistence: isNative && typeof window !== 'undefined' && (window as any).getReactNativePersistence 
@@ -52,14 +49,14 @@ const ignite = () => {
         : [indexedDBLocalPersistence, browserLocalPersistence]
     });
 
-    // ВКЛЮЧАЕМ ОФФЛАЙН-ПЕРСИСТЕНТНОСТЬ (КЭШИРОВАНИЕ)
+    // ФИКС ОШИБКИ ca9: Используем singleTabManager, так как в APK нет вкладок
     dbInstance = initializeFirestore(appInstance, {
       localCache: persistentLocalCache({
-        tabManager: persistentMultipleTabManager()
+        tabManager: persistentSingleTabManager()
       })
     });
     
-    console.log('%c🛰️ NUXUS KERNEL: PERSISTENCE ENGINE ACTIVE', 'color: #34C759; font-weight: bold;');
+    console.log('%c🛰️ NUXUS KERNEL: STABLE PERSISTENCE ACTIVE', 'color: #34C759; font-weight: bold;');
   } catch (e) {
     console.error("NUXUS KERNEL: IGNITION CRASHED", e);
     if (!appInstance) appInstance = initializeApp(firebaseConfig);

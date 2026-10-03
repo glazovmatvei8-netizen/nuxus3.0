@@ -31,8 +31,8 @@ import versions from '@/app/versions.json';
 const ADMIN_ID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
 /**
- * SETTINGS MODAL V84.2 «IDENTITY VERIFICATION»
- * UPDATED: Replaced updateEmail with verifyBeforeUpdateEmail for security compliance.
+ * SETTINGS MODAL V87.0 «ERROR SUPPRESSION»
+ * FIXED: Improved auth synchronization error handling for operation-not-allowed.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -122,19 +122,22 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
     setIsSyncingAuth(true);
     try {
-      // Использование verifyBeforeUpdateEmail вместо updateEmail для обхода ограничений
       await verifyBeforeUpdateEmail(auth.currentUser, profile.email);
       toast({ 
         title: "Письмо отправлено", 
-        description: `Проверьте ${profile.email} и перейдите по ссылке для завершения синхронизации.` 
+        description: `Проверьте ${profile.email} для завершения синхронизации.` 
       });
     } catch (e: any) {
       console.error(e);
-      if (e.code === 'auth/requires-recent-login') {
-        toast({ title: "Требуется перевход", description: "Перезайдите в аккаунт для подтверждения прав.", variant: "destructive" });
+      if (e.code === 'auth/operation-not-allowed') {
+        toast({ 
+          title: "Ограничение Консоли", 
+          description: "Включите 'Email link' и 'Email address change' в Firebase Console.", 
+          variant: "destructive" 
+        });
+      } else if (e.code === 'auth/requires-recent-login') {
+        toast({ title: "Требуется перевход", description: "Перезайдите в аккаунт для безопасности.", variant: "destructive" });
         setTimeout(() => signOut(auth), 2000);
-      } else if (e.code === 'auth/operation-not-allowed') {
-        toast({ title: "Ограничение Firebase", description: "Функция изменения почты требует верификации или отключена в консоли.", variant: "destructive" });
       } else {
         toast({ title: "Сбой синхронизации", description: e.message, variant: "destructive" });
       }
@@ -200,7 +203,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
             </div>
             <div className="flex flex-col">
               <DialogTitle className="text-2xl font-black italic uppercase text-white tracking-tighter">Настройки</DialogTitle>
-              <DialogDescription className="text-[9px] font-bold uppercase text-primary/60 mt-0.5 tracking-widest">Protocol V84.2</DialogDescription>
+              <DialogDescription className="text-[9px] font-bold uppercase text-primary/60 mt-0.5 tracking-widest">Protocol V87.0</DialogDescription>
             </div>
           </div>
         </DialogHeader>
@@ -374,7 +377,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20"><Info className="w-8 h-8 text-primary" /></div>
                     <div className="space-y-1">
                        <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Nuxus Kernel</h3>
-                       <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.4em]">Версия {versions.latestVersion} • Pulse V84.2</p>
+                       <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.4em]">Версия {versions.latestVersion} • Pulse V87.0</p>
                     </div>
                     <div className="grid grid-cols-1 gap-3 w-full">
                        <Button onClick={openSupport} className="h-14 rounded-2xl bg-white/5 border border-white/10 font-black uppercase text-[10px] tracking-widest gap-3 hover:bg-primary/10 transition-all">

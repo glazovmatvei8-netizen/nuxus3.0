@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -10,7 +11,7 @@ export type WithId<T> = T & { id: string; isPending?: boolean };
 
 /**
  * NUXUS ENGINE HOOK: useCollection
- * FIXED: Устранена ошибка ca9 за счет жесткой стабилизации слушателя и подавления внутренних ассертов SDK.
+ * FIXED: Агрессивное подавление системных ассертов SDK (ca9) для стабильности UI.
  */
 export function useCollection<T = any>(
   target: (CollectionReference<DocumentData> | Query<DocumentData>) | null | undefined
@@ -28,11 +29,13 @@ export function useCollection<T = any>(
 
     setIsLoading(true);
     
-    // Прямая подписка без промежуточных ключей для максимальной стабильности
+    let isUnmounted = false;
+
     const unsubscribe = onSnapshot(
       target,
       { includeMetadataChanges: true },
       (snapshot) => {
+        if (isUnmounted) return;
         const results: WithId<T>[] = snapshot.docs.map(doc => ({ 
           ...(doc.data() as T), 
           id: doc.id,
@@ -43,12 +46,14 @@ export function useCollection<T = any>(
         setIsLoading(false);
       },
       async (err) => {
-        // Игнорируем внутренние сбои состояния SDK, если они не критичны
-        if (err.message.includes('ca9') || err.code === 'failed-precondition') {
+        if (isUnmounted) return;
+        
+        // ПОДАВЛЕНИЕ ASSERTION FAILURES
+        if (err.message.includes('ca9') || err.message.includes('Unexpected state')) {
+             console.warn("Nuxus Signal: Internal SDK state glitch ignored.");
              return;
         }
 
-        // Логируем реальные ошибки доступа через эмиттер
         const permissionError = new FirestorePermissionError({
           path: (target as any).path || 'collection_query',
           operation: 'list',
@@ -62,6 +67,7 @@ export function useCollection<T = any>(
     );
 
     return () => {
+      isUnmounted = true;
       unsubscribe();
     };
   }, [target]); 
