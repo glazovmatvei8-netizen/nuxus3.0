@@ -20,7 +20,7 @@ import {
   Info, HelpCircle, UserCheck, ShieldAlert, ImageIcon, Type, LayoutGrid, MessageSquare, Headphones, KeyRound, RefreshCw, AlertTriangle
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { signOut, updateEmail } from 'firebase/auth';
+import { signOut, verifyBeforeUpdateEmail } from 'firebase/auth';
 import { doc, updateDoc, deleteDoc, addDoc, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppState } from '@/lib/app-state';
@@ -31,8 +31,8 @@ import versions from '@/app/versions.json';
 const ADMIN_ID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
 /**
- * SETTINGS MODAL V84.0 «IDENTITY REPAIR»
- * ADDED: Synchronize Auth Signal button to fix email mismatches.
+ * SETTINGS MODAL V84.2 «IDENTITY VERIFICATION»
+ * UPDATED: Replaced updateEmail with verifyBeforeUpdateEmail for security compliance.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -122,13 +122,19 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
     setIsSyncingAuth(true);
     try {
-      await updateEmail(auth.currentUser, profile.email);
-      toast({ title: "Личность исправлена", description: "Теперь вы можете входить по новой почте." });
+      // Использование verifyBeforeUpdateEmail вместо updateEmail для обхода ограничений
+      await verifyBeforeUpdateEmail(auth.currentUser, profile.email);
+      toast({ 
+        title: "Письмо отправлено", 
+        description: `Проверьте ${profile.email} и перейдите по ссылке для завершения синхронизации.` 
+      });
     } catch (e: any) {
       console.error(e);
       if (e.code === 'auth/requires-recent-login') {
         toast({ title: "Требуется перевход", description: "Перезайдите в аккаунт для подтверждения прав.", variant: "destructive" });
         setTimeout(() => signOut(auth), 2000);
+      } else if (e.code === 'auth/operation-not-allowed') {
+        toast({ title: "Ограничение Firebase", description: "Функция изменения почты требует верификации или отключена в консоли.", variant: "destructive" });
       } else {
         toast({ title: "Сбой синхронизации", description: e.message, variant: "destructive" });
       }
@@ -194,7 +200,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
             </div>
             <div className="flex flex-col">
               <DialogTitle className="text-2xl font-black italic uppercase text-white tracking-tighter">Настройки</DialogTitle>
-              <DialogDescription className="text-[9px] font-bold uppercase text-primary/60 mt-0.5 tracking-widest">Protocol V84.0</DialogDescription>
+              <DialogDescription className="text-[9px] font-bold uppercase text-primary/60 mt-0.5 tracking-widest">Protocol V84.2</DialogDescription>
             </div>
           </div>
         </DialogHeader>
@@ -228,7 +234,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                             </div>
                             <p className="text-[9px] text-white/60 font-bold uppercase leading-relaxed">
                                Почта в системе входа ({auth?.currentUser?.email}) не совпадает с вашим профилем ({profile?.email}). 
-                               Вы не сможете войти под новой почтой, пока не синхронизируете их.
+                               Для исправления нажмите кнопку ниже и подтвердите ссылку в вашей новой почте.
                             </p>
                             <Button 
                               onClick={syncAuthIdentity} 
@@ -368,7 +374,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20"><Info className="w-8 h-8 text-primary" /></div>
                     <div className="space-y-1">
                        <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Nuxus Kernel</h3>
-                       <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.4em]">Версия {versions.latestVersion} • Pulse V84.0</p>
+                       <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.4em]">Версия {versions.latestVersion} • Pulse V84.2</p>
                     </div>
                     <div className="grid grid-cols-1 gap-3 w-full">
                        <Button onClick={openSupport} className="h-14 rounded-2xl bg-white/5 border border-white/10 font-black uppercase text-[10px] tracking-widest gap-3 hover:bg-primary/10 transition-all">
