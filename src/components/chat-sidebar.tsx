@@ -45,7 +45,8 @@ const ChatListItem = memo(({
   const isUnread = (lastMsg && !lastMsg.isRead && lastMsg.senderId !== currentUserId) || chat.isManualUnread;
 
   const decryptedPreview = useMemo(() => {
-    if (!mounted || !lastMsg) return 'Нет сообщений';
+    if (!mounted) return '...';
+    if (!lastMsg) return 'Нет сообщений';
     if (lastMsg.contentType !== 'text') return `[Вложение]`;
     return decryptSignal(lastMsg.content);
   }, [lastMsg, mounted]);
@@ -58,6 +59,13 @@ const ChatListItem = memo(({
       return '';
     }
   }, [chat.lastMessageAt, mounted]);
+
+  const displayName = useMemo(() => {
+    if (!mounted) return '...';
+    if (chat.type === 'saved') return 'Архив Данных';
+    if (chat.type === 'private') return formatDisplayName(otherProfile?.name, otherProfile?.username);
+    return formatDisplayName(chat.name, chat.username);
+  }, [chat, otherProfile, mounted]);
 
   return (
     <div className="px-4 py-1">
@@ -72,11 +80,11 @@ const ChatListItem = memo(({
       >
         <div className="relative shrink-0">
           <UserAvatar 
-            userId={otherId} 
+            userId={otherId || (chat.type === 'saved' ? currentUserId : null)} 
             className="h-16 w-16 rounded-[2rem] border border-white/5 shadow-xl group-hover:scale-105 transition-transform" 
-            manualAvatarUrl={chat.type !== 'private' ? chat.avatarUrl : otherProfile?.avatarUrl} 
-            fallbackName={chat.name} 
-            showOnlineStatus 
+            manualAvatarUrl={chat.type !== 'private' && chat.type !== 'saved' ? chat.avatarUrl : otherProfile?.avatarUrl} 
+            fallbackName={displayName} 
+            showOnlineStatus={chat.type === 'private'} 
           />
           {isUnread && (
             <div className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-primary rounded-full border-4 border-[#010103] shadow-[0_0_20px_rgba(var(--primary),1)]" />
@@ -87,7 +95,7 @@ const ChatListItem = memo(({
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
               <span className={cn("font-black text-[15px] truncate italic tracking-tighter uppercase", isActive ? "text-white" : "text-white/80")}>
-                {formatDisplayName(chat.name || otherProfile?.name, chat.username)}
+                {displayName}
               </span>
               {isPremium && <Star className="w-3.5 h-3.5 text-primary fill-primary animate-pulse" />}
               {isPinned && <Pin className="w-3 h-3 text-white/20" />}

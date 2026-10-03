@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -23,7 +24,7 @@ import { signOut } from 'firebase/auth';
 import { doc, updateDoc, deleteDoc, addDoc, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppState } from '@/lib/app-state';
-import { isUserPremium, cn } from '@/lib/utils';
+import { isUserPremium, cn, isGlobalAdmin } from '@/lib/utils';
 import type { User } from '@/lib/types';
 import versions from '@/app/versions.json';
 
@@ -108,18 +109,23 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const openSupport = async () => {
     if (!db || !user) return;
     
-    // Если пользователь сам является оператором
-    if (user.uid === ADMIN_ID) {
+    const isUserAdmin = isGlobalAdmin(profile);
+    
+    if (isUserAdmin || user.uid === ADMIN_ID) {
       toast({ title: "Вы являетесь оператором Ядра" });
       return;
     }
 
     try {
-      const q = query(collection(db, 'chats'), where('type', '==', 'private'), where('participantIds', 'array-contains', user.uid));
+      const q = query(
+        collection(db, 'chats'), 
+        where('type', '==', 'private'), 
+        where('participantIds', 'array-contains', user.uid)
+      );
       const snap = await getDocs(q);
       const existing = snap.docs.find(d => {
         const data = d.data();
-        return data.type === 'private' && data.participantIds.includes(ADMIN_ID);
+        return data.participantIds.includes(ADMIN_ID);
       });
       
       if (existing) {
@@ -157,7 +163,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
             </div>
             <div className="flex flex-col">
               <DialogTitle className="text-2xl font-black italic uppercase text-white tracking-tighter">Настройки</DialogTitle>
-              <DialogDescription className="text-[9px] font-bold uppercase text-primary/60 mt-0.5 tracking-widest">Protocol V74.0</DialogDescription>
+              <DialogDescription className="text-[9px] font-bold uppercase text-primary/60 mt-0.5 tracking-widest">Protocol V79.0</DialogDescription>
             </div>
           </div>
         </DialogHeader>
@@ -310,7 +316,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20"><Info className="w-8 h-8 text-primary" /></div>
                     <div className="space-y-1">
                        <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Nuxus Kernel</h3>
-                       <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.4em]">Версия {versions.latestVersion} • Pulse V74.0</p>
+                       <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.4em]">Версия {versions.latestVersion} • Pulse V79.0</p>
                     </div>
                     <div className="grid grid-cols-1 gap-3 w-full">
                        <Button onClick={openSupport} className="h-14 rounded-2xl bg-white/5 border border-white/10 font-black uppercase text-[10px] tracking-widest gap-3 hover:bg-primary/10 transition-all">

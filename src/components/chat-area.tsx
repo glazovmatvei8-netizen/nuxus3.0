@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
@@ -225,7 +226,6 @@ export default function ChatArea() {
     addDoc(collection(db, 'chats', currentChatId, 'messages'), msgData);
     updateDoc(doc(db, 'chats', currentChatId), { lastMessageAt: new Date().toISOString() });
     
-    // Increment reputation slightly for normal talk
     if (userProfile) {
        updateDoc(doc(db, 'users', firebaseUser.uid), { reputation: (userProfile.reputation || 0) + 0.1 });
     }
@@ -238,6 +238,13 @@ export default function ChatArea() {
     return {};
   }, [userProfile?.settings?.chatBackground]);
 
+  const currentDisplayName = useMemo(() => {
+    if (!chat) return '...';
+    if (chat.type === 'saved') return 'Архив Данных';
+    if (chat.type === 'private') return formatDisplayName(otherProfile?.name, otherProfile?.username);
+    return formatDisplayName(chat.name, chat.username);
+  }, [chat, otherProfile]);
+
   const rep = getReputationInfo(otherId ? otherProfile?.reputation : userProfile?.reputation);
 
   return (
@@ -249,18 +256,18 @@ export default function ChatArea() {
           <Button variant="ghost" size="icon" className="md:hidden rounded-2xl text-white/40 h-10 w-10 hover:bg-white/5" onClick={() => setCurrentChatId(null)}><ChevronLeft className="w-6 h-6" /></Button>
           <div className="flex items-center gap-4 cursor-pointer min-w-0 flex-1 group" onClick={() => otherId ? setInspectedUserId(otherId) : setIsChatInfoOpen(true)}>
             <UserAvatar 
-              userId={otherId} 
+              userId={otherId || (chat?.type === 'saved' ? firebaseUser?.uid : null)} 
               className="h-11 w-11 border-2 border-white/10 group-hover:border-primary/40 transition-all shadow-xl" 
-              manualAvatarUrl={chat?.avatarUrl} 
-              fallbackName={formatDisplayName(chat?.name)} 
-              showOnlineStatus 
+              manualAvatarUrl={chat?.type !== 'private' && chat?.type !== 'saved' ? chat?.avatarUrl : otherProfile?.avatarUrl} 
+              fallbackName={currentDisplayName} 
+              showOnlineStatus={chat?.type === 'private'} 
             />
             <div className="flex flex-col min-w-0 text-left">
               <div className="flex items-center gap-2 min-w-0">
-                <span className="font-black text-base truncate text-white leading-tight italic tracking-tighter uppercase">{formatDisplayName(chat?.name, chat?.username)}</span>
+                <span className="font-black text-base truncate text-white leading-tight italic tracking-tighter uppercase">{currentDisplayName}</span>
                 <span className={cn("text-[10px] drop-shadow-lg", rep.color)} title={`Lvl ${rep.level}`}>{rep.icon}</span>
               </div>
-              <span className="text-[9px] font-bold text-primary/60 tracking-widest uppercase italic">{t('online')}</span>
+              <span className="text-[9px] font-bold text-primary/60 tracking-widest uppercase italic">{chat?.type === 'private' ? t('online') : chat?.type === 'saved' ? 'Ваш Архив' : chat?.username}</span>
             </div>
           </div>
         </div>
