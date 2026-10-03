@@ -9,6 +9,29 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
+ * ИНТЕЛЛЕКТУАЛЬНЫЙ НОРМАЛИЗАТОР НОМЕРОВ V82.0
+ * Приводит любой ввод (89xx, 9xx, +7xx) к стандарту E.164.
+ */
+export function normalizePhoneNumber(phone: string): string {
+  if (!phone) return '';
+  
+  // Удаляем все не-цифры
+  let cleaned = phone.replace(/\D/g, '');
+  
+  // Если начинается с 8 и длина 11 (РФ стандарт)
+  if (cleaned.startsWith('8') && cleaned.length === 11) {
+    cleaned = '7' + cleaned.substring(1);
+  } 
+  // Если начинается с 9 и длина 10 (пропущенная семерка)
+  else if (cleaned.startsWith('9') && cleaned.length === 10) {
+    cleaned = '7' + cleaned;
+  }
+  // Если просто короткий номер без кода страны, но мы в контексте РФ (опционально)
+  
+  return cleaned ? `+${cleaned}` : '';
+}
+
+/**
  * АБСОЛЮТНЫЙ ИДЕНТИФИКАТОР V74.1
  * Защищенный дешифратор для предотвращения крахов UI.
  */

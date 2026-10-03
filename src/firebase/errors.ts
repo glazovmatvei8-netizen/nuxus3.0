@@ -1,6 +1,6 @@
 'use client';
-import { getAuth, type User, type Auth } from 'firebase/auth';
-import { getApp } from 'firebase/app';
+import { type User } from 'firebase/auth';
+import { nuxus } from '@/lib/nuxus-engine';
 
 type SecurityRuleContext = {
   path: string;
@@ -73,10 +73,8 @@ function buildAuthObject(currentUser: User | null): FirebaseAuthObject | null {
 function buildRequestObject(context: SecurityRuleContext): SecurityRuleRequest {
   let authObject: FirebaseAuthObject | null = null;
   try {
-    // Safely attempt to get auth from the default app
-    const app = getApp();
-    const firebaseAuth = getAuth(app);
-    const currentUser = firebaseAuth.currentUser;
+    // Безопасное получение пользователя через nuxus-engine
+    const currentUser = nuxus.auth?.currentUser;
     if (currentUser) {
       authObject = buildAuthObject(currentUser);
     }

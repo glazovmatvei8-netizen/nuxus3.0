@@ -19,7 +19,7 @@ import {
 } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { NuxusLogo } from './nuxus-logo';
-import { cn, formatDisplayName } from '@/lib/utils';
+import { cn, formatDisplayName, normalizePhoneNumber } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { translations } from '@/lib/translations';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -41,7 +41,6 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
   const auth = useAuth();
   const db = useFirestore();
   const { toast } = useToast();
-  const { activeAccountIndex, setSlotName } = useAppState();
   
   const [lang, setLang] = useState<'ru' | 'en' | null>(null);
   const [mode, setMode] = useState<'login' | 'register'>(initialMode);
@@ -55,7 +54,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
 
   // Form State
   const [country, setCountry] = useState(COUNTRIES[0]);
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const [phoneNumberInput, setPhoneNumberInput] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -84,20 +83,27 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
     if (!auth) return;
     setIsLoading(true);
     try {
-      const fullPhone = country.code + phoneNumber.replace(/\D/g, '');
-      
+      // Интеллектуальная обработка номера:
+      // Соединяем код страны и ввод, затем прогоняем через нормализатор.
+      const rawFullPhone = country.code + phoneNumberInput;
+      const normalizedPhone = normalizePhoneNumber(rawFullPhone);
+
+      if (!normalizedPhone || normalizedPhone.length < 10) {
+        throw new Error("Некорректный номер телефона");
+      }
+
       if (!window.recaptchaVerifier) {
         window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
           'size': 'invisible'
         });
       }
 
-      const confirmation = await signInWithPhoneNumber(auth, fullPhone, window.recaptchaVerifier);
+      const confirmation = await signInWithPhoneNumber(auth, normalizedPhone, window.recaptchaVerifier);
       setVerificationId(confirmation.verificationId);
       (window as any).confirmationResult = confirmation;
-      toast({ title: "Код отправлен", description: "Проверьте входящие SMS" });
+      toast({ title: "Код отправлен", description: `На номер ${normalizedPhone}` });
     } catch (e: any) {
-      toast({ title: "Ошибка SMS", description: e.message || "Некорректный аргумент Auth", variant: "destructive" });
+      toast({ title: "Ошибка SMS", description: e.message || "Некорректный ввод", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -111,9 +117,10 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
       const user = result.user;
       
       const userDoc = await getDoc(doc(db!, 'users', user.uid));
-      if (!userDoc.exists() && mode === 'login') {
+      if (!userDoc.exists()) {
+         // Автоматически переключаем в режим регистрации если узла нет
          setMode('register');
-         toast({ title: "Узел не найден", description: "Завершите регистрацию профиля" });
+         toast({ title: "Узел не найден", description: "Завершите создание профиля" });
       } else {
          toast({ title: "Вход выполнен" });
       }
@@ -128,14 +135,13 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
     e.preventDefault();
     if (!db || !auth) return;
     
-    if (authMethod === 'phone' && verificationId) {
-       await handleVerifySms();
-       return;
-    }
-
-    if (authMethod === 'phone' && !verificationId) {
-       await handleSendSms();
-       return;
+    if (authMethod === 'phone') {
+      if (verificationId) {
+        await handleVerifySms();
+      } else {
+        await handleSendSms();
+      }
+      return;
     }
 
     setIsLoading(true);
@@ -155,6 +161,8 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
           if (!name.trim()) throw new Error("Введите ваше имя");
           if (!username.trim()) throw new Error("Выберите @ID");
           const usernameWithAt = '@' + username.trim().replace('@', '').replace(/\s/g, '').toLowerCase();
+          
+          // Проверка существования username
           const userCred = await createUserWithEmailAndPassword(auth, cleanEmail, password);
           await updateProfile(userCred.user, { displayName: name.trim() });
           
@@ -206,7 +214,6 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
 
   return (
     <div className="h-[100dvh] w-full flex flex-col bg-[#010103] relative overflow-hidden">
-      {/* Container must be outside any conditional blocks and visible to SDK */}
       <div id="recaptcha-container" className="fixed top-[-100px] left-[-100px] opacity-0 pointer-events-none"></div>
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(59,130,246,0.1)_0%,transparent_70%)]" />
       <ScrollArea className="w-full h-full">
@@ -219,12 +226,12 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                 <button onClick={() => setMode('register')} className={cn("px-5 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all", mode === 'register' ? "bg-white text-black shadow-xl" : "text-white/20")}>Регистрация</button>
               </div>
               <div className="space-y-1">
-                <CardTitle className="text-3xl font-black text-white tracking-tighter italic uppercase">{mode === 'login' ? 'Привет' : 'Вход'}</CardTitle>
+                <CardTitle className="text-3xl font-black text-white tracking-tighter italic uppercase">{mode === 'login' ? 'Привет' : 'Создать'}</CardTitle>
                 <CardDescription className="text-primary/60 font-black uppercase text-[7px] tracking-[0.4em] italic">{t.subtitle}</CardDescription>
               </div>
               <div className="flex gap-2 p-1 bg-black/40 rounded-xl border border-white/5 w-[240px] mx-auto">
-                <button onClick={() => {setAuthMethod('phone'); setVerificationId(null);}} className={cn("flex-1 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5", authMethod === 'phone' ? "bg-white/10 text-white" : "text-white/20")}><Phone size={9} /> Номер</button>
-                <button onClick={() => {setAuthMethod('email'); setVerificationId(null);}} className={cn("flex-1 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5", authMethod === 'email' ? "bg-white/10 text-white" : "text-white/20")}><Mail size={9} /> @nuxus.fun</button>
+                <button type="button" onClick={() => {setAuthMethod('phone'); setVerificationId(null);}} className={cn("flex-1 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all", authMethod === 'phone' ? "bg-white/10 text-white" : "text-white/20")}><Phone size={9} /> Номер</button>
+                <button type="button" onClick={() => {setAuthMethod('email'); setVerificationId(null);}} className={cn("flex-1 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all", authMethod === 'email' ? "bg-white/10 text-white" : "text-white/20")}><Mail size={9} /> @nuxus.fun</button>
               </div>
             </CardHeader>
             <CardContent className="px-6 pb-8">
@@ -273,7 +280,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                                   </ScrollArea>
                                </PopoverContent>
                             </Popover>
-                            <Input placeholder="000 000 00 00" value={phoneNumber} onChange={e => setPhoneNumber(e.target.value)} className="h-11 flex-1 bg-white/[0.02] border-white/5 rounded-xl font-bold text-sm px-4 focus:border-primary/40 tracking-wider" />
+                            <Input placeholder="000 000 00 00" value={phoneNumberInput} onChange={e => setPhoneNumberInput(e.target.value)} className="h-11 flex-1 bg-white/[0.02] border-white/5 rounded-xl font-bold text-sm px-4 focus:border-primary/40 tracking-wider" />
                          </div>
                       </div>
                     ) : (

@@ -13,14 +13,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { signOut, signInWithPhoneNumber, RecaptchaVerifier } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
-import { isUserActuallyBanned, isUserAnomaly, cn } from '@/lib/utils';
+import { isUserActuallyBanned, isUserAnomaly, cn, normalizePhoneNumber } from '@/lib/utils';
 import { NuxusLogo } from '@/components/nuxus-logo';
 import { checkBiometric } from '@/services/biometric-service';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 /**
- * NUXUS HOME GATE V81.1 «ROBUST RECOVERY»
- * FIXED: Recaptcha initialization and auth argument handling.
+ * NUXUS HOME GATE V82.0 «UNIVERSAL RECOVERY»
+ * UPDATED: Support for flexible phone input normalization.
  */
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -112,18 +112,24 @@ export default function Home() {
     
     setIsRecovering(true);
     try {
+      // Нормализуем номер из базы перед отправкой
+      const normalizedPhone = normalizePhoneNumber(profile.phone);
+      
       if (!window.recaptchaVerifierRecovery) {
-        window.recaptchaVerifierRecovery = new RecaptchaVerifier(auth, 'recovery-recaptcha', { size: 'invisible' });
+        const container = document.getElementById('recovery-recaptcha');
+        if (container) {
+          window.recaptchaVerifierRecovery = new RecaptchaVerifier(auth, 'recovery-recaptcha', { size: 'invisible' });
+        }
       }
       
-      const confirmation = await signInWithPhoneNumber(auth, profile.phone, window.recaptchaVerifierRecovery);
+      const confirmation = await signInWithPhoneNumber(auth, normalizedPhone, window.recaptchaVerifierRecovery);
       (window as any).recoveryConfirmation = confirmation;
       setRecoveryId(confirmation.verificationId);
       setIsRecoveryOpen(true);
-      toast({ title: "SMS отправлено", description: "Используйте 6-значный код для сброса PIN" });
+      toast({ title: "SMS отправлено", description: `Проверьте номер ${normalizedPhone}` });
     } catch (e: any) {
       console.error("Recovery Error:", e);
-      toast({ title: "Сбой шлюза", description: e.message || "Ошибка аргумента Auth", variant: "destructive" });
+      toast({ title: "Сбой шлюза", description: e.message || "Ошибка нормализации номера", variant: "destructive" });
     } finally {
       setIsRecovering(false);
     }
@@ -182,7 +188,7 @@ export default function Home() {
     return (
       <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#010103] text-white">
         <NuxusLogo size={80} className="animate-pulse opacity-40" />
-        <p className="mt-8 text-[8px] font-black uppercase tracking-[0.6em] text-primary/40">Syncing Engine V81.1</p>
+        <p className="mt-8 text-[8px] font-black uppercase tracking-[0.6em] text-primary/40">Syncing Engine V82.0</p>
       </div>
     );
   }
@@ -210,7 +216,7 @@ export default function Home() {
 
     return (
       <div className="min-h-[100dvh] w-full flex flex-col bg-[#010103] relative overflow-hidden">
-        {/* Recaptcha container must always be present in DOM for initialization */}
+        {/* Контейнер рекапчи должен быть доступен */}
         <div id="recovery-recaptcha" className="fixed top-[-100px] left-[-100px] opacity-0 pointer-events-none"></div>
         
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.1)_0%,transparent_70%)] pointer-events-none" />
