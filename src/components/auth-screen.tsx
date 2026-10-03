@@ -38,8 +38,8 @@ const COUNTRIES = [
 ];
 
 /**
- * AUTH SCREEN V84.0 «IDENTITY ENFORCER»
- * UPDATED: SMS Confirmation result persistence and domain restrictions.
+ * AUTH SCREEN V84.1 «IDENTITY MIGRATOR»
+ * UPDATED: Domain restriction now applies ONLY to registration to allow legacy login and migration.
  */
 export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'login' | 'register' }) {
   const auth = useAuth();
@@ -72,7 +72,6 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
   const initRecaptcha = useCallback(() => {
     if (typeof window === 'undefined' || !auth) return;
     
-    // Если уже есть - возвращаем
     if ((window as any).recaptchaVerifier) return (window as any).recaptchaVerifier;
 
     try {
@@ -105,7 +104,6 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
 
       const confirmation = await signInWithPhoneNumber(auth, normalizedPhone, verifier);
       setVerificationId(confirmation.verificationId);
-      // КРИТИЧЕСКИ ВАЖНО: Храним объект подтверждения глобально
       (window as any).confirmationResult = confirmation;
       
       toast({ title: "Код отправлен", description: `На номер ${normalizedPhone}` });
@@ -164,9 +162,10 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
       if (authMethod === 'email') {
         const cleanEmail = email.trim().toLowerCase();
         
-        // СТРОГАЯ ВАЛИДАЦИЯ ДОМЕНА @NUXUS.FUN
-        if (!cleanEmail.endsWith('@nuxus.fun')) {
-          throw new Error("Регистрация и вход разрешены только для @nuxus.fun");
+        // СТРОГАЯ ВАЛИДАЦИЯ ДОМЕНА ТОЛЬКО ПРИ РЕГИСТРАЦИИ
+        // Это позволяет старым пользователям (yandex.ru) войти для синхронизации
+        if (mode === 'register' && !cleanEmail.endsWith('@nuxus.fun')) {
+          throw new Error("Регистрация разрешена только для домена @nuxus.fun");
         }
 
         if (mode === 'login') {
@@ -201,8 +200,9 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
       }
     } catch (e: any) {
       let msg = e.message;
-      if (e.code === 'auth/user-not-found') msg = "Узел не зарегистрирован в системе Auth. Используйте старую почту или регистрацию.";
+      if (e.code === 'auth/user-not-found') msg = "Узел не зарегистрирован в системе Auth. Проверьте почту или используйте регистрацию.";
       if (e.code === 'auth/wrong-password') msg = "Неверный пароль доступа";
+      if (e.code === 'auth/invalid-credential') msg = "Ошибка учетных данных (Auth Error)";
       toast({ title: "Ошибка", description: msg, variant: "destructive" });
     } finally {
       setIsLoading(false);
@@ -231,7 +231,6 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
 
   return (
     <div className="h-[100dvh] w-full flex flex-col bg-[#010103] relative overflow-hidden">
-      {/* Контейнер рекапчи ВСЕГДА в DOM */}
       <div id="recaptcha-container" className="fixed top-[-100px] left-[-100px] opacity-0 pointer-events-none"></div>
       
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(59,130,246,0.1)_0%,transparent_70%)]" />
