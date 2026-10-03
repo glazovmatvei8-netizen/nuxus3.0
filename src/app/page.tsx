@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -20,8 +19,8 @@ import { checkBiometric } from '@/services/biometric-service';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 /**
- * NUXUS HOME GATE V81.0 «RECOVERY UPDATE»
- * UPDATED: SMS-based 2FA PIN recovery and Android biometric support.
+ * NUXUS HOME GATE V81.1 «ROBUST RECOVERY»
+ * FIXED: Recaptcha initialization and auth argument handling.
  */
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -110,18 +109,21 @@ export default function Home() {
       toast({ title: "Ошибка", description: "К аккаунту не привязан номер телефона", variant: "destructive" });
       return;
     }
+    
     setIsRecovering(true);
     try {
       if (!window.recaptchaVerifierRecovery) {
         window.recaptchaVerifierRecovery = new RecaptchaVerifier(auth, 'recovery-recaptcha', { size: 'invisible' });
       }
+      
       const confirmation = await signInWithPhoneNumber(auth, profile.phone, window.recaptchaVerifierRecovery);
       (window as any).recoveryConfirmation = confirmation;
       setRecoveryId(confirmation.verificationId);
       setIsRecoveryOpen(true);
       toast({ title: "SMS отправлено", description: "Используйте 6-значный код для сброса PIN" });
     } catch (e: any) {
-      toast({ title: "Сбой шлюза", description: e.message, variant: "destructive" });
+      console.error("Recovery Error:", e);
+      toast({ title: "Сбой шлюза", description: e.message || "Ошибка аргумента Auth", variant: "destructive" });
     } finally {
       setIsRecovering(false);
     }
@@ -180,7 +182,7 @@ export default function Home() {
     return (
       <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#010103] text-white">
         <NuxusLogo size={80} className="animate-pulse opacity-40" />
-        <p className="mt-8 text-[8px] font-black uppercase tracking-[0.6em] text-primary/40">Syncing Engine V81.0</p>
+        <p className="mt-8 text-[8px] font-black uppercase tracking-[0.6em] text-primary/40">Syncing Engine V81.1</p>
       </div>
     );
   }
@@ -208,7 +210,9 @@ export default function Home() {
 
     return (
       <div className="min-h-[100dvh] w-full flex flex-col bg-[#010103] relative overflow-hidden">
-        <div id="recovery-recaptcha" className="hidden"></div>
+        {/* Recaptcha container must always be present in DOM for initialization */}
+        <div id="recovery-recaptcha" className="fixed top-[-100px] left-[-100px] opacity-0 pointer-events-none"></div>
+        
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.1)_0%,transparent_70%)] pointer-events-none" />
         
         <ScrollArea className="flex-1 w-full h-full">

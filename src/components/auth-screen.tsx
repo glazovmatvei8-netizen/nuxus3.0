@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect } from 'react';
@@ -68,9 +67,16 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
 
   useEffect(() => {
     if (typeof window !== 'undefined' && auth && !window.recaptchaVerifier) {
-      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-        'size': 'invisible'
-      });
+      try {
+        const container = document.getElementById('recaptcha-container');
+        if (container) {
+          window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+            'size': 'invisible'
+          });
+        }
+      } catch (e) {
+        console.error("Recaptcha Init Error:", e);
+      }
     }
   }, [auth]);
 
@@ -79,12 +85,19 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
     setIsLoading(true);
     try {
       const fullPhone = country.code + phoneNumber.replace(/\D/g, '');
+      
+      if (!window.recaptchaVerifier) {
+        window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+          'size': 'invisible'
+        });
+      }
+
       const confirmation = await signInWithPhoneNumber(auth, fullPhone, window.recaptchaVerifier);
       setVerificationId(confirmation.verificationId);
       (window as any).confirmationResult = confirmation;
       toast({ title: "Код отправлен", description: "Проверьте входящие SMS" });
     } catch (e: any) {
-      toast({ title: "Ошибка SMS", description: e.message, variant: "destructive" });
+      toast({ title: "Ошибка SMS", description: e.message || "Некорректный аргумент Auth", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -136,7 +149,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
         }
 
         if (mode === 'login') {
-          const userCred = await signInWithEmailAndPassword(auth, cleanEmail, password);
+          await signInWithEmailAndPassword(auth, cleanEmail, password);
           toast({ title: "Синхронизация завершена" });
         } else {
           if (!name.trim()) throw new Error("Введите ваше имя");
@@ -193,7 +206,8 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
 
   return (
     <div className="h-[100dvh] w-full flex flex-col bg-[#010103] relative overflow-hidden">
-      <div id="recaptcha-container" className="hidden"></div>
+      {/* Container must be outside any conditional blocks and visible to SDK */}
+      <div id="recaptcha-container" className="fixed top-[-100px] left-[-100px] opacity-0 pointer-events-none"></div>
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(59,130,246,0.1)_0%,transparent_70%)]" />
       <ScrollArea className="w-full h-full">
         <div className="min-h-full w-full flex flex-col items-center justify-center p-6 py-12">
