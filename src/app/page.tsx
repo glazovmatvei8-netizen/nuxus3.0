@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -19,8 +20,8 @@ import { checkBiometric } from '@/services/biometric-service';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 /**
- * NUXUS HOME GATE V82.0 «UNIVERSAL RECOVERY»
- * UPDATED: Support for flexible phone input normalization.
+ * NUXUS HOME GATE V85.0 «BUILD STABILITY»
+ * FIXED: TypeScript window casting for Recaptcha and build integrity.
  */
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -112,17 +113,19 @@ export default function Home() {
     
     setIsRecovering(true);
     try {
-      // Нормализуем номер из базы перед отправкой
       const normalizedPhone = normalizePhoneNumber(profile.phone);
       
-      if (!window.recaptchaVerifierRecovery) {
+      if (!(window as any).recaptchaVerifierRecovery) {
         const container = document.getElementById('recovery-recaptcha');
         if (container) {
-          window.recaptchaVerifierRecovery = new RecaptchaVerifier(auth, 'recovery-recaptcha', { size: 'invisible' });
+          (window as any).recaptchaVerifierRecovery = new RecaptchaVerifier(auth, 'recovery-recaptcha', { size: 'invisible' });
         }
       }
       
-      const confirmation = await signInWithPhoneNumber(auth, normalizedPhone, window.recaptchaVerifierRecovery);
+      const verifier = (window as any).recaptchaVerifierRecovery;
+      if (!verifier) throw new Error("Recaptcha node not ready");
+
+      const confirmation = await signInWithPhoneNumber(auth, normalizedPhone, verifier);
       (window as any).recoveryConfirmation = confirmation;
       setRecoveryId(confirmation.verificationId);
       setIsRecoveryOpen(true);
@@ -140,9 +143,8 @@ export default function Home() {
     setIsRecovering(true);
     try {
       await (window as any).recoveryConfirmation.confirm(recoveryCode);
-      // Если SMS верное, сбрасываем PIN в базе и пускаем пользователя
       await updateDoc(doc(db!, 'users', user!.uid), {
-        twoFactorPin: '111111', // Временный PIN
+        twoFactorPin: '111111', 
         twoFactorPinLength: '6'
       });
       setIs2FAVerified(true);
@@ -188,7 +190,7 @@ export default function Home() {
     return (
       <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#010103] text-white">
         <NuxusLogo size={80} className="animate-pulse opacity-40" />
-        <p className="mt-8 text-[8px] font-black uppercase tracking-[0.6em] text-primary/40">Syncing Engine V82.0</p>
+        <p className="mt-8 text-[8px] font-black uppercase tracking-[0.6em] text-primary/40">Syncing Engine V85.0</p>
       </div>
     );
   }
@@ -216,7 +218,6 @@ export default function Home() {
 
     return (
       <div className="min-h-[100dvh] w-full flex flex-col bg-[#010103] relative overflow-hidden">
-        {/* Контейнер рекапчи должен быть доступен */}
         <div id="recovery-recaptcha" className="fixed top-[-100px] left-[-100px] opacity-0 pointer-events-none"></div>
         
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.1)_0%,transparent_70%)] pointer-events-none" />
