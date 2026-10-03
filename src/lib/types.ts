@@ -195,6 +195,7 @@ export interface User {
   isBanned?: boolean;
   isPremium?: boolean;
   isAdmin?: boolean;
+  reputation?: number;
   twoFactorEnabled?: boolean;
   twoFactorPin?: string;
   twoFactorPinLength?: '4' | '6';

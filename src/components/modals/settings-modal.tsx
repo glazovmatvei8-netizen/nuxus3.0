@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -28,10 +27,8 @@ import { isUserPremium, cn } from '@/lib/utils';
 import type { User } from '@/lib/types';
 import versions from '@/app/versions.json';
 
-/**
- * SETTINGS MODAL V74.0 «PULSE PROTOCOL»
- * Восстановлена настройка Face ID и длины PIN.
- */
+const ADMIN_ID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
+
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
   const db = useFirestore();
@@ -110,25 +107,34 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
   const openSupport = async () => {
     if (!db || !user) return;
-    const supportNodeId = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
+    
+    // Если пользователь сам является оператором
+    if (user.uid === ADMIN_ID) {
+      toast({ title: "Вы являетесь оператором Ядра" });
+      return;
+    }
+
     try {
       const q = query(collection(db, 'chats'), where('type', '==', 'private'), where('participantIds', 'array-contains', user.uid));
       const snap = await getDocs(q);
-      const existing = snap.docs.find(d => d.data().participantIds.includes(supportNodeId));
+      const existing = snap.docs.find(d => {
+        const data = d.data();
+        return data.type === 'private' && data.participantIds.includes(ADMIN_ID);
+      });
       
       if (existing) {
         setCurrentChatId(existing.id);
       } else {
         const newChat = await addDoc(collection(db, 'chats'), {
           type: 'private',
-          participantIds: [user.uid, supportNodeId],
+          participantIds: [user.uid, ADMIN_ID],
           ownerId: user.uid,
           createdAt: new Date().toISOString(),
           name: "Поддержка Nuxus",
           username: "@support",
           metadata: {
             [user.uid]: { name: profile?.name || 'Node', username: profile?.username || '?' },
-            [supportNodeId]: { name: "Поддержка Nuxus", username: "@support", isPremium: true }
+            [ADMIN_ID]: { name: "Поддержка Nuxus", username: "@support", isPremium: true }
           }
         });
         setCurrentChatId(newChat.id);

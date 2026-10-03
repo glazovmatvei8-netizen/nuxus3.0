@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { memo, useMemo, useState, useEffect } from 'react';
@@ -7,20 +6,28 @@ import { format } from 'date-fns';
 import { 
   Check, CheckCheck, Play, MoreHorizontal
 } from 'lucide-react';
-import { cn, decryptSignal } from '@/lib/utils';
+import { cn, decryptSignal, getReputationInfo } from '@/lib/utils';
 import { useAppState } from '@/lib/app-state';
+import { useFirestore } from '@/firebase/provider';
+import { useDoc } from '@/firebase/firestore/use-doc';
+import { doc } from 'firebase/firestore';
+import type { User } from '@/lib/types';
 
 /**
- * MESSAGE ITEM V6.5.8 «TITANIUM DIRECT»
- * FIXED: Hydration error by deferring date formatting and decryption to client-side.
+ * MESSAGE ITEM V78.0 «AEGIS SHIELD»
+ * UPDATED: Display reputation shields and handle profile navigation.
  */
 export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile }: any) => {
   const { setInspectedUserId } = useAppState();
+  const db = useFirestore();
   const [mounted, setMounted] = useState(false);
   
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const senderRef = React.useMemo(() => (!db || !message.senderId) ? null : doc(db, 'users', message.senderId), [db, message.senderId]);
+  const { data: senderProfile } = useDoc<User>(senderRef);
   
   const displayContent = useMemo(() => {
     if (!mounted) return '...';
@@ -50,6 +57,8 @@ export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile }: a
     large: "text-[18px]",
   };
 
+  const rep = getReputationInfo(senderProfile?.reputation);
+
   return (
     <div className={cn(
       "w-full flex flex-col mb-2 animate-in fade-in slide-in-from-bottom-2 duration-500", 
@@ -62,7 +71,7 @@ export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile }: a
         {!isMe && (
           <UserAvatar 
             userId={message.senderId} 
-            className="h-10 w-10 border border-white/5 shadow-2xl mb-1" 
+            className="h-10 w-10 border border-white/5 shadow-2xl mb-1 cursor-pointer hover:scale-110 transition-transform" 
             onClick={() => setInspectedUserId(message.senderId)} 
           />
         )}
@@ -73,6 +82,7 @@ export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile }: a
                <span className="text-[11px] font-black text-primary/60 uppercase tracking-widest italic">
                  {message.senderName || 'User'}
                </span>
+               <span className={cn("text-[9px]", rep.color)}>{rep.icon}</span>
             </div>
           )}
           

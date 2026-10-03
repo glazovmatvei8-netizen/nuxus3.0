@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -16,7 +15,7 @@ import { useMemoFirebase } from '@/firebase/firestore/use-memo-firebase';
 import { doc, query, collection, limit, getDocs, addDoc, where, orderBy, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useAppState } from '@/lib/app-state';
-import { formatDisplayName, isUserPremium, formatLastSeen, cn, isGlobalAdmin } from '@/lib/utils';
+import { formatDisplayName, isUserPremium, formatLastSeen, cn, isGlobalAdmin, getReputationInfo } from '@/lib/utils';
 import type { User, ReceivedGift } from '@/lib/types';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
@@ -27,8 +26,8 @@ const ADMIN_ID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 const ORIGIN_DATE = '2024-01-01T00:00:00Z'; 
 
 /**
- * USER PROFILE MODAL V5.2.4 «TITANIUM SYNC»
- * FIXED: Hydration mismatch by deferring registration date formatting to client-side.
+ * USER PROFILE MODAL V78.0 «AEGIS SHIELD»
+ * UPDATED: Display Reputation Shield levels and improved actions.
  */
 export function UserProfileModal() {
   const db = useFirestore();
@@ -134,6 +133,8 @@ export function UserProfileModal() {
     try { return format(new Date(rawDate), 'dd.MM.yyyy', { locale: ru }); } catch (e) { return '...'; }
   }, [targetUser?.createdAt, inspectedUserId, mounted]);
 
+  const rep = getReputationInfo(targetUser?.reputation);
+
   if (!inspectedUserId) return null;
 
   return (
@@ -157,6 +158,11 @@ export function UserProfileModal() {
               fallbackName={targetUser?.name}
               showOnlineStatus
             />
+            {/* Reputation Shield Badge */}
+            <div className={cn("absolute -bottom-2 -right-2 w-12 h-12 rounded-2xl obsidian-glass border flex items-center justify-center text-xl z-20 shadow-2xl", rep.color, rep.shadow)}>
+              {rep.icon}
+              <span className="absolute -top-1 -right-1 text-[8px] font-black bg-black px-1 rounded-md text-white">{rep.level}</span>
+            </div>
           </div>
         </DialogHeader>
 
@@ -169,6 +175,21 @@ export function UserProfileModal() {
             </div>
 
             <div className="px-6 mt-10 space-y-6">
+              {/* Reputation Info Card */}
+              <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5 space-y-4">
+                 <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black uppercase text-white/40 tracking-widest">Уровень доверия</span>
+                    <span className={cn("text-xs font-black uppercase italic", rep.color)}>Level {rep.level}</span>
+                 </div>
+                 <div className="h-1.5 w-full bg-black/40 rounded-full overflow-hidden p-[1px]">
+                    <div 
+                      className={cn("h-full rounded-full transition-all duration-1000", rep.color.replace('text-', 'bg-'))} 
+                      style={{ width: `${Math.min(100, ((targetUser?.reputation || 0) % 10) * 10)}%` }} 
+                    />
+                 </div>
+                 <p className="text-[8px] text-white/20 uppercase font-bold text-center tracking-widest">Анализ активности узла завершен</p>
+              </div>
+
               {isViewerAdmin && inspectedUserId !== currentUser?.uid && (
                 <div className="space-y-3 p-6 bg-red-500/5 rounded-[2.2rem] border border-red-500/20">
                   <h3 className="text-[10px] font-black uppercase text-red-500 tracking-widest flex items-center gap-2 mb-2">

@@ -19,7 +19,7 @@ import { useCollection } from '@/firebase/firestore/use-collection';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { useMemoFirebase } from '@/firebase/firestore/use-memo-firebase';
 import { collection, query, orderBy, doc, addDoc, updateDoc } from 'firebase/firestore';
-import { formatDisplayName, cn, compressImage, encryptSignal, decryptSignal, isUserPremium } from '@/lib/utils';
+import { formatDisplayName, cn, compressImage, encryptSignal, decryptSignal, isUserPremium, getReputationInfo } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -171,7 +171,7 @@ ChatInputBar.displayName = 'ChatInputBar';
 export default function ChatArea() {
   const { user: firebaseUser } = useUser();
   const db = useFirestore();
-  const { currentChatId, setCurrentChatId } = useAppState();
+  const { currentChatId, setCurrentChatId, setInspectedUserId } = useAppState();
   const { t } = useTranslations();
   
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
@@ -183,6 +183,16 @@ export default function ChatArea() {
 
   const chatRef = useMemoFirebase(() => (!db || !currentChatId) ? null : doc(db, 'chats', currentChatId), [db, currentChatId]);
   const { data: chat } = useDoc<Chat>(chatRef);
+
+  const otherId = useMemo(() => {
+    if (chat?.type === 'private') {
+      return chat.participantIds.find(id => id !== firebaseUser?.uid);
+    }
+    return null;
+  }, [chat, firebaseUser?.uid]);
+
+  const otherProfileRef = useMemoFirebase(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
+  const { data: otherProfile } = useDoc<UserType>(otherProfileRef);
 
   const messagesQuery = useMemoFirebase(() => (!db || !currentChatId) ? null : query(collection(db, 'chats', currentChatId, 'messages'), orderBy('sentAt', 'asc')), [db, currentChatId]);
   const { data: messages } = useCollection<Message>(messagesQuery);
@@ -214,6 +224,11 @@ export default function ChatArea() {
     }
     addDoc(collection(db, 'chats', currentChatId, 'messages'), msgData);
     updateDoc(doc(db, 'chats', currentChatId), { lastMessageAt: new Date().toISOString() });
+    
+    // Increment reputation slightly for normal talk
+    if (userProfile) {
+       updateDoc(doc(db, 'users', firebaseUser.uid), { reputation: (userProfile.reputation || 0) + 0.1 });
+    }
   }, [currentChatId, firebaseUser?.uid, db, userProfile, replyTo]);
 
   const bgStyle = useMemo(() => {
@@ -223,6 +238,8 @@ export default function ChatArea() {
     return {};
   }, [userProfile?.settings?.chatBackground]);
 
+  const rep = getReputationInfo(otherId ? otherProfile?.reputation : userProfile?.reputation);
+
   return (
     <div className="flex-1 flex flex-col h-full bg-[#030306] relative overflow-hidden z-20">
       <div className="absolute inset-0 z-0 opacity-[0.2] pointer-events-none" style={bgStyle} />
@@ -230,16 +247,19 @@ export default function ChatArea() {
       <header className="h-16 border-b border-white/5 bg-white/[0.02] backdrop-blur-[120px] flex items-center px-4 shrink-0 z-30 shadow-2xl">
         <div className="flex items-center gap-4 flex-1 min-w-0">
           <Button variant="ghost" size="icon" className="md:hidden rounded-2xl text-white/40 h-10 w-10 hover:bg-white/5" onClick={() => setCurrentChatId(null)}><ChevronLeft className="w-6 h-6" /></Button>
-          <div className="flex items-center gap-4 cursor-pointer min-w-0 flex-1 group" onClick={() => setIsChatInfoOpen(true)}>
+          <div className="flex items-center gap-4 cursor-pointer min-w-0 flex-1 group" onClick={() => otherId ? setInspectedUserId(otherId) : setIsChatInfoOpen(true)}>
             <UserAvatar 
-              userId={chat?.type === 'private' ? chat.participantIds.find(id => id !== firebaseUser?.uid) : null} 
+              userId={otherId} 
               className="h-11 w-11 border-2 border-white/10 group-hover:border-primary/40 transition-all shadow-xl" 
               manualAvatarUrl={chat?.avatarUrl} 
               fallbackName={formatDisplayName(chat?.name)} 
               showOnlineStatus 
             />
             <div className="flex flex-col min-w-0 text-left">
-              <span className="font-black text-base truncate text-white leading-tight italic tracking-tighter uppercase">{formatDisplayName(chat?.name, chat?.username)}</span>
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="font-black text-base truncate text-white leading-tight italic tracking-tighter uppercase">{formatDisplayName(chat?.name, chat?.username)}</span>
+                <span className={cn("text-[10px] drop-shadow-lg", rep.color)} title={`Lvl ${rep.level}`}>{rep.icon}</span>
+              </div>
               <span className="text-[9px] font-bold text-primary/60 tracking-widest uppercase italic">{t('online')}</span>
             </div>
           </div>

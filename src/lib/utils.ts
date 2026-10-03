@@ -1,4 +1,3 @@
-
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { formatDistanceToNow, parseISO, differenceInSeconds } from 'date-fns';
@@ -117,4 +116,20 @@ export async function compressImage(dataUrl: string, maxWidth = 1200, quality = 
     };
     img.onerror = () => resolve(dataUrl);
   });
+}
+
+/**
+ * РЕПУТАЦИОННЫЙ ЩИТ V78.0
+ * Возвращает информацию о щите репутации на основе очков.
+ */
+export function getReputationInfo(reputation: number = 0) {
+  const level = Math.floor(reputation / 10) + 1;
+  
+  if (reputation >= 60) return { level, color: 'text-red-500', icon: '🛡️', shadow: 'shadow-red-500/20' };
+  if (reputation >= 45) return { level, color: 'text-yellow-500', icon: '🛡️', shadow: 'shadow-yellow-500/20' };
+  if (reputation >= 30) return { level, color: 'text-purple-500', icon: '🛡️', shadow: 'shadow-purple-500/20' };
+  if (reputation >= 20) return { level, color: 'text-green-500', icon: '🛡️', shadow: 'shadow-green-500/20' };
+  if (reputation >= 10) return { level, color: 'text-blue-500', icon: '🛡️', shadow: 'shadow-blue-500/20' };
+  
+  return { level, color: 'text-white/60', icon: '🛡️', shadow: 'shadow-white/10' };
 }
