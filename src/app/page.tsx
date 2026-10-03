@@ -7,12 +7,12 @@ import { useDoc } from '@/firebase/firestore/use-doc';
 import { useAppState } from '@/lib/app-state';
 import AuthScreen from '@/components/auth-screen';
 import ChatMain from '@/components/chat-main';
-import { Fingerprint, AlertTriangle, Lock, ShieldCheck, Loader2, RefreshCcw } from 'lucide-react';
-import { doc } from 'firebase/firestore';
+import { Fingerprint, AlertTriangle, Lock, ShieldCheck, Loader2, RefreshCcw, KeyRound, MessageSquareCode } from 'lucide-react';
+import { doc, updateDoc } from 'firebase/firestore';
 import type { User as UserType } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { signOut } from 'firebase/auth';
+import { signOut, signInWithPhoneNumber, RecaptchaVerifier } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { isUserActuallyBanned, isUserAnomaly, cn } from '@/lib/utils';
 import { NuxusLogo } from '@/components/nuxus-logo';
@@ -20,8 +20,8 @@ import { checkBiometric } from '@/services/biometric-service';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 /**
- * NUXUS HOME GATE V77.0 «PERFECT VIEW»
- * ИСПРАВЛЕНО: Адаптивная верстка экрана 2FA/Face ID для предотвращения вылета кнопок за экран.
+ * NUXUS HOME GATE V81.0 «RECOVERY UPDATE»
+ * UPDATED: SMS-based 2FA PIN recovery and Android biometric support.
  */
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -36,13 +36,18 @@ export default function Home() {
   const [isMounted, setIsMounted] = useState(false);
   const [loadTimeout, setLoadTimeout] = useState(false);
 
+  // Recovery State
+  const [isRecoveryMode, setIsRecoveryOpen] = useState(false);
+  const [recoveryId, setRecoveryId] = useState<string | null>(null);
+  const [recoveryCode, setRecoveryCode] = useState('');
+  const [isRecovering, setIsRecovering] = useState(false);
+
   useEffect(() => {
     setIsMounted(true);
-    if (typeof window !== 'undefined' && window.PublicKeyCredential) {
+    if (typeof window !== 'undefined' && (window.PublicKeyCredential || (window as any).Capacitor)) {
       setIsBiometricAvailable(true);
     }
 
-    // Предохранитель черного экрана (10 секунд)
     const timer = setTimeout(() => {
       setLoadTimeout(true);
     }, 10000);
@@ -100,14 +105,55 @@ export default function Home() {
     }
   };
 
+  const startPinRecovery = async () => {
+    if (!auth || !profile?.phone) {
+      toast({ title: "Ошибка", description: "К аккаунту не привязан номер телефона", variant: "destructive" });
+      return;
+    }
+    setIsRecovering(true);
+    try {
+      if (!window.recaptchaVerifierRecovery) {
+        window.recaptchaVerifierRecovery = new RecaptchaVerifier(auth, 'recovery-recaptcha', { size: 'invisible' });
+      }
+      const confirmation = await signInWithPhoneNumber(auth, profile.phone, window.recaptchaVerifierRecovery);
+      (window as any).recoveryConfirmation = confirmation;
+      setRecoveryId(confirmation.verificationId);
+      setIsRecoveryOpen(true);
+      toast({ title: "SMS отправлено", description: "Используйте 6-значный код для сброса PIN" });
+    } catch (e: any) {
+      toast({ title: "Сбой шлюза", description: e.message, variant: "destructive" });
+    } finally {
+      setIsRecovering(false);
+    }
+  };
+
+  const handleVerifyRecovery = async () => {
+    if (!recoveryCode || !(window as any).recoveryConfirmation) return;
+    setIsRecovering(true);
+    try {
+      await (window as any).recoveryConfirmation.confirm(recoveryCode);
+      // Если SMS верное, сбрасываем PIN в базе и пускаем пользователя
+      await updateDoc(doc(db!, 'users', user!.uid), {
+        twoFactorPin: '111111', // Временный PIN
+        twoFactorPinLength: '6'
+      });
+      setIs2FAVerified(true);
+      toast({ title: "Доступ восстановлен", description: "Установлен временный PIN: 111111. Смените его в настройках." });
+    } catch (e) {
+      toast({ title: "Неверный код SMS", variant: "destructive" });
+    } finally {
+      setIsRecovering(false);
+    }
+  };
+
   useEffect(() => {
-    if (profile?.twoFactorEnabled) {
+    if (profile?.twoFactorEnabled && !isRecoveryMode) {
       const targetLength = parseInt(profile.twoFactorPinLength || '6');
       if (twoFactorInput.length === targetLength) {
         handleVerify2FA();
       }
     }
-  }, [twoFactorInput, profile, handleVerify2FA]);
+  }, [twoFactorInput, profile, handleVerify2FA, isRecoveryMode]);
 
   if (!isMounted) {
     return (
@@ -123,11 +169,7 @@ export default function Home() {
         <NuxusLogo size={80} className="opacity-20 mb-8" />
         <h2 className="text-xl font-black uppercase italic tracking-tighter mb-2">Задержка синхронизации</h2>
         <p className="text-[10px] text-white/30 uppercase tracking-widest mb-8">Ядро ожидает ответ от узлов сети...</p>
-        <Button 
-          variant="outline" 
-          onClick={() => window.location.reload()}
-          className="rounded-2xl border-white/10 bg-white/5 font-black uppercase text-[10px] tracking-widest gap-2"
-        >
+        <Button variant="outline" onClick={() => window.location.reload()} className="rounded-2xl border-white/10 bg-white/5 font-black uppercase text-[10px] tracking-widest gap-2">
           <RefreshCcw className="w-4 h-4" /> Перезагрузить Ядро
         </Button>
       </div>
@@ -138,7 +180,7 @@ export default function Home() {
     return (
       <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#010103] text-white">
         <NuxusLogo size={80} className="animate-pulse opacity-40" />
-        <p className="mt-8 text-[8px] font-black uppercase tracking-[0.6em] text-primary/40">Syncing Engine V77.0</p>
+        <p className="mt-8 text-[8px] font-black uppercase tracking-[0.6em] text-primary/40">Syncing Engine V81.0</p>
       </div>
     );
   }
@@ -166,6 +208,7 @@ export default function Home() {
 
     return (
       <div className="min-h-[100dvh] w-full flex flex-col bg-[#010103] relative overflow-hidden">
+        <div id="recovery-recaptcha" className="hidden"></div>
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.1)_0%,transparent_70%)] pointer-events-none" />
         
         <ScrollArea className="flex-1 w-full h-full">
@@ -175,61 +218,69 @@ export default function Home() {
               <div className="flex flex-col items-center gap-6">
                 <div className="h-20 w-20 rounded-[2.2rem] bg-primary/10 border border-primary/20 flex items-center justify-center shadow-[0_0_50px_rgba(168,85,247,0.2)] relative overflow-hidden group">
                     <div className="absolute inset-0 bg-primary/5 group-hover:animate-pulse" />
-                    <Lock className="w-10 h-10 text-primary relative z-10" />
+                    {isRecoveryMode ? <MessageSquareCode className="w-10 h-10 text-primary relative z-10" /> : <Lock className="w-10 h-10 text-primary relative z-10" />}
                 </div>
                 <div className="space-y-2">
-                    <h2 className="text-3xl font-black uppercase italic text-white tracking-tighter">Личность</h2>
-                    <p className="text-[9px] font-bold text-white/20 uppercase tracking-[0.4em]">Pulse Protection Active</p>
+                    <h2 className="text-3xl font-black uppercase italic text-white tracking-tighter">{isRecoveryMode ? 'Восстановление' : 'Личность'}</h2>
+                    <p className="text-[9px] font-bold text-white/20 uppercase tracking-[0.4em]">{isRecoveryMode ? 'SMS Verification Protocol' : 'Pulse Protection Active'}</p>
                 </div>
               </div>
 
-              <div className="space-y-8">
-                <div className="space-y-4">
-                  <div className="relative">
-                    <Input 
-                      type="password" 
-                      placeholder={"•".repeat(pinLength)} 
-                      maxLength={pinLength} 
-                      autoFocus
-                      className="bg-white/[0.03] border-white/5 h-20 text-4xl tracking-[0.5em] text-center rounded-[2.2rem] font-black text-white focus:border-primary/40 transition-all shadow-inner"
-                      value={twoFactorInput}
-                      onChange={e => {
-                        const val = e.target.value.replace(/\D/g, '');
-                        setTwoFactorInput(val);
-                      }}
-                      onKeyDown={e => e.key === 'Enter' && handleVerify2FA()}
-                    />
+              {!isRecoveryMode ? (
+                <div className="space-y-8">
+                  <div className="space-y-4">
+                    <div className="relative">
+                      <Input 
+                        type="password" 
+                        placeholder={"•".repeat(pinLength)} 
+                        maxLength={pinLength} 
+                        autoFocus
+                        className="bg-white/[0.03] border-white/5 h-20 text-4xl tracking-[0.5em] text-center rounded-[2.2rem] font-black text-white focus:border-primary/40 transition-all shadow-inner"
+                        value={twoFactorInput}
+                        onChange={e => {
+                          const val = e.target.value.replace(/\D/g, '');
+                          setTwoFactorInput(val);
+                        }}
+                        onKeyDown={e => e.key === 'Enter' && handleVerify2FA()}
+                      />
+                    </div>
+                    <p className="text-[7px] font-black text-white/10 uppercase tracking-widest">Введите {pinLength}-значный код доступа</p>
                   </div>
-                  <p className="text-[7px] font-black text-white/10 uppercase tracking-widest">Введите {pinLength}-значный код доступа</p>
-                </div>
 
-                <div className="flex flex-col gap-3">
-                  <Button 
-                    onClick={() => handleVerify2FA()} 
-                    className="w-full h-14 rounded-2xl bg-primary text-white font-black uppercase italic tracking-widest shadow-2xl shadow-primary/30 active:scale-95 transition-all text-xs"
-                  >
-                    Подтвердить код
-                  </Button>
+                  <div className="flex flex-col gap-3">
+                    <Button onClick={() => handleVerify2FA()} className="w-full h-14 rounded-2xl bg-primary text-white font-black uppercase italic tracking-widest shadow-2xl shadow-primary/30 active:scale-95 transition-all text-xs">Подтвердить код</Button>
 
-                  {isBiometricAvailable && (
-                    <Button 
-                      variant="ghost" 
-                      onClick={handleFaceID}
-                      disabled={isAuthenticating}
-                      className="w-full h-14 rounded-2xl bg-white/5 border border-white/10 text-white font-black uppercase italic tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-4 group"
-                    >
-                      {isAuthenticating ? (
-                        <Loader2 className="w-6 h-6 text-primary animate-spin" />
-                      ) : (
-                        <>
-                          <Fingerprint className="w-6 h-6 text-primary group-hover:scale-110 transition-transform" />
-                          Использовать Face ID
-                        </>
-                      )}
-                    </Button>
-                  )}
+                    {isBiometricAvailable && (
+                      <Button variant="ghost" onClick={handleFaceID} disabled={isAuthenticating} className="w-full h-14 rounded-2xl bg-white/5 border border-white/10 text-white font-black uppercase italic tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-4 group">
+                        {isAuthenticating ? <Loader2 className="w-6 h-6 text-primary animate-spin" /> : <><Fingerprint className="w-6 h-6 text-primary group-hover:scale-110 transition-transform" /> Использовать Биометрию</>}
+                      </Button>
+                    )}
+
+                    <button onClick={startPinRecovery} disabled={isRecovering} className="text-[9px] font-black uppercase text-white/20 hover:text-primary transition-colors mt-2 tracking-widest">
+                      {isRecovering ? 'Отправка...' : 'Забыл PIN-код'}
+                    </button>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="space-y-8 animate-in slide-in-from-right-4">
+                   <div className="space-y-4">
+                      <Input 
+                        placeholder="000 000" 
+                        maxLength={6}
+                        className="bg-white/5 border-primary/40 h-20 text-4xl tracking-[0.5em] text-center rounded-[2.2rem] font-black text-white"
+                        value={recoveryCode}
+                        onChange={e => setRecoveryCode(e.target.value.replace(/\D/g, ''))}
+                      />
+                      <p className="text-[7px] font-black text-white/30 uppercase tracking-widest">Введите 6 цифр из SMS для сброса</p>
+                   </div>
+                   <div className="flex flex-col gap-3">
+                      <Button onClick={handleVerifyRecovery} disabled={isRecovering} className="w-full h-16 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-xl">
+                        {isRecovering ? <Loader2 className="animate-spin" /> : 'Восстановить доступ'}
+                      </Button>
+                      <button onClick={() => setIsRecoveryOpen(false)} className="text-[8px] font-black uppercase text-white/20 hover:text-white transition-colors">Вернуться к вводу PIN</button>
+                   </div>
+                </div>
+              )}
             </div>
           </div>
         </ScrollArea>
