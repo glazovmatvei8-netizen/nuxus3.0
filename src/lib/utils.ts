@@ -1,3 +1,4 @@
+
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { formatDistanceToNow, parseISO, differenceInSeconds } from 'date-fns';
@@ -9,24 +10,28 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * ИНТЕЛЛЕКТУАЛЬНЫЙ НОРМАЛИЗАТОР НОМЕРОВ V82.0
- * Приводит любой ввод (89xx, 9xx, +7xx) к стандарту E.164.
+ * ИНТЕЛЛЕКТУАЛЬНЫЙ НОРМАЛИЗАТОР НОМЕРОВ V83.0
+ * Максимально агрессивно приводит любой ввод к стандарту E.164.
  */
 export function normalizePhoneNumber(phone: string): string {
   if (!phone) return '';
   
-  // Удаляем все не-цифры
+  // Удаляем всё, кроме цифр
   let cleaned = phone.replace(/\D/g, '');
   
-  // Если начинается с 8 и длина 11 (РФ стандарт)
+  // Если ввод начинается с 8 и длина 11 (типично для РФ: 8900...)
   if (cleaned.startsWith('8') && cleaned.length === 11) {
     cleaned = '7' + cleaned.substring(1);
   } 
-  // Если начинается с 9 и длина 10 (пропущенная семерка)
+  // Если ввод начинается с 9 и длина 10 (пропущенная 7 или 8: 900...)
   else if (cleaned.startsWith('9') && cleaned.length === 10) {
     cleaned = '7' + cleaned;
   }
-  // Если просто короткий номер без кода страны, но мы в контексте РФ (опционально)
+  // Если это просто короткий номер без кода, но длиннее 7 цифр
+  else if (cleaned.length >= 7 && cleaned.length <= 10 && !cleaned.startsWith('7')) {
+    // По умолчанию считаем регионом РФ если не указано иное
+    cleaned = '7' + cleaned;
+  }
   
   return cleaned ? `+${cleaned}` : '';
 }

@@ -1,6 +1,7 @@
+
 "use client"
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,7 +24,6 @@ import { cn, formatDisplayName, normalizePhoneNumber } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { translations } from '@/lib/translations';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { useAppState } from '@/lib/app-state';
 import versions from '@/app/versions.json';
 
 const COUNTRIES = [
@@ -64,27 +64,29 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
 
   const t = lang ? translations[lang].auth : translations.ru.auth;
 
-  useEffect(() => {
-    if (typeof window !== 'undefined' && auth && !window.recaptchaVerifier) {
-      try {
-        const container = document.getElementById('recaptcha-container');
-        if (container) {
-          window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-            'size': 'invisible'
-          });
-        }
-      } catch (e) {
-        console.error("Recaptcha Init Error:", e);
+  // Инициализация Recaptcha
+  const initRecaptcha = useCallback(() => {
+    if (typeof window === 'undefined' || !auth) return;
+    if (window.recaptchaVerifier) return window.recaptchaVerifier;
+
+    try {
+      const container = document.getElementById('recaptcha-container');
+      if (container) {
+        window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+          size: 'invisible',
+          callback: () => { console.log('Recaptcha solved'); }
+        });
       }
+    } catch (e) {
+      console.error("Recaptcha Init Error:", e);
     }
+    return window.recaptchaVerifier;
   }, [auth]);
 
   const handleSendSms = async () => {
     if (!auth) return;
     setIsLoading(true);
     try {
-      // Интеллектуальная обработка номера:
-      // Соединяем код страны и ввод, затем прогоняем через нормализатор.
       const rawFullPhone = country.code + phoneNumberInput;
       const normalizedPhone = normalizePhoneNumber(rawFullPhone);
 
@@ -92,40 +94,45 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
         throw new Error("Некорректный номер телефона");
       }
 
-      if (!window.recaptchaVerifier) {
-        window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-          'size': 'invisible'
-        });
-      }
+      const verifier = initRecaptcha();
+      if (!verifier) throw new Error("Шлюз Recaptcha не готов");
 
-      const confirmation = await signInWithPhoneNumber(auth, normalizedPhone, window.recaptchaVerifier);
+      const confirmation = await signInWithPhoneNumber(auth, normalizedPhone, verifier);
       setVerificationId(confirmation.verificationId);
+      // Важно: сохраняем глобально для доступа из handleVerifySms
       (window as any).confirmationResult = confirmation;
+      
       toast({ title: "Код отправлен", description: `На номер ${normalizedPhone}` });
     } catch (e: any) {
-      toast({ title: "Ошибка SMS", description: e.message || "Некорректный ввод", variant: "destructive" });
+      console.error("SMS Send Error:", e);
+      toast({ title: "Ошибка SMS", description: e.message || "Сбой сетевого узла", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleVerifySms = async () => {
-    if (!smsCode || !(window as any).confirmationResult) return;
+    const confirmation = (window as any).confirmationResult;
+    if (!smsCode || !confirmation) {
+      toast({ title: "Ошибка сессии", description: "Запросите код заново", variant: "destructive" });
+      setVerificationId(null);
+      return;
+    }
+
     setIsLoading(true);
     try {
-      const result = await (window as any).confirmationResult.confirm(smsCode);
+      const result = await confirmation.confirm(smsCode);
       const user = result.user;
       
       const userDoc = await getDoc(doc(db!, 'users', user.uid));
       if (!userDoc.exists()) {
-         // Автоматически переключаем в режим регистрации если узла нет
          setMode('register');
          toast({ title: "Узел не найден", description: "Завершите создание профиля" });
       } else {
          toast({ title: "Вход выполнен" });
       }
     } catch (e: any) {
-      toast({ title: "Неверный код", variant: "destructive" });
+      toast({ title: "Неверный код", description: "Проверьте цифры из SMS", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -150,8 +157,10 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
       
       if (authMethod === 'email') {
         const cleanEmail = email.trim().toLowerCase();
-        if (!cleanEmail.endsWith('@nuxus.fun')) {
-          throw new Error("Регистрация через почту разрешена только для домена @nuxus.fun");
+        
+        // Валидация только для регистрации
+        if (mode === 'register' && !cleanEmail.endsWith('@nuxus.fun')) {
+          throw new Error("Регистрация разрешена только для @nuxus.fun");
         }
 
         if (mode === 'login') {
@@ -162,7 +171,6 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
           if (!username.trim()) throw new Error("Выберите @ID");
           const usernameWithAt = '@' + username.trim().replace('@', '').replace(/\s/g, '').toLowerCase();
           
-          // Проверка существования username
           const userCred = await createUserWithEmailAndPassword(auth, cleanEmail, password);
           await updateProfile(userCred.user, { displayName: name.trim() });
           
@@ -186,7 +194,10 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
         }
       }
     } catch (e: any) {
-      toast({ title: "Ошибка", description: e.message, variant: "destructive" });
+      let msg = e.message;
+      if (e.code === 'auth/user-not-found') msg = "Узел с такой почтой не зарегистрирован в системе Auth";
+      if (e.code === 'auth/wrong-password') msg = "Неверный пароль доступа";
+      toast({ title: "Ошибка", description: msg, variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -222,8 +233,8 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
           <Card className="w-full max-w-[380px] bg-white/[0.01] backdrop-blur-[100px] border-white/5 rounded-[2.5rem] p-1 shadow-2xl relative z-10">
             <CardHeader className="text-center pt-6 pb-2 space-y-5">
               <div className="inline-flex bg-black/60 p-1 rounded-xl border border-white/5 mx-auto">
-                <button onClick={() => setMode('login')} className={cn("px-5 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all", mode === 'login' ? "bg-white text-black shadow-xl" : "text-white/20")}>Вход</button>
-                <button onClick={() => setMode('register')} className={cn("px-5 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all", mode === 'register' ? "bg-white text-black shadow-xl" : "text-white/20")}>Регистрация</button>
+                <button onClick={() => {setMode('login'); setVerificationId(null);}} className={cn("px-5 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all", mode === 'login' ? "bg-white text-black shadow-xl" : "text-white/20")}>Вход</button>
+                <button onClick={() => {setMode('register'); setVerificationId(null);}} className={cn("px-5 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all", mode === 'register' ? "bg-white text-black shadow-xl" : "text-white/20")}>Регистрация</button>
               </div>
               <div className="space-y-1">
                 <CardTitle className="text-3xl font-black text-white tracking-tighter italic uppercase">{mode === 'login' ? 'Привет' : 'Создать'}</CardTitle>
@@ -231,7 +242,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
               </div>
               <div className="flex gap-2 p-1 bg-black/40 rounded-xl border border-white/5 w-[240px] mx-auto">
                 <button type="button" onClick={() => {setAuthMethod('phone'); setVerificationId(null);}} className={cn("flex-1 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all", authMethod === 'phone' ? "bg-white/10 text-white" : "text-white/20")}><Phone size={9} /> Номер</button>
-                <button type="button" onClick={() => {setAuthMethod('email'); setVerificationId(null);}} className={cn("flex-1 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all", authMethod === 'email' ? "bg-white/10 text-white" : "text-white/20")}><Mail size={9} /> @nuxus.fun</button>
+                <button type="button" onClick={() => {setAuthMethod('email'); setVerificationId(null);}} className={cn("flex-1 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all", authMethod === 'email' ? "bg-white/10 text-white" : "text-white/20")}><Mail size={9} /> Почта</button>
               </div>
             </CardHeader>
             <CardContent className="px-6 pb-8">
@@ -290,15 +301,15 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                           <Input placeholder="000000" maxLength={6} value={smsCode} onChange={e => setSmsCode(e.target.value.replace(/\D/g, ''))} className="h-14 bg-white/[0.02] border-primary/30 rounded-xl text-center font-black tracking-[0.5em] text-xl" />
                           <MessageSquareCode className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/40" />
                         </div>
-                        <button type="button" onClick={() => setVerificationId(null)} className="text-[8px] font-black uppercase text-primary/60 mt-2 hover:text-primary transition-colors">Сменить номер</button>
+                        <button type="button" onClick={() => {setVerificationId(null); setSmsCode('');}} className="text-[8px] font-black uppercase text-primary/60 mt-2 hover:text-primary transition-colors">Сменить номер</button>
                       </div>
                     )}
                   </div>
                 ) : (
                   <div className="space-y-4">
                     <div className="space-y-1">
-                      <Label className="text-[8px] font-black uppercase text-primary/40 ml-2">Email (@nuxus.fun)</Label>
-                      <Input type="email" placeholder="admin@nuxus.fun" value={email} onChange={e => setEmail(e.target.value)} className="h-11 bg-white/[0.02] border-white/5 rounded-xl font-bold text-sm px-4" />
+                      <Label className="text-[8px] font-black uppercase text-primary/40 ml-2">Email Адрес</Label>
+                      <Input type="email" placeholder="user@nuxus.fun" value={email} onChange={e => setEmail(e.target.value)} className="h-11 bg-white/[0.02] border-white/5 rounded-xl font-bold text-sm px-4" />
                     </div>
                     <div className="space-y-1">
                       <Label className="text-[8px] font-black uppercase text-primary/40 ml-2">Пароль</Label>
