@@ -7,8 +7,9 @@ import { doc } from 'firebase/firestore';
 import type { User } from '@/lib/types';
 
 /**
- * ПРИМЕНИТЕЛЬ ТЕМЫ V10.0 «DIRECT LINK»
- * ОПТИМИЗИРОВАНО: Прямые импорты для исключения циклической зависимости и ошибки 'call'.
+ * ПРИМЕНИТЕЛЬ ТЕМЫ V11.0 «AESTHETIC OVERRIDE»
+ * ОПТИМИЗИРОВАНО: Элитные темы (Event Horizon, Crimson Nebula) принудительно 
+ * отключают пользовательский цвет для сохранения дизайнерской гармонии.
  */
 export function ThemeApplier() {
   const { user } = useUser();
@@ -24,10 +25,13 @@ export function ThemeApplier() {
   useEffect(() => {
     if (typeof document === 'undefined') return;
 
-    if (profile?.settings?.theme) {
-      document.documentElement.setAttribute('data-theme', profile.settings.theme);
-    }
+    const theme = profile?.settings?.theme || 'default';
+    const isEliteTheme = theme === 'event-horizon' || theme === 'crimson-nebula';
 
+    // Применяем атрибут темы
+    document.documentElement.setAttribute('data-theme', theme);
+
+    // Применяем режим (dark/light)
     const appearance = profile?.settings?.appearance || 'dark';
     if (appearance === 'light') {
       document.documentElement.classList.remove('dark');
@@ -38,6 +42,14 @@ export function ThemeApplier() {
     }
 
     const applyColor = (hex: string) => {
+      // Если выбрана Элитная тема, мы УДАЛЯЕМ инлайновые стили цветов,
+      // чтобы цвета из globals.css (amber/burgundy) взяли верх.
+      if (isEliteTheme) {
+        document.documentElement.style.removeProperty('--primary');
+        document.documentElement.style.removeProperty('--ring');
+        return;
+      }
+
       if (!hex) return;
       const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
       if (result) {
@@ -64,6 +76,10 @@ export function ThemeApplier() {
 
     if (profile?.settings?.customPrimaryColor) {
       applyColor(profile.settings.customPrimaryColor);
+    } else {
+      // Очистка если цвета нет
+      document.documentElement.style.removeProperty('--primary');
+      document.documentElement.style.removeProperty('--ring');
     }
   }, [profile?.settings?.theme, profile?.settings?.appearance, profile?.settings?.customPrimaryColor]);
 

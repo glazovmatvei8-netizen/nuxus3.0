@@ -30,26 +30,30 @@
     --chart-5: 27 87% 67%;
   }
 
-  /* ELITE THEME: EVENT HORIZON (Amber/Gold Glow) */
+  /* ELITE THEME: EVENT HORIZON (Amber/Gold Glow - EXACT AS PHOTO) */
   [data-theme='event-horizon'] {
-    --background: 30 15% 2%;
+    --background: 30 15% 1%;
     --foreground: 30 10% 98%;
-    --card: 30 15% 4%;
-    --primary: 35 100% 50%; /* Pure Amber */
-    --accent: 45 100% 60%; /* Gold */
-    --border: 30 10% 12%;
-    --ring: 35 100% 50%;
+    --card: 30 15% 3%;
+    --primary: 38 100% 55%; /* Rich Amber */
+    --accent: 45 100% 50%; /* Pure Gold */
+    --border: 30 15% 10%;
+    --ring: 38 100% 55%;
+    --muted: 30 15% 5%;
+    --muted-foreground: 30 10% 40%;
   }
 
-  /* ELITE THEME: CRIMSON NEBULA (Burgundy Pro) */
+  /* ELITE THEME: CRIMSON NEBULA (Burgundy Pro / Wine) */
   [data-theme='crimson-nebula'] {
-    --background: 345 30% 2%;
+    --background: 345 30% 1%;
     --foreground: 345 10% 98%;
-    --card: 345 30% 4%;
-    --primary: 345 80% 45%; /* Deep Burgundy */
-    --accent: 345 100% 70%; /* Rose Petal */
-    --border: 345 20% 12%;
-    --ring: 345 80% 45%;
+    --card: 345 30% 3%;
+    --primary: 345 85% 40%; /* Deep Burgundy Wine */
+    --accent: 345 100% 65%; /* Soft Rose Burst */
+    --border: 345 25% 10%;
+    --ring: 345 85% 40%;
+    --muted: 345 30% 5%;
+    --muted-foreground: 345 10% 40%;
   }
 }
 
@@ -88,13 +92,13 @@
   background-image: linear-gradient(135deg, rgba(255,255,255,0.02) 0%, transparent 100%);
 }
 
-/* ELITE GLOW CARD (FOR EVENT HORIZON & CRIMSON) */
+/* ELITE GLOW CARD (IMPROVED - EXACT AS PHOTO) */
 .elite-glow-card {
   @apply relative rounded-[3rem] overflow-hidden border border-white/10;
-  background: radial-gradient(circle at 50% 0%, hsla(var(--primary), 0.15), transparent 70%),
+  background: radial-gradient(circle at 50% 0%, hsla(var(--primary), 0.2), transparent 85%),
               rgba(255, 255, 255, 0.01);
-  box-shadow: 0 40px 100px rgba(0,0,0,0.9), 
-              0 0 40px hsla(var(--primary), 0.05);
+  box-shadow: 0 60px 120px rgba(0,0,0,0.95), 
+              0 0 60px hsla(var(--primary), 0.08);
 }
 
 .no-scrollbar::-webkit-scrollbar { display: none; }
