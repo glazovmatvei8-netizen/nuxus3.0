@@ -25,15 +25,24 @@
   }
 
   [data-theme='event-horizon'] {
-    --background: 30 15% 1%;
-    --foreground: 30 10% 98%;
-    --card: 30 15% 3%;
-    --primary: 38 100% 55%; /* Идеальный янтарный */
-    --accent: 45 100% 50%; 
-    --border: 30 15% 8%;
-    --ring: 38 100% 55%;
-    --muted: 30 15% 5%;
-    --muted-foreground: 30 10% 30%;
+    /* Фон приложения (глубокий темно-серый/почти черный) #121212 */
+    --background: 0 0% 7%;
+    /* Цвет текста заголовков (белый/молочный) #FFFFFF */
+    --foreground: 0 0% 100%;
+    /* Цвет карточек и плашек (темный стекломорфизм) #1C1C1E */
+    --card: 240 2% 11%;
+    --card-foreground: 0 0% 100%;
+    /* Основной акцентный цвет (теплый янтарный) #E58E38 */
+    --primary: 30 77% 56%;
+    --primary-foreground: 0 0% 100%;
+    /* Мягкие золотистые тона для акцентов #F39C12 */
+    --accent: 38 90% 51%;
+    --accent-foreground: 0 0% 10%;
+    /* Цвет второстепенного текста (серо-бежевый) #8E8E93 */
+    --muted-foreground: 240 2% 57%;
+    --muted: 0 0% 10%;
+    --border: 240 2% 15%;
+    --ring: 30 77% 56%;
   }
 
   [data-theme='crimson-nebula'] {
@@ -72,25 +81,32 @@
   }
 }
 
-/* ЭКСКЛЮЗИВНАЯ КАРТОЧКА EVENT HORIZON */
+/* ЭКСКЛЮЗИВНАЯ КАРТОЧКА EVENT HORIZON С ТЕНЯМИ #3A2518 */
 .nuxus-event-card {
-  @apply relative rounded-[3rem] border-2 border-primary/20 overflow-hidden shadow-[0_40px_100px_rgba(0,0,0,0.8)];
-  background: radial-gradient(circle at 50% 30%, hsla(var(--primary), 0.25), transparent 80%),
-              rgba(255, 255, 255, 0.015);
+  @apply relative rounded-[3rem] border-2 border-primary/20 overflow-hidden;
+  /* Градиентный переход от янтарного к прозрачному на фоне #1C1C1E */
+  background: radial-gradient(circle at 50% 30%, hsla(var(--primary), 0.2), transparent 80%),
+              rgba(28, 28, 30, 0.6);
+  backdrop-filter: blur(40px);
+  /* Тени оттенка #3A2518 */
+  shadow: 0 40px 100px rgba(58, 37, 24, 0.4);
+  box-shadow: 0 40px 100px rgba(58, 37, 24, 0.4), inset 0 0 20px rgba(229, 142, 56, 0.05);
 }
 
 .nuxus-event-card::before {
   content: '';
   @apply absolute inset-0 rounded-[3rem] p-[1px];
-  background: linear-gradient(180deg, hsla(var(--primary), 0.3), transparent);
+  background: linear-gradient(180deg, hsla(var(--primary), 0.4), transparent);
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   mask-composite: exclude;
   pointer-events: none;
 }
 
-/* НИЖНЕЕ МЕНЮ ИЗ ФОТО */
+/* НИЖНЕЕ МЕНЮ С ПОЛУПРОЗРАЧНОСТЬЮ #1C1C1E */
 .nuxus-bottom-nav {
-  @apply bg-[#0a0a0c]/80 backdrop-blur-[40px] border-t border-white/[0.05];
+  background: rgba(28, 28, 30, 0.85);
+  backdrop-filter: blur(50px);
+  @apply border-t border-white/[0.05];
 }
 
 .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -103,4 +119,9 @@
 
 .animate-shine {
   animation: shine 3s infinite linear;
+}
+
+/* ЭЛИТНЫЙ ЭФФЕКТ ГЛОУ */
+.elite-glow-card {
+  @apply nuxus-event-card;
 }

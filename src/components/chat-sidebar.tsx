@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useMemo, memo, useEffect } from 'react';
@@ -74,7 +73,7 @@ const ChatListItem = memo(({
         className={cn(
           "relative flex items-center gap-5 p-5 rounded-[2.8rem] transition-all duration-500 cursor-pointer group",
           isActive 
-            ? "obsidian-glass shadow-2xl" 
+            ? "bg-primary/5 border border-primary/20 shadow-2xl" 
             : "hover:bg-white/[0.03]"
         )}
       >
@@ -87,7 +86,7 @@ const ChatListItem = memo(({
             showOnlineStatus={chat.type === 'private'} 
           />
           {isUnread && (
-            <div className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-primary rounded-full border-4 border-[#010103] shadow-[0_0_20px_rgba(var(--primary),1)]" />
+            <div className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-primary rounded-full border-4 border-background shadow-[0_0_20px_rgba(var(--primary),1)]" />
           )}
         </div>
 
@@ -98,13 +97,13 @@ const ChatListItem = memo(({
                 {displayName}
               </span>
               {isPremium && <Star className="w-3.5 h-3.5 text-primary fill-primary animate-pulse" />}
-              {isPinned && <Pin className="w-3 h-3 text-white/20" />}
+              {isPinned && <Pin className="w-3 h-3 text-muted-foreground/40" />}
             </div>
-            <span className="text-[9px] text-white/10 font-black whitespace-nowrap tracking-widest">
+            <span className="text-[9px] text-muted-foreground/30 font-black whitespace-nowrap tracking-widest">
               {displayTime}
             </span>
           </div>
-          <p className="text-[13px] text-white/30 truncate font-medium tracking-tight">
+          <p className="text-[13px] text-muted-foreground truncate font-medium tracking-tight">
             {decryptedPreview}
           </p>
         </div>
@@ -165,7 +164,7 @@ export default function ChatSidebar() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-transparent overflow-hidden">
+    <div className="flex flex-col h-full bg-background overflow-hidden">
       <ScrollArea className="flex-1 no-scrollbar">
         <div className="flex flex-col min-h-full pb-60">
           <div className="px-6 pt-12 pb-6 space-y-6">
@@ -184,7 +183,7 @@ export default function ChatSidebar() {
                <Button 
                  variant="ghost" 
                  size="icon" 
-                 className="h-12 w-12 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-primary/20 hover:text-primary transition-all shadow-xl" 
+                 className="h-12 w-12 rounded-2xl bg-card border border-white/5 hover:bg-primary/20 hover:text-primary transition-all shadow-xl" 
                  onClick={() => setIsCreateModalOpen(true)}
                >
                  <Plus className="w-6 h-6" strokeWidth={3} />
@@ -192,10 +191,10 @@ export default function ChatSidebar() {
             </div>
 
             <div className="relative group">
-              <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-white/10 group-focus-within:text-primary transition-colors" />
+              <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/30 group-focus-within:text-primary transition-colors" />
               <input 
                 placeholder={t('sidebar.search')} 
-                className="w-full h-14 obsidian-glass rounded-[2rem] pl-16 text-[15px] font-medium placeholder:text-white/5 focus:outline-none focus:border-primary/40 transition-all shadow-inner"
+                className="w-full h-14 bg-card rounded-[2rem] pl-16 text-[15px] font-bold text-white placeholder:text-muted-foreground/40 border border-white/5 focus:outline-none focus:border-primary/40 transition-all shadow-inner"
                 onClick={() => setIsSearchOpen(true)}
                 readOnly
               />
@@ -209,18 +208,18 @@ export default function ChatSidebar() {
                     <div key={i} className="flex flex-col items-center gap-2 shrink-0 group cursor-pointer" onClick={() => handleSlotSwitch(i)}>
                       <div className={cn(
                         "h-16 w-16 rounded-[1.8rem] border-2 flex items-center justify-center transition-all active:scale-90 shadow-2xl relative",
-                        activeAccountIndex === i ? "border-primary bg-primary/10 shadow-primary/20" : "border-white/5 bg-white/5 opacity-40 hover:opacity-100"
+                        activeAccountIndex === i ? "border-primary bg-primary/10 shadow-primary/20" : "border-white/5 bg-card opacity-40 hover:opacity-100"
                       )}>
                         {activeAccountIndex === i ? (
                           <UserAvatar userId={user?.uid} className="h-10 w-10 border-none" manualAvatarUrl={profile?.avatarUrl} />
                         ) : (
-                          <Plus className="w-6 h-6 text-white/20 group-hover:text-primary transition-colors" />
+                          <Plus className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
                         )}
-                        {activeAccountIndex === i && <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-primary rounded-full border-2 border-[#010103] shadow-[0_0_100px_rgba(var(--primary),1)]" />}
+                        {activeAccountIndex === i && <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-primary rounded-full border-2 border-background shadow-[0_0_100px_rgba(var(--primary),1)]" />}
                       </div>
                       <span className={cn(
                         "text-[8px] font-black uppercase tracking-widest truncate w-16 text-center italic",
-                        activeAccountIndex === i ? "text-primary" : "text-white/20"
+                        activeAccountIndex === i ? "text-primary" : "text-muted-foreground"
                       )}>
                         {activeAccountIndex === i ? (profile?.name || 'Active') : (slotNames[i] || `Add account`)}
                       </span>
@@ -260,7 +259,7 @@ export default function ChatSidebar() {
                ))
              ) : (
                <div className="flex flex-col items-center justify-center py-32 opacity-5 space-y-6">
-                  <MessageSquare className="w-24 h-24" />
+                  <MessageSquare className="w-24 h-24 text-muted-foreground" />
                   <p className="text-[10px] font-black uppercase tracking-[1em]">{t('sidebar.noResults')}</p>
                </div>
              )}

@@ -8,8 +8,8 @@ import { UserAvatar } from '@/components/user-avatar';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
-  ChevronRight, Star, Fingerprint, Palette, ShieldAlert, 
-  Share2, ShieldCheck, Plus, Menu, RefreshCw, LayoutGrid, Info
+  ChevronRight, Star, Fingerprint, Palette, ShieldCheck, 
+  Share2, LayoutGrid, Info, Menu, RefreshCw
 } from 'lucide-react';
 import { useAppState } from '@/lib/app-state';
 import { formatDisplayName, cn, isUserPremium, isGlobalAdmin } from '@/lib/utils';
@@ -18,13 +18,12 @@ import { useToast } from '@/hooks/use-toast';
 import { AdminPanelModal } from './modals/admin-panel-modal';
 
 /**
- * PROFILE VIEW V90.0 «EVENT HORIZON ABSOLUTE»
- * Идентичное повторение интерфейса со скриншота.
+ * PROFILE VIEW V91.0 «CHROMATIC PRECISION»
+ * Применяет новую цветовую схему: #121212 фон, #E58E38 акцент, #8E8E93 вспомогательный текст.
  */
 export default function ProfileView() {
   const { user } = useUser();
   const db = useFirestore();
-  const auth = useAuth();
   const { toast } = useToast();
   const { setIsSettingsOpen, setSettingsTab, setIsLegalOpen } = useAppState();
   
@@ -44,31 +43,31 @@ export default function ProfileView() {
   if (!mounted) return null;
 
   return (
-    <div className="flex flex-col h-full bg-[#010103] overflow-hidden relative">
-      {/* Top Browser UI Header (Visual Decoration) */}
-      <header className="h-14 flex items-center justify-between px-6 shrink-0 z-[100] border-b border-white/[0.05] bg-[#0c0c0e]/40">
-        <Menu className="w-6 h-6 text-white/40" />
-        <div className="bg-white/5 px-4 py-1.5 rounded-full flex items-center gap-2 max-w-[200px] border border-white/5">
-           <span className="text-[10px] text-white/30 truncate font-medium">nuxus.fun/kernel</span>
+    <div className="flex flex-col h-full bg-background overflow-hidden relative">
+      {/* Top Decoration */}
+      <header className="h-14 flex items-center justify-between px-6 shrink-0 z-[100] border-b border-white/[0.05] bg-card/40 backdrop-blur-md">
+        <Menu className="w-5 h-5 text-muted-foreground" />
+        <div className="bg-white/5 px-4 py-1 rounded-full flex items-center gap-2 max-w-[200px] border border-white/5">
+           <span className="text-[9px] text-muted-foreground/60 truncate font-black uppercase tracking-widest">nuxus.fun/kernel</span>
         </div>
-        <RefreshCw className="w-5 h-5 text-white/40" />
+        <RefreshCw className="w-5 h-5 text-muted-foreground" />
       </header>
 
       <ScrollArea className="flex-1 relative z-20">
         <div className="px-6 pt-6 pb-40 space-y-8 animate-in fade-in duration-1000">
           
-          {/* THE MAIN AMBER CARD */}
+          {/* THE MAIN AMBER CARD (Event Horizon Theme) */}
           <div className="nuxus-event-card p-10 flex flex-col items-center gap-6">
-             <div className="absolute top-6 right-8 opacity-20">
-                <div className="border border-white/40 rounded-lg px-2 py-1 flex flex-col items-center">
+             <div className="absolute top-6 right-8 opacity-40">
+                <div className="border border-primary/40 rounded-lg px-2 py-1 flex flex-col items-center bg-black/20">
                    <span className="text-[6px] font-black text-white leading-none">OCP</span>
                    <span className="text-[5px] font-bold text-primary uppercase mt-0.5">ON</span>
                 </div>
              </div>
 
              <div className="relative group">
-                <div className="absolute -inset-10 bg-primary/25 blur-[45px] rounded-full animate-pulse" />
-                <div className="relative z-10 p-1.5 rounded-full border-2 border-primary/40 bg-[#0a0a0c]">
+                <div className="absolute -inset-10 bg-primary/20 blur-[45px] rounded-full animate-pulse" />
+                <div className="relative z-10 p-1 rounded-full border-2 border-primary/40 bg-black/40 shadow-2xl">
                    <UserAvatar 
                      userId={user?.uid} 
                      className="h-28 w-28 border-none shadow-2xl" 
@@ -79,13 +78,13 @@ export default function ProfileView() {
 
              <div className="text-center space-y-4 relative z-10">
                 <div className="flex items-center justify-center gap-3">
-                   <h2 className="text-[22px] font-black text-white uppercase italic tracking-tighter leading-none">
+                   <h2 className="text-[22px] font-black text-white uppercase italic tracking-tighter leading-none drop-shadow-sm">
                      {profile?.name ? formatDisplayName(profile.name) : 'NODE ACTIVE'}
                    </h2>
                    <Star className="w-5 h-5 text-primary fill-primary animate-pulse" />
                 </div>
-                <div className="bg-white/5 border border-white/10 px-6 py-1.5 rounded-full">
-                   <span className="text-[9px] font-black uppercase text-primary/80 tracking-[0.2em] italic">
+                <div className="bg-black/40 backdrop-blur-md border border-white/10 px-6 py-1.5 rounded-full shadow-lg">
+                   <span className="text-[9px] font-black uppercase text-primary tracking-[0.2em] italic">
                      {profile?.username || '@USERNAME'}
                    </span>
                 </div>
@@ -95,21 +94,21 @@ export default function ProfileView() {
           {/* LIST SECTIONS */}
           <div className="space-y-6">
              <div className="flex items-center justify-between px-2">
-                <h3 className="text-[11px] font-black uppercase text-white/30 tracking-[0.3em]">Мои Узлы</h3>
+                <h3 className="text-[10px] font-black uppercase text-muted-foreground tracking-[0.3em]">Мои Узлы</h3>
                 <LayoutGrid className="w-3.5 h-3.5 text-primary/40" />
              </div>
 
-             <div className="space-y-1">
+             <div className="space-y-2">
                 {/* CREATOR ITEM */}
-                <div className="flex items-center gap-5 p-5 bg-white/[0.02] border border-white/[0.05] rounded-[2.5rem] shadow-xl relative overflow-hidden group">
+                <div className="flex items-center gap-5 p-5 bg-card/40 border border-white/[0.05] rounded-[2.5rem] shadow-xl relative overflow-hidden group">
                    <div className="relative">
                       <div className="absolute -inset-2 bg-primary/10 blur-xl rounded-full" />
-                      <div className="relative z-10 p-0.5 rounded-full border border-primary/40">
-                         <UserAvatar userId={user?.uid} className="h-11 w-11" manualAvatarUrl={profile?.avatarUrl} />
+                      <div className="relative z-10 p-0.5 rounded-full border border-primary/40 bg-black/20">
+                         <UserAvatar userId={user?.uid} className="h-10 w-10" manualAvatarUrl={profile?.avatarUrl} />
                       </div>
                    </div>
-                   <span className="text-[14px] font-black text-white uppercase italic tracking-widest">Создатель</span>
-                   <div className="absolute right-6 w-3 h-3 bg-primary rounded-full border-4 border-[#010103] shadow-[0_0_15px_rgba(var(--primary),0.8)]" />
+                   <span className="text-[13px] font-black text-white uppercase italic tracking-widest">Создатель</span>
+                   <div className="absolute right-6 w-3 h-3 bg-primary rounded-full border-4 border-background shadow-[0_0_15px_rgba(var(--primary),0.8)]" />
                 </div>
 
                 {/* ACTION ITEMS */}
@@ -159,10 +158,10 @@ function ProfileListItem({ icon: Icon, label, onClick }: any) {
       className="flex items-center justify-between p-6 cursor-pointer hover:bg-white/[0.02] transition-all group"
     >
       <div className="flex items-center gap-6">
-        <div className="w-12 h-12 rounded-2xl bg-white/[0.03] border border-white/5 flex items-center justify-center group-hover:bg-primary/10 transition-all">
-          <Icon className="w-5 h-5 text-white/40 group-hover:text-primary" />
+        <div className="w-12 h-12 rounded-2xl bg-card/60 border border-white/5 flex items-center justify-center group-hover:bg-primary/10 transition-all shadow-md">
+          <Icon className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
         </div>
-        <span className="text-white/80 font-black uppercase tracking-widest text-[13px] italic leading-none">{label}</span>
+        <span className="text-white/90 font-black uppercase tracking-widest text-[13px] italic leading-none">{label}</span>
       </div>
       <ChevronRight className="w-4 h-4 text-white/10 group-hover:text-primary transition-all" />
     </div>
