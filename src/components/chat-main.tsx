@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useEffect, useMemo } from 'react';
@@ -27,7 +28,7 @@ import {
 } from 'lucide-react';
 
 /**
- * NUXUS CHAT MAIN V93.0 «REPLICA MASTER»
+ * NUXUS CHAT MAIN V95.0 «REPLICA MASTER»
  */
 export default function ChatMain() {
   const { 
@@ -61,7 +62,7 @@ export default function ChatMain() {
     { id: 'calls', icon: Phone, label: 'CALLS' },
     { id: 'chats', icon: MessageSquare, label: 'CHATS' },
     { id: 'wallet', icon: Wallet, label: 'WALLET' },
-    { id: 'profile', icon: LayoutGrid, label: 'NODE' },
+    { id: 'profile', icon: LayoutGrid, label: 'NODES' },
   ];
 
   return (
