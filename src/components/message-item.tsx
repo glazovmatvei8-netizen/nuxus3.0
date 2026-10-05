@@ -1,25 +1,38 @@
+
 "use client"
 
 import React, { memo, useMemo, useState, useEffect } from 'react';
 import { UserAvatar } from '@/components/user-avatar';
 import { format } from 'date-fns';
 import { 
-  Check, CheckCheck, Play, MoreHorizontal
+  Check, CheckCheck, Play, MoreHorizontal, 
+  Copy, Share2, Pin, Trash2, Heart, Smile,
+  Reply, ReplyAll
 } from 'lucide-react';
-import { cn, decryptSignal, getReputationInfo } from '@/lib/utils';
+import { cn, decryptSignal, getReputationInfo, encryptSignal } from '@/lib/utils';
 import { useAppState } from '@/lib/app-state';
-import { useFirestore } from '@/firebase/provider';
+import { useFirestore, useUser } from '@/firebase/provider';
 import { useDoc } from '@/firebase/firestore/use-doc';
-import { doc } from 'firebase/firestore';
-import type { User } from '@/lib/types';
+import { doc, updateDoc, arrayUnion, arrayRemove, deleteDoc } from 'firebase/firestore';
+import type { User, Message } from '@/lib/types';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+  ContextMenuSeparator,
+} from "@/components/ui/context-menu";
+import { useToast } from '@/hooks/use-toast';
 
 /**
- * MESSAGE ITEM V78.0 «AEGIS SHIELD»
- * UPDATED: Display reputation shields and handle profile navigation.
+ * MESSAGE ITEM V96.0 «SIGNAL CONTROL»
+ * UPDATED: Context menu, reactions, copy, forward, and absolute elite styling.
  */
-export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile }: any) => {
-  const { setInspectedUserId } = useAppState();
+export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, chatId, onReply }: any) => {
+  const { setInspectedUserId, setForwardingMessage } = useAppState();
+  const { user } = useUser();
   const db = useFirestore();
+  const { toast } = useToast();
   const [mounted, setMounted] = useState(false);
   
   useEffect(() => {
@@ -41,6 +54,37 @@ export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile }: a
     } catch (e) { return ''; }
   }, [message.sentAt, mounted]);
 
+  const handleCopy = () => {
+    navigator.clipboard.writeText(displayContent);
+    toast({ title: "Скопировано", description: "Текст сигнала в буфере обмена." });
+  };
+
+  const handleReaction = async (emoji: string) => {
+    if (!db || !user || !chatId) return;
+    const msgRef = doc(db, 'chats', chatId, 'messages', message.id);
+    const hasReacted = message.reactions?.[emoji]?.includes(user.uid);
+    
+    if (hasReacted) {
+      await updateDoc(msgRef, { [`reactions.${emoji}`]: arrayRemove(user.uid) });
+    } else {
+      await updateDoc(msgRef, { [`reactions.${emoji}`]: arrayUnion(user.uid) });
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!db || !chatId) return;
+    if (confirm("Аннигилировать этот сигнал для всех?")) {
+      await deleteDoc(doc(db, 'chats', chatId, 'messages', message.id));
+      toast({ title: "Сигнал удален" });
+    }
+  };
+
+  const handlePin = async () => {
+    if (!db || !chatId) return;
+    await updateDoc(doc(db, 'chats', chatId), { pinnedMessageId: message.id });
+    toast({ title: "Сигнал закреплен" });
+  };
+
   const bubbleStyle = viewerProfile?.settings?.bubbleStyle || message.metadata?.bubbleStyle || 'default';
   const textSize = viewerProfile?.settings?.messageSize || 'medium';
 
@@ -61,76 +105,112 @@ export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile }: a
 
   return (
     <div className={cn(
-      "w-full flex flex-col mb-2 animate-in fade-in slide-in-from-bottom-2 duration-500", 
+      "w-full flex flex-col mb-4 animate-in fade-in slide-in-from-bottom-2 duration-500", 
       isMe ? "items-end" : "items-start"
     )}>
-      <div className={cn(
-        "flex gap-3 max-w-[90%] items-end", 
-        isMe ? "flex-row-reverse" : "flex-row"
-      )}>
-        {!isMe && (
-          <UserAvatar 
-            userId={message.senderId} 
-            className="h-10 w-10 border border-white/5 shadow-2xl mb-1 cursor-pointer hover:scale-110 transition-transform" 
-            onClick={() => setInspectedUserId(message.senderId)} 
-          />
-        )}
-        
-        <div className={cn("flex flex-col", isMe ? "items-end" : "items-start")}>
-          {!isMe && (
-            <div className="flex items-center gap-2 ml-1 mb-1">
-               <span className="text-[11px] font-black text-primary/60 uppercase tracking-widest italic">
-                 {message.senderName || 'User'}
-               </span>
-               <span className={cn("text-[9px]", rep.color)}>{rep.icon}</span>
-            </div>
-          )}
-          
-          <div className="relative group">
-            <div className={cn(
-              "p-4 px-6 rounded-[2rem] relative shadow-2xl transition-all duration-500 border overflow-hidden",
-              styleClasses[bubbleStyle as keyof typeof styleClasses] || styleClasses.default,
-              isMe ? "rounded-br-lg" : "rounded-bl-lg"
-            )}>
-              {isMe && amIPremium && (
-                 <div className="absolute top-0 left-0 w-full h-[1px] liquid-shimmer opacity-40" />
-              )}
-
-              {message.contentType === 'audio' ? (
-                <div className="flex items-center gap-4 min-w-[200px] py-1">
-                   <button className="h-10 w-10 rounded-full bg-white/10 shrink-0 flex items-center justify-center hover:bg-white/20 transition-all"><Play className="w-5 h-5 fill-current" /></button>
-                   <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
-                      <div className="h-full bg-primary/40 w-1/3 shadow-[0_0_15px_rgba(var(--primary),0.5)]" />
-                   </div>
-                   <span className="text-[10px] font-black opacity-30 tabular-nums">{message.metadata?.duration ? `${Math.floor(message.metadata.duration / 60)}:${(message.metadata.duration % 60).toString().padStart(2, '0')}` : '0:01'}</span>
-                </div>
-              ) : message.contentType === 'image' ? (
-                <div className="relative rounded-2xl overflow-hidden border border-white/5 max-w-[300px] shadow-2xl">
-                   <img src={message.content} alt="Attachment" className="w-full h-auto object-cover" />
-                </div>
-              ) : (
-                <div className={cn("whitespace-pre-wrap font-medium leading-relaxed tracking-tight", textClasses[textSize as keyof typeof textClasses])}>
-                  {displayContent}
+      <ContextMenu>
+        <ContextMenuTrigger className="w-full flex flex-col items-inherit">
+          <div className={cn(
+            "flex gap-3 max-w-[90%] items-end", 
+            isMe ? "flex-row-reverse" : "flex-row"
+          )}>
+            {!isMe && (
+              <UserAvatar 
+                userId={message.senderId} 
+                className="h-10 w-10 border border-white/5 shadow-2xl mb-1 cursor-pointer hover:scale-110 transition-transform" 
+                onClick={() => setInspectedUserId(message.senderId)} 
+              />
+            )}
+            
+            <div className={cn("flex flex-col", isMe ? "items-end" : "items-start")}>
+              {!isMe && (
+                <div className="flex items-center gap-2 ml-1 mb-1">
+                   <span className="text-[11px] font-black text-primary/60 uppercase tracking-widest italic">
+                     {message.senderName || 'User'}
+                   </span>
+                   <span className={cn("text-[9px]", rep.color)}>{rep.icon}</span>
                 </div>
               )}
+              
+              <div className="relative group">
+                <div className={cn(
+                  "p-4 px-6 rounded-[2.2rem] relative shadow-2xl transition-all duration-500 border overflow-hidden",
+                  styleClasses[bubbleStyle as keyof typeof styleClasses] || styleClasses.default,
+                  isMe ? "rounded-br-lg" : "rounded-bl-lg"
+                )}>
+                  {message.forwardFrom && (
+                    <div className="flex items-center gap-1.5 mb-1.5 opacity-40">
+                      <Share2 className="w-2.5 h-2.5" />
+                      <span className="text-[8px] font-black uppercase tracking-widest">Переслано от {message.forwardFrom}</span>
+                    </div>
+                  )}
 
-              <div className="mt-2 flex items-center gap-2 opacity-30 justify-end h-4">
-                 <span className="text-[9px] font-black tabular-nums">{formattedTime}</span>
-                 {isMe && (message.isRead ? <CheckCheck className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5" />)}
-              </div>
+                  {message.contentType === 'audio' ? (
+                    <div className="flex items-center gap-4 min-w-[200px] py-1">
+                       <button className="h-10 w-10 rounded-full bg-white/10 shrink-0 flex items-center justify-center hover:bg-white/20 transition-all"><Play className="w-5 h-5 fill-current" /></button>
+                       <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
+                          <div className="h-full bg-primary/40 w-1/3 shadow-[0_0_15px_rgba(var(--primary),0.5)]" />
+                       </div>
+                       <span className="text-[10px] font-black opacity-30 tabular-nums">{message.metadata?.duration ? `${Math.floor(message.metadata.duration / 60)}:${(message.metadata.duration % 60).toString().padStart(2, '0')}` : '0:01'}</span>
+                    </div>
+                  ) : message.contentType === 'image' ? (
+                    <div className="relative rounded-2xl overflow-hidden border border-white/5 max-w-[300px] shadow-2xl">
+                       <img src={message.content} alt="Attachment" className="w-full h-auto object-cover" />
+                    </div>
+                  ) : (
+                    <div className={cn("whitespace-pre-wrap font-medium leading-relaxed tracking-tight", textClasses[textSize as keyof typeof textClasses])}>
+                      {displayContent}
+                    </div>
+                  )}
 
-              <button 
-                className={cn(
-                  "absolute top-1/2 -translate-y-1/2 p-2 rounded-full text-white/5 opacity-0 group-hover:opacity-100 transition-all hover:text-white/40 hover:bg-white/5",
-                  isMe ? "-left-12" : "-right-12"
+                  <div className="mt-2 flex items-center gap-2 opacity-30 justify-end h-4">
+                     <span className="text-[9px] font-black tabular-nums">{formattedTime}</span>
+                     {isMe && (message.isRead ? <CheckCheck className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5" />)}
+                  </div>
+                </div>
+
+                {/* Reactions Display */}
+                {message.reactions && Object.keys(message.reactions).length > 0 && (
+                  <div className={cn(
+                    "flex gap-1 mt-1.5 flex-wrap",
+                    isMe ? "justify-end" : "justify-start"
+                  )}>
+                    {Object.entries(message.reactions).map(([emoji, uids]: any) => (
+                      uids.length > 0 && (
+                        <button 
+                          key={emoji}
+                          onClick={() => handleReaction(emoji)}
+                          className={cn(
+                            "flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black border transition-all",
+                            uids.includes(user?.uid) ? "bg-primary/20 border-primary text-white" : "bg-white/5 border-white/10 text-white/40 hover:bg-white/10"
+                          )}
+                        >
+                          <span>{emoji}</span>
+                          <span className="tabular-nums">{uids.length}</span>
+                        </button>
+                      )
+                    ))}
+                  </div>
                 )}
-              >
-                <MoreHorizontal className="w-5 h-5" />
-              </button>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
+        </ContextMenuTrigger>
+
+        <ContextMenuContent className="w-56 bg-[#121212]/95 backdrop-blur-xl border-white/10 rounded-2xl p-2 shadow-2xl">
+          <div className="flex justify-around p-2 mb-2 bg-white/5 rounded-xl border border-white/5">
+            {['❤️', '🔥', '👍', '😂', '😮', '😢'].map(e => (
+              <button key={e} onClick={() => handleReaction(e)} className="text-lg hover:scale-125 transition-transform active:scale-90">{e}</button>
+            ))}
+          </div>
+          <ContextMenuItem onClick={() => onReply(message)} className="gap-3 py-3 rounded-xl font-bold text-[11px] uppercase tracking-widest text-white"><Reply className="w-4 h-4 text-primary" /> Ответить</ContextMenuItem>
+          <ContextMenuItem onClick={handleCopy} className="gap-3 py-3 rounded-xl font-bold text-[11px] uppercase tracking-widest text-white"><Copy className="w-4 h-4 text-primary" /> Копировать</ContextMenuItem>
+          <ContextMenuItem onClick={() => setForwardingMessage(message)} className="gap-3 py-3 rounded-xl font-bold text-[11px] uppercase tracking-widest text-white"><Share2 className="w-4 h-4 text-primary" /> Переслать</ContextMenuItem>
+          <ContextMenuItem onClick={handlePin} className="gap-3 py-3 rounded-xl font-bold text-[11px] uppercase tracking-widest text-white"><Pin className="w-4 h-4 text-primary" /> Закрепить</ContextMenuItem>
+          <ContextMenuSeparator className="bg-white/5" />
+          <ContextMenuItem onClick={handleDelete} className="gap-3 py-3 rounded-xl font-bold text-[11px] uppercase tracking-widest text-red-500"><Trash2 className="w-4 h-4" /> Удалить для всех</ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
     </div>
   );
 });

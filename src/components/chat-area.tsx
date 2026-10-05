@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, ChevronLeft, X, Paperclip, Mic, StopCircle, 
-  Smile, Trash2, CornerUpLeft, Loader2
+  Smile, Trash2, CornerUpLeft, Loader2, Pin, XCircle
 } from 'lucide-react';
 import { MessageItem } from './message-item';
 import { ChatInfoModal } from './modals/chat-info-modal';
@@ -108,7 +108,7 @@ const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelRepl
               <span className="text-[12px] text-white/40 truncate italic">{decryptSignal(replyTo.content)}</span>
             </div>
           </div>
-          <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-white/10 rounded-full" onClick={onCancelReply}><X className="w-4 h-4" /></Button>
+          <button className="h-8 w-8 text-white/20 hover:text-white" onClick={onCancelReply}><X className="w-4 h-4" /></button>
         </div>
       )}
 
@@ -117,7 +117,7 @@ const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelRepl
           <>
             <Button variant="ghost" size="icon" className="h-12 w-12 shrink-0 rounded-2xl obsidian-glass hover:bg-white/10 border border-white/5 shadow-xl transition-all" onClick={() => fileInputRef.current?.click()}><Paperclip className="w-6 h-6 text-white/40" /></Button>
             
-            <div className="flex-1 flex items-end bg-white/5 rounded-[2rem] border border-white/5 min-h-[48px] px-4 py-2.5 shadow-inner transition-all focus-within:border-primary/40 focus-within:bg-white/[0.08]">
+            <div className="flex-1 flex items-end bg-white/5 rounded-[2.2rem] border border-white/5 min-h-[48px] px-5 py-2.5 shadow-inner transition-all focus-within:border-primary/40 focus-within:bg-white/[0.08]">
               <Textarea 
                 placeholder={t('chat.placeholder')} 
                 className="bg-transparent border-none focus-visible:ring-0 text-white min-h-[26px] max-h-[180px] py-0 text-[15px] resize-none w-full scrollbar-hide font-medium tracking-tight" 
@@ -198,6 +198,12 @@ export default function ChatArea() {
   const messagesQuery = useMemoFirebase(() => (!db || !currentChatId) ? null : query(collection(db, 'chats', currentChatId, 'messages'), orderBy('sentAt', 'asc')), [db, currentChatId]);
   const { data: messages } = useCollection<Message>(messagesQuery);
 
+  const pinnedMsgRef = useMemoFirebase(() => {
+    if (!db || !currentChatId || !chat?.pinnedMessageId) return null;
+    return doc(db, 'chats', currentChatId, 'messages', chat.pinnedMessageId);
+  }, [db, currentChatId, chat?.pinnedMessageId]);
+  const { data: pinnedMessage } = useDoc<Message>(pinnedMsgRef);
+
   const isPremium = useMemo(() => isUserPremium(userProfile), [userProfile]);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
@@ -230,6 +236,11 @@ export default function ChatArea() {
        updateDoc(doc(db, 'users', firebaseUser.uid), { reputation: (userProfile.reputation || 0) + 0.1 });
     }
   }, [currentChatId, firebaseUser?.uid, db, userProfile, replyTo]);
+
+  const unpinMessage = async () => {
+    if (!db || !currentChatId) return;
+    await updateDoc(doc(db, 'chats', currentChatId), { pinnedMessageId: null });
+  };
 
   const bgStyle = useMemo(() => {
     if (userProfile?.settings?.chatBackground) {
@@ -273,15 +284,33 @@ export default function ChatArea() {
         </div>
       </header>
 
+      {/* Pinned Message Bar */}
+      {pinnedMessage && (
+        <div className="bg-white/[0.03] backdrop-blur-[40px] border-b border-white/5 h-12 flex items-center px-6 gap-3 shrink-0 z-20 animate-in slide-in-from-top-4 duration-500 shadow-xl group">
+          <div className="w-1 h-6 bg-primary rounded-full shadow-[0_0_10px_rgba(229,142,56,0.6)]" />
+          <div className="flex flex-col flex-1 min-w-0 cursor-pointer" onClick={() => document.getElementById(pinnedMessage.id)?.scrollIntoView({ behavior: 'smooth' })}>
+            <span className="text-[9px] font-black text-primary uppercase tracking-[0.2em] italic">Закрепленный сигнал</span>
+            <span className="text-[12px] text-white/60 truncate font-medium">
+              {pinnedMessage.contentType === 'text' ? decryptSignal(pinnedMessage.content) : '[Вложение]'}
+            </span>
+          </div>
+          <button onClick={unpinMessage} className="text-white/20 hover:text-white transition-colors">
+            <XCircle className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       <div className="flex-1 relative overflow-hidden flex flex-col min-w-0 z-10">
         <ScrollArea className="flex-1 w-full">
           <div className="flex flex-col gap-1 max-w-4xl mx-auto px-4 py-6 min-h-full">
             {messages?.map(msg => (
-               <MessageItem 
-                 key={msg.id} message={msg} isMe={msg.senderId === firebaseUser?.uid} 
-                 chatId={currentChatId} onReply={setReplyTo} 
-                 amIPremium={isPremium} viewerProfile={userProfile} 
-               />
+               <div id={msg.id} key={msg.id}>
+                 <MessageItem 
+                   message={msg} isMe={msg.senderId === firebaseUser?.uid} 
+                   chatId={currentChatId} onReply={setReplyTo} 
+                   amIPremium={isPremium} viewerProfile={userProfile} 
+                 />
+               </div>
             ))}
             <div id="messages-end" className="h-4" />
           </div>
