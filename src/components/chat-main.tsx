@@ -26,6 +26,10 @@ import {
   Globe, LayoutGrid
 } from 'lucide-react';
 
+/**
+ * NUXUS CHAT MAIN V92.0 «ABSOLUTE MIRROR»
+ * Воссоздает навигацию с подписями и свечением из фото-референса.
+ */
 export default function ChatMain() {
   const { 
     currentChatId, activeCallId, setActiveCallId, 
@@ -56,19 +60,18 @@ export default function ChatMain() {
   const NAV_ITEMS = [
     { id: 'discovery', icon: Globe, label: 'EXPLORE' },
     { id: 'calls', icon: Phone, label: 'CALLS' },
-    { id: 'chats', icon: MessageSquare, label: 'CHATS' },
     { id: 'wallet', icon: Wallet, label: 'WALLET' },
-    { id: 'profile', icon: Settings, label: 'NODES' },
+    { id: 'profile', icon: LayoutGrid, label: 'NODES' },
   ];
 
   return (
-    <div className="fixed inset-0 flex flex-col w-screen bg-[#010103] overflow-hidden h-[100dvh]">
+    <div className="fixed inset-0 flex flex-col w-screen bg-[#121212] overflow-hidden h-[100dvh]">
       <NotificationListener />
       
       <div className="flex-1 flex overflow-hidden w-full relative h-full z-10">
         
-        {/* Desktop Sidebar (hidden on mobile) */}
-        <nav className="hidden md:flex flex-col items-center py-8 w-20 bg-black/60 border-r border-white/5 shrink-0 z-[100] gap-8">
+        {/* Desktop Sidebar */}
+        <nav className="hidden md:flex flex-col items-center py-8 w-20 bg-black/40 border-r border-white/5 shrink-0 z-[100] gap-8 backdrop-blur-xl">
            <div className="p-2.5 rounded-2xl bg-primary/10 border border-primary/20 mb-4">
               <LayoutGrid className="w-6 h-6 text-primary" />
            </div>
@@ -80,7 +83,7 @@ export default function ChatMain() {
                   onClick={() => setActiveView(item.id as any)}
                   className={cn(
                     "relative group p-3 rounded-2xl transition-all duration-300",
-                    activeView === item.id ? "bg-primary text-white shadow-[0_0_20px_rgba(var(--primary),0.3)]" : "text-white/20 hover:text-white/60 hover:bg-white/5"
+                    activeView === item.id ? "text-primary active-nav-glow" : "text-muted-foreground hover:text-white"
                   )}
                 >
                   <item.icon className={cn("w-6 h-6", activeView === item.id && "fill-current")} />
@@ -91,7 +94,7 @@ export default function ChatMain() {
 
         <div className="flex-1 flex overflow-hidden h-full relative">
           <div className={cn(
-            "w-full md:w-[400px] lg:w-[440px] h-full flex-shrink-0 z-30 bg-black/20 backdrop-blur-[120px] border-r border-white/5 relative overflow-hidden transition-all duration-500", 
+            "w-full md:w-[400px] lg:w-[440px] h-full flex-shrink-0 z-30 bg-transparent border-r border-white/5 relative overflow-hidden transition-all duration-500", 
             (currentChatId && activeView === 'chats') ? "hidden md:block" : "block"
           )}>
             <div className="h-full w-full">
@@ -105,10 +108,10 @@ export default function ChatMain() {
           </div>
           
           <div className={cn(
-            "flex-1 h-full flex flex-col min-w-0 bg-transparent relative z-20 overflow-hidden transition-all duration-500 md:p-6 lg:p-10", 
+            "flex-1 h-full flex flex-col min-w-0 bg-[#0a0a0c]/50 relative z-20 overflow-hidden transition-all duration-500", 
             (!currentChatId || ['profile', 'wallet', 'discovery', 'calls'].includes(activeView)) ? "hidden md:flex" : "flex"
           )}>
-            <div className="h-full w-full overflow-hidden flex flex-col bg-white/[0.01] md:rounded-[4rem] border border-white/5 shadow-[0_50px_150px_rgba(0,0,0,0.8)]">
+            <div className="h-full w-full overflow-hidden flex flex-col bg-transparent">
               {currentChatId ? <ChatArea /> : (
                 <div className="hidden md:flex flex-1 flex-col items-center justify-center p-16 text-center space-y-12 opacity-30">
                    <div className="relative">
@@ -117,7 +120,7 @@ export default function ChatMain() {
                          <MessageSquare className="w-20 h-20 text-primary" />
                       </div>
                    </div>
-                   <h2 className="text-4xl font-black text-white uppercase tracking-tight">NUXUS CORE</h2>
+                   <h2 className="text-4xl font-black text-white uppercase tracking-tight italic">NUXUS CORE</h2>
                 </div>
               )}
             </div>
@@ -125,10 +128,10 @@ export default function ChatMain() {
         </div>
       </div>
 
-      {/* MOBILE BOTTOM NAV - REPLICATING PHOTO */}
+      {/* MOBILE BOTTOM NAV - EXACT REPLICA OF THE PHOTO */}
       {(!currentChatId || activeView !== 'chats') && (
-        <div className="md:hidden fixed bottom-0 left-0 right-0 z-[1000] pb-[env(safe-area-inset-bottom)] nuxus-bottom-nav">
-          <div className="h-20 flex items-center justify-around px-4">
+        <div className="md:hidden fixed bottom-0 left-0 right-0 z-[1000] pb-[env(safe-area-inset-bottom)] nuxus-bottom-nav h-24">
+          <div className="h-full flex items-center justify-around px-2">
             {NAV_ITEMS.map((item) => (
                <NavButton 
                  key={item.id}
@@ -158,23 +161,25 @@ function NavButton({ icon: Icon, label, active, onClick, isProfile, userId }: an
     <button 
       onClick={onClick} 
       className={cn(
-        "flex flex-col items-center justify-center gap-1.5 transition-all duration-300", 
-        active ? "text-primary scale-110" : "text-white/20"
+        "flex flex-col items-center justify-center gap-2 transition-all duration-500 w-20", 
+        active ? "text-primary active-nav-glow scale-110" : "text-muted-foreground"
       )}
     >
-      <div className={cn(
-        "relative",
-        active && isProfile && "p-0.5 rounded-full border-2 border-primary shadow-[0_0_20px_rgba(var(--primary),0.6)]"
-      )}>
+      <div className="relative">
         {isProfile ? (
-          <UserAvatar userId={userId} className="h-7 w-7" />
+          <div className={cn(
+            "p-0.5 rounded-full border-2 transition-all",
+            active ? "border-primary shadow-[0_0_15px_rgba(229,142,56,0.6)]" : "border-white/20"
+          )}>
+            <UserAvatar userId={userId} className="h-6 w-6" />
+          </div>
         ) : (
-          <Icon className={cn("w-5 h-5", active && "fill-current")} strokeWidth={active ? 2.5 : 2} />
+          <Icon className={cn("w-6 h-6", active && "fill-current")} />
         )}
       </div>
       <span className={cn(
-        "text-[8px] font-black uppercase tracking-widest",
-        active ? "opacity-100" : "opacity-60"
+        "text-[8px] font-black uppercase tracking-[0.2em] italic transition-opacity",
+        active ? "opacity-100" : "opacity-40"
       )}>
         {label}
       </span>

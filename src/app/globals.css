@@ -10,39 +10,30 @@
     --card-foreground: 0 0% 100%;
     --popover: 240 10% 2%;
     --popover-foreground: 0 0% 100%;
-    --primary: 217 91% 60%;
+    --primary: 30 77% 56%;
     --primary-foreground: 0 0% 100%;
     --secondary: 240 10% 6%;
     --secondary-foreground: 0 0% 100%;
     --muted: 240 10% 5%;
     --muted-foreground: 240 5% 60%;
-    --accent: 199 89% 48%;
+    --accent: 38 90% 51%;
     --accent-foreground: 240 10% 2%;
     --border: 240 10% 8%;
     --input: 240 10% 8%;
-    --ring: 217 91% 60%;
+    --ring: 30 77% 56%;
     --radius: 3.5rem;
   }
 
   [data-theme='event-horizon'] {
-    /* Фон приложения (глубокий темно-серый/почти черный) #121212 */
-    --background: 0 0% 7%;
-    /* Цвет текста заголовков (белый/молочный) #FFFFFF */
+    --background: 0 0% 7%; /* #121212 */
     --foreground: 0 0% 100%;
-    /* Цвет карточек и плашек (темный стекломорфизм) #1C1C1E */
-    --card: 240 2% 11%;
+    --card: 240 2% 11%; /* #1C1C1E */
     --card-foreground: 0 0% 100%;
-    /* Основной акцентный цвет (теплый янтарный) #E58E38 */
-    --primary: 30 77% 56%;
+    --primary: 30 77% 56%; /* #E58E38 */
     --primary-foreground: 0 0% 100%;
-    /* Мягкие золотистые тона для акцентов #F39C12 */
-    --accent: 38 90% 51%;
-    --accent-foreground: 0 0% 10%;
-    /* Цвет второстепенного текста (серо-бежевый) #8E8E93 */
-    --muted-foreground: 240 2% 57%;
-    --muted: 0 0% 10%;
+    --accent: 38 90% 51%; /* #F39C12 */
+    --muted-foreground: 240 2% 57%; /* #8E8E93 */
     --border: 240 2% 15%;
-    --ring: 30 77% 56%;
   }
 
   [data-theme='crimson-nebula'] {
@@ -67,12 +58,13 @@
   }
   
   input, textarea {
+    @apply cursor-text;
     -webkit-user-select: text;
     user-select: text;
   }
 
   html, body {
-    @apply bg-[#010103] text-foreground antialiased selection:bg-primary/40;
+    @apply bg-[#121212] text-foreground antialiased selection:bg-primary/40;
     overscroll-behavior: none !important;
     height: 100dvh;
     width: 100%;
@@ -81,47 +73,49 @@
   }
 }
 
-/* ЭКСКЛЮЗИВНАЯ КАРТОЧКА EVENT HORIZON С ТЕНЯМИ #3A2518 */
 .nuxus-event-card {
-  @apply relative rounded-[3rem] border-2 border-primary/20 overflow-hidden;
-  /* Градиентный переход от янтарного к прозрачному на фоне #1C1C1E */
-  background: radial-gradient(circle at 50% 30%, hsla(var(--primary), 0.2), transparent 80%),
-              rgba(28, 28, 30, 0.6);
+  @apply relative rounded-[3rem] border-2 border-white/[0.03] overflow-hidden;
+  background: rgba(28, 28, 30, 0.6);
   backdrop-filter: blur(40px);
-  /* Тени оттенка #3A2518 */
-  shadow: 0 40px 100px rgba(58, 37, 24, 0.4);
   box-shadow: 0 40px 100px rgba(58, 37, 24, 0.4), inset 0 0 20px rgba(229, 142, 56, 0.05);
 }
 
 .nuxus-event-card::before {
   content: '';
   @apply absolute inset-0 rounded-[3rem] p-[1px];
-  background: linear-gradient(180deg, hsla(var(--primary), 0.4), transparent);
+  background: linear-gradient(180deg, hsla(var(--primary), 0.2), transparent);
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   mask-composite: exclude;
   pointer-events: none;
 }
 
-/* НИЖНЕЕ МЕНЮ С ПОЛУПРОЗРАЧНОСТЬЮ #1C1C1E */
 .nuxus-bottom-nav {
-  background: rgba(28, 28, 30, 0.85);
-  backdrop-filter: blur(50px);
+  background: rgba(18, 18, 18, 0.85);
+  backdrop-filter: blur(60px);
   @apply border-t border-white/[0.05];
+}
+
+.active-nav-glow {
+  position: relative;
+}
+
+.active-nav-glow::after {
+  content: '';
+  @apply absolute -bottom-4 left-1/2 -translate-x-1/2 w-12 h-12 bg-primary/40 blur-[20px] rounded-full pointer-events-none;
+}
+
+.icon-glow-bg {
+  background: radial-gradient(circle at center, hsla(var(--primary), 0.25) 0%, transparent 70%);
 }
 
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-@keyframes shine {
-  0% { transform: translateX(-100%) skewX(-15deg); }
-  100% { transform: translateX(200%) skewX(-15deg); }
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
 }
 
-.animate-shine {
-  animation: shine 3s infinite linear;
-}
-
-/* ЭЛИТНЫЙ ЭФФЕКТ ГЛОУ */
-.elite-glow-card {
-  @apply nuxus-event-card;
+.animate-shimmer {
+  animation: shimmer 2s infinite;
 }

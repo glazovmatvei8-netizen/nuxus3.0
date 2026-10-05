@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect } from 'react';
@@ -18,8 +17,8 @@ import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 
 /**
- * CALL CENTER V45.0.3 «TITANIUM SYNC»
- * FIXED: Hydration mismatch by deferring date formatting to client-side.
+ * CALL CENTER V92.0 «MIRROR ABSOLUTE»
+ * В точности воссоздает интерфейс из референса.
  */
 export default function CallsView() {
   const { user } = useUser();
@@ -50,85 +49,88 @@ export default function CallsView() {
     if (!user) return;
     const link = `${window.location.origin}/?action=call&to=${user.uid}`;
     navigator.clipboard.writeText(link);
-    toast({ 
-      title: "Call Invitation Link", 
-      description: "Ссылка скопирована. При переходе по ней, узел начнет звонок вам." 
-    });
+    toast({ title: "Link Created", description: "Signal invitation copied." });
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#0a0a0c] overflow-hidden relative">
-      <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 blur-[120px] pointer-events-none -z-10" />
+    <div className="flex flex-col h-full bg-[#121212] overflow-hidden relative">
+      {/* Background Subtle Gradient */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(229,142,56,0.05)_0%,transparent_50%)] pointer-events-none" />
       
-      <ScrollArea className="flex-1">
-        <div className="px-6 pt-10 pb-40 space-y-8">
-          <div className="flex items-center justify-between">
-            <div className="flex flex-col text-left">
-              <h1 className="text-3xl font-black text-white italic tracking-tighter uppercase flex items-center gap-3">
-                Центр <span className="text-[8px] bg-primary/20 text-primary px-2 py-0.5 rounded-full border border-primary/20 tracking-widest font-black">CALL CENTER</span>
-              </h1>
-              <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.4em] ml-1 mt-1">Quantum Encryption Signal</p>
-            </div>
-            <div className="obsidian-glass p-3 rounded-2xl border-white/5 shadow-xl">
-               <Activity className="w-6 h-6 text-primary animate-pulse" />
+      <ScrollArea className="flex-1 relative z-10">
+        <div className="px-8 pt-16 pb-40 space-y-12">
+          
+          {/* HEADER: ЦЕНТР CALL CENTER */}
+          <div className="flex items-center gap-3">
+            <h1 className="text-4xl font-black text-white italic tracking-tighter uppercase leading-none">
+              ЦЕНТР
+            </h1>
+            <div className="flex items-center gap-2 mt-1">
+               <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] italic">CALL CENTER</span>
+               <div className="w-1.5 h-1.5 rounded-full bg-red-600 shadow-[0_0_8px_rgba(220,38,38,0.8)] animate-pulse" />
             </div>
           </div>
           
-          <div className="grid grid-cols-2 gap-4">
+          {/* ACTION CARDS: SQUARE MODE */}
+          <div className="grid grid-cols-2 gap-5">
              <button 
                onClick={() => setIsSearchOpen(true)}
-               className="flex flex-col items-center gap-3 p-6 obsidian-glass rounded-[2.2rem] border-white/5 hover:bg-primary/5 hover:border-primary/40 transition-all group shadow-2xl active:scale-95"
+               className="aspect-square flex flex-col items-center justify-center gap-4 p-4 bg-[#1C1C1E] border border-white/[0.03] rounded-[2.8rem] shadow-2xl transition-all active:scale-95 group relative overflow-hidden"
              >
-                <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 group-hover:bg-primary/20 transition-all">
-                  <UserPlus className="w-6 h-6 text-primary" />
+                <div className="absolute inset-0 icon-glow-bg opacity-40" />
+                <div className="relative z-10 w-14 h-14 flex items-center justify-center text-primary">
+                  <Phone className="w-8 h-8 fill-current drop-shadow-[0_0_15px_rgba(229,142,56,0.6)]" />
                 </div>
-                <span className="text-[10px] font-black uppercase text-white tracking-widest italic">Позвонить</span>
+                <span className="relative z-10 text-[11px] font-black uppercase text-primary tracking-[0.1em] italic">ПОЗВОНИТЬ</span>
              </button>
              
              <button 
                onClick={handleCreateCallLink}
-               className="flex flex-col items-center gap-3 p-6 obsidian-glass rounded-[2.2rem] border-white/5 hover:bg-accent/5 hover:border-accent/40 transition-all group shadow-2xl active:scale-95"
+               className="aspect-square flex flex-col items-center justify-center gap-4 p-4 bg-[#1C1C1E] border border-white/[0.03] rounded-[2.8rem] shadow-2xl transition-all active:scale-95 group relative overflow-hidden"
              >
-                <div className="w-12 h-12 rounded-2xl bg-accent/10 flex items-center justify-center border border-accent/20 group-hover:bg-accent/20 transition-all">
-                  <LinkIcon className="w-6 h-6 text-accent" />
+                <div className="absolute inset-0 icon-glow-bg opacity-40" />
+                <div className="relative z-10 w-14 h-14 flex items-center justify-center text-primary">
+                  <LinkIcon className="w-8 h-8 drop-shadow-[0_0_15px_rgba(229,142,56,0.6)]" />
                 </div>
-                <span className="text-[10px] font-black uppercase text-white tracking-widest italic">Call Link</span>
+                <span className="relative z-10 text-[11px] font-black uppercase text-primary tracking-[0.1em] italic">CALL LINK</span>
              </button>
           </div>
 
-          <div className="flex gap-2 bg-white/5 p-1 rounded-2xl border border-white/5 shadow-inner">
+          {/* TOGGLE TABS */}
+          <div className="bg-[#1C1C1E]/50 border border-white/[0.05] p-1.5 rounded-[2rem] flex items-center">
              <button 
                onClick={() => setActiveTab('all')} 
-               className={cn("flex-1 h-11 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all", activeTab === 'all' ? "bg-primary text-white shadow-lg" : "text-white/40 hover:bg-white/5")}
+               className={cn(
+                 "flex-1 h-14 rounded-[1.8rem] text-[11px] font-black uppercase tracking-widest transition-all italic", 
+                 activeTab === 'all' ? "bg-[#3A2518] text-primary shadow-xl border border-primary/10" : "text-muted-foreground hover:text-white"
+               )}
              >
                Все вызовы
              </button>
              <button 
                onClick={() => setActiveTab('missed')} 
-               className={cn("flex-1 h-11 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all", activeTab === 'missed' ? "bg-red-500 text-white shadow-lg" : "text-white/40 hover:bg-white/5")}
+               className={cn(
+                 "flex-1 h-14 rounded-[1.8rem] text-[11px] font-black uppercase tracking-widest transition-all italic", 
+                 activeTab === 'missed' ? "bg-[#3A2518] text-red-500 shadow-xl border border-red-500/10" : "text-muted-foreground hover:text-white"
+               )}
              >
                Пропущенные
              </button>
           </div>
 
-          <div className="space-y-3 animate-in fade-in duration-700">
-            {isLoading ? (
-              <div className="flex flex-col items-center justify-center p-20 gap-4 opacity-40">
-                <Loader2 className="w-10 h-10 animate-spin text-primary" />
-                <p className="text-[10px] font-black uppercase tracking-widest">Синхронизация истории...</p>
-              </div>
-            ) : filteredCalls.length > 0 ? (
-              filteredCalls.map(call => (
-                <CallItem key={call.id} call={call} currentUserId={user?.uid} />
-              ))
-            ) : (
-              <div className="flex flex-col items-center justify-center p-20 text-center space-y-6 opacity-20">
-                <div className="w-24 h-24 rounded-full border-2 border-dashed border-white/20 flex items-center justify-center animate-pulse">
-                  <PhoneOff className="w-10 h-10" />
-                </div>
-                <p className="text-[11px] font-black uppercase tracking-[0.5em]">Журнал пуст</p>
-              </div>
-            )}
+          {/* LOADING STATE: REPLICATING THE SPINNER */}
+          <div className="flex flex-col items-center justify-center py-10">
+             {isLoading ? (
+               <div className="w-10 h-10 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+             ) : filteredCalls.length === 0 ? (
+               <div className="w-10 h-10 border-2 border-white/5 border-t-white/10 rounded-full opacity-20" />
+             ) : (
+               <div className="w-full space-y-3">
+                  {filteredCalls.map(call => (
+                    <CallItem key={call.id} call={call} currentUserId={user?.uid} />
+                  ))}
+               </div>
+             )}
           </div>
         </div>
       </ScrollArea>
@@ -161,40 +163,19 @@ function CallItem({ call, currentUserId }: { call: Call, currentUserId?: string 
   }, [call.createdAt, mounted]);
 
   return (
-    <div className="p-4 obsidian-glass rounded-3xl border-white/5 hover:bg-white/[0.04] transition-all group relative overflow-hidden shadow-lg">
-      <div className="flex items-center justify-between relative z-10">
-        <div className="flex items-center gap-4 flex-1 min-w-0">
-          <div className="relative">
-            <UserAvatar userId={otherId} className="h-14 w-14 border border-white/10" manualAvatarUrl={otherUser?.avatarUrl} fallbackName={otherUser?.name} />
-            <div className={cn(
-              "absolute -bottom-1 -right-1 p-1.5 rounded-lg border-2 border-[#0a0a0c] shadow-lg",
-              isMissed ? "bg-red-500" : "bg-primary"
-            )}>
-              {isOutgoing ? <ArrowUpRight className="w-2.5 h-2.5 text-white" /> : <ArrowDownLeft className="w-2.5 h-2.5 text-white" />}
-            </div>
-          </div>
-          
-          <div className="flex flex-col min-w-0 text-left">
-            <span className={cn("font-black text-base truncate italic tracking-tight uppercase", isMissed ? "text-red-400" : "text-white")}>
-              {formatDisplayName(otherUser?.name, otherUser?.username)}
-            </span>
-            <div className="flex items-center gap-2 mt-0.5">
-               <span className="text-[9px] font-black uppercase text-white/30 tracking-widest">{displayDate}</span>
-               <div className="w-1 h-1 rounded-full bg-white/10" />
-               <span className="text-[8px] font-black uppercase text-primary/60 tracking-widest">{isOutgoing ? 'Исходящий' : 'Входящий'}</span>
-            </div>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-2">
-           <Button variant="ghost" size="icon" className="h-10 w-10 rounded-2xl bg-white/5 border border-white/5 hover:bg-primary/20 hover:text-primary transition-all shadow-xl group-hover:scale-105 active:scale-90">
-             <Phone className="w-5 h-5" />
-           </Button>
+    <div className="p-5 bg-[#1C1C1E]/40 rounded-[2rem] border border-white/[0.03] flex items-center justify-between group">
+      <div className="flex items-center gap-4">
+        <UserAvatar userId={otherId} className="h-12 w-12 border border-white/5" manualAvatarUrl={otherUser?.avatarUrl} fallbackName={otherUser?.name} />
+        <div className="flex flex-col text-left">
+          <span className={cn("font-bold text-[15px] italic uppercase tracking-tight", isMissed ? "text-red-400" : "text-white")}>
+            {formatDisplayName(otherUser?.name, otherUser?.username)}
+          </span>
+          <span className="text-[9px] font-black uppercase text-muted-foreground/60 tracking-widest mt-0.5">{displayDate}</span>
         </div>
       </div>
-      <div className="absolute top-0 right-0 p-4 opacity-[0.02] -z-0">
-         <ShieldCheck className="w-16 h-16" />
-      </div>
+      <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl bg-white/5 text-muted-foreground group-hover:text-primary transition-all">
+        <Phone className="w-5 h-5" />
+      </Button>
     </div>
   );
 }
