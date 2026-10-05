@@ -16,8 +16,7 @@ import { StoryArchiveModal } from './modals/story-archive-modal';
 import { useToast } from '@/hooks/use-toast';
 
 /**
- * NUXUS MOMENTS BAR V72.1 «STABILITY PATCH»
- * ИСПРАВЛЕНО: Прямое использование useUser и корректные импорты.
+ * NUXUS MOMENTS BAR V93.0 «REPLICA MASTER»
  */
 export function StoriesBar() {
   const { user } = useUser();
@@ -61,26 +60,33 @@ export function StoriesBar() {
   };
 
   return (
-    <div className="flex gap-4 p-4 overflow-x-auto scrollbar-hide bg-transparent border-b border-white/5 shrink-0 relative z-20">
-      <div className="flex flex-col items-center gap-1.5 shrink-0 group cursor-pointer" onClick={() => setIsArchiveOpen(true)}>
-         <div className="h-[68px] w-[68px] rounded-full p-[2px] bg-white/5 border border-white/5 flex items-center justify-center group-hover:bg-white/10 transition-all">
-            <Archive className="w-6 h-6 text-white/40 group-hover:text-primary transition-colors" />
+    <div className="flex gap-6 p-4 px-6 overflow-x-auto scrollbar-hide bg-transparent shrink-0 relative z-20">
+      
+      {/* АРХИВ - REPLICA */}
+      <div className="flex flex-col items-center gap-2 shrink-0 group cursor-pointer" onClick={() => setIsArchiveOpen(true)}>
+         <div className="h-16 w-16 rounded-3xl bg-white/[0.03] border border-white/10 flex items-center justify-center transition-all group-hover:bg-white/[0.08]">
+            <Archive className="w-7 h-7 text-muted-foreground/40" />
          </div>
-         <span className="text-[10px] font-black uppercase text-white/40 tracking-[0.1em] italic">Архив</span>
+         <span className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-widest italic">АРХИВ</span>
       </div>
 
-      <div className="flex flex-col items-center gap-1.5 shrink-0 group cursor-pointer" onClick={() => myStories.length > 0 ? setStoriesToView(myStories) : handleAddStory()}>
-        <div className={cn("relative h-[68px] w-[68px] rounded-full p-[2px] transition-all duration-500 flex items-center justify-center", myStories.length > 0 ? "bg-gradient-to-tr from-[#34C759] via-[#007AFF] to-[#AF52DE] shadow-[0_0_15px_rgba(52,199,89,0.3)] animate-pulse" : "bg-white/10 group-hover:bg-white/20")}>
-          <div className="rounded-full h-full w-full overflow-hidden relative bg-[#0a0a0c] flex items-center justify-center">
+      {/* MOMENT (STORIES) - REPLICA */}
+      <div className="flex flex-col items-center gap-2 shrink-0 group cursor-pointer" onClick={() => myStories.length > 0 ? setStoriesToView(myStories) : handleAddStory()}>
+        <div className="relative h-16 w-16 rounded-full border border-white/10 p-0.5 transition-all group-hover:scale-105">
+          <div className="rounded-full h-full w-full overflow-hidden bg-white/5 flex items-center justify-center">
             <UserAvatar userId={user?.uid} className="h-full w-full border-none rounded-full" manualAvatarUrl={profile?.avatarUrl} />
           </div>
-          {myStories.length === 0 && <div className="absolute bottom-0 right-0 h-6 w-6 bg-primary rounded-full border-2 border-[#0a0a0c] flex items-center justify-center shadow-lg"><Plus className="w-4 h-4 text-white" strokeWidth={3} /></div>}
+          {myStories.length === 0 && (
+             <div className="absolute bottom-0 right-0 h-5 w-5 bg-primary rounded-full border-2 border-[#121212] flex items-center justify-center shadow-lg">
+                <Plus className="w-3.5 h-3.5 text-white" strokeWidth={4} />
+             </div>
+          )}
         </div>
-        <span className="text-[10px] font-black uppercase text-white/80 tracking-[0.1em] italic">{myStories.length > 0 ? 'Моя' : 'Момент'}</span>
+        <span className="text-[10px] font-black uppercase text-white tracking-widest italic">{myStories.length > 0 ? 'MOMENT' : 'MOMENT'}</span>
       </div>
 
       {isLoading && !allStories ? (
-        <div className="h-[68px] flex items-center px-4"><Loader2 className="w-5 h-5 animate-spin text-primary/40" /></div>
+        <div className="h-16 flex items-center px-4"><Loader2 className="w-5 h-5 animate-spin text-primary/40" /></div>
       ) : (
         otherUserIds.map(uid => (
           <StoryCircle key={uid} userId={uid} stories={groupedStories[uid]} onView={() => setStoriesToView(groupedStories[uid])} currentUserId={user?.uid} />
@@ -99,13 +105,15 @@ function StoryCircle({ userId, stories, onView, currentUserId }: { userId: strin
   const hasUnviewed = useMemo(() => stories?.some(s => !s.viewers?.includes(currentUserId || '')), [stories, currentUserId]);
   
   return (
-    <div className="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-transform" onClick={onView}>
-      <div className={cn("h-[68px] w-[68px] rounded-full p-[2px] transition-all duration-500 flex items-center justify-center", hasUnviewed ? "bg-gradient-to-tr from-[#34C759] via-[#007AFF] to-[#AF52DE] scale-105 shadow-[0_0_20px_rgba(0,122,255,0.4)]" : "bg-white/20")}>
-        <div className="rounded-full h-full w-full overflow-hidden bg-[#0a0a0c] flex items-center justify-center">
+    <div className="flex flex-col items-center gap-2 shrink-0 cursor-pointer active:scale-95 transition-transform" onClick={onView}>
+      <div className={cn("h-16 w-16 rounded-full p-0.5 border transition-all", hasUnviewed ? "border-primary" : "border-white/10")}>
+        <div className="rounded-full h-full w-full overflow-hidden bg-white/5 flex items-center justify-center">
           <UserAvatar userId={userId} className="h-full w-full border-none rounded-full" manualAvatarUrl={profile?.avatarUrl} />
         </div>
       </div>
-      <span className={cn("text-[10px] font-bold truncate w-[68px] text-center transition-colors uppercase", hasUnviewed ? "text-white" : "text-white/40")}>{formatDisplayName(profile?.name).split(' ')[0]}</span>
+      <span className={cn("text-[10px] font-bold truncate w-16 text-center uppercase tracking-tight", hasUnviewed ? "text-white" : "text-muted-foreground/40")}>
+        {formatDisplayName(profile?.name).split(' ')[0]}
+      </span>
     </div>
   );
 }

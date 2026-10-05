@@ -27,8 +27,7 @@ import {
 } from 'lucide-react';
 
 /**
- * NUXUS CHAT MAIN V92.0 «ABSOLUTE MIRROR»
- * Воссоздает навигацию с подписями и свечением из фото-референса.
+ * NUXUS CHAT MAIN V93.0 «REPLICA MASTER»
  */
 export default function ChatMain() {
   const { 
@@ -60,8 +59,9 @@ export default function ChatMain() {
   const NAV_ITEMS = [
     { id: 'discovery', icon: Globe, label: 'EXPLORE' },
     { id: 'calls', icon: Phone, label: 'CALLS' },
+    { id: 'chats', icon: MessageSquare, label: 'CHATS' },
     { id: 'wallet', icon: Wallet, label: 'WALLET' },
-    { id: 'profile', icon: LayoutGrid, label: 'NODES' },
+    { id: 'profile', icon: LayoutGrid, label: 'NODE' },
   ];
 
   return (
@@ -128,22 +128,20 @@ export default function ChatMain() {
         </div>
       </div>
 
-      {/* MOBILE BOTTOM NAV - EXACT REPLICA OF THE PHOTO */}
+      {/* MOBILE BOTTOM NAV - REPLICA MASTER */}
       {(!currentChatId || activeView !== 'chats') && (
-        <div className="md:hidden fixed bottom-0 left-0 right-0 z-[1000] pb-[env(safe-area-inset-bottom)] nuxus-bottom-nav h-24">
-          <div className="h-full flex items-center justify-around px-2">
-            {NAV_ITEMS.map((item) => (
-               <NavButton 
-                 key={item.id}
-                 icon={item.icon} 
-                 label={item.label}
-                 active={activeView === item.id} 
-                 onClick={() => setActiveView(item.id as any)} 
-                 isProfile={item.id === 'profile'}
-                 userId={user?.uid}
-               />
-            ))}
-          </div>
+        <div className="md:hidden nuxus-floating-nav">
+          {NAV_ITEMS.map((item) => (
+             <NavButton 
+               key={item.id}
+               icon={item.icon} 
+               label={item.label}
+               active={activeView === item.id} 
+               onClick={() => setActiveView(item.id as any)} 
+               isProfile={item.id === 'profile'}
+               userId={user?.uid}
+             />
+          ))}
         </div>
       )}
 
@@ -161,25 +159,26 @@ function NavButton({ icon: Icon, label, active, onClick, isProfile, userId }: an
     <button 
       onClick={onClick} 
       className={cn(
-        "flex flex-col items-center justify-center gap-2 transition-all duration-500 w-20", 
-        active ? "text-primary active-nav-glow scale-110" : "text-muted-foreground"
+        "flex flex-col items-center justify-center gap-1.5 transition-all duration-500 relative min-w-[60px]", 
+        active ? "text-white" : "text-muted-foreground/60"
       )}
     >
+      {active && <div className="nav-active-glow" />}
       <div className="relative">
         {isProfile ? (
           <div className={cn(
             "p-0.5 rounded-full border-2 transition-all",
-            active ? "border-primary shadow-[0_0_15px_rgba(229,142,56,0.6)]" : "border-white/20"
+            active ? "border-white shadow-lg" : "border-white/10"
           )}>
             <UserAvatar userId={userId} className="h-6 w-6" />
           </div>
         ) : (
-          <Icon className={cn("w-6 h-6", active && "fill-current")} />
+          <Icon className={cn("w-5 h-5", active && "fill-current")} />
         )}
       </div>
       <span className={cn(
-        "text-[8px] font-black uppercase tracking-[0.2em] italic transition-opacity",
-        active ? "opacity-100" : "opacity-40"
+        "text-[8px] font-black uppercase tracking-widest italic transition-colors",
+        active ? "text-primary" : "text-muted-foreground/40"
       )}>
         {label}
       </span>

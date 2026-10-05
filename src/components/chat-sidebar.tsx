@@ -67,47 +67,46 @@ const ChatListItem = memo(({
   }, [chat, otherProfile, mounted]);
 
   return (
-    <div className="px-4 py-1">
+    <div className="px-4 py-0.5">
       <div 
         onClick={onClick}
         className={cn(
-          "relative flex items-center gap-5 p-5 rounded-[2.8rem] transition-all duration-500 cursor-pointer group",
+          "relative flex items-center gap-4 p-4 rounded-[2.5rem] transition-all duration-300 cursor-pointer group",
           isActive 
-            ? "bg-primary/5 border border-primary/20 shadow-2xl" 
-            : "hover:bg-white/[0.03]"
+            ? "bg-white/[0.03]" 
+            : "hover:bg-white/[0.01]"
         )}
       >
         <div className="relative shrink-0">
           <UserAvatar 
             userId={otherId || (chat.type === 'saved' ? currentUserId : null)} 
-            className="h-16 w-16 rounded-[2rem] border border-white/5 shadow-xl group-hover:scale-105 transition-transform" 
+            className="h-14 w-14 rounded-full border border-white/5" 
             manualAvatarUrl={chat.type !== 'private' && chat.type !== 'saved' ? chat.avatarUrl : otherProfile?.avatarUrl} 
             fallbackName={displayName} 
-            showOnlineStatus={chat.type === 'private'} 
           />
           {isUnread && (
-            <div className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-primary rounded-full border-4 border-background shadow-[0_0_20px_rgba(var(--primary),1)]" />
+            <div className="absolute top-0 right-0 w-3.5 h-3.5 bg-primary rounded-full border-4 border-[#121212]" />
           )}
         </div>
 
-        <div className="flex-1 min-w-0 flex flex-col gap-1">
-          <div className="flex items-center justify-between gap-2">
+        <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 min-w-0">
-              <span className={cn("font-black text-[15px] truncate italic tracking-tighter uppercase", isActive ? "text-white" : "text-white/80")}>
+              <span className="font-bold text-[15px] truncate text-white uppercase tracking-tight">
                 {displayName}
               </span>
-              {isPremium && <Star className="w-3.5 h-3.5 text-primary fill-primary animate-pulse" />}
-              {isPinned && <Pin className="w-3 h-3 text-muted-foreground/40" />}
+              {isPremium && <Star className="w-3 h-3 text-primary fill-primary" />}
             </div>
-            <span className="text-[9px] text-muted-foreground/30 font-black whitespace-nowrap tracking-widest">
+            <span className="text-[10px] text-muted-foreground/40 font-medium whitespace-nowrap">
               {displayTime}
             </span>
           </div>
-          <p className="text-[13px] text-muted-foreground truncate font-medium tracking-tight">
+          <p className="text-[13px] text-muted-foreground/60 truncate font-medium tracking-tight">
             {decryptedPreview}
           </p>
         </div>
       </div>
+      <div className="h-[1px] w-full bg-white/[0.03] mt-0.5" />
     </div>
   );
 });
@@ -164,87 +163,72 @@ export default function ChatSidebar() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-background overflow-hidden">
+    <div className="flex flex-col h-full bg-[#121212] overflow-hidden">
       <ScrollArea className="flex-1 no-scrollbar">
         <div className="flex flex-col min-h-full pb-60">
-          <div className="px-6 pt-12 pb-6 space-y-6">
+          <div className="px-6 pt-16 pb-6 space-y-8">
             <div className="flex items-center justify-between">
-               {isOnline ? (
-                 <h1 className="text-4xl font-black text-white italic tracking-tighter uppercase leading-none opacity-90 animate-in fade-in duration-500">{t('app.chats')}</h1>
-               ) : (
-                 <div className="flex flex-col gap-1 animate-in slide-in-from-left-4 duration-500">
-                    <div className="flex items-center gap-3">
-                       <h1 className="text-4xl font-black text-primary italic tracking-tighter uppercase leading-none">Nuxus</h1>
-                       <Loader className="w-6 h-6 text-primary animate-spin" />
-                    </div>
-                    <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60 italic animate-pulse">Подключение...</span>
-                 </div>
-               )}
+               <h1 className="text-4xl font-black text-primary italic tracking-tighter uppercase leading-none">
+                 ЧАТЫ
+               </h1>
                <Button 
                  variant="ghost" 
                  size="icon" 
-                 className="h-12 w-12 rounded-2xl bg-card border border-white/5 hover:bg-primary/20 hover:text-primary transition-all shadow-xl" 
+                 className="h-10 w-10 rounded-xl bg-white/[0.03] border border-white/5 text-white" 
                  onClick={() => setIsCreateModalOpen(true)}
                >
-                 <Plus className="w-6 h-6" strokeWidth={3} />
+                 <Plus className="w-5 h-5" strokeWidth={3} />
                </Button>
             </div>
 
             <div className="relative group">
-              <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/30 group-focus-within:text-primary transition-colors" />
+              <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/30" />
               <input 
-                placeholder={t('sidebar.search')} 
-                className="w-full h-14 bg-card rounded-[2rem] pl-16 text-[15px] font-bold text-white placeholder:text-muted-foreground/40 border border-white/5 focus:outline-none focus:border-primary/40 transition-all shadow-inner"
+                placeholder="Поиск..." 
+                className="w-full h-14 bg-white/[0.03] rounded-[2.5rem] pl-16 text-[15px] font-bold text-white placeholder:text-muted-foreground/40 border border-white/5 focus:outline-none focus:border-primary/40 transition-all"
                 onClick={() => setIsSearchOpen(true)}
                 readOnly
               />
             </div>
           </div>
 
+          {/* ACCOUNT SLOTS - REPLICA */}
           <div className="px-4 pb-4">
             <ScrollArea className="w-full" orientation="horizontal">
-               <div className="flex gap-4 px-2 py-1">
+               <div className="flex gap-5 px-2 py-1">
                   {[0, 1, 2, 3, 4].map(i => (
                     <div key={i} className="flex flex-col items-center gap-2 shrink-0 group cursor-pointer" onClick={() => handleSlotSwitch(i)}>
                       <div className={cn(
-                        "h-16 w-16 rounded-[1.8rem] border-2 flex items-center justify-center transition-all active:scale-90 shadow-2xl relative",
-                        activeAccountIndex === i ? "border-primary bg-primary/10 shadow-primary/20" : "border-white/5 bg-card opacity-40 hover:opacity-100"
+                        "h-16 w-16 rounded-full flex items-center justify-center transition-all relative",
+                        activeAccountIndex === i ? "nuxus-orbit-active" : "bg-white/[0.03] border border-white/10"
                       )}>
+                        {activeAccountIndex === i && <div className="nuxus-orbit-dot" />}
                         {activeAccountIndex === i ? (
-                          <UserAvatar userId={user?.uid} className="h-10 w-10 border-none" manualAvatarUrl={profile?.avatarUrl} />
+                          <div className="p-0.5 rounded-full bg-[#121212] h-[calc(100%-4px)] w-[calc(100%-4px)] flex items-center justify-center">
+                            <UserAvatar userId={user?.uid} className="h-full w-full border-none" manualAvatarUrl={profile?.avatarUrl} />
+                          </div>
                         ) : (
-                          <Plus className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
+                          <Plus className="w-6 h-6 text-muted-foreground/40" />
                         )}
-                        {activeAccountIndex === i && <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-primary rounded-full border-2 border-background shadow-[0_0_100px_rgba(var(--primary),1)]" />}
                       </div>
                       <span className={cn(
-                        "text-[8px] font-black uppercase tracking-widest truncate w-16 text-center italic",
-                        activeAccountIndex === i ? "text-primary" : "text-muted-foreground"
+                        "text-[9px] font-black uppercase tracking-widest truncate w-16 text-center italic",
+                        activeAccountIndex === i ? "text-primary" : "text-muted-foreground/40"
                       )}>
-                        {activeAccountIndex === i ? (profile?.name || 'Active') : (slotNames[i] || `Add account`)}
+                        {activeAccountIndex === i ? 'EVENT HO...' : 'ADD ACCO...'}
                       </span>
                     </div>
                   ))}
-                  
-                  {isGlobalAdmin(profile) && (
-                    <div className="flex flex-col items-center gap-2 shrink-0 group cursor-pointer" onClick={() => setIsAdminOpen(true)}>
-                       <div className="h-16 w-16 rounded-[1.8rem] border-2 border-red-500/20 bg-red-500/5 flex items-center justify-center transition-all active:scale-90 shadow-2xl group-hover:bg-red-500/10 group-hover:border-red-500/40">
-                          <ShieldCheck className="w-6 h-6 text-red-500" />
-                       </div>
-                       <span className="text-[8px] font-black uppercase tracking-widest text-red-500/40 group-hover:text-red-500 transition-colors italic">Root</span>
-                    </div>
-                  )}
                </div>
             </ScrollArea>
           </div>
 
           <StoriesBar />
 
-          <div className="mt-2">
+          <div className="mt-4">
              {isChatsLoading && filteredChats.length === 0 ? (
-               <div className="flex flex-col items-center justify-center py-20 gap-4 opacity-10">
+               <div className="flex flex-col items-center justify-center py-20 opacity-10">
                   <Loader2 className="w-10 h-10 animate-spin text-primary" />
-                  <p className="text-[10px] font-black uppercase tracking-widest italic">Syncing...</p>
                </div>
              ) : filteredChats.length > 0 ? (
                filteredChats.map(chat => (
@@ -258,9 +242,8 @@ export default function ChatSidebar() {
                  />
                ))
              ) : (
-               <div className="flex flex-col items-center justify-center py-32 opacity-5 space-y-6">
-                  <MessageSquare className="w-24 h-24 text-muted-foreground" />
-                  <p className="text-[10px] font-black uppercase tracking-[1em]">{t('sidebar.noResults')}</p>
+               <div className="flex flex-col items-center justify-center py-32 opacity-5">
+                  <MessageSquare className="w-16 h-16 text-muted-foreground" />
                </div>
              )}
           </div>

@@ -89,14 +89,37 @@
   pointer-events: none;
 }
 
-.nuxus-bottom-nav {
-  background: rgba(18, 18, 18, 0.85);
+.nuxus-floating-nav {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90%;
+  max-width: 450px;
+  height: 80px;
+  background: rgba(28, 28, 30, 0.6);
   backdrop-filter: blur(60px);
-  @apply border-t border-white/[0.05];
+  border-radius: 3rem;
+  border: 1px border-white/5;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 1rem;
+  z-index: 1000;
 }
 
-.active-nav-glow {
-  position: relative;
+.nav-active-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 60px;
+  height: 60px;
+  background: hsla(var(--primary), 0.8);
+  border-radius: 1.5rem;
+  box-shadow: 0 0 40px hsla(var(--primary), 0.5);
+  z-index: -1;
 }
 
 .active-nav-glow::after {
@@ -118,4 +141,27 @@
 
 .animate-shimmer {
   animation: shimmer 2s infinite;
+}
+
+.nuxus-orbit-active {
+  padding: 2px;
+  background: conic-gradient(from 0deg, transparent, hsla(var(--primary), 0.8), transparent);
+  border-radius: 50%;
+  animation: rotate-orbit 4s linear infinite;
+}
+
+@keyframes rotate-orbit {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.nuxus-orbit-dot {
+  position: absolute;
+  top: 2px;
+  right: 12px;
+  width: 6px;
+  height: 6px;
+  background: hsla(var(--primary), 1);
+  border-radius: 50%;
+  box-shadow: 0 0 10px hsla(var(--primary), 0.8);
 }
