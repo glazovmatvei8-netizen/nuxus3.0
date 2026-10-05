@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -17,7 +16,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Settings2, Camera, ShieldCheck, Loader2, Fingerprint, Palette, 
   ChevronRight, Globe, Trash2, Mail, Phone, Lock, 
-  Info, HelpCircle, UserCheck, ShieldAlert, ImageIcon, Type, LayoutGrid, MessageSquare, Headphones, KeyRound, RefreshCw, AlertTriangle
+  Info, HelpCircle, UserCheck, ShieldAlert, ImageIcon, Type, LayoutGrid, MessageSquare, Headphones, KeyRound, RefreshCw, AlertTriangle, Sparkles, Crown
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut, verifyBeforeUpdateEmail } from 'firebase/auth';
@@ -30,10 +29,6 @@ import versions from '@/app/versions.json';
 
 const ADMIN_ID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
-/**
- * SETTINGS MODAL V87.0 «ERROR SUPPRESSION»
- * FIXED: Improved auth synchronization error handling for operation-not-allowed.
- */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
   const db = useFirestore();
@@ -56,6 +51,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     messageSize: 'medium' as any,
     isGhostMode: false, twoFactorEnabled: false, twoFactorPin: '', twoFactorPinLength: '6' as '4' | '6'
   });
+
+  const isPremium = isUserPremium(profile);
 
   useEffect(() => {
     if (profile && open) {
@@ -114,33 +111,16 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
   const syncAuthIdentity = async () => {
     if (!auth?.currentUser || !profile?.email) return;
-    
     if (auth.currentUser.email === profile.email) {
-      toast({ title: "Синхронизация не требуется", description: "Ваша личность в порядке." });
+      toast({ title: "Синхронизация не требуется" });
       return;
     }
-
     setIsSyncingAuth(true);
     try {
       await verifyBeforeUpdateEmail(auth.currentUser, profile.email);
-      toast({ 
-        title: "Письмо отправлено", 
-        description: `Проверьте ${profile.email} для завершения синхронизации.` 
-      });
+      toast({ title: "Письмо отправлено", description: `Проверьте ${profile.email}` });
     } catch (e: any) {
-      console.error(e);
-      if (e.code === 'auth/operation-not-allowed') {
-        toast({ 
-          title: "Ограничение Консоли", 
-          description: "Включите 'Email link' и 'Email address change' в Firebase Console.", 
-          variant: "destructive" 
-        });
-      } else if (e.code === 'auth/requires-recent-login') {
-        toast({ title: "Требуется перевход", description: "Перезайдите в аккаунт для безопасности.", variant: "destructive" });
-        setTimeout(() => signOut(auth), 2000);
-      } else {
-        toast({ title: "Сбой синхронизации", description: e.message, variant: "destructive" });
-      }
+      toast({ title: "Сбой синхронизации", variant: "destructive" });
     } finally {
       setIsSyncingAuth(false);
     }
@@ -148,47 +128,26 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
   const openSupport = async () => {
     if (!db || !user) return;
-    const isUserAdmin = isGlobalAdmin(profile);
-    if (isUserAdmin || user.uid === ADMIN_ID) {
+    if (isGlobalAdmin(profile) || user.uid === ADMIN_ID) {
       toast({ title: "Вы являетесь оператором Ядра" });
       return;
     }
-
     try {
-      const q = query(
-        collection(db, 'chats'), 
-        where('type', '==', 'private'), 
-        where('participantIds', 'array-contains', user.uid)
-      );
+      const q = query(collection(db, 'chats'), where('type', '==', 'private'), where('participantIds', 'array-contains', user.uid));
       const snap = await getDocs(q);
-      const existing = snap.docs.find(d => {
-        const data = d.data();
-        return data.participantIds.includes(ADMIN_ID);
-      });
-      
+      const existing = snap.docs.find(d => d.data().participantIds.includes(ADMIN_ID));
       if (existing) {
         setCurrentChatId(existing.id);
       } else {
         const newChat = await addDoc(collection(db, 'chats'), {
-          type: 'private',
-          participantIds: [user.uid, ADMIN_ID],
-          ownerId: user.uid,
-          createdAt: new Date().toISOString(),
-          name: "Поддержка Nuxus",
-          username: "@support",
-          metadata: {
-            [user.uid]: { name: profile?.name || 'Node', username: profile?.username || '?' },
-            [ADMIN_ID]: { name: "Поддержка Nuxus", username: "@support", isPremium: true }
-          }
+          type: 'private', participantIds: [user.uid, ADMIN_ID], ownerId: user.uid,
+          createdAt: new Date().toISOString(), name: "Поддержка Nuxus", username: "@support",
+          metadata: { [user.uid]: { name: profile?.name || 'Node' }, [ADMIN_ID]: { name: "Поддержка Nuxus", isPremium: true } }
         });
         setCurrentChatId(newChat.id);
       }
-      onOpenChange(false);
-      setActiveView('chats');
-      toast({ title: "Канал с Поддержкой открыт" });
-    } catch (e) {
-      toast({ title: "Сбой связи", variant: "destructive" });
-    }
+      onOpenChange(false); setActiveView('chats');
+    } catch (e) { toast({ title: "Сбой связи" }); }
   };
 
   const isAuthMismatch = auth?.currentUser && profile?.email && auth.currentUser.email !== profile.email;
@@ -203,7 +162,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
             </div>
             <div className="flex flex-col">
               <DialogTitle className="text-2xl font-black italic uppercase text-white tracking-tighter">Настройки</DialogTitle>
-              <DialogDescription className="text-[9px] font-bold uppercase text-primary/60 mt-0.5 tracking-widest">Protocol V87.0</DialogDescription>
+              <DialogDescription className="text-[9px] font-bold uppercase text-primary/60 mt-0.5 tracking-widest">Protocol V88.0</DialogDescription>
             </div>
           </div>
         </DialogHeader>
@@ -233,19 +192,14 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                          <div className="p-6 bg-red-500/10 border border-red-500/20 rounded-[2rem] space-y-4 animate-in fade-in zoom-in-95">
                             <div className="flex items-center gap-3 text-red-500">
                                <AlertTriangle className="w-5 h-5 animate-pulse" />
-                               <span className="text-[10px] font-black uppercase tracking-widest">Разрыв Личности Обнаружен</span>
+                               <span className="text-[10px] font-black uppercase tracking-widest">Разрыв Личности</span>
                             </div>
                             <p className="text-[9px] text-white/60 font-bold uppercase leading-relaxed">
-                               Почта в системе входа ({auth?.currentUser?.email}) не совпадает с вашим профилем ({profile?.email}). 
-                               Для исправления нажмите кнопку ниже и подтвердите ссылку в вашей новой почте.
+                               Для входа под новой почтой необходимо подтвердить Auth-сигнал.
                             </p>
-                            <Button 
-                              onClick={syncAuthIdentity} 
-                              disabled={isSyncingAuth}
-                              className="w-full h-11 bg-red-500 text-white rounded-xl font-black uppercase text-[9px] tracking-widest gap-2 shadow-xl shadow-red-500/20"
-                            >
+                            <Button onClick={syncAuthIdentity} disabled={isSyncingAuth} className="w-full h-11 bg-red-500 text-white rounded-xl font-black uppercase text-[9px] tracking-widest gap-2 shadow-xl">
                               {isSyncingAuth ? <Loader2 className="animate-spin w-4 h-4" /> : <RefreshCw className="w-4 h-4" />}
-                              Синхронизировать Auth-сигнал
+                              Синхронизировать
                             </Button>
                          </div>
                        )}
@@ -273,7 +227,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     <div className="flex items-center justify-between">
                        <div className="flex flex-col gap-1">
                           <span className="text-sm font-black text-white uppercase tracking-tight flex items-center gap-2"><ShieldCheck className="w-4 h-4 text-green-500" /> Ghost Mode</span>
-                          <span className="text-[8px] text-white/30 font-bold uppercase tracking-widest ml-6">Скрыть активность в сети</span>
+                          <span className="text-[8px] text-white/30 font-bold uppercase tracking-widest ml-6">Скрыть активность</span>
                        </div>
                        <Switch checked={form.isGhostMode} onCheckedChange={v => setForm({...form, isGhostMode: v})} />
                     </div>
@@ -303,22 +257,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                            </div>
                            <div className="space-y-2">
                              <Label className="text-[8px] font-black uppercase text-white/40 ml-2">Задать новый PIN</Label>
-                             <Input 
-                               type="password" 
-                               placeholder={form.twoFactorPinLength === '4' ? "••••" : "••••••"}
-                               maxLength={parseInt(form.twoFactorPinLength)}
-                               value={form.twoFactorPin} 
-                               onChange={e => setForm({...form, twoFactorPin: e.target.value.replace(/\D/g, '')})}
-                               className="h-14 bg-black/60 border-primary/30 rounded-xl text-center font-black tracking-[0.5em] text-2xl" 
-                             />
-                           </div>
-                           
-                           <div className="p-4 bg-primary/10 border border-primary/20 rounded-2xl flex items-center justify-between">
-                              <div className="flex flex-col">
-                                 <span className="text-[10px] font-black text-white uppercase">Native Face ID</span>
-                                 <p className="text-[7px] text-white/30 font-bold uppercase">Использовать системный скан</p>
-                              </div>
-                              <Fingerprint className="w-5 h-5 text-primary animate-pulse" />
+                             <Input type="password" maxLength={parseInt(form.twoFactorPinLength)} value={form.twoFactorPin} onChange={e => setForm({...form, twoFactorPin: e.target.value.replace(/\D/g, '')})} className="h-14 bg-black/60 border-primary/30 rounded-xl text-center font-black tracking-[0.5em] text-2xl" />
                            </div>
                          </div>
                        )}
@@ -329,7 +268,33 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               <TabsContent value="style" className="space-y-6 m-0">
                  <div className="bg-white/5 p-6 rounded-[2.5rem] border border-white/5 space-y-8">
                     <div className="space-y-3">
-                       <Label className="text-[9px] font-black uppercase text-primary/60 ml-2 flex items-center gap-2 tracking-widest"><Palette className="w-4 h-4" /> Акцентный цвет</Label>
+                       <Label className="text-[9px] font-black uppercase text-primary/60 ml-2 flex items-center gap-2 tracking-widest"><LayoutGrid className="w-3.5 h-3.5" /> Элитные Темы {isPremium ? <Sparkles className="w-3 h-3 text-accent animate-pulse" /> : <Crown className="w-3 h-3 text-white/20" />}</Label>
+                       <Select value={form.theme} onValueChange={v => {
+                         if (!isPremium && (v === 'event-horizon' || v === 'crimson-nebula')) {
+                           toast({ title: "Elite Required", description: "Нужен Premium статус для этой темы", variant: "destructive" });
+                           return;
+                         }
+                         setForm({...form, theme: v});
+                       }}>
+                          <SelectTrigger className="bg-black/40 border-white/10 rounded-xl h-14 text-[10px] font-black uppercase italic tracking-widest">
+                             <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-[#0a0a0c] border-white/10 rounded-2xl shadow-2xl">
+                             <SelectItem value="default" className="text-[10px] font-bold uppercase py-3">Pulse Classic</SelectItem>
+                             <SelectItem value="glass" className="text-[10px] font-bold uppercase py-3">Glassmorphism</SelectItem>
+                             <SelectItem value="midnight" className="text-[10px] font-bold uppercase py-3">Midnight Pure</SelectItem>
+                             <SelectItem value="event-horizon" className="text-[10px] font-black uppercase italic tracking-widest py-3 text-primary border-t border-white/5">
+                                <span className="flex items-center gap-2"><Sparkles className="w-3 h-3" /> Event Horizon (Gold)</span>
+                             </SelectItem>
+                             <SelectItem value="crimson-nebula" className="text-[10px] font-black uppercase italic tracking-widest py-3 text-red-500">
+                                <span className="flex items-center gap-2"><Sparkles className="w-3 h-3" /> Crimson Nebula (Wine)</span>
+                             </SelectItem>
+                          </SelectContent>
+                       </Select>
+                    </div>
+
+                    <div className="space-y-3">
+                       <Label className="text-[9px] font-black uppercase text-primary/60 ml-2 flex items-center gap-2 tracking-widest"><Palette className="w-4 h-4" /> Акцентный цвет (HEX)</Label>
                        <div className="flex gap-4">
                           <Input value={form.customPrimaryColor} onChange={e => setForm({...form, customPrimaryColor: e.target.value})} placeholder="#A855F7" className="h-12 bg-black/40 border-white/10 font-mono text-center tracking-[0.1em] font-bold rounded-xl flex-1" />
                           <div className="w-12 h-12 rounded-xl shadow-xl border-2 border-[#0a0a0c] shrink-0" style={{ backgroundColor: form.customPrimaryColor || 'hsl(var(--primary))' }} />
@@ -341,33 +306,18 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                        <Input value={form.chatBackground} onChange={e => setForm({...form, chatBackground: e.target.value})} placeholder="https://images..." className="h-12 bg-black/40 border-white/10 rounded-xl px-4 text-xs" />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                       <div className="space-y-2">
-                          <Label className="text-[9px] font-black uppercase text-white/40 ml-2 flex items-center gap-2 tracking-widest"><LayoutGrid className="w-3.5 h-3.5" /> Тема</Label>
-                          <Select value={form.theme} onValueChange={v => setForm({...form, theme: v})}>
-                             <SelectTrigger className="bg-black/40 border-white/10 rounded-xl h-11 text-[9px] font-black uppercase">
-                                <SelectValue />
-                             </SelectTrigger>
-                             <SelectContent className="bg-[#0a0a0c] border-white/10">
-                                <SelectItem value="default" className="text-[9px] font-bold uppercase">Pulse Classic</SelectItem>
-                                <SelectItem value="glass" className="text-[9px] font-bold uppercase">Glassmorphism</SelectItem>
-                                <SelectItem value="midnight" className="text-[9px] font-bold uppercase">Midnight</SelectItem>
-                             </SelectContent>
-                          </Select>
-                       </div>
-                       <div className="space-y-2">
-                          <Label className="text-[9px] font-black uppercase text-white/40 ml-2 flex items-center gap-2 tracking-widest"><Type className="w-3.5 h-3.5" /> Шрифт</Label>
-                          <Select value={form.fontFamily} onValueChange={v => setForm({...form, fontFamily: v})}>
-                             <SelectTrigger className="bg-black/40 border-white/10 rounded-xl h-11 text-[9px] font-black uppercase">
-                                <SelectValue />
-                             </SelectTrigger>
-                             <SelectContent className="bg-[#0a0a0c] border-white/10">
-                                <SelectItem value="jakarta" className="text-[9px] font-bold uppercase">Plus Jakarta</SelectItem>
-                                <SelectItem value="inter" className="text-[9px] font-bold uppercase">Inter Pro</SelectItem>
-                                <SelectItem value="system" className="text-[9px] font-bold uppercase">System</SelectItem>
-                             </SelectContent>
-                          </Select>
-                       </div>
+                    <div className="space-y-2">
+                       <Label className="text-[9px] font-black uppercase text-white/40 ml-2 flex items-center gap-2 tracking-widest"><Type className="w-3.5 h-3.5" /> Шрифт</Label>
+                       <Select value={form.fontFamily} onValueChange={v => setForm({...form, fontFamily: v})}>
+                          <SelectTrigger className="bg-black/40 border-white/10 rounded-xl h-11 text-[9px] font-black uppercase">
+                             <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-[#0a0a0c] border-white/10">
+                             <SelectItem value="jakarta" className="text-[9px] font-bold uppercase">Plus Jakarta</SelectItem>
+                             <SelectItem value="inter" className="text-[9px] font-bold uppercase">Inter Pro</SelectItem>
+                             <SelectItem value="system" className="text-[9px] font-bold uppercase">System</SelectItem>
+                          </SelectContent>
+                       </Select>
                     </div>
                  </div>
               </TabsContent>
@@ -377,7 +327,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20"><Info className="w-8 h-8 text-primary" /></div>
                     <div className="space-y-1">
                        <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Nuxus Kernel</h3>
-                       <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.4em]">Версия {versions.latestVersion} • Pulse V87.0</p>
+                       <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.4em]">Версия {versions.latestVersion} • Pulse V88.0</p>
                     </div>
                     <div className="grid grid-cols-1 gap-3 w-full">
                        <Button onClick={openSupport} className="h-14 rounded-2xl bg-white/5 border border-white/10 font-black uppercase text-[10px] tracking-widest gap-3 hover:bg-primary/10 transition-all">
