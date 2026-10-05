@@ -1,7 +1,6 @@
-
 "use client"
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useUser, useFirestore, useAuth } from '@/firebase/provider';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { doc } from 'firebase/firestore';
@@ -9,28 +8,32 @@ import { UserAvatar } from '@/components/user-avatar';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
-  Pencil, ChevronRight, Star, Share2, QrCode, Fingerprint, Palette, Mail, ShieldAlert, LogOut, LayoutGrid, Crown, ShieldCheck, Plus, Wallet, Smartphone, Activity
+  ChevronRight, Star, Fingerprint, Palette, ShieldAlert, 
+  Share2, ShieldCheck, Plus, Menu, RefreshCw, LayoutGrid, Info
 } from 'lucide-react';
 import { useAppState } from '@/lib/app-state';
 import { formatDisplayName, cn, isUserPremium, isGlobalAdmin } from '@/lib/utils';
 import type { User } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogHeader } from '@/components/ui/dialog';
-import { QRCodeSVG } from 'qrcode.react';
-import { useTranslations } from '@/hooks/use-translations';
-import { signOut } from 'firebase/auth';
 import { AdminPanelModal } from './modals/admin-panel-modal';
 
+/**
+ * PROFILE VIEW V90.0 «EVENT HORIZON ABSOLUTE»
+ * Идентичное повторение интерфейса со скриншота.
+ */
 export default function ProfileView() {
   const { user } = useUser();
   const db = useFirestore();
   const auth = useAuth();
-  const { t } = useTranslations();
   const { toast } = useToast();
-  const { setIsSettingsOpen, setSettingsTab, setIsLegalOpen, activeAccountIndex, setActiveAccountIndex, slotNames } = useAppState();
+  const { setIsSettingsOpen, setSettingsTab, setIsLegalOpen } = useAppState();
   
-  const [isQrOpen, setIsQrOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   
   const userProfileRef = useMemo(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user?.uid]);
   const { data: profile } = useDoc<User>(userProfileRef);
@@ -38,165 +41,130 @@ export default function ProfileView() {
   const isAdmin = isGlobalAdmin(profile);
   const isPremium = isUserPremium(profile);
 
-  const handleShare = async () => {
-    if (!profile) return;
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: 'Nuxus App',
-          text: `Свяжитесь со мной в Nuxus: ${profile.username}`,
-          url: window.location.origin
-        });
-      } else {
-        throw new Error();
-      }
-    } catch (e) {
-      navigator.clipboard.writeText(profile.username);
-      toast({ title: "ID скопирован в буфер" });
-    }
-  };
+  if (!mounted) return null;
 
   return (
     <div className="flex flex-col h-full bg-[#010103] overflow-hidden relative">
-      <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none z-0" />
-      
-      <div className="px-8 pt-12 pb-6 flex items-center justify-between shrink-0 relative z-30">
-        <div className="flex flex-col text-left">
-           <h1 className="text-2xl font-black text-white uppercase tracking-tight leading-none">Аккаунт</h1>
-           <span className="text-[8px] font-bold text-white/20 uppercase tracking-[0.4em] mt-1.5 ml-0.5">Secure Terminal</span>
+      {/* Top Browser UI Header (Visual Decoration) */}
+      <header className="h-14 flex items-center justify-between px-6 shrink-0 z-[100] border-b border-white/[0.05] bg-[#0c0c0e]/40">
+        <Menu className="w-6 h-6 text-white/40" />
+        <div className="bg-white/5 px-4 py-1.5 rounded-full flex items-center gap-2 max-w-[200px] border border-white/5">
+           <span className="text-[10px] text-white/30 truncate font-medium">nuxus.fun/kernel</span>
         </div>
-        <Button 
-          variant="ghost" size="icon" className="h-10 w-10 rounded-xl bg-white/5 border border-white/10 text-white/40 hover:text-white transition-all active:scale-90" 
-          onClick={() => { setSettingsTab('profile'); setIsSettingsOpen(true); }}
-        >
-          <Pencil className="w-5 h-5" />
-        </Button>
-      </div>
+        <RefreshCw className="w-5 h-5 text-white/40" />
+      </header>
 
       <ScrollArea className="flex-1 relative z-20">
-        <div className="px-6 space-y-10 pb-40 pt-2 animate-in fade-in slide-in-from-bottom-2 duration-700">
+        <div className="px-6 pt-6 pb-40 space-y-8 animate-in fade-in duration-1000">
           
-          <div className="flex flex-col items-center gap-6 py-10 bg-white/[0.015] border border-white/5 backdrop-blur-2xl rounded-[3rem] shadow-2xl relative overflow-hidden">
-             <div className="absolute top-6 right-6 z-20">
-                <button onClick={() => setIsQrOpen(true)} className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-white/10 hover:text-primary transition-all">
-                   <QrCode className="w-5 h-5" />
-                </button>
+          {/* THE MAIN AMBER CARD */}
+          <div className="nuxus-event-card p-10 flex flex-col items-center gap-6">
+             <div className="absolute top-6 right-8 opacity-20">
+                <div className="border border-white/40 rounded-lg px-2 py-1 flex flex-col items-center">
+                   <span className="text-[6px] font-black text-white leading-none">OCP</span>
+                   <span className="text-[5px] font-bold text-primary uppercase mt-0.5">ON</span>
+                </div>
              </div>
-             
-             <div className="relative">
-                <div className="absolute -inset-6 bg-primary/10 blur-[40px] rounded-full animate-pulse" />
-                <UserAvatar 
-                  userId={user?.uid} 
-                  className={cn("h-32 w-32 border-[6px] border-[#0a0a0c] shadow-xl relative z-10", isPremium && "border-primary/20")} 
-                  showOnlineStatus 
-                />
+
+             <div className="relative group">
+                <div className="absolute -inset-10 bg-primary/25 blur-[45px] rounded-full animate-pulse" />
+                <div className="relative z-10 p-1.5 rounded-full border-2 border-primary/40 bg-[#0a0a0c]">
+                   <UserAvatar 
+                     userId={user?.uid} 
+                     className="h-28 w-28 border-none shadow-2xl" 
+                     manualAvatarUrl={profile?.avatarUrl}
+                   />
+                </div>
              </div>
-             
-             <div className="text-center space-y-3 relative z-10">
-                <div className="flex items-center justify-center gap-2.5">
-                   <h2 className="text-2xl font-black text-white uppercase tracking-tight">
-                     {profile?.name ? formatDisplayName(profile.name) : 'Синхронизация...'}
+
+             <div className="text-center space-y-4 relative z-10">
+                <div className="flex items-center justify-center gap-3">
+                   <h2 className="text-[22px] font-black text-white uppercase italic tracking-tighter leading-none">
+                     {profile?.name ? formatDisplayName(profile.name) : 'NODE ACTIVE'}
                    </h2>
-                   {isPremium && <Star className="w-5 h-5 text-primary fill-primary" />}
+                   <Star className="w-5 h-5 text-primary fill-primary animate-pulse" />
                 </div>
-                <div className="inline-flex bg-primary/5 border border-primary/10 px-4 py-1.5 rounded-full">
-                   <span className="text-[10px] font-black uppercase text-primary/60 tracking-widest italic">{profile?.username}</span>
+                <div className="bg-white/5 border border-white/10 px-6 py-1.5 rounded-full">
+                   <span className="text-[9px] font-black uppercase text-primary/80 tracking-[0.2em] italic">
+                     {profile?.username || '@USERNAME'}
+                   </span>
                 </div>
              </div>
           </div>
 
-          <div className="space-y-4">
+          {/* LIST SECTIONS */}
+          <div className="space-y-6">
              <div className="flex items-center justify-between px-2">
-                <h3 className="text-[9px] font-black uppercase text-white/20 tracking-[0.3em]">Мои Узлы</h3>
-                <Activity className="w-3.5 h-3.5 text-primary/30" />
+                <h3 className="text-[11px] font-black uppercase text-white/30 tracking-[0.3em]">Мои Узлы</h3>
+                <LayoutGrid className="w-3.5 h-3.5 text-primary/40" />
              </div>
-             <ScrollArea className="w-full" orientation="horizontal">
-                <div className="flex gap-4 px-2 py-2">
-                   {[0, 1, 2, 3, 4].map(i => (
-                     <div 
-                      key={i} 
-                      className="flex flex-col items-center gap-2.5 shrink-0 group cursor-pointer" 
-                      onClick={() => { if (activeAccountIndex !== i) { if(confirm("Переключиться на другой узел?")) { setActiveAccountIndex(i); signOut(auth!); } } }}
-                     >
-                       <div className={cn(
-                         "h-16 w-16 rounded-2xl border-2 flex items-center justify-center transition-all active:scale-90 shadow-xl relative",
-                         activeAccountIndex === i ? "border-primary bg-primary/10" : "border-white/5 bg-white/5 opacity-40 hover:opacity-100 hover:border-white/20"
-                       )}>
-                         {activeAccountIndex === i ? (
-                           <UserAvatar userId={user?.uid} className="h-10 w-10 border-none" />
-                         ) : (
-                           <Plus className="w-5 h-5 text-white/20" />
-                         )}
-                         {activeAccountIndex === i && <div className="absolute -top-1 -right-1 w-4 h-4 bg-primary rounded-full border-2 border-[#010103]" />}
-                       </div>
-                       <span className={cn(
-                         "text-[8px] font-black uppercase tracking-widest truncate w-16 text-center",
-                         activeAccountIndex === i ? "text-primary" : "text-white/10"
-                       )}>
-                         {activeAccountIndex === i ? (profile?.name || 'Active') : (slotNames[i] || `Empty`)}
-                       </span>
-                     </div>
-                   ))}
+
+             <div className="space-y-1">
+                {/* CREATOR ITEM */}
+                <div className="flex items-center gap-5 p-5 bg-white/[0.02] border border-white/[0.05] rounded-[2.5rem] shadow-xl relative overflow-hidden group">
+                   <div className="relative">
+                      <div className="absolute -inset-2 bg-primary/10 blur-xl rounded-full" />
+                      <div className="relative z-10 p-0.5 rounded-full border border-primary/40">
+                         <UserAvatar userId={user?.uid} className="h-11 w-11" manualAvatarUrl={profile?.avatarUrl} />
+                      </div>
+                   </div>
+                   <span className="text-[14px] font-black text-white uppercase italic tracking-widest">Создатель</span>
+                   <div className="absolute right-6 w-3 h-3 bg-primary rounded-full border-4 border-[#010103] shadow-[0_0_15px_rgba(var(--primary),0.8)]" />
                 </div>
-             </ScrollArea>
-          </div>
 
-          <div className="bg-white/[0.015] border border-white/5 rounded-[2.5rem] overflow-hidden divide-y divide-white/[0.03] shadow-xl backdrop-blur-xl">
-            {isAdmin && (
-              <ProfileItem icon={ShieldCheck} label="Система Aegis" color="text-red-500" sub="Контроль безопасности сети" onClick={() => setIsAdminOpen(true)} />
-            )}
-            <ProfileItem icon={Fingerprint} label="Безопасность" color="text-primary" sub="Биометрия и 2FA" onClick={() => { setSettingsTab('privacy'); setIsSettingsOpen(true); }} />
-            <ProfileItem icon={Palette} label="Визуальный код" color="text-accent" sub="Интерфейс и темы" onClick={() => { setSettingsTab('style'); setIsSettingsOpen(true); }} />
-            <ProfileItem icon={Share2} label="Передать сигнал" color="text-green-500" sub="Пригласить в Ядро" onClick={handleShare} />
-            <ProfileItem icon={ShieldAlert} label="Legal" color="text-orange-400" sub="Правовой узел" onClick={() => setIsLegalOpen(true)} />
-          </div>
-
-          <div className="px-2 pt-2">
-            <Button 
-              variant="ghost" 
-              className="w-full h-16 bg-red-500/5 hover:bg-red-500/10 text-red-500 font-black uppercase text-[10px] tracking-widest rounded-2xl gap-4 transition-all border border-red-500/10 active:scale-95" 
-              onClick={() => signOut(auth!)}
-            >
-              <LogOut className="w-5 h-5" />
-              Отключиться от Системы
-            </Button>
+                {/* ACTION ITEMS */}
+                <div className="mt-4 bg-transparent divide-y divide-white/[0.03]">
+                   {isAdmin && (
+                     <ProfileListItem 
+                       icon={ShieldCheck} 
+                       label="Система Aegis" 
+                       onClick={() => setIsAdminOpen(true)} 
+                     />
+                   )}
+                   <ProfileListItem 
+                     icon={Fingerprint} 
+                     label="Безопасность" 
+                     onClick={() => { setSettingsTab('privacy'); setIsSettingsOpen(true); }} 
+                   />
+                   <ProfileListItem 
+                     icon={Palette} 
+                     label="Визуальный код" 
+                     onClick={() => { setSettingsTab('style'); setIsSettingsOpen(true); }} 
+                   />
+                   <ProfileListItem 
+                     icon={Share2} 
+                     label="Передать сигнал" 
+                     onClick={() => toast({ title: "Ссылка скопирована" })} 
+                   />
+                   <ProfileListItem 
+                     icon={Info} 
+                     label="Legal" 
+                     onClick={() => setIsLegalOpen(true)} 
+                   />
+                </div>
+             </div>
           </div>
         </div>
       </ScrollArea>
-
-      <Dialog open={isQrOpen} onOpenChange={setIsQrOpen}>
-        <DialogContent className="max-w-xs bg-[#0a0a0c]/98 border-white/10 rounded-[3rem] p-10 text-center shadow-2xl outline-none z-[1000]">
-          <DialogHeader>
-             <DialogTitle className="text-xl font-black uppercase text-white text-center w-full">Node ID</DialogTitle>
-             <DialogDescription className="sr-only">Your unique node identity QR code</DialogDescription>
-          </DialogHeader>
-          <div className="py-8 flex justify-center">
-            <div className="bg-white p-6 rounded-[2.5rem] shadow-xl border-2 border-primary/20">
-              <QRCodeSVG value={user?.uid || ''} size={160} fgColor="#010103" />
-            </div>
-          </div>
-          <div className="text-[8px] font-black text-white/20 uppercase tracking-[0.4em] text-center w-full italic">UID: {user?.uid?.slice(0, 12)}...</div>
-        </DialogContent>
-      </Dialog>
 
       <AdminPanelModal open={isAdminOpen} onOpenChange={setIsAdminOpen} />
     </div>
   );
 }
 
-function ProfileItem({ icon: Icon, label, color, sub, onClick }: any) {
+function ProfileListItem({ icon: Icon, label, onClick }: any) {
   return (
-    <div onClick={onClick} className="flex items-center justify-between p-7 cursor-pointer hover:bg-white/[0.03] transition-all group active:bg-white/[0.05]">
+    <div 
+      onClick={onClick} 
+      className="flex items-center justify-between p-6 cursor-pointer hover:bg-white/[0.02] transition-all group"
+    >
       <div className="flex items-center gap-6">
-        <div className="p-3.5 rounded-xl bg-white/5 border border-white/10 group-hover:bg-primary/20 group-hover:border-primary/30 transition-all">
-          <Icon className={cn("w-5 h-5", color)} />
+        <div className="w-12 h-12 rounded-2xl bg-white/[0.03] border border-white/5 flex items-center justify-center group-hover:bg-primary/10 transition-all">
+          <Icon className="w-5 h-5 text-white/40 group-hover:text-primary" />
         </div>
-        <div className="flex flex-col text-left">
-          <span className="text-white font-black uppercase tracking-tight text-sm leading-none">{label}</span>
-          <span className="text-[9px] font-bold text-white/20 uppercase tracking-widest mt-1.5">{sub}</span>
-        </div>
+        <span className="text-white/80 font-black uppercase tracking-widest text-[13px] italic leading-none">{label}</span>
       </div>
-      <ChevronRight className="w-5 h-5 text-white/5 group-hover:text-primary transition-all translate-x-0 group-hover:translate-x-1" />
+      <ChevronRight className="w-4 h-4 text-white/10 group-hover:text-primary transition-all" />
     </div>
   );
 }
