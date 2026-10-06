@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -138,14 +139,8 @@
 
 .nuxus-orbit-active {
   padding: 3px;
-  background: conic-gradient(from 0deg, transparent, hsla(var(--primary), 1), transparent);
+  background: hsla(var(--primary), 1); /* Static highlight instead of spin */
   border-radius: 50%;
-  animation: rotate-orbit 5s linear infinite;
-}
-
-@keyframes rotate-orbit {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
 }
 
 .nuxus-orbit-dot {

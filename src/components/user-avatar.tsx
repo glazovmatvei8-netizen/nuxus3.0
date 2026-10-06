@@ -12,8 +12,8 @@ import { differenceInMinutes, parseISO } from 'date-fns';
 import Image from 'next/image';
 
 /**
- * USER AVATAR V6.6.0 «IDENTITY PROTECT»
- * FIXED: Ensuring correct avatar is loaded based on direct userId.
+ * USER AVATAR V6.7.0 «THERMAL OPTIMIZED»
+ * REMOVED: Spin animation to reduce GPU load and follow user request.
  */
 export const UserAvatar = memo(({ userId, className, fallbackName, manualAvatarUrl, showOnlineStatus = false, onClick }: any) => {
   const db = useFirestore();
@@ -45,7 +45,8 @@ export const UserAvatar = memo(({ userId, className, fallbackName, manualAvatarU
     <div onClick={onClick} className={cn("relative inline-flex items-center justify-center shrink-0 rounded-full cursor-pointer", className)}>
       {premium && (
         <div className="absolute inset-[-3px] rounded-full p-[1.5px] overflow-hidden z-0">
-          <div className="absolute inset-[-100%] bg-gradient-to-tr from-primary via-accent to-primary animate-[spin_30s_linear_infinite] opacity-30" />
+          {/* Static premium border (Rotation removed per user request) */}
+          <div className="absolute inset-[-100%] bg-gradient-to-tr from-primary via-accent to-primary opacity-30" />
         </div>
       )}
 

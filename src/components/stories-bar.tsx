@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useMemo, useState } from 'react';
@@ -17,7 +18,8 @@ import { CreateStoryModal } from './modals/create-story-modal';
 import { useToast } from '@/hooks/use-toast';
 
 /**
- * NUXUS MOMENTS BAR V98.0 «FULLY FUNCTIONAL»
+ * NUXUS MOMENTS BAR V99.0 «BIG PLUS EDITION»
+ * UPDATED: When no stories exist, the button is a large Plus icon on the whole circle.
  */
 export function StoriesBar() {
   const { user } = useUser();
@@ -71,18 +73,19 @@ export function StoriesBar() {
          <span className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-[0.2em] italic">АРХИВ</span>
       </div>
 
-      {/* MOMENT (STORIES) - REPLICA */}
+      {/* MOMENT (STORIES) - UPDATED WITH BIG PLUS */}
       <div className="flex flex-col items-center gap-3 shrink-0 group cursor-pointer" onClick={() => myStories.length > 0 ? setStoriesToView(myStories) : handleAddStory()}>
         <div className="relative h-18 w-18 rounded-full border-2 border-primary/20 p-1 transition-all group-hover:scale-105 shadow-2xl">
           <div className="rounded-full h-full w-full overflow-hidden bg-black/40 flex items-center justify-center relative">
-            <UserAvatar userId={user?.uid} className="h-full w-full border-none rounded-full" manualAvatarUrl={profile?.avatarUrl} />
+            {myStories.length > 0 ? (
+              <UserAvatar userId={user?.uid} className="h-full w-full border-none rounded-full" manualAvatarUrl={profile?.avatarUrl} />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                 <Plus className="w-8 h-8 text-primary" strokeWidth={4} />
+              </div>
+            )}
             <div className="absolute inset-0 bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
-          {myStories.length === 0 && (
-             <div className="absolute bottom-0 right-0 h-6 w-6 bg-primary rounded-full border-3 border-[#121212] flex items-center justify-center shadow-xl">
-                <Plus className="w-4 h-4 text-white" strokeWidth={5} />
-             </div>
-          )}
           {myStories.length > 0 && (
              <div className="absolute -top-1 -right-1 h-6 w-6 bg-primary rounded-full border-3 border-[#121212] flex items-center justify-center shadow-xl">
                 <Zap className="w-3.5 h-3.5 text-white fill-current" />
