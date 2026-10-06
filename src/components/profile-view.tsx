@@ -17,8 +17,8 @@ import { useToast } from '@/hooks/use-toast';
 import { AdminPanelModal } from './modals/admin-panel-modal';
 
 /**
- * PROFILE VIEW V98.0 «TOTAL ADAPTIVE AURA»
- * Теперь карточка полностью окрашивается в акцентный цвет пользователя.
+ * PROFILE VIEW V99.0 «ABSOLUTE MIRROR»
+ * Полная репликация горизонтальной карточки из референса.
  */
 export default function ProfileView() {
   const { user } = useUser();
@@ -41,90 +41,88 @@ export default function ProfileView() {
   if (!mounted) return null;
 
   return (
-    <div className="flex flex-col h-full bg-background overflow-hidden relative">
+    <div className="flex flex-col h-full bg-[#121212] overflow-hidden relative">
       {/* Top Header */}
       <header className="h-14 flex items-center justify-between px-6 shrink-0 z-[100] border-b border-white/[0.05] bg-card/40 backdrop-blur-md">
         <Menu className="w-5 h-5 text-muted-foreground" />
         <div className="bg-white/5 px-4 py-1 rounded-full flex items-center gap-2 max-w-[200px] border border-white/5">
-           <span className="text-[9px] text-muted-foreground/60 truncate font-black uppercase tracking-widest">nuxus.fun/kernel</span>
+           <span className="text-[9px] text-muted-foreground/60 truncate font-black uppercase tracking-widest italic">nuxus.fun/kernel</span>
         </div>
         <RefreshCw className="w-5 h-5 text-muted-foreground" />
       </header>
 
       <ScrollArea className="flex-1 relative z-20">
-        <div className="px-6 pt-6 pb-40 space-y-10 animate-in fade-in duration-1000">
+        <div className="px-6 pt-10 pb-40 space-y-12 animate-in fade-in duration-1000">
           
-          {/* THE MAIN ADAPTIVE CARD (Total Tint Mode) */}
-          <div className="nuxus-event-card p-12 flex flex-col items-center gap-8 group relative overflow-hidden">
+          {/* THE MIRROR CARD (Horizontal Aspect) */}
+          <div className="nuxus-event-card w-full py-10 px-6 flex flex-col items-center justify-center relative overflow-hidden group min-h-[280px]">
              {/* Dynamic Aura Background */}
-             <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,hsla(var(--primary),0.3),transparent_100%)] pointer-events-none" />
+             <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,hsla(var(--primary),0.35),transparent_75%)] pointer-events-none" />
              
-             {/* Decor Badge */}
-             <div className="absolute top-8 right-10 opacity-70">
-                <div className="border border-primary/40 rounded-xl px-2.5 py-1.5 flex flex-col items-center bg-black/60 backdrop-blur-sm shadow-xl">
-                   <span className="text-[7px] font-black text-white leading-none tracking-tighter">OCP</span>
-                   <span className="text-[6px] font-bold text-primary uppercase mt-1">ON</span>
+             {/* Ghost Badge (Top Right) - Replicating the photo */}
+             <div className="absolute top-6 right-6 opacity-30">
+                <div className="w-10 h-10 rounded-xl border border-white/20 bg-white/5 flex flex-col items-center justify-center">
+                   <span className="text-[6px] font-black text-white leading-none">CORE</span>
+                   <span className="text-[6px] font-black text-white leading-none mt-0.5">NODE</span>
                 </div>
              </div>
 
-             <div className="relative group">
-                <div className="absolute -inset-16 bg-primary/30 blur-[60px] rounded-full animate-pulse group-hover:bg-primary/40 transition-all duration-1000" />
-                <div className="relative z-10 p-2 rounded-full border-2 border-primary/50 bg-black/80 shadow-2xl">
+             <div className="relative mb-6">
+                <div className="absolute -inset-12 bg-primary/25 blur-[50px] rounded-full animate-pulse" />
+                <div className="relative z-10 p-1.5 rounded-full border border-primary/40 bg-black/60 shadow-2xl">
                    <UserAvatar 
                      userId={user?.uid} 
-                     className="h-32 w-32 border-none shadow-2xl" 
+                     className="h-24 w-24 border-none shadow-2xl" 
                      manualAvatarUrl={profile?.avatarUrl}
                    />
                 </div>
              </div>
 
-             <div className="text-center space-y-5 relative z-10 w-full">
-                <div className="flex flex-col items-center gap-3">
-                   <div className="flex items-center gap-3">
-                      <h2 className="text-[26px] font-black text-white uppercase italic tracking-tighter leading-none drop-shadow-[0_4px_20px_rgba(255,255,255,0.2)]">
-                        {profile?.name ? formatDisplayName(profile.name) : 'NODE ACTIVE'}
-                      </h2>
-                      <Star className="w-6 h-6 text-primary fill-primary animate-pulse" />
-                   </div>
-                   <div className="bg-black/60 backdrop-blur-2xl border border-white/10 px-8 py-2 rounded-full shadow-2xl">
-                      <span className="text-[10px] font-black uppercase text-primary tracking-[0.3em] italic">
-                        {profile?.username || '@USERNAME'}
-                      </span>
-                   </div>
+             <div className="flex flex-col items-center gap-4 relative z-10 w-full text-center">
+                <div className="flex items-center justify-center gap-3">
+                   <h2 className="text-[22px] font-black text-white uppercase tracking-[0.05em] leading-none drop-shadow-[0_4px_15px_rgba(255,255,255,0.15)]">
+                     {profile?.name ? formatDisplayName(profile.name) : 'NODE ACTIVE'}
+                   </h2>
+                   <Star className="w-5 h-5 text-primary fill-primary animate-pulse" />
                 </div>
                 
-                <p className="text-[11px] font-bold text-white/50 uppercase tracking-widest leading-relaxed max-w-[280px] mx-auto">
-                   УЗЕЛ СИНХРОНИЗИРОВАН С ГЛОБАЛЬНЫМ ЯДРОМ
-                </p>
+                <div className="bg-black/40 backdrop-blur-xl border border-white/5 px-6 py-1.5 rounded-full shadow-inner min-w-[140px]">
+                   <span className="text-[10px] font-bold uppercase text-[#8E8E93] tracking-[0.2em]">
+                     {profile?.username || '@USERNAME'}
+                   </span>
+                </div>
              </div>
           </div>
 
           {/* LIST SECTIONS */}
           <div className="space-y-8">
              <div className="flex items-center justify-between px-3">
-                <h3 className="text-[11px] font-black uppercase text-muted-foreground tracking-[0.4em]">Мои Узлы</h3>
-                <LayoutGrid className="w-4 h-4 text-primary/40" />
+                <h3 className="text-[11px] font-black uppercase text-muted-foreground tracking-[0.3em] italic">Мои Узлы</h3>
+                <div className="relative">
+                   <div className="absolute inset-0 bg-primary/20 blur-md rounded-full" />
+                   <Sparkles className="w-3.5 h-3.5 text-primary relative z-10" />
+                </div>
              </div>
 
              <div className="space-y-3">
                 {/* CREATOR ITEM */}
-                <div className="flex items-center gap-6 p-6 bg-card/60 border border-white/[0.08] rounded-[3rem] shadow-2xl relative overflow-hidden group">
+                <div className="flex items-center gap-6 p-6 bg-[#1C1C1E] border border-white/[0.03] rounded-[2.8rem] shadow-2xl relative overflow-hidden group">
                    <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                    <div className="relative">
-                      <div className="absolute -inset-4 bg-primary/20 blur-2xl rounded-full" />
-                      <div className="relative z-10 p-1 rounded-full border-2 border-primary/50 bg-black/40">
-                         <UserAvatar userId={user?.uid} className="h-12 w-12" manualAvatarUrl={profile?.avatarUrl} />
+                      <div className="absolute -inset-4 bg-primary/15 blur-xl rounded-full" />
+                      <div className="relative z-10 p-1 rounded-full border border-primary/30 bg-black/40">
+                         <UserAvatar userId={user?.uid} className="h-10 w-10" manualAvatarUrl={profile?.avatarUrl} />
                       </div>
                    </div>
                    <div className="flex flex-col text-left">
-                      <span className="text-[14px] font-black text-white uppercase italic tracking-widest">Создатель Ядра</span>
-                      <span className="text-[9px] text-primary/60 font-bold uppercase tracking-widest">Master Identity</span>
+                      <span className="text-[13px] font-black text-white uppercase italic tracking-widest">Создатель Ядра</span>
+                      <span className="text-[8px] text-primary/60 font-bold uppercase tracking-widest">Master Identity</span>
                    </div>
-                   <div className="absolute right-8 w-3.5 h-3.5 bg-primary rounded-full border-4 border-[#121212] shadow-[0_0_20px_rgba(var(--primary),1)]" />
+                   <div className="absolute right-8 w-2 h-2 bg-primary rounded-full shadow-[0_0_15px_rgba(var(--primary),1)] animate-pulse" />
                 </div>
 
                 {/* ACTION ITEMS */}
-                <div className="mt-6 bg-transparent divide-y divide-white/[0.05] rounded-[3rem] overflow-hidden border border-white/[0.05]">
+                <div className="mt-4 bg-transparent divide-y divide-white/[0.03] rounded-[2.8rem] overflow-hidden border border-white/[0.03]">
                    {isAdmin && (
                      <ProfileListItem 
                        icon={ShieldCheck} 
@@ -170,15 +168,15 @@ function ProfileListItem({ icon: Icon, label, onClick }: any) {
   return (
     <div 
       onClick={onClick} 
-      className="flex items-center justify-between p-7 cursor-pointer hover:bg-white/[0.03] transition-all group bg-[#1C1C1E]/40"
+      className="flex items-center justify-between p-6 cursor-pointer hover:bg-white/[0.02] transition-all group bg-[#1C1C1E]/30"
     >
       <div className="flex items-center gap-6">
-        <div className="w-14 h-14 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-center group-hover:bg-primary/20 group-hover:border-primary/40 transition-all shadow-xl">
-          <Icon className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
+        <div className="w-12 h-12 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-center group-hover:bg-primary/10 group-hover:border-primary/20 transition-all shadow-xl">
+          <Icon className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
         </div>
-        <span className="text-white/90 font-black uppercase tracking-[0.2em] text-[15px] italic leading-none">{label}</span>
+        <span className="text-white/80 font-black uppercase tracking-[0.15em] text-[13px] italic leading-none">{label}</span>
       </div>
-      <ChevronRight className="w-5 h-5 text-white/10 group-hover:text-primary group-hover:translate-x-1 transition-all" />
+      <ChevronRight className="w-4 h-4 text-white/10 group-hover:text-primary group-hover:translate-x-1 transition-all" />
     </div>
   );
 }
