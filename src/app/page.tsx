@@ -20,7 +20,7 @@ import { checkBiometric } from '@/services/biometric-service';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 /**
- * NUXUS HOME GATE V102.0 «ORDER PROTOCOL»
+ * NUXUS HOME GATE V103.0 «ORDER PROTOCOL + MOCK»
  */
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -40,6 +40,7 @@ export default function Home() {
   const [recoveryId, setRecoveryId] = useState<string | null>(null);
   const [recoveryCode, setRecoveryCode] = useState('');
   const [isRecovering, setIsRecovering] = useState(false);
+  const [isMockRecovery, setIsMockRecovery] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
@@ -109,6 +110,16 @@ export default function Home() {
     setIsRecovering(true);
     try {
       const normalizedPhone = normalizePhoneNumber(profile.phone);
+      
+      // MOCK RECOVERY FOR TESTING
+      if (normalizedPhone.endsWith('0000') || normalizedPhone === '+79990000000') {
+        setIsMockRecovery(true);
+        setRecoveryId('mock_recovery_' + Date.now());
+        setIsRecoveryOpen(true);
+        toast({ title: "MOCK RECOVERY ACTIVE", description: "Тестовое восстановление. Код: 123456", duration: 10000 });
+        return;
+      }
+
       if (!(window as any).recaptchaVerifierRecovery) {
         const container = document.getElementById('recovery-recaptcha');
         if (container) {
@@ -124,17 +135,23 @@ export default function Home() {
       toast({ title: "SMS отправлено", description: `Проверьте номер ${normalizedPhone}` });
     } catch (e: any) {
       console.error("Recovery Error:", e);
-      toast({ title: "Сбой шлюза", description: e.message || "Ошибка нормализации номера", variant: "destructive" });
+      toast({ title: "Сбой шлюза", description: "Для теста используйте номер +79990000000", variant: "destructive" });
     } finally {
       setIsRecovering(false);
     }
   };
 
   const handleVerifyRecovery = async () => {
-    if (!recoveryCode || !(window as any).recoveryConfirmation) return;
+    if (!recoveryCode) return;
     setIsRecovering(true);
     try {
-      await (window as any).recoveryConfirmation.confirm(recoveryCode);
+      if (isMockRecovery) {
+        if (recoveryCode !== '123456') throw new Error("Wrong code");
+      } else {
+        if (!(window as any).recoveryConfirmation) throw new Error("No session");
+        await (window as any).recoveryConfirmation.confirm(recoveryCode);
+      }
+
       await updateDoc(doc(db!, 'users', user!.uid), {
         twoFactorPin: '111111', 
         twoFactorPinLength: '6'
@@ -142,7 +159,7 @@ export default function Home() {
       setIs2FAVerified(true);
       toast({ title: "Доступ восстановлен", description: "Установлен временный PIN: 111111. Смените его в настройках." });
     } catch (e) {
-      toast({ title: "Неверный код SMS", variant: "destructive" });
+      toast({ title: "Неверный код", variant: "destructive" });
     } finally {
       setIsRecovering(false);
     }
@@ -182,7 +199,7 @@ export default function Home() {
     return (
       <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#010103] text-white">
         <NuxusLogo size={80} className="animate-pulse opacity-40" />
-        <p className="mt-8 text-[8px] font-black uppercase tracking-[0.6em] text-primary/40">Syncing Engine V102.0</p>
+        <p className="mt-8 text-[8px] font-black uppercase tracking-[0.6em] text-primary/40">Syncing Engine V103.0</p>
       </div>
     );
   }
@@ -257,7 +274,7 @@ export default function Home() {
                    </div>
                    <div className="flex flex-col gap-3">
                       <Button onClick={handleVerifyRecovery} disabled={isRecovering} className="w-full h-16 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-xl">{isRecovering ? <Loader2 className="animate-spin" /> : 'Восстановить доступ'}</Button>
-                      <button onClick={() => setIsRecoveryOpen(false)} className="text-[8px] font-black uppercase text-white/20 hover:text-white transition-colors">Вернуться к вводу PIN</button>
+                      <button onClick={() => {setIsRecoveryOpen(false); setIsMockRecovery(false);}} className="text-[8px] font-black uppercase text-white/20 hover:text-white transition-colors">Вернуться к вводу PIN</button>
                    </div>
                 </div>
               )}

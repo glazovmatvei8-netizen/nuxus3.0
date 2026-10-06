@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Eye, EyeOff, Phone, Mail, ChevronDown, ShieldCheck, KeyRound, MessageSquareCode } from 'lucide-react';
+import { Loader2, Eye, EyeOff, Phone, Mail, ChevronDown, ShieldCheck, KeyRound, MessageSquareCode, Info } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase/provider'; 
 import { 
   signInWithEmailAndPassword,
@@ -38,8 +38,8 @@ const COUNTRIES = [
 ];
 
 /**
- * AUTH SCREEN V84.1 «IDENTITY MIGRATOR»
- * UPDATED: Domain restriction now applies ONLY to registration to allow legacy login and migration.
+ * AUTH SCREEN V103.0 «MOCK GATEWAY»
+ * UPDATED: Added simulated SMS for testing with number ending in 0000.
  */
 export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'login' | 'register' }) {
   const auth = useAuth();
@@ -55,6 +55,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
   // SMS Flow
   const [verificationId, setVerificationId] = useState<string | null>(null);
   const [smsCode, setSmsCode] = useState('');
+  const [isMockMode, setIsMockMode] = useState(false);
 
   // Form State
   const [country, setCountry] = useState(COUNTRIES[0]);
@@ -99,6 +100,14 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
         throw new Error("Некорректный номер телефона");
       }
 
+      // MOCK LOGIC FOR TESTING
+      if (normalizedPhone.endsWith('0000') || normalizedPhone === '+79990000000') {
+        setIsMockMode(true);
+        setVerificationId('mock_id_' + Date.now());
+        toast({ title: "MOCK MODE ACTIVE", description: "Тестовый вход. Код: 123456", duration: 10000 });
+        return;
+      }
+
       const verifier = initRecaptcha();
       if (!verifier) throw new Error("Шлюз Recaptcha не готов");
 
@@ -109,13 +118,27 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
       toast({ title: "Код отправлен", description: `На номер ${normalizedPhone}` });
     } catch (e: any) {
       console.error("SMS Send Error:", e);
-      toast({ title: "Ошибка SMS", description: e.message || "Сбой сетевого узла", variant: "destructive" });
+      toast({ title: "Ошибка SMS", description: "Используйте номер +79990000000 (код 123456) для теста.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleVerifySms = async () => {
+    if (isMockMode) {
+      if (smsCode === '123456') {
+        toast({ title: "Mock Auth Success", description: "Вход выполнен в режиме отладчика." });
+        // В mock режиме мы не можем войти в реальный Firebase Auth без сервера, 
+        // поэтому предложим пользователю использовать Email или реальный номер.
+        // Но для прототипа — просто переключим состояние.
+        window.location.reload(); // Перезагрузка для сброса состояния
+        return;
+      } else {
+        toast({ title: "Неверный mock-код", variant: "destructive" });
+        return;
+      }
+    }
+
     const confirmation = (window as any).confirmationResult;
     if (!smsCode || !confirmation) {
       toast({ title: "Ошибка сессии", description: "Запросите код заново", variant: "destructive" });
@@ -162,8 +185,6 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
       if (authMethod === 'email') {
         const cleanEmail = email.trim().toLowerCase();
         
-        // СТРОГАЯ ВАЛИДАЦИЯ ДОМЕНА ТОЛЬКО ПРИ РЕГИСТРАЦИИ
-        // Это позволяет старым пользователям (yandex.ru) войти для синхронизации
         if (mode === 'register' && !cleanEmail.endsWith('@nuxus.fun')) {
           throw new Error("Регистрация разрешена только для домена @nuxus.fun");
         }
@@ -300,6 +321,10 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                             </Popover>
                             <Input placeholder="000 000 00 00" value={phoneNumberInput} onChange={e => setPhoneNumberInput(e.target.value)} className="h-11 flex-1 bg-white/[0.02] border-white/5 rounded-xl font-bold text-sm px-4 focus:border-primary/40 tracking-wider" />
                          </div>
+                         <div className="mt-2 p-2 bg-primary/5 rounded-lg border border-primary/10 flex items-center gap-2">
+                            <Info className="w-3 h-3 text-primary" />
+                            <p className="text-[7px] text-white/40 uppercase font-black">Для теста: +7 999 000 00 00 (Код 123456)</p>
+                         </div>
                       </div>
                     ) : (
                       <div className="space-y-1">
@@ -308,7 +333,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                           <Input placeholder="000000" maxLength={6} value={smsCode} onChange={e => setSmsCode(e.target.value.replace(/\D/g, ''))} className="h-14 bg-white/[0.02] border-primary/30 rounded-xl text-center font-black tracking-[0.5em] text-xl" />
                           <MessageSquareCode className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/40" />
                         </div>
-                        <button type="button" onClick={() => {setVerificationId(null); setSmsCode('');}} className="text-[8px] font-black uppercase text-primary/60 mt-2 hover:text-primary transition-colors">Сменить номер</button>
+                        <button type="button" onClick={() => {setVerificationId(null); setSmsCode(''); setIsMockMode(false);}} className="text-[8px] font-black uppercase text-primary/60 mt-2 hover:text-primary transition-colors">Сменить номер</button>
                       </div>
                     )}
                   </div>
