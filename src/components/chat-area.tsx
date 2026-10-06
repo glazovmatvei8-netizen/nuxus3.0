@@ -98,7 +98,7 @@ const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelRepl
 
   return (
     <>
-    <footer className="p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] bg-black/60 backdrop-blur-[120px] border-t border-white/5 shrink-0 z-40 relative flex flex-col gap-2">
+    <footer className="p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] bg-black/80 backdrop-blur-[40px] border-t border-white/5 shrink-0 z-40 relative flex flex-col gap-2">
       {replyTo && (
         <div className="bg-white/5 p-3 rounded-2xl flex items-center justify-between border border-white/5 mb-1 animate-in slide-in-from-bottom-2 shadow-xl">
           <div className="flex items-center gap-4 min-w-0">
@@ -262,7 +262,7 @@ export default function ChatArea() {
     <div className="flex-1 flex flex-col h-full bg-[#030306] relative overflow-hidden z-20">
       <div className="absolute inset-0 z-0 opacity-[0.2] pointer-events-none" style={bgStyle} />
       
-      <header className="h-16 border-b border-white/5 bg-white/[0.02] backdrop-blur-[120px] flex items-center px-4 shrink-0 z-30 shadow-2xl">
+      <header className="h-16 border-b border-white/5 bg-white/[0.02] backdrop-blur-[40px] flex items-center px-4 shrink-0 z-30 shadow-2xl">
         <div className="flex items-center gap-4 flex-1 min-w-0">
           <Button variant="ghost" size="icon" className="md:hidden rounded-2xl text-white/40 h-10 w-10 hover:bg-white/5" onClick={() => setCurrentChatId(null)}><ChevronLeft className="w-6 h-6" /></Button>
           <div className="flex items-center gap-4 cursor-pointer min-w-0 flex-1 group" onClick={() => otherId ? setInspectedUserId(otherId) : setIsChatInfoOpen(true)}>
@@ -286,7 +286,7 @@ export default function ChatArea() {
 
       {/* Pinned Message Bar */}
       {pinnedMessage && (
-        <div className="bg-white/[0.03] backdrop-blur-[40px] border-b border-white/5 h-12 flex items-center px-6 gap-3 shrink-0 z-20 animate-in slide-in-from-top-4 duration-500 shadow-xl group">
+        <div className="bg-white/[0.03] backdrop-blur-[24px] border-b border-white/5 h-12 flex items-center px-6 gap-3 shrink-0 z-20 animate-in slide-in-from-top-4 duration-500 shadow-xl group">
           <div className="w-1 h-6 bg-primary rounded-full shadow-[0_0_10px_rgba(229,142,56,0.6)]" />
           <div className="flex flex-col flex-1 min-w-0 cursor-pointer" onClick={() => document.getElementById(pinnedMessage.id)?.scrollIntoView({ behavior: 'smooth' })}>
             <span className="text-[9px] font-black text-primary uppercase tracking-[0.2em] italic">Закрепленный сигнал</span>

@@ -28,7 +28,8 @@ import {
 } from 'lucide-react';
 
 /**
- * NUXUS CHAT MAIN V95.0 «REPLICA MASTER»
+ * NUXUS CHAT MAIN V106.0 «PERFORMANCE EDITION»
+ * Оптимизировано размытие и слои для стабильности на ПК.
  */
 export default function ChatMain() {
   const { 
@@ -72,7 +73,7 @@ export default function ChatMain() {
       <div className="flex-1 flex overflow-hidden w-full relative h-full z-10">
         
         {/* Desktop Sidebar */}
-        <nav className="hidden md:flex flex-col items-center py-8 w-20 bg-black/40 border-r border-white/5 shrink-0 z-[100] gap-8 backdrop-blur-xl">
+        <nav className="hidden md:flex flex-col items-center py-8 w-20 bg-black/40 border-r border-white/5 shrink-0 z-[100] gap-8 backdrop-blur-2xl transform translate-z-0">
            <div className="p-2.5 rounded-2xl bg-primary/10 border border-primary/20 mb-4">
               <LayoutGrid className="w-6 h-6 text-primary" />
            </div>

@@ -77,9 +77,11 @@
 .nuxus-event-card {
   @apply relative rounded-[3.5rem] border-2 border-white/[0.05] overflow-hidden;
   background: hsla(var(--primary), 0.15);
-  backdrop-filter: blur(50px);
+  backdrop-filter: blur(24px); /* Снижено с 50px для производительности ПК */
   box-shadow: 0 40px 120px hsla(var(--primary), 0.25), inset 0 0 50px hsla(var(--primary), 0.1);
   transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: translateZ(0); /* Аппаратное ускорение */
+  contain: paint;
 }
 
 .nuxus-event-card::after {
@@ -92,12 +94,12 @@
   position: fixed;
   bottom: 2.5rem;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translateX(-50%) translateZ(0);
   width: 92%;
   max-width: 480px;
   height: 84px;
-  background: rgba(28, 28, 30, 0.7);
-  backdrop-filter: blur(80px);
+  background: rgba(28, 28, 30, 0.8);
+  backdrop-filter: blur(32px); /* Снижено с 80px */
   border-radius: 4rem;
   border: 1px solid rgba(255,255,255,0.08);
   box-shadow: 0 30px 100px rgba(0,0,0,0.8);
@@ -106,6 +108,7 @@
   justify-content: space-around;
   padding: 0 1.5rem;
   z-index: 1000;
+  will-change: transform;
 }
 
 .nav-active-glow {
@@ -139,7 +142,7 @@
 
 .nuxus-orbit-active {
   padding: 3px;
-  background: hsla(var(--primary), 1); /* Static highlight instead of spin */
+  background: hsla(var(--primary), 1); 
   border-radius: 50%;
 }
 
@@ -152,4 +155,10 @@
   background: hsla(var(--primary), 1);
   border-radius: 50%;
   box-shadow: 0 0 15px hsla(var(--primary), 1);
+}
+
+.obsidian-glass {
+  background: rgba(28, 28, 30, 0.6);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
