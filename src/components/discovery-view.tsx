@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState } from 'react';
@@ -8,99 +7,147 @@ import { Button } from '@/components/ui/button';
 import { 
   Search, Orbit, CircleDollarSign, TowerControl, 
   Satellite, Microscope, Atom, ChevronRight,
-  Sparkles, Layers
+  Sparkles, Layers, Zap, Loader2
 } from 'lucide-react';
 import { useAppState } from '@/lib/app-state';
-import { cn } from '@/lib/utils';
+import { useUser, useFirestore } from '@/firebase/provider';
+import { collection, query, where, getDocs, doc, updateDoc, arrayUnion, limit } from 'firebase/firestore';
+import { cn, formatDisplayName } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 /**
- * NAVIGATOR EXPLORE V95.0 «MASTER REPLICA»
- * Полное визуальное соответствие референсу.
+ * NAVIGATOR EXPLORE V98.0 «FUNCTIONAL HUB»
+ * Теперь кнопки «Присоединиться» работают и добавляют пользователя в чаты.
  */
 export default function DiscoveryView() {
+  const { user } = useUser();
+  const db = useFirestore();
+  const { toast } = useToast();
   const [search, setSearch] = useState('');
+  const [isJoining, setIsJoining] = useState<string | null>(null);
   const { setCurrentChatId, setActiveView } = useAppState();
+
+  const handleJoin = async (chatUsername: string) => {
+    if (!db || !user) return;
+    setIsJoining(chatUsername);
+    try {
+      const q = query(collection(db, 'chats'), where('username', '==', chatUsername), limit(1));
+      const snap = await getDocs(q);
+      
+      if (!snap.empty) {
+        const chatDoc = snap.docs[0];
+        const chatData = chatDoc.data();
+        
+        if (!chatData.participantIds.includes(user.uid)) {
+          await updateDoc(doc(db, 'chats', chatDoc.id), {
+            participantIds: arrayUnion(user.uid)
+          });
+          toast({ title: "Доступ разрешен", description: "Узел интегрирован в кластер" });
+        }
+        
+        setCurrentChatId(chatDoc.id);
+        setActiveView('chats');
+      } else {
+        toast({ title: "Сбой сигнала", description: "Узел не обнаружен в базе", variant: "destructive" });
+      }
+    } catch (e) {
+      toast({ title: "Ошибка шлюза", variant: "destructive" });
+    } finally {
+      setIsJoining(null);
+    }
+  };
 
   return (
     <div className="flex flex-col h-full bg-[#121212] overflow-hidden relative">
       {/* Top Header */}
-      <div className="px-8 pt-12 pb-4 shrink-0 text-center">
-        <h1 className="text-3xl font-black text-primary italic tracking-tighter uppercase">
+      <div className="px-8 pt-16 pb-6 shrink-0 text-center relative z-10">
+        <h1 className="text-4xl font-black text-primary italic tracking-tighter uppercase leading-none drop-shadow-[0_0_30px_hsla(var(--primary),0.3)]">
           EXPLORE
         </h1>
+        <p className="text-[10px] font-black uppercase tracking-[0.6em] text-white/20 mt-3">Navigator Engine</p>
       </div>
 
-      <div className="px-8 pb-6 shrink-0">
+      <div className="px-8 pb-8 shrink-0 relative z-10">
         <div className="relative group">
-          <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8E8E93]/40" />
+          <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20 group-focus-within:text-primary transition-all" />
           <Input 
             placeholder="Поиск узлов, каналов, пользователей..." 
-            className="bg-[#1C1C1E] border-none h-12 rounded-full pl-12 text-sm font-bold text-white placeholder:text-[#8E8E93]/60 focus:ring-1 focus:ring-primary/40 transition-all"
+            className="bg-[#1C1C1E] border-white/[0.05] h-16 rounded-[2rem] pl-16 text-md font-bold text-white placeholder:text-[#8E8E93]/40 focus:ring-2 focus:ring-primary/20 transition-all shadow-inner"
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
         </div>
       </div>
 
-      <ScrollArea className="flex-1">
-        <div className="px-8 pb-40 space-y-10 animate-in fade-in duration-700">
+      <ScrollArea className="flex-1 relative z-10">
+        <div className="px-8 pb-40 space-y-12 animate-in fade-in duration-1000">
           
           {/* RECOMMENDED NODES */}
-          <section className="space-y-4">
-            <h3 className="text-[11px] font-black uppercase text-[#8E8E93] tracking-[0.15em] px-1">
+          <section className="space-y-6">
+            <h3 className="text-[11px] font-black uppercase text-[#8E8E93] tracking-[0.3em] px-2 italic">
               Рекомендуемые узлы
             </h3>
-            <ScrollArea className="w-full pb-4">
-              <div className="flex gap-4">
+            <ScrollArea className="w-full pb-6">
+              <div className="flex gap-5">
                 <RecommendCard 
-                  icon={<Orbit className="w-8 h-8 text-blue-400" />} 
-                  title="Космическая Станция '^Аврора'" 
-                  onClick={() => {}}
+                  id="aurora"
+                  icon={<Orbit className="w-10 h-10 text-blue-400" />} 
+                  title="Станция 'Аврора'" 
+                  username="@aurora_node"
+                  loading={isJoining === '@aurora_node'}
+                  onClick={() => handleJoin('@aurora_node')}
                 />
                 <RecommendCard 
-                  icon={<CircleDollarSign className="w-8 h-8 text-yellow-500" />} 
-                  title="Торговый путь 'Кеплер'" 
-                  onClick={() => {}}
+                  id="kepler"
+                  icon={<CircleDollarSign className="w-10 h-10 text-yellow-500" />} 
+                  title="Торговый путь" 
+                  username="@kepler_trade"
+                  loading={isJoining === '@kepler_trade'}
+                  onClick={() => handleJoin('@kepler_trade')}
                 />
                 <RecommendCard 
-                  icon={<TowerControl className="w-8 h-8 text-primary" />} 
+                  id="beacon"
+                  icon={<TowerControl className="w-10 h-10 text-primary" />} 
                   title="Звездный маяк" 
-                  onClick={() => {}}
+                  username="@star_beacon"
+                  loading={isJoining === '@star_beacon'}
+                  onClick={() => handleJoin('@star_beacon')}
                 />
               </div>
             </ScrollArea>
           </section>
 
           {/* CATEGORIES */}
-          <section className="space-y-4">
-            <h3 className="text-[11px] font-black uppercase text-[#8E8E93] tracking-[0.15em] px-1">
+          <section className="space-y-6">
+            <h3 className="text-[11px] font-black uppercase text-[#8E8E93] tracking-[0.3em] px-2 italic">
               Категории
             </h3>
-            <div className="space-y-2">
+            <div className="grid grid-cols-1 gap-3">
               <CategoryItem icon={Satellite} label="Связь и Коммуникации" />
-              <CategoryItem icon={GoldBarsIcon} label="Торговля и Ресурсы" />
+              <CategoryItem icon={Layers} label="Торговля и Ресурсы" />
               <CategoryItem icon={Microscope} label="Наука и Исследования" />
             </div>
           </section>
 
           {/* ACTIVE EVENTS */}
-          <section className="space-y-4">
-            <h3 className="text-[11px] font-black uppercase text-[#8E8E93] tracking-[0.15em] px-1">
+          <section className="space-y-6">
+            <h3 className="text-[11px] font-black uppercase text-[#8E8E93] tracking-[0.3em] px-2 italic">
               Активные События
             </h3>
-            <div className="nuxus-event-card p-6 flex items-center gap-6 group cursor-pointer hover:bg-[#1C1C1E]/80 transition-all">
-               <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center relative overflow-hidden">
-                  <div className="absolute inset-0 bg-primary/5 animate-pulse" />
-                  <Atom className="w-8 h-8 text-primary relative z-10" />
+            <div className="nuxus-event-card p-8 flex items-center gap-8 group cursor-pointer hover:bg-[#1C1C1E]/90 transition-all shadow-2xl relative overflow-hidden">
+               <div className="w-18 h-18 rounded-3xl bg-primary/20 border border-primary/30 flex items-center justify-center relative z-10">
+                  <Atom className="w-10 h-10 text-primary animate-[spin_10s_linear_infinite]" />
                </div>
-               <div className="flex flex-col text-left">
-                  <span className="text-[16px] font-black text-white italic tracking-tight uppercase group-hover:text-primary transition-colors">
+               <div className="flex flex-col text-left relative z-10">
+                  <span className="text-[18px] font-black text-white italic tracking-tighter uppercase group-hover:text-primary transition-colors">
                     Квантовый Симпозиум
                   </span>
-                  <span className="text-[10px] font-bold text-[#8E8E93] uppercase tracking-widest mt-1">
-                    28.08.2028 13:18:46
-                  </span>
+                  <div className="flex items-center gap-3 mt-2">
+                     <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_10px_green]" />
+                     <span className="text-[10px] font-bold text-green-500 uppercase tracking-widest">LIVE NOW</span>
+                  </div>
                </div>
+               <Zap className="absolute right-8 top-1/2 -translate-y-1/2 w-12 h-12 text-primary/5 group-hover:text-primary/20 transition-all" />
             </div>
           </section>
 
@@ -110,22 +157,24 @@ export default function DiscoveryView() {
   );
 }
 
-function RecommendCard({ icon, title, onClick }: any) {
+function RecommendCard({ icon, title, username, onClick, loading }: any) {
   return (
-    <div className="min-w-[160px] p-5 bg-[#1C1C1E] border border-white/[0.03] rounded-[2.5rem] flex flex-col gap-4 shadow-xl group">
-       <div className="w-12 h-12 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center justify-center group-hover:bg-primary/5 transition-all">
+    <div className="min-w-[190px] p-6 bg-[#1C1C1E] border border-white/[0.05] rounded-[3rem] flex flex-col gap-6 shadow-2xl group transition-all hover:border-primary/30">
+       <div className="w-16 h-16 rounded-[1.8rem] bg-white/[0.03] border border-white/5 flex items-center justify-center group-hover:bg-primary/10 group-hover:border-primary/20 transition-all">
           {icon}
        </div>
-       <div className="flex flex-col gap-1 text-left">
-          <span className="text-[12px] font-black text-white italic uppercase leading-tight line-clamp-2 min-h-[32px]">
+       <div className="flex flex-col gap-2 text-left">
+          <span className="text-[15px] font-black text-white italic uppercase leading-tight line-clamp-1">
             {title}
           </span>
-          <button 
+          <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">{username}</span>
+          <Button 
             onClick={onClick}
-            className="mt-2 text-[8px] font-black uppercase tracking-[0.2em] text-primary/60 hover:text-primary transition-colors text-left"
+            disabled={loading}
+            className="mt-2 h-11 w-full bg-primary/10 border border-primary/20 rounded-2xl text-[10px] font-black uppercase tracking-widest text-primary hover:bg-primary hover:text-white transition-all shadow-lg active:scale-95"
           >
-            Присоединиться
-          </button>
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Присоединиться'}
+          </Button>
        </div>
     </div>
   );
@@ -133,22 +182,16 @@ function RecommendCard({ icon, title, onClick }: any) {
 
 function CategoryItem({ icon: Icon, label }: any) {
   return (
-    <div className="flex items-center justify-between p-5 bg-[#1C1C1E]/60 rounded-[2rem] border border-white/[0.03] hover:bg-[#1C1C1E] transition-all cursor-pointer group">
-       <div className="flex items-center gap-5">
-          <div className="w-10 h-10 rounded-xl bg-white/[0.03] flex items-center justify-center text-[#8E8E93] group-hover:text-primary transition-colors">
-             <Icon className="w-5 h-5" />
+    <div className="flex items-center justify-between p-6 bg-[#1C1C1E]/70 rounded-[2.5rem] border border-white/[0.05] hover:bg-[#1C1C1E] transition-all cursor-pointer group shadow-xl">
+       <div className="flex items-center gap-6">
+          <div className="w-12 h-12 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-center text-muted-foreground group-hover:text-primary group-hover:border-primary/20 transition-all">
+             <Icon className="w-6 h-6" />
           </div>
-          <span className="text-[13px] font-black text-white italic uppercase tracking-tight">
+          <span className="text-[15px] font-black text-white italic uppercase tracking-tighter">
             {label}
           </span>
        </div>
-       <ChevronRight className="w-4 h-4 text-[#8E8E93]/40 group-hover:text-primary group-hover:translate-x-1 transition-all" />
+       <ChevronRight className="w-5 h-5 text-white/10 group-hover:text-primary group-hover:translate-x-1 transition-all" />
     </div>
-  );
-}
-
-function GoldBarsIcon(props: any) {
-  return (
-    <svg {...props} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m2 17 2-2 4 4"/><path d="m9 18 3 3 4-4"/><path d="m13 14 8-8"/><path d="m18 6 3 3"/></svg>
   );
 }

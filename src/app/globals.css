@@ -74,39 +74,36 @@
 }
 
 .nuxus-event-card {
-  @apply relative rounded-[3rem] border-2 border-white/[0.03] overflow-hidden;
-  background: rgba(28, 28, 30, 0.75);
-  backdrop-filter: blur(40px);
-  /* Адаптивная тень и внутреннее свечение на базе основного цвета */
-  box-shadow: 0 40px 100px hsla(var(--primary), 0.15), inset 0 0 30px hsla(var(--primary), 0.05);
+  @apply relative rounded-[3.5rem] border-2 border-white/[0.05] overflow-hidden;
+  background: hsla(var(--primary), 0.15);
+  backdrop-filter: blur(50px);
+  box-shadow: 0 40px 120px hsla(var(--primary), 0.25), inset 0 0 50px hsla(var(--primary), 0.1);
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.nuxus-event-card::before {
+.nuxus-event-card::after {
   content: '';
-  @apply absolute inset-0 rounded-[3rem] p-[1px];
-  background: linear-gradient(180deg, hsla(var(--primary), 0.2), transparent);
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  mask-composite: exclude;
-  pointer-events: none;
+  @apply absolute inset-0 opacity-40 pointer-events-none;
+  background: radial-gradient(circle at 50% 50%, hsla(var(--primary), 0.4) 0%, transparent 80%);
 }
 
 .nuxus-floating-nav {
   position: fixed;
-  bottom: 2rem;
+  bottom: 2.5rem;
   left: 50%;
   transform: translateX(-50%);
-  width: 90%;
-  max-width: 450px;
-  height: 80px;
-  background: rgba(28, 28, 30, 0.6);
-  backdrop-filter: blur(60px);
-  border-radius: 3rem;
-  border: 1px border-white/5;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  width: 92%;
+  max-width: 480px;
+  height: 84px;
+  background: rgba(28, 28, 30, 0.7);
+  backdrop-filter: blur(80px);
+  border-radius: 4rem;
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 30px 100px rgba(0,0,0,0.8);
   display: flex;
   align-items: center;
   justify-content: space-around;
-  padding: 0 1rem;
+  padding: 0 1.5rem;
   z-index: 1000;
 }
 
@@ -115,21 +112,16 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 60px;
-  height: 60px;
-  background: hsla(var(--primary), 0.8);
-  border-radius: 1.5rem;
-  box-shadow: 0 0 40px hsla(var(--primary), 0.5);
+  width: 65px;
+  height: 65px;
+  background: hsla(var(--primary), 0.9);
+  border-radius: 2rem;
+  box-shadow: 0 0 50px hsla(var(--primary), 0.6);
   z-index: -1;
 }
 
-.active-nav-glow::after {
-  content: '';
-  @apply absolute -bottom-4 left-1/2 -translate-x-1/2 w-12 h-12 bg-primary/40 blur-[20px] rounded-full pointer-events-none;
-}
-
 .icon-glow-bg {
-  background: radial-gradient(circle at center, hsla(var(--primary), 0.25) 0%, transparent 70%);
+  background: radial-gradient(circle at center, hsla(var(--primary), 0.35) 0%, transparent 75%);
 }
 
 .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -145,10 +137,10 @@
 }
 
 .nuxus-orbit-active {
-  padding: 2px;
-  background: conic-gradient(from 0deg, transparent, hsla(var(--primary), 0.8), transparent);
+  padding: 3px;
+  background: conic-gradient(from 0deg, transparent, hsla(var(--primary), 1), transparent);
   border-radius: 50%;
-  animation: rotate-orbit 4s linear infinite;
+  animation: rotate-orbit 5s linear infinite;
 }
 
 @keyframes rotate-orbit {
@@ -158,11 +150,11 @@
 
 .nuxus-orbit-dot {
   position: absolute;
-  top: 2px;
-  right: 12px;
-  width: 6px;
-  height: 6px;
+  top: 4px;
+  right: 14px;
+  width: 8px;
+  height: 8px;
   background: hsla(var(--primary), 1);
   border-radius: 50%;
-  box-shadow: 0 0 10px hsla(var(--primary), 0.8);
+  box-shadow: 0 0 15px hsla(var(--primary), 1);
 }
