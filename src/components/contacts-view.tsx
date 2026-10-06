@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useMemo } from 'react';
@@ -17,8 +18,8 @@ import type { User, Chat } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 
 /**
- * CONTACTS VIEW V5.2.0 «ABSOLUTE STABILITY»
- * FIXED: Устранена ошибка ca9 за счет использования useMemoFirebase для всех запросов.
+ * CONTACTS VIEW V102.0 «ORDER PROTOCOL»
+ * Добавлен запрет на создание дублей личных чатов.
  */
 export default function ContactsView() {
   const { user } = useUser();
@@ -50,6 +51,7 @@ export default function ContactsView() {
   const startChat = async (otherUser: User) => {
     if (!db || !user || !profile) return;
     try {
+      // ПРОВЕРКА НА СУЩЕСТВУЮЩИЙ ЧАТ
       const q = query(
         collection(db, 'chats'),
         where('type', '==', 'private'),
@@ -75,6 +77,7 @@ export default function ContactsView() {
         createdAt: new Date().toISOString(),
         name: otherUser.name,
         username: otherUser.username,
+        avatarUrl: otherUser.avatarUrl || null,
         metadata: {
           [user.uid]: { name: profile.name, username: profile.username, avatarUrl: profile.avatarUrl || null },
           [otherUser.id]: { name: otherUser.name, username: otherUser.username, avatarUrl: otherUser.avatarUrl || null }
@@ -90,52 +93,41 @@ export default function ContactsView() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#0a0a0c] overflow-hidden">
-      <div className="px-4 pt-6 pb-2 shrink-0">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-[28px] font-black text-white tracking-tight">Контакты</h1>
-          <Button size="icon" className="h-10 w-10 rounded-xl bg-[#007AFF]">
-            <UserPlus className="w-6 h-6 text-white" />
+    <div className="flex flex-col h-full bg-[#121212] overflow-hidden">
+      <div className="px-8 pt-16 pb-6 shrink-0">
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-4xl font-black text-primary italic tracking-tighter uppercase leading-none">КОНТАКТЫ</h1>
+          <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl bg-white/[0.03] border border-white/5 text-white">
+            <UserPlus className="w-5 h-5" />
           </Button>
         </div>
-
         <div className="relative mb-4">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/60" />
-          <Input 
-            placeholder="Поиск по контактам" 
-            className="pl-10 bg-[#1c1c1e] border-none rounded-xl h-10 text-[15px]" 
-            value={searchQuery} 
-            onChange={(e) => setSearchQuery(e.target.value)} 
-          />
+          <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/30" />
+          <Input placeholder="Поиск по контактам" className="pl-16 bg-white/[0.03] border-white/5 rounded-[2rem] h-14 text-[15px] font-bold" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
         </div>
       </div>
-
       <ScrollArea className="flex-1">
         <div className="px-4 space-y-1 pb-24">
           {filteredContacts.length > 0 ? (
             filteredContacts.map(contact => (
-              <div 
-                key={contact.id} 
-                className="flex items-center justify-between p-3 rounded-2xl hover:bg-white/5 transition-all cursor-pointer group"
-                onClick={() => startChat(contact)}
-              >
-                <div className="flex items-center gap-3">
-                  <UserAvatar userId={contact.id} className="h-12 w-12" manualAvatarUrl={contact.avatarUrl} />
-                  <div className="flex flex-col">
-                    <span className="font-bold text-white flex items-center gap-1">
+              <div key={contact.id} className="flex items-center justify-between p-4 rounded-[2rem] hover:bg-white/[0.02] transition-all cursor-pointer group" onClick={() => startChat(contact)}>
+                <div className="flex items-center gap-4">
+                  <UserAvatar userId={contact.id} className="h-14 w-14 border border-white/5 shadow-xl" manualAvatarUrl={contact.avatarUrl} />
+                  <div className="flex flex-col text-left">
+                    <span className="font-bold text-white uppercase italic tracking-tight flex items-center gap-2">
                       {formatDisplayName(contact.name)}
                       {isUserPremium(contact) && <Star className="w-3 h-3 text-accent fill-accent" />}
                     </span>
-                    <span className="text-[12px] text-muted-foreground">{contact.username}</span>
+                    <span className="text-[10px] font-black uppercase text-primary/60 tracking-widest">{contact.username}</span>
                   </div>
                 </div>
-                <MessageCircle className="w-5 h-5 text-muted-foreground/40 group-hover:text-[#007AFF] transition-colors" />
+                <MessageCircle className="w-5 h-5 text-muted-foreground/40 group-hover:text-primary transition-colors" />
               </div>
             ))
           ) : (
-            <div className="flex flex-col items-center justify-center p-12 text-center opacity-40">
-              <ContactIcon className="w-12 h-12 mb-4" />
-              <p className="text-sm font-bold uppercase tracking-widest">Список пуст</p>
+            <div className="flex flex-col items-center justify-center p-20 text-center opacity-10">
+              <ContactIcon className="w-16 h-16 mb-4" />
+              <p className="text-[10px] font-black uppercase tracking-[0.3em]">Список пуст</p>
             </div>
           )}
         </div>

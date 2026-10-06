@@ -11,34 +11,22 @@ export function cn(...inputs: ClassValue[]) {
 
 /**
  * ИНТЕЛЛЕКТУАЛЬНЫЙ НОРМАЛИЗАТОР НОМЕРОВ V83.0
- * Максимально агрессивно приводит любой ввод к стандарту E.164.
  */
 export function normalizePhoneNumber(phone: string): string {
   if (!phone) return '';
-  
-  // Удаляем всё, кроме цифр
   let cleaned = phone.replace(/\D/g, '');
-  
-  // Если ввод начинается с 8 и длина 11 (типично для РФ: 8900...)
   if (cleaned.startsWith('8') && cleaned.length === 11) {
     cleaned = '7' + cleaned.substring(1);
-  } 
-  // Если ввод начинается с 9 и длина 10 (пропущенная 7 или 8: 900...)
-  else if (cleaned.startsWith('9') && cleaned.length === 10) {
+  } else if (cleaned.startsWith('9') && cleaned.length === 10) {
+    cleaned = '7' + cleaned;
+  } else if (cleaned.length >= 7 && cleaned.length <= 10 && !cleaned.startsWith('7')) {
     cleaned = '7' + cleaned;
   }
-  // Если это просто короткий номер без кода, но длиннее 7 цифр
-  else if (cleaned.length >= 7 && cleaned.length <= 10 && !cleaned.startsWith('7')) {
-    // По умолчанию считаем регионом РФ если не указано иное
-    cleaned = '7' + cleaned;
-  }
-  
   return cleaned ? `+${cleaned}` : '';
 }
 
 /**
  * АБСОЛЮТНЫЙ ИДЕНТИФИКАТОР V74.1
- * Защищенный дешифратор для предотвращения крахов UI.
  */
 export function formatDisplayName(name: string | undefined | null, username?: string | null): string {
   if (
@@ -51,22 +39,22 @@ export function formatDisplayName(name: string | undefined | null, username?: st
   ) {
     return name;
   }
-  
   const cleanUsername = username?.trim();
   if (cleanUsername && cleanUsername !== '' && cleanUsername !== '@' && cleanUsername !== 'null') {
     return cleanUsername;
   }
-  
   return 'Узел Сети';
 }
 
+/**
+ * ПРОВЕРКА АНОМАЛИЙ V102.0
+ * Теперь юзернейм ОБЯЗАТЕЛЕН. Нет юзера = Аномалия.
+ */
 export function isUserAnomaly(user: User | null | undefined): boolean {
   if (!user) return false;
-  const name = (user.name || '').trim().toLowerCase();
   const username = (user.username || '').trim().replace('@', '');
-  const isDefaultName = name === 'user' || name === '' || name === 'null' || name === '??';
   const isMissingUsername = username === '' || username.length < 2;
-  return isDefaultName || isMissingUsername;
+  return isMissingUsername;
 }
 
 export function encryptSignal(text: string): string {
@@ -79,15 +67,11 @@ export function encryptSignal(text: string): string {
 
 export function decryptSignal(content: string | undefined | null): string {
   if (!content || typeof content !== 'string') return content || '';
-  
-  // Распознаем только наши префиксы
   const isEncoded = content.startsWith('NX_SECURE_') || content.startsWith('NX_');
   if (!isEncoded) return content;
-
   try {
     const prefix = content.startsWith('NX_SECURE_') ? 'NX_SECURE_' : 'NX_';
     const raw = content.replace(prefix, '');
-    // Проверка валидности base64 перед декодированием
     if (!/^[A-Za-z0-9+/=]+$/.test(raw)) return content;
     return decodeURIComponent(atob(raw));
   } catch (e) { 
@@ -111,6 +95,7 @@ export function isUserPremium(user: User | null | undefined): boolean {
 export function isUserActuallyBanned(user: User | null | undefined): boolean {
   if (!user) return false;
   if (user.isBanned) return true;
+  // Если это не админ и у него нет юзернейма — бан
   if (isUserAnomaly(user) && !isGlobalAdmin(user)) return true;
   return false;
 }
@@ -146,18 +131,12 @@ export async function compressImage(dataUrl: string, maxWidth = 1200, quality = 
   });
 }
 
-/**
- * РЕПУТАЦИОННЫЙ ЩИТ V78.0
- * Возвращает информацию о щите репутации на основе очков.
- */
 export function getReputationInfo(reputation: number = 0) {
   const level = Math.floor(reputation / 10) + 1;
-  
   if (reputation >= 60) return { level, color: 'text-red-500', icon: '🛡️', shadow: 'shadow-red-500/20' };
   if (reputation >= 45) return { level, color: 'text-yellow-500', icon: '🛡️', shadow: 'shadow-yellow-500/20' };
   if (reputation >= 30) return { level, color: 'text-purple-500', icon: '🛡️', shadow: 'shadow-purple-500/20' };
   if (reputation >= 20) return { level, color: 'text-green-500', icon: '🛡️', shadow: 'shadow-green-500/20' };
   if (reputation >= 10) return { level, color: 'text-blue-500', icon: '🛡️', shadow: 'shadow-blue-500/20' };
-  
   return { level, color: 'text-white/60', icon: '🛡️', shadow: 'shadow-white/10' };
 }

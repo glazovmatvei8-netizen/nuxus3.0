@@ -9,15 +9,15 @@ import { useFirestore, useUser } from '@/firebase/provider';
 import { collection, query, where, getDocs, limit, addDoc } from 'firebase/firestore';
 import { useAppState } from '@/lib/app-state';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Loader2, ArrowRight, Globe, User, Bot, BotOff } from 'lucide-react';
+import { Search, Loader2, ArrowRight, Globe, User, MessageSquare } from 'lucide-react';
 import { UserAvatar } from '@/components/user-avatar';
 import { cn } from '@/lib/utils';
 
-type SearchFilter = 'all' | 'users' | 'groups' | 'bots';
+type SearchFilter = 'all' | 'users' | 'groups';
 
 /**
- * ГЛОБАЛЬНЫЙ ПОИСК V73.0 «STABILITY FIX»
- * ИСПРАВЛЕНО: Импорт useAppState из корректного файла.
+ * ГЛОБАЛЬНЫЙ ПОИСК V102.0 «ORDER PROTOCOL»
+ * Удалены боты, исправлена логика создания дубликатов чатов.
  */
 export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const { user } = useUser();
@@ -27,7 +27,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
   
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<SearchFilter>('all');
-  const [results, setResults] = useState<{ type: 'chat' | 'user' | 'bot', data: any }[]>([]);
+  const [results, setResults] = useState<{ type: 'chat' | 'user', data: any }[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSearch = useCallback(async (val: string) => {
@@ -51,23 +51,12 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
         limit(20)
       );
 
-      const botQ = query(
-        collection(db, 'bots'),
-        where('usernameLowercase', '>=', searchTarget),
-        where('usernameLowercase', '<=', searchTarget + '\uf8ff'),
-        limit(20)
-      );
-
-      const [userSnap, botSnap] = await Promise.all([getDocs(userQ), getDocs(botQ)]);
-
-      botSnap.docs.forEach(d => {
-        foundResults.push({ type: 'bot', data: { id: d.id, ...d.data() } });
-      });
+      const [userSnap] = await Promise.all([getDocs(userQ)]);
 
       userSnap.docs.forEach(d => {
         const data = d.data();
         if (d.id !== user?.uid && !foundResults.some(r => r.data.id === d.id)) {
-          foundResults.push({ type: data.isBot ? 'bot' : 'user', data: { id: d.id, ...data } });
+          foundResults.push({ type: 'user', data: { id: d.id, ...data } });
         }
       });
 
@@ -84,7 +73,6 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
 
       let filtered = foundResults;
       if (activeFilter === 'users') filtered = foundResults.filter(r => r.type === 'user');
-      if (activeFilter === 'bots') filtered = foundResults.filter(r => r.type === 'bot');
       if (activeFilter === 'groups') filtered = foundResults.filter(r => r.type === 'chat');
 
       setResults(filtered);
@@ -95,39 +83,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
     }
   }, [db, activeFilter, user?.uid]);
 
-  const handleSelectResult = async (res: { type: 'chat' | 'user' | 'bot', data: any }) => {
-    if (!db || !user) return;
-    
-    if (res.type === 'bot') {
-       try {
-         const chatQ = query(collection(db, 'chats'), where('type', '==', 'private'), where('participantIds', 'array-contains', user.uid));
-         const snap = await getDocs(chatQ);
-         const existing = snap.docs.find(d => d.data().participantIds.includes(res.data.id));
-         
-         if (existing) {
-           setCurrentChatId(existing.id);
-         } else {
-           const newChat = await addDoc(collection(db, 'chats'), {
-             type: 'private',
-             participantIds: [user.uid, res.data.id],
-             ownerId: user.uid,
-             createdAt: new Date().toISOString(),
-             name: res.data.name,
-             username: res.data.username,
-             avatarUrl: res.data.avatarUrl || null,
-             metadata: {
-               [user.uid]: { name: user.displayName || 'User', username: '?' },
-               [res.data.id]: { name: res.data.name, username: res.data.username, isBot: true, avatarUrl: res.data.avatarUrl }
-             }
-           });
-           setCurrentChatId(newChat.id);
-         }
-         onOpenChange(false);
-         setActiveView('chats');
-       } catch (e) { toast({ title: "Ошибка входа в узел бота" }); }
-       return;
-    }
-
+  const handleSelectResult = async (res: { type: 'chat' | 'user', data: any }) => {
     if (res.type === 'user') {
       setInspectedUserId(res.data.id);
       onOpenChange(false);
@@ -143,40 +99,23 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
       <DialogContent className="max-w-md bg-[#0a0a0c]/98 backdrop-blur-3xl border-white/10 rounded-[2.5rem] p-0 overflow-hidden shadow-2xl h-[80vh] flex flex-col outline-none">
         <DialogHeader className="px-6 pt-8 pb-4 shrink-0 space-y-6">
            <DialogTitle className="text-white font-black uppercase italic tracking-tighter text-2xl">Discovery Hub</DialogTitle>
-           
            <div className="relative group">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
-              <Input 
-                placeholder="Имя, ник (@) или ID..." 
-                value={searchQuery} 
-                onChange={e => handleSearch(e.target.value)} 
-                className="bg-white/5 border-white/10 h-14 rounded-2xl pl-12 text-lg focus:border-primary/40 transition-all font-bold" 
-                autoFocus 
-              />
+              <Input placeholder="Имя, ник (@) или ID..." value={searchQuery} onChange={e => handleSearch(e.target.value)} className="bg-white/5 border-white/10 h-14 rounded-2xl pl-12 text-lg focus:border-primary/40 transition-all font-bold" autoFocus />
               {isLoading && <div className="absolute right-4 top-1/2 -translate-y-1/2"><Loader2 className="w-5 h-5 text-primary animate-spin" /></div>}
            </div>
-
            <div className="flex gap-2 overflow-x-auto scrollbar-hide py-1">
               {[
                 { id: 'all', label: 'Все', icon: Globe },
                 { id: 'users', label: 'Люди', icon: User },
-                { id: 'groups', label: 'Группы', icon: LayoutGrid },
-                { id: 'bots', label: 'Боты', icon: Bot }
+                { id: 'groups', label: 'Группы', icon: MessageSquare }
               ].map(f => (
-                <button 
-                  key={f.id} 
-                  onClick={() => { setActiveFilter(f.id as any); handleSearch(searchQuery); }}
-                  className={cn(
-                    "flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
-                    activeFilter === f.id ? "bg-primary text-white shadow-lg shadow-primary/20" : "bg-white/5 text-muted-foreground hover:bg-white/10"
-                  )}
-                >
+                <button key={f.id} onClick={() => { setActiveFilter(f.id as any); handleSearch(searchQuery); }} className={cn("flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap", activeFilter === f.id ? "bg-primary text-white shadow-lg shadow-primary/20" : "bg-white/5 text-muted-foreground hover:bg-white/10")}>
                   <f.icon className="w-3.5 h-3.5" /> {f.label}
                 </button>
               ))}
            </div>
         </DialogHeader>
-
         <ScrollArea className="flex-1">
           <div className="p-4 space-y-2">
             {results.length > 0 ? (
@@ -185,10 +124,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
                    <div className="flex items-center gap-4 min-w-0">
                       <UserAvatar userId={res.type === 'user' ? res.data.id : null} manualAvatarUrl={res.data.avatarUrl} className="h-12 w-12 shrink-0 border border-white/10" fallbackName={res.data.name} />
                       <div className="flex flex-col text-left min-w-0">
-                         <div className="flex items-center gap-2">
-                            <span className="font-bold text-white truncate">{res.data.name || 'Анонимный узел'}</span>
-                            {res.type === 'bot' && <span className="text-[7px] bg-primary/20 text-primary px-1.5 py-0.5 rounded-md font-black uppercase tracking-widest">BOT</span>}
-                         </div>
+                         <span className="font-bold text-white truncate">{res.data.name || 'Анонимный узел'}</span>
                          <span className="text-[10px] text-muted-foreground uppercase font-black truncate tracking-widest">
                            {res.data.username} {res.type === 'chat' && `• ${res.data.type}`}
                          </span>
@@ -199,8 +135,8 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
               ))
             ) : searchQuery.length >= 2 ? (
               <div className="flex flex-col items-center justify-center py-24 opacity-20">
-                 <BotOff className="w-16 h-16 mb-4" />
-                 <p className="text-[11px] font-black uppercase tracking-[0.5em] text-center">Сигналы не обнаружены</p>
+                 <Search className="w-16 h-16 mb-4" />
+                 <p className="text-[11px] font-black uppercase tracking-[0.5em] text-center">Узел не обнаружен</p>
               </div>
             ) : (
               <div className="p-10 text-center opacity-30">
@@ -212,10 +148,4 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
       </DialogContent>
     </Dialog>
   );
-}
-
-function LayoutGrid(props: any) {
-  return (
-    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-layout-grid"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
-  )
 }
