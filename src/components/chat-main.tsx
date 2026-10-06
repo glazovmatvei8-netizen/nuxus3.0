@@ -28,8 +28,9 @@ import {
 } from 'lucide-react';
 
 /**
- * NUXUS CHAT MAIN V106.0 «PERFORMANCE EDITION»
- * Оптимизировано размытие и слои для стабильности на ПК.
+ * NUXUS CHAT MAIN V107.0 «ULTRA PERFORMANCE»
+ * Максимальная оптимизация для 60Гц мониторов и ПК.
+ * Удалены тяжелые фильтры, добавлена изоляция слоев.
  */
 export default function ChatMain() {
   const { 
@@ -67,14 +68,14 @@ export default function ChatMain() {
   ];
 
   return (
-    <div className="fixed inset-0 flex flex-col w-screen bg-[#121212] overflow-hidden h-[100dvh]">
+    <div className="fixed inset-0 flex flex-col w-screen bg-[#121212] overflow-hidden h-[100dvh] transition-colors duration-500">
       <NotificationListener />
       
       <div className="flex-1 flex overflow-hidden w-full relative h-full z-10">
         
-        {/* Desktop Sidebar */}
-        <nav className="hidden md:flex flex-col items-center py-8 w-20 bg-black/40 border-r border-white/5 shrink-0 z-[100] gap-8 backdrop-blur-2xl transform translate-z-0">
-           <div className="p-2.5 rounded-2xl bg-primary/10 border border-primary/20 mb-4">
+        {/* Desktop Sidebar - Optimized with simpler backgrounds */}
+        <nav className="hidden md:flex flex-col items-center py-8 w-20 bg-[#0a0a0c] border-r border-white/5 shrink-0 z-[100] gap-8 transform translate-z-0">
+           <div className="p-2.5 rounded-2xl bg-primary/10 border border-primary/20 mb-4 shadow-sm">
               <LayoutGrid className="w-6 h-6 text-primary" />
            </div>
            
@@ -84,11 +85,14 @@ export default function ChatMain() {
                   key={item.id}
                   onClick={() => setActiveView(item.id as any)}
                   className={cn(
-                    "relative group p-3 rounded-2xl transition-all duration-300",
-                    activeView === item.id ? "text-primary active-nav-glow" : "text-muted-foreground hover:text-white"
+                    "relative group p-3 rounded-2xl transition-all duration-200",
+                    activeView === item.id ? "text-primary bg-white/5" : "text-muted-foreground hover:text-white"
                   )}
                 >
                   <item.icon className={cn("w-6 h-6", activeView === item.id && "fill-current")} />
+                  {activeView === item.id && (
+                    <div className="absolute -left-[1px] top-1/4 bottom-1/4 w-[2px] bg-primary rounded-full shadow-[0_0_10px_rgba(229,142,56,0.8)]" />
+                  )}
                 </button>
               ))}
            </div>
@@ -96,10 +100,10 @@ export default function ChatMain() {
 
         <div className="flex-1 flex overflow-hidden h-full relative">
           <div className={cn(
-            "w-full md:w-[400px] lg:w-[440px] h-full flex-shrink-0 z-30 bg-transparent border-r border-white/5 relative overflow-hidden transition-all duration-500", 
+            "w-full md:w-[400px] lg:w-[440px] h-full flex-shrink-0 z-30 bg-transparent border-r border-white/5 relative overflow-hidden transition-all duration-300", 
             (currentChatId && activeView === 'chats') ? "hidden md:block" : "block"
           )}>
-            <div className="h-full w-full">
+            <div className="h-full w-full contain-strict">
               {activeView === 'chats' && <ChatSidebar />}
               {activeView === 'contacts' && <ContactsView />}
               {activeView === 'calls' && <CallsView />}
@@ -110,14 +114,14 @@ export default function ChatMain() {
           </div>
           
           <div className={cn(
-            "flex-1 h-full flex flex-col min-w-0 bg-[#0a0a0c]/50 relative z-20 overflow-hidden transition-all duration-500", 
+            "flex-1 h-full flex flex-col min-w-0 bg-[#0a0a0c]/50 relative z-20 overflow-hidden transition-all duration-300", 
             (!currentChatId || ['profile', 'wallet', 'discovery', 'calls'].includes(activeView)) ? "hidden md:flex" : "flex"
           )}>
-            <div className="h-full w-full overflow-hidden flex flex-col bg-transparent">
+            <div className="h-full w-full overflow-hidden flex flex-col bg-transparent contain-content">
               {currentChatId ? <ChatArea /> : (
                 <div className="hidden md:flex flex-1 flex-col items-center justify-center p-16 text-center space-y-12 opacity-30">
                    <div className="relative">
-                      <div className="absolute -inset-16 bg-primary/10 blur-[100px] rounded-full animate-pulse" />
+                      <div className="absolute -inset-16 bg-primary/10 blur-[60px] rounded-full animate-pulse" />
                       <div className="w-48 h-48 rounded-[4.5rem] bg-white/[0.02] border border-white/5 flex items-center justify-center shadow-inner relative z-10">
                          <MessageSquare className="w-20 h-20 text-primary" />
                       </div>
@@ -130,7 +134,7 @@ export default function ChatMain() {
         </div>
       </div>
 
-      {/* MOBILE BOTTOM NAV - REPLICA MASTER */}
+      {/* MOBILE BOTTOM NAV - Optimized for performance */}
       {(!currentChatId || activeView !== 'chats') && (
         <div className="md:hidden nuxus-floating-nav">
           {NAV_ITEMS.map((item) => (
@@ -161,7 +165,7 @@ function NavButton({ icon: Icon, label, active, onClick, isProfile, userId }: an
     <button 
       onClick={onClick} 
       className={cn(
-        "flex flex-col items-center justify-center gap-1.5 transition-all duration-500 relative min-w-[60px]", 
+        "flex flex-col items-center justify-center gap-1.5 transition-all duration-300 relative min-w-[60px]", 
         active ? "text-white" : "text-muted-foreground/60"
       )}
     >
@@ -169,13 +173,13 @@ function NavButton({ icon: Icon, label, active, onClick, isProfile, userId }: an
       <div className="relative">
         {isProfile ? (
           <div className={cn(
-            "p-0.5 rounded-full border-2 transition-all",
-            active ? "border-white shadow-lg" : "border-white/10"
+            "p-0.5 rounded-full border-2 transition-all duration-300",
+            active ? "border-white shadow-md scale-110" : "border-white/10"
           )}>
             <UserAvatar userId={userId} className="h-6 w-6" />
           </div>
         ) : (
-          <Icon className={cn("w-5 h-5", active && "fill-current")} />
+          <Icon className={cn("w-5 h-5", active && "fill-current scale-110")} />
         )}
       </div>
       <span className={cn(
