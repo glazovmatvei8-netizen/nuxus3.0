@@ -18,8 +18,8 @@ import { useToast } from '@/hooks/use-toast';
 import { AdminPanelModal } from './modals/admin-panel-modal';
 
 /**
- * PROFILE VIEW V91.0 «CHROMATIC PRECISION»
- * Применяет новую цветовую схему: #121212 фон, #E58E38 акцент, #8E8E93 вспомогательный текст.
+ * PROFILE VIEW V97.0 «ADAPTIVE AURA»
+ * Внедрена полная синхронизация цвета карточки с акцентным цветом пользователя.
  */
 export default function ProfileView() {
   const { user } = useUser();
@@ -56,18 +56,21 @@ export default function ProfileView() {
       <ScrollArea className="flex-1 relative z-20">
         <div className="px-6 pt-6 pb-40 space-y-8 animate-in fade-in duration-1000">
           
-          {/* THE MAIN AMBER CARD (Event Horizon Theme) */}
-          <div className="nuxus-event-card p-10 flex flex-col items-center gap-6">
-             <div className="absolute top-6 right-8 opacity-40">
-                <div className="border border-primary/40 rounded-lg px-2 py-1 flex flex-col items-center bg-black/20">
+          {/* THE MAIN ADAPTIVE CARD (Aura Mode) */}
+          <div className="nuxus-event-card p-10 flex flex-col items-center gap-6 group relative">
+             {/* Фоновое свечение, подстраивающееся под цвет */}
+             <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,hsla(var(--primary),0.1),transparent_80%)] pointer-events-none" />
+             
+             <div className="absolute top-6 right-8 opacity-60">
+                <div className="border border-primary/30 rounded-lg px-2 py-1 flex flex-col items-center bg-black/40 backdrop-blur-sm">
                    <span className="text-[6px] font-black text-white leading-none">OCP</span>
                    <span className="text-[5px] font-bold text-primary uppercase mt-0.5">ON</span>
                 </div>
              </div>
 
              <div className="relative group">
-                <div className="absolute -inset-10 bg-primary/20 blur-[45px] rounded-full animate-pulse" />
-                <div className="relative z-10 p-1 rounded-full border-2 border-primary/40 bg-black/40 shadow-2xl">
+                <div className="absolute -inset-12 bg-primary/20 blur-[50px] rounded-full animate-pulse group-hover:bg-primary/30 transition-all duration-1000" />
+                <div className="relative z-10 p-1.5 rounded-full border-2 border-primary/40 bg-black/60 shadow-2xl">
                    <UserAvatar 
                      userId={user?.uid} 
                      className="h-28 w-28 border-none shadow-2xl" 
@@ -78,12 +81,12 @@ export default function ProfileView() {
 
              <div className="text-center space-y-4 relative z-10">
                 <div className="flex items-center justify-center gap-3">
-                   <h2 className="text-[22px] font-black text-white uppercase italic tracking-tighter leading-none drop-shadow-sm">
+                   <h2 className="text-[22px] font-black text-white uppercase italic tracking-tighter leading-none drop-shadow-[0_2px_10px_rgba(255,255,255,0.1)]">
                      {profile?.name ? formatDisplayName(profile.name) : 'NODE ACTIVE'}
                    </h2>
                    <Star className="w-5 h-5 text-primary fill-primary animate-pulse" />
                 </div>
-                <div className="bg-black/40 backdrop-blur-md border border-white/10 px-6 py-1.5 rounded-full shadow-lg">
+                <div className="bg-black/50 backdrop-blur-xl border border-white/10 px-6 py-1.5 rounded-full shadow-2xl">
                    <span className="text-[9px] font-black uppercase text-primary tracking-[0.2em] italic">
                      {profile?.username || '@USERNAME'}
                    </span>

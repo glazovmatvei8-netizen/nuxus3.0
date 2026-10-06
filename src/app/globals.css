@@ -75,9 +75,10 @@
 
 .nuxus-event-card {
   @apply relative rounded-[3rem] border-2 border-white/[0.03] overflow-hidden;
-  background: rgba(28, 28, 30, 0.6);
+  background: rgba(28, 28, 30, 0.75);
   backdrop-filter: blur(40px);
-  box-shadow: 0 40px 100px rgba(58, 37, 24, 0.4), inset 0 0 20px rgba(229, 142, 56, 0.05);
+  /* Адаптивная тень и внутреннее свечение на базе основного цвета */
+  box-shadow: 0 40px 100px hsla(var(--primary), 0.15), inset 0 0 30px hsla(var(--primary), 0.05);
 }
 
 .nuxus-event-card::before {
