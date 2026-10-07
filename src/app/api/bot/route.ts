@@ -1,27 +1,19 @@
-
 import { NextResponse } from 'next/server';
 
 /**
- * NUXUS BOT API GATEWAY v1.0
- * Эндпоинт для внешних ботов (например, Spirit of the Elements).
+ * NUXUS BOT API GATEWAY v1.1
+ * Помечен как статический для совместимости с output: export
  */
+export const dynamic = 'force-static';
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const authHeader = request.headers.get('Authorization');
 
-    // Базовая проверка токена
     if (!authHeader || !authHeader.startsWith('Bearer nx_live_')) {
       return NextResponse.json({ error: "Invalid Signal: Unauthorized" }, { status: 401 });
     }
-
-    console.log(`[BOT API] Signal received from: ${body.botId || 'Unknown'}`);
-    
-    /**
-     * ЛОГИКА ОБРАБОТКИ:
-     * Здесь узел Ядра принимает команду от бота (например, sendMessage)
-     * и записывает её в Firestore.
-     */
 
     return NextResponse.json({
       status: "success",

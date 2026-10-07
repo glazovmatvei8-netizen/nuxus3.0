@@ -11,23 +11,18 @@ import { Progress } from '@/components/ui/progress';
 import { useFirestore } from '@/firebase/provider'; 
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { useMemoFirebase } from '@/firebase/firestore/use-memo-firebase';
-import { collection, query, doc, limit, writeBatch, orderBy } from 'firebase/firestore';
+import { collection, query, doc, limit, writeBatch } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   ShieldAlert, Users, Ban, Activity, 
   Search, Crown, Mail, Send, Sparkles,
-  BarChart3, Scale, Zap, Terminal, X,
-  Loader2
+  Loader2, Terminal
 } from 'lucide-react';
 import type { User } from '@/lib/types';
 import { formatDisplayName, cn, isUserPremium } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useAppState } from '@/lib/app-state';
 
-/**
- * ADMIN PANEL MODAL V100.1 «BUILD STABILITY»
- * FIXED: Added missing Loader2 import and improved data handling.
- */
 export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const db = useFirestore();
   const { toast } = useToast();

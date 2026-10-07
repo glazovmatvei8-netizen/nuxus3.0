@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
 
 /**
- * KERNEL HEALTH CHECK v1.0
+ * KERNEL HEALTH CHECK v1.1
+ * Помечен как статический для совместимости с output: export
  */
+export const dynamic = 'force-static';
+
 export async function GET() {
   return NextResponse.json({
     status: "active",
