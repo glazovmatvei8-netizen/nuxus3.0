@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next'
 
 /**
- * КРИТИЧЕСКИЙ ФИКС ДЛЯ СТАТИЧЕСКОГО ЭКСПОРТА (IPA)
+ * КРИТИЧЕСКИЙ ФИКС ДЛЯ СТАТИЧЕСКОГО ЭКСПОРТА (IPA/RU-HOSTING)
  * Принудительно переводит манифест в статический режим.
  */
 export const dynamic = 'force-static'
@@ -16,13 +16,13 @@ export default function manifest(): MetadataRoute.Manifest {
     id: 'chat.nuxus.app',
     name: 'Nuxus 2.0',
     short_name: 'Nuxus',
-    description: 'Современный мессенджер с поддержкой ИИ, защитой 2FA и видеозвонками.',
+    description: 'Суверенный мессенджер с поддержкой ИИ и квантовой защитой.',
     start_url: '/',
     scope: '/',
     display: 'standalone',
     display_override: ['window-controls-overlay', 'tabbed', 'standalone', 'minimal-ui'],
-    background_color: '#0a0a0c',
-    theme_color: '#0a0a0c',
+    background_color: '#010103',
+    theme_color: '#010103',
     lang: 'ru',
     dir: 'ltr',
     orientation: 'portrait',
@@ -50,9 +50,9 @@ export default function manifest(): MetadataRoute.Manifest {
     ],
     shortcuts: [
       {
-        name: 'Новый чат',
-        short_name: 'Чат',
-        description: 'Начать новое обсуждение',
+        name: 'Чаты',
+        short_name: 'Чаты',
+        description: 'Открыть список диалогов',
         url: '/?view=chats',
         icons: [{ src: APP_ICON_URL, sizes: '192x192', type: 'image/png' }]
       }
