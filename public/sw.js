@@ -1,13 +1,18 @@
-/**
- * NUXUS OFFLINE SHIELD V1.1
- * Автоматическое кэширование интерфейса для работы в РФ.
- */
-const CACHE_NAME = 'nuxus-core-v110';
+
+const CACHE_NAME = 'nuxus-kernel-v112';
+const OFFLINE_URL = '/offline.html';
+
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
-  '/manifest.json',
-  'https://i.ibb.co/sd2MqGz2/Icon.png'
+  '/offline.html',
+  '/manifest.webmanifest',
+  '/favicon.ico',
+  '/versions.json',
+  '/login/index.html',
+  '/register/index.html',
+  '/download/index.html',
+  '/node/index.html'
 ];
 
 self.addEventListener('install', (event) => {
@@ -16,9 +21,36 @@ self.addEventListener('install', (event) => {
       return cache.addAll(ASSETS_TO_CACHE);
     })
   );
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheName !== CACHE_NAME) {
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    })
+  );
+  self.clients.claim();
 });
 
 self.addEventListener('fetch', (event) => {
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).catch(() => {
+        return caches.match(event.request).then((response) => {
+          return response || caches.match(OFFLINE_URL);
+        });
+      })
+    );
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request).then((response) => {
       return response || fetch(event.request);
