@@ -1,3 +1,4 @@
+
 import { MetadataRoute } from 'next'
 
 /**
@@ -7,9 +8,6 @@ import { MetadataRoute } from 'next'
 export const dynamic = 'force-static'
 
 export default function manifest(): MetadataRoute.Manifest {
-  /**
-   * ИКОНКА ДЛЯ МАНИФЕСТА (v45) - АБСОЛЮТ
-   */
   const APP_ICON_URL = 'https://i.ibb.co/sd2MqGz2/Icon.png?v=45';
   
   return {
@@ -20,14 +18,9 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: '/',
     scope: '/',
     display: 'standalone',
-    display_override: ['window-controls-overlay', 'tabbed', 'standalone', 'minimal-ui'],
     background_color: '#010103',
     theme_color: '#010103',
     lang: 'ru',
-    dir: 'ltr',
-    orientation: 'portrait',
-    categories: ['social', 'communication', 'productivity'],
-    prefer_related_applications: false,
     icons: [
       {
         src: APP_ICON_URL,
@@ -40,23 +33,7 @@ export default function manifest(): MetadataRoute.Manifest {
         sizes: '512x512',
         type: 'image/png',
         purpose: 'any'
-      },
-      {
-        src: APP_ICON_URL,
-        sizes: '512x512',
-        type: 'image/png',
-        purpose: 'maskable'
       }
     ],
-    shortcuts: [
-      {
-        name: 'Чаты',
-        short_name: 'Чаты',
-        description: 'Открыть список диалогов',
-        url: '/?view=chats',
-        icons: [{ src: APP_ICON_URL, sizes: '192x192', type: 'image/png' }]
-      }
-    ],
-    related_applications: [],
   }
 }
