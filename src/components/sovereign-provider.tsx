@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, type ReactNode } from 'react';
@@ -11,8 +10,8 @@ import { AppIconApplier } from '@/components/app-icon-applier';
 import { OfflinePlaceholder } from '@/components/offline-placeholder';
 
 /**
- * SOVEREIGN PROVIDER V5.9.0 «NATIVE BRIDGE»
- * Гарантирует запуск только на клиенте, убирая ошибку 'originalFactory.call'.
+ * SOVEREIGN PROVIDER V109.0 «OFFLINE CORE»
+ * Добавлена регистрация Service Worker для работы в условиях блокировок.
  */
 export function SovereignProvider({ children }: { children: ReactNode }) {
   const [mounted, setMounted] = useState(false);
@@ -27,6 +26,21 @@ export function SovereignProvider({ children }: { children: ReactNode }) {
       }
     };
     document.addEventListener('contextmenu', preventDefault);
+
+    // РЕГИСТРАЦИЯ SERVICE WORKER ДЛЯ АВТОНОМНОСТИ В РФ
+    if ('serviceWorker' in navigator && window.location.protocol === 'https:') {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').then(
+          (registration) => {
+            console.log('🛰️ Nuxus Kernel: Offline Shield Active', registration.scope);
+          },
+          (err) => {
+            console.warn('⚠️ Nuxus Kernel: Offline Shield Failed', err);
+          }
+        );
+      });
+    }
+
     return () => document.removeEventListener('contextmenu', preventDefault);
   }, []);
 
