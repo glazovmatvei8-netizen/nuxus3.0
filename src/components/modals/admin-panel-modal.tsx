@@ -16,7 +16,8 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   ShieldAlert, Users, Ban, Activity, 
   Search, Crown, Mail, Send, Sparkles,
-  BarChart3, Scale, Zap, Terminal, X
+  BarChart3, Scale, Zap, Terminal, X,
+  Loader2
 } from 'lucide-react';
 import type { User } from '@/lib/types';
 import { formatDisplayName, cn, isUserPremium } from '@/lib/utils';
@@ -24,8 +25,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useAppState } from '@/lib/app-state';
 
 /**
- * ADMIN PANEL MODAL V100.0 «CLEAN ARCHITECTURE»
- * Полностью переработан интерфейс: убраны наслоения, исправлен скролл и вылеты за экран.
+ * ADMIN PANEL MODAL V100.1 «BUILD STABILITY»
+ * FIXED: Added missing Loader2 import and improved data handling.
  */
 export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const db = useFirestore();
@@ -75,15 +76,17 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
       await batch.commit();
       toast({ title: "Рассылка запущена" });
       setBroadcastSubject(''); setBroadcastBody('');
-    } catch (e) { toast({ title: "Сбой шлюза" }); }
-    finally { setIsBroadcasting(false); }
+    } catch (e) { 
+      toast({ title: "Сбой шлюза", variant: "destructive" }); 
+    } finally { 
+      setIsBroadcasting(false); 
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl bg-[#020205] border-white/10 rounded-[3rem] p-0 overflow-hidden h-[90vh] md:h-[85vh] flex flex-col shadow-2xl outline-none">
         
-        {/* HEADER - FIXED */}
         <DialogHeader className="p-6 md:p-8 border-b border-white/5 shrink-0 bg-primary/5 relative">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_50%,hsla(var(--primary),0.1),transparent_70%)]" />
           <div className="relative z-10 flex items-center justify-between gap-4">
@@ -93,16 +96,15 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               </div>
               <div className="flex flex-col text-left">
                 <DialogTitle className="text-2xl font-black uppercase italic text-white tracking-tighter">AEGIS CONTROL</DialogTitle>
-                <DialogDescription className="text-[8px] font-black uppercase text-primary/60 tracking-[0.4em]">Node Protocol V100.0</DialogDescription>
+                <DialogDescription className="text-[8px] font-black uppercase text-primary/60 tracking-[0.4em]">Node Protocol V100.1</DialogDescription>
               </div>
             </div>
           </div>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-          {/* TABS LIST - FIXED BELOW HEADER */}
           <div className="px-6 md:px-8 py-4 bg-black/20 border-b border-white/5 shrink-0">
-            <TabsList className="flex bg-white/5 p-1 rounded-2xl border border-white/5 overflow-x-auto no-scrollbar justify-start md:justify-center">
+            <TabsList className="flex bg-white/5 p-1 rounded-xl border border-white/5 overflow-x-auto no-scrollbar justify-start md:justify-center">
               <TabsTrigger value="analytics" className="flex-1 min-w-[100px] text-[9px] font-black uppercase tracking-widest py-2.5 data-[state=active]:bg-primary data-[state=active]:text-white">Статистика</TabsTrigger>
               <TabsTrigger value="users" className="flex-1 min-w-[100px] text-[9px] font-black uppercase tracking-widest py-2.5 data-[state=active]:bg-primary data-[state=active]:text-white">База узлов</TabsTrigger>
               <TabsTrigger value="broadcast" className="flex-1 min-w-[100px] text-[9px] font-black uppercase tracking-widest py-2.5 data-[state=active]:bg-primary data-[state=active]:text-white">Рассылка</TabsTrigger>
@@ -110,7 +112,6 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
             </TabsList>
           </div>
 
-          {/* MAIN SCROLLABLE CONTENT */}
           <div className="flex-1 min-h-0">
             <ScrollArea className="h-full">
               <div className="p-6 md:p-8 space-y-10 pb-20">
@@ -218,7 +219,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                         disabled={isBroadcasting} 
                         className="w-full h-16 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-xl shadow-primary/20 transition-all hover:scale-[1.02]"
                       >
-                        {isBroadcasting ? <Loader2 className="animate-spin" /> : <><Send className="w-5 h-5 mr-3" /> Активировать Передачу</>}
+                        {isBroadcasting ? <Loader2 className="animate-spin w-5 h-5" /> : <><Send className="w-5 h-5 mr-3" /> Активировать Передачу</>}
                       </Button>
                    </div>
                 </TabsContent>
