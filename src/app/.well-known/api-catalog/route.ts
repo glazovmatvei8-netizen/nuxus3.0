@@ -2,9 +2,11 @@
 import { NextResponse } from 'next/server';
 
 /**
- * NUXUS API CATALOG v1.0 (RFC 9727)
- * Обеспечивает автоматическое обнаружение API для AI-агентов и ботов.
+ * NUXUS API CATALOG v1.1 (RFC 9727)
+ * Помечен как статический для совместимости с output: export
  */
+export const dynamic = 'force-static';
+
 export async function GET() {
   const catalog = {
     "linkset": [
