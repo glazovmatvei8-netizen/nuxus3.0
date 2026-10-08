@@ -3,7 +3,7 @@
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ShieldCheck, Lock, HelpCircle, Scale } from 'lucide-react';
+import { ShieldCheck, Lock, HelpCircle, Scale, Copyright } from 'lucide-react';
 import versions from '@/app/versions.json';
 
 export function LegalModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
@@ -21,6 +21,19 @@ export function LegalModal({ open, onOpenChange }: { open: boolean, onOpenChange
 
         <ScrollArea className="flex-1 p-8">
           <div className="space-y-8 text-[12px] leading-relaxed text-white/80 uppercase font-bold tracking-tight">
+            
+            <section className="space-y-4 p-6 bg-primary/5 border border-primary/20 rounded-3xl">
+              <h3 className="text-primary font-black flex items-center gap-2 italic">
+                <Copyright className="w-4 h-4" /> ИНТЕЛЛЕКТУАЛЬНАЯ СОБСТВЕННОСТЬ
+              </h3>
+              <p className="text-white font-black">
+                ВСЕ ПРАВА НА ПРИЛОЖЕНИЕ, ИСХОДНЫЙ КОД, ДИЗАЙН И ТОРГОВУЮ МАРКУ ПРИНАДЛЕЖАТ КОМАНДЕ NUXUS.
+              </p>
+              <p className="opacity-70">
+                Любое несанкционированное копирование или имитация работы Ядра преследуется по законам цифровой защиты. Nuxus является единственным законным владельцем и оператором данной платформы.
+              </p>
+            </section>
+
             <section className="space-y-4">
               <h3 className="text-primary font-black flex items-center gap-2"><Lock className="w-4 h-4" /> ПОЛИТИКА КОНФИДЕНЦИАЛЬНОСТИ</h3>
               <p>1. ОБЩИЕ ПОЛОЖЕНИЯ: Настоящая Политика определяет порядок обработки данных в приложении Nuxus.fun.</p>
@@ -34,6 +47,10 @@ export function LegalModal({ open, onOpenChange }: { open: boolean, onOpenChange
               <h3 className="text-primary font-black flex items-center gap-2"><Scale className="w-4 h-4" /> РЕГИОНАЛЬНЫЕ ОГРАНИЧЕНИЯ</h3>
               <p className="text-red-500">Nuxus.fun не оказывает услуги пользователям с территории РФ (+7) для защиты целостности сети.</p>
             </section>
+
+            <div className="pt-10 text-center opacity-40">
+               <p className="text-[10px] font-black tracking-[0.5em]">© NUXUS 2024</p>
+            </div>
           </div>
         </ScrollArea>
       </DialogContent>

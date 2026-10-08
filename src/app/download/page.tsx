@@ -1,4 +1,3 @@
-
 "use client"
 
 import React from 'react';
@@ -9,8 +8,8 @@ import Link from 'next/link';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 /**
- * NUXUS DOWNLOAD HUB V35.4.0
- * ОБНОВЛЕНО: Добавлена прямая ссылка на установку APK.
+ * NUXUS DOWNLOAD HUB V35.4.1
+ * UPDATED: Added explicit copyright information.
  */
 export default function DownloadPage() {
   const handleDownload = (e: React.MouseEvent) => {
@@ -34,7 +33,7 @@ export default function DownloadPage() {
         </Link>
         <div className="flex flex-col items-end pointer-events-none">
            <span className="text-[8px] font-black uppercase tracking-[0.4em] text-primary">Nuxus Kernel</span>
-           <span className="text-[10px] font-bold text-white/20 uppercase">v35.4.0</span>
+           <span className="text-[10px] font-bold text-white/20 uppercase">v35.4.1</span>
         </div>
       </div>
 
@@ -74,9 +73,14 @@ export default function DownloadPage() {
                 <Smartphone className="w-4 h-4" />
                 <Zap className="w-4 h-4" />
              </div>
-             <p className="text-[7px] text-white uppercase font-bold tracking-widest leading-relaxed max-w-[280px] mx-auto">
-               0+. ООО «Nuxus Quantum Platforms». Протокол QES 25.4. Все права защищены.
-             </p>
+             <div className="space-y-1">
+               <p className="text-[8px] text-white uppercase font-black tracking-[0.3em]">
+                 © Nuxus 2024. All Rights Reserved.
+               </p>
+               <p className="text-[7px] text-white uppercase font-bold tracking-widest leading-relaxed max-w-[280px] mx-auto opacity-50">
+                 0+. ООО «Nuxus Quantum Platforms». Протокол QES 25.4. Все права на интеллектуальную собственность принадлежат Nuxus.
+               </p>
+             </div>
           </div>
         </div>
       </ScrollArea>

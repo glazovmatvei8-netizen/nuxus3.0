@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -7,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Eye, EyeOff, Mail, ShieldCheck, KeyRound, Info } from 'lucide-react';
+import { Loader2, Eye, EyeOff, Mail, ShieldCheck, KeyRound, Info, Copyright } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase/provider'; 
 import { 
   signInWithEmailAndPassword,
@@ -24,8 +23,8 @@ import { translations } from '@/lib/translations';
 import versions from '@/app/versions.json';
 
 /**
- * AUTH SCREEN V105.0 «EMAIL IDENTITY ONLY»
- * SMS MODULE ANNIHILATED.
+ * AUTH SCREEN V105.1 «LEGAL BRANDING»
+ * UPDATED: Added copyright info.
  */
 export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'login' | 'register' }) {
   const auth = useAuth();
@@ -175,9 +174,9 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
             </CardContent>
           </Card>
           <div className="mt-8 flex flex-col items-center gap-2 opacity-20">
-             <div className="flex items-center gap-1.5 bg-white/5 px-2 py-1 rounded-full border border-white/10">
-                <ShieldCheck className="w-2.5 h-2.5 text-primary" />
-                <p className="text-[6px] font-black text-white uppercase tracking-[0.3em]">System Active</p>
+             <div className="flex items-center gap-1.5 bg-white/5 px-3 py-1 rounded-full border border-white/10">
+                <Copyright className="w-2.5 h-2.5 text-primary" />
+                <p className="text-[7px] font-black text-white uppercase tracking-[0.3em]">Nuxus 2024. All Rights Reserved.</p>
              </div>
              <p className="text-[5px] font-black text-white/40 uppercase tracking-[0.6em]">Build {versions.build}</p>
           </div>
