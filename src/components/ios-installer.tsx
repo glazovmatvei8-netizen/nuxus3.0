@@ -2,29 +2,29 @@
 "use client"
 
 import React from 'react';
-import { NuxusLogo } from './nuxus-logo';
 import { Button } from '@/components/ui/button';
 import { Share, PlusSquare, ShieldCheck, Zap, Info, Download, AppWindow, Smartphone } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 /**
- * Native-like iOS App Store Installation Screen
- * Оптимизирован для предложения нативного .IPA или PWA.
+ * Native-like iOS App Store Installation Screen V113.1
+ * ОБНОВЛЕНО: Используется новая аватарка IMG-2541.jpg.
  */
 export function IosInstaller({ onDismiss }: { onDismiss: () => void }) {
+  const NEW_ICON_URL = 'https://i.postimg.cc/T2xvz0mn/IMG-2541.jpg';
+
   return (
     <div className="fixed inset-0 z-[2000] bg-[#0a0a0c] flex flex-col items-center overflow-y-auto pb-20 scrollbar-hide">
-      {/* Эффект матового стекла сверху */}
       <div className="sticky top-0 w-full h-16 bg-[#0a0a0c]/80 backdrop-blur-xl border-b border-white/5 z-20 flex items-center justify-between px-6">
         <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">App Store</span>
         <Button variant="ghost" onClick={onDismiss} className="text-[10px] font-black uppercase text-primary">Отмена</Button>
       </div>
 
       <div className="w-full max-w-md px-6 pt-10 relative z-10 flex flex-col items-center">
-        {/* Иконка и заголовок */}
         <div className="w-full flex gap-6 mb-8 text-left">
-          <div className="w-32 h-32 rounded-[2.5rem] bg-card border border-white/10 shadow-2xl flex items-center justify-center shrink-0 overflow-hidden">
-             <NuxusLogo size={100} />
+          <div className="w-32 h-32 rounded-[2.5rem] bg-card border border-white/10 shadow-2xl flex items-center justify-center shrink-0 overflow-hidden relative">
+             <Image src={NEW_ICON_URL} alt="Nuxus Logo" fill className="object-cover" unoptimized />
           </div>
           <div className="flex flex-col justify-center flex-1">
             <h1 className="text-2xl font-black text-white leading-tight">Nuxus 2.0</h1>
@@ -42,7 +42,6 @@ export function IosInstaller({ onDismiss }: { onDismiss: () => void }) {
           </div>
         </div>
 
-        {/* Характеристики */}
         <div className="w-full grid grid-cols-3 gap-0.5 border-y border-white/5 py-4 mb-8">
           <div className="flex flex-col items-center">
             <span className="text-white font-black text-sm">V33.2</span>
@@ -60,11 +59,9 @@ export function IosInstaller({ onDismiss }: { onDismiss: () => void }) {
           </div>
         </div>
 
-        {/* Выбор метода установки */}
         <div className="w-full space-y-4">
           <h2 className="text-white font-black text-sm uppercase italic px-2 text-left">Выберите метод</h2>
           
-          {/* Метод 1: Нативное приложение */}
           <div className="bg-primary/10 p-5 rounded-[2rem] border border-primary/20 space-y-4 text-left">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-2xl bg-primary/20 flex items-center justify-center">
@@ -80,7 +77,6 @@ export function IosInstaller({ onDismiss }: { onDismiss: () => void }) {
             </p>
           </div>
 
-          {/* Метод 2: Android APK */}
           <Link href="/download" className="block w-full">
             <div className="bg-[#A4C639]/10 p-5 rounded-[2rem] border border-[#A4C639]/20 space-y-4 text-left hover:bg-[#A4C639]/15 transition-all">
               <div className="flex items-center gap-4">
@@ -98,7 +94,6 @@ export function IosInstaller({ onDismiss }: { onDismiss: () => void }) {
             </div>
           </Link>
 
-          {/* Метод 3: PWA */}
           <div className="bg-white/5 p-5 rounded-[2rem] border border-white/5 space-y-4 text-left">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center">

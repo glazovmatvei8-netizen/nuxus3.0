@@ -8,7 +8,8 @@ import { MetadataRoute } from 'next'
 export const dynamic = 'force-static'
 
 export default function manifest(): MetadataRoute.Manifest {
-  const APP_ICON_URL = 'https://i.postimg.cc/T2xvz0mn/IMG-2541.jpg';
+  // Новая иконка с cache-buster для принудительного обновления на устройствах
+  const APP_ICON_URL = 'https://i.postimg.cc/T2xvz0mn/IMG-2541.jpg?v=113';
   
   return {
     id: 'chat.nuxus.app',

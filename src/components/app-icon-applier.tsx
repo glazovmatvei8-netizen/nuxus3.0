@@ -8,8 +8,8 @@ import { doc } from 'firebase/firestore';
 import type { User } from '@/lib/types';
 
 /**
- * ОБНОВЛЯТОР ИКОНОК V6.6.0 «DECOUPLED»
- * ИСПРАВЛЕНО: Прямые импорты для исключения циклической зависимости.
+ * ОБНОВЛЯТОР ИКОНОК V113.1 «HARD OVERRIDE»
+ * ИСПРАВЛЕНО: Принудительное использование новой иконки IMG-2541.jpg.
  */
 export function AppIconApplier() {
   const { user } = useUser();
@@ -22,7 +22,8 @@ export function AppIconApplier() {
 
   const { data: profile } = useDoc<User>(userRef);
 
-  const TARGET_ICON = 'https://i.postimg.cc/T2xvz0mn/IMG-2541.jpg';
+  // Новая иконка с параметром сброса кэша
+  const TARGET_ICON = 'https://i.postimg.cc/T2xvz0mn/IMG-2541.jpg?v=113';
 
   useEffect(() => {
     if (typeof document === 'undefined') return;
@@ -50,7 +51,11 @@ export function AppIconApplier() {
     };
 
     updateIcons();
-  }, [profile?.settings?.customAppIconUrl]);
+    
+    // Запуск через секунду для уверенности, что Next.js не перекрыл иконку
+    const timer = setTimeout(updateIcons, 1000);
+    return () => clearTimeout(timer);
+  }, [profile?.settings?.customAppIconUrl, TARGET_ICON]);
 
   return null;
 }
