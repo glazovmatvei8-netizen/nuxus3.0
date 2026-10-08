@@ -22,7 +22,7 @@ export function AppIconApplier() {
 
   const { data: profile } = useDoc<User>(userRef);
 
-  const TARGET_ICON = 'https://i.ibb.co/sd2MqGz2/Icon.png?v=45';
+  const TARGET_ICON = 'https://i.postimg.cc/T2xvz0mn/IMG-2541.jpg';
 
   useEffect(() => {
     if (typeof document === 'undefined') return;
@@ -30,7 +30,7 @@ export function AppIconApplier() {
     const updateIcons = () => {
       const customIcon = profile?.settings?.customAppIconUrl;
       const finalIcon = customIcon 
-        ? (customIcon.includes('?') ? `${customIcon}&v=45` : `${customIcon}?v=45`)
+        ? (customIcon.includes('?') ? `${customIcon}&v=113` : `${customIcon}?v=113`)
         : TARGET_ICON;
 
       const selectors = [

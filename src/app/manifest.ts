@@ -8,7 +8,7 @@ import { MetadataRoute } from 'next'
 export const dynamic = 'force-static'
 
 export default function manifest(): MetadataRoute.Manifest {
-  const APP_ICON_URL = 'https://i.ibb.co/sd2MqGz2/Icon.png?v=45';
+  const APP_ICON_URL = 'https://i.postimg.cc/T2xvz0mn/IMG-2541.jpg';
   
   return {
     id: 'chat.nuxus.app',
@@ -25,13 +25,13 @@ export default function manifest(): MetadataRoute.Manifest {
       {
         src: APP_ICON_URL,
         sizes: '192x192',
-        type: 'image/png',
+        type: 'image/jpeg',
         purpose: 'any'
       },
       {
         src: APP_ICON_URL,
         sizes: '512x512',
-        type: 'image/png',
+        type: 'image/jpeg',
         purpose: 'any'
       }
     ],
