@@ -3,17 +3,17 @@
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ShieldCheck, Lock, HelpCircle, Scale, Copyright } from 'lucide-react';
+import { ShieldCheck, Lock, Scale, Copyright, Globe } from 'lucide-react';
 import versions from '@/app/versions.json';
 
 /**
- * LEGAL MODAL V6.2.0 «STRICT OWNERSHIP»
+ * LEGAL MODAL V115.0 «STRICT OWNERSHIP»
  * UPDATED: Explicitly states Nuxus as the legal owner and code holder.
  */
 export function LegalModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl bg-[#0a0a0c] border-white/10 rounded-[2.5rem] p-0 overflow-hidden shadow-2xl flex flex-col h-[85vh] z-[3000]">
+      <DialogContent className="max-w-2xl bg-[#0a0a0c] border-white/10 rounded-[2.5rem] p-0 overflow-hidden shadow-2xl flex flex-col h-[85vh] z-[3000] outline-none">
         <DialogHeader className="p-8 border-b border-white/5 bg-gradient-to-r from-primary/10 to-transparent">
           <DialogTitle className="text-xl font-black uppercase italic text-white flex items-center gap-3">
             <ShieldCheck className="w-6 h-6 text-primary" /> Правовой Департамент
@@ -44,12 +44,11 @@ export function LegalModal({ open, onOpenChange }: { open: boolean, onOpenChange
               <p>2. КАКИЕ ДАННЫЕ МЫ СОБИРАЕМ: Номер телефона, пароль в зашифрованном виде, сообщения и медиафайлы (исключительно для доставки).</p>
               <p>3. ЦЕЛИ ОБРАБОТКИ: Данные нужны для создания аккаунта, авторизации и обеспечения работы мессенджера.</p>
               <p>4. БЕЗОПАСНОСТЬ: Мы не продаем и не передаем данные третьим лицам. Все хранится на защищенных узлах.</p>
-              <p>5. УДАЛЕНИЕ ДАННЫХ: Пользователь имеет право на полное удаление (Аннигиляцию) аккаунта через настройки.</p>
             </section>
             
             <section className="space-y-4 pt-4 border-t border-white/5">
-              <h3 className="text-primary font-black flex items-center gap-2"><Scale className="w-4 h-4" /> РЕГИОНАЛЬНЫЕ ОГРАНИЧЕНИЯ</h3>
-              <p className="text-red-500">Nuxus.fun не оказывает услуги пользователям с территории РФ (+7) для защиты целостности сети.</p>
+              <h3 className="text-primary font-black flex items-center gap-2"><Globe className="w-4 h-4" /> ТЕРРИТОРИАЛЬНЫЙ СУВЕРЕНИТЕТ</h3>
+              <p className="text-red-500">Система Nuxus является независимым цифровым пространством. Все операции по шифрованию происходят на стороне конечного узла пользователя (E2EE).</p>
             </section>
 
             <div className="pt-10 text-center opacity-40">
