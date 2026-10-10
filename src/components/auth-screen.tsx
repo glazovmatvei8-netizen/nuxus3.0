@@ -24,7 +24,7 @@ import versions from '@/app/versions.json';
 
 /**
  * AUTH SCREEN V105.1 «LEGAL BRANDING»
- * UPDATED: Added copyright info.
+ * UPDATED: Integrated explicit copyright info and Nuxus ownership notice.
  */
 export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'login' | 'register' }) {
   const auth = useAuth();
@@ -173,6 +173,8 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
               </form>
             </CardContent>
           </Card>
+          
+          {/* COPYRIGHT INFO */}
           <div className="mt-8 flex flex-col items-center gap-2 opacity-20">
              <div className="flex items-center gap-1.5 bg-white/5 px-3 py-1 rounded-full border border-white/10">
                 <Copyright className="w-2.5 h-2.5 text-primary" />

@@ -6,6 +6,10 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { ShieldCheck, Lock, HelpCircle, Scale, Copyright } from 'lucide-react';
 import versions from '@/app/versions.json';
 
+/**
+ * LEGAL MODAL V6.2.0 «STRICT OWNERSHIP»
+ * UPDATED: Explicitly states Nuxus as the legal owner and code holder.
+ */
 export function LegalModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

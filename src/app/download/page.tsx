@@ -9,7 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 /**
  * NUXUS DOWNLOAD HUB V35.4.1
- * UPDATED: Added explicit copyright information.
+ * UPDATED: Added explicit copyright information and legal notice.
  */
 export default function DownloadPage() {
   const handleDownload = (e: React.MouseEvent) => {
@@ -67,6 +67,7 @@ export default function DownloadPage() {
             <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.3em] pointer-events-none">Версия клиента: Pulse 35.4</p>
           </div>
 
+          {/* COPYRIGHT FOOTER */}
           <div className="pt-10 space-y-4 opacity-30 pointer-events-none">
              <div className="flex items-center justify-center gap-6">
                 <ShieldCheck className="w-4 h-4" />
