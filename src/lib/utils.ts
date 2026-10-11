@@ -48,7 +48,6 @@ export function formatDisplayName(name: string | undefined | null, username?: st
 
 /**
  * ПРОВЕРКА АНОМАЛИЙ V102.0
- * Теперь юзернейм ОБЯЗАТЕЛЕН. Нет юзера = Аномалия.
  */
 export function isUserAnomaly(user: User | null | undefined): boolean {
   if (!user) return false;
@@ -95,7 +94,6 @@ export function isUserPremium(user: User | null | undefined): boolean {
 export function isUserActuallyBanned(user: User | null | undefined): boolean {
   if (!user) return false;
   if (user.isBanned) return true;
-  // Если это не админ и у него нет юзернейма — бан
   if (isUserAnomaly(user) && !isGlobalAdmin(user)) return true;
   return false;
 }
@@ -131,12 +129,23 @@ export async function compressImage(dataUrl: string, maxWidth = 1200, quality = 
   });
 }
 
+/**
+ * REPUTATION SYSTEM V2.0
+ */
 export function getReputationInfo(reputation: number = 0) {
   const level = Math.floor(reputation / 10) + 1;
-  if (reputation >= 60) return { level, color: 'text-red-500', icon: '🛡️', shadow: 'shadow-red-500/20' };
-  if (reputation >= 45) return { level, color: 'text-yellow-500', icon: '🛡️', shadow: 'shadow-yellow-500/20' };
-  if (reputation >= 30) return { level, color: 'text-purple-500', icon: '🛡️', shadow: 'shadow-purple-500/20' };
-  if (reputation >= 20) return { level, color: 'text-green-500', icon: '🛡️', shadow: 'shadow-green-500/20' };
-  if (reputation >= 10) return { level, color: 'text-blue-500', icon: '🛡️', shadow: 'shadow-blue-500/20' };
-  return { level, color: 'text-white/60', icon: '🛡️', shadow: 'shadow-white/10' };
+  const currentExp = Math.floor((reputation % 10) * 10); // Experience percentage in current level
+
+  if (reputation >= 100) return { level, name: 'Core Architect', color: 'text-red-500', icon: '💎', shadow: 'shadow-red-500/30', progress: 100 };
+  if (reputation >= 70) return { level, name: 'Legendary Node', color: 'text-orange-500', icon: '👑', shadow: 'shadow-orange-500/20', progress: currentExp };
+  if (reputation >= 45) return { level, name: 'Elite Node', color: 'text-yellow-500', icon: '🌟', shadow: 'shadow-yellow-500/20', progress: currentExp };
+  if (reputation >= 25) return { level, name: 'Trusted Node', color: 'text-purple-500', icon: '🛡️', shadow: 'shadow-purple-500/20', progress: currentExp };
+  if (reputation >= 10) return { level, name: 'Active Node', color: 'text-green-500', icon: '⚡', shadow: 'shadow-green-500/20', progress: currentExp };
+  return { level, name: 'New Node', color: 'text-white/40', icon: '🛰️', shadow: 'shadow-white/5', progress: currentExp };
+}
+
+export function triggerHaptic() {
+  if (typeof window !== 'undefined' && window.navigator?.vibrate) {
+    window.navigator.vibrate(20);
+  }
 }

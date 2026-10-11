@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -6,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Eye, EyeOff, ShieldCheck, Copyright, Lock } from 'lucide-react';
+import { Loader2, Eye, EyeOff, ShieldCheck, Copyright, Lock, Globe } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase/provider'; 
 import { 
   signInWithEmailAndPassword,
@@ -23,8 +24,8 @@ import { translations } from '@/lib/translations';
 import versions from '@/app/versions.json';
 
 /**
- * AUTH SCREEN V115.0 «PREMIUM SECURITY»
- * UPDATED: Integrated explicit copyright info and Nuxus ownership notice.
+ * AUTH SCREEN V116.0 «GLOBAL ACCESS»
+ * UPDATED: Removed @nuxus.fun email restriction. Now any email can join the Core.
  */
 export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'login' | 'register' }) {
   const auth = useAuth();
@@ -57,9 +58,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
       if (mode === 'register') {
         if (!name.trim()) throw new Error("Введите ваше имя");
         if (!username.trim()) throw new Error("Выберите @ID");
-        if (!cleanEmail.endsWith('@nuxus.fun')) {
-          throw new Error("Регистрация разрешена только для домена @nuxus.fun");
-        }
+        if (!cleanEmail.includes('@')) throw new Error("Введите корректный Email");
 
         const usernameWithAt = '@' + username.trim().replace('@', '').replace(/\s/g, '').toLowerCase();
         
@@ -75,6 +74,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
           email: cleanEmail,
           createdAt: new Date().toISOString(),
           balance: 0,
+          reputation: 0,
           settings: { 
             language: lang || 'ru', appearance: 'dark', theme: 'default',
             fontFamily: 'jakarta', bubbleStyle: 'default', messageSize: 'medium',
@@ -82,7 +82,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
           }
         };
         await setDoc(doc(db, 'users', userCred.user.uid), userData);
-        toast({ title: "Узел @nuxus.fun активирован" });
+        toast({ title: "Узел успешно активирован", description: `Добро пожаловать в Ядро, ${name}!` });
       } else {
         await signInWithEmailAndPassword(auth, cleanEmail, password);
         toast({ title: "Синхронизация завершена" });
@@ -91,7 +91,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
       let msg = e.message;
       if (e.code === 'auth/user-not-found') msg = "Узел не зарегистрирован. Проверьте почту.";
       if (e.code === 'auth/wrong-password') msg = "Неверный пароль доступа.";
-      if (e.code === 'auth/unauthorized-domain') msg = "Ошибка безопасности: Домен не авторизован в Firebase Console.";
+      if (e.code === 'auth/invalid-credential') msg = "Ошибка авторизации: проверьте данные.";
       toast({ title: "Ошибка входа", description: msg, variant: "destructive" });
     } finally {
       setIsLoading(false);
@@ -106,11 +106,11 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
           <NuxusLogo size={120} className="mb-10 drop-shadow-[0_0_30px_rgba(168,85,247,0.4)]" />
           <div className="space-y-4 w-full max-w-[300px]">
             <h1 className="text-2xl font-black text-white text-center mb-8 uppercase italic tracking-tighter">NUXUS CORE</h1>
-            <button onClick={() => setLang('ru')} className="w-full h-16 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-between px-6 transition-all active:scale-95 hover:bg-white/10 group">
+            <button onClick={() => setLang('ru')} className="w-full h-16 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-between px-6 transition-all active:scale-95 hover:bg-white/10 group shadow-xl">
               <span className="text-white font-black uppercase italic tracking-widest text-xs">Русский</span>
               <div className="bg-primary/20 px-2 py-0.5 rounded-lg text-primary text-[8px] font-black uppercase">RU</div>
             </button>
-            <button onClick={() => setLang('en')} className="w-full h-16 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-between px-6 transition-all active:scale-95 hover:bg-white/10 group">
+            <button onClick={() => setLang('en')} className="w-full h-16 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-between px-6 transition-all active:scale-95 hover:bg-white/10 group shadow-xl">
               <span className="text-white font-black uppercase italic tracking-widest text-xs">English</span>
               <div className="bg-primary/20 px-2 py-0.5 rounded-lg text-primary text-[8px] font-black uppercase">EN</div>
             </button>
@@ -125,12 +125,13 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(168,85,247,0.1)_0%,transparent_70%)]" />
       <ScrollArea className="w-full h-full">
         <div className="min-h-full w-full flex flex-col items-center justify-center p-6 py-12">
-          <div className="mb-6 cursor-pointer" onClick={() => setLang(null)}><NuxusLogo size={80} /></div>
-          <Card className="w-full max-w-[380px] bg-white/[0.01] backdrop-blur-[100px] border-white/5 rounded-[2.5rem] p-1 shadow-2xl relative z-10">
+          <div className="mb-6 cursor-pointer hover:scale-105 transition-transform" onClick={() => setLang(null)}><NuxusLogo size={80} /></div>
+          <Card className="w-full max-w-[380px] bg-white/[0.01] backdrop-blur-[100px] border-white/5 rounded-[2.5rem] p-1 shadow-2xl relative z-10 overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
             <CardHeader className="text-center pt-6 pb-2 space-y-5">
-              <div className="inline-flex bg-black/60 p-1 rounded-xl border border-white/5 mx-auto">
-                <button onClick={() => setMode('login')} className={cn("px-5 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all", mode === 'login' ? "bg-white text-black shadow-xl" : "text-white/20")}>Вход</button>
-                <button onClick={() => setMode('register')} className={cn("px-5 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all", mode === 'register' ? "bg-white text-black shadow-xl" : "text-white/20")}>Регистрация</button>
+              <div className="inline-flex bg-black/60 p-1 rounded-xl border border-white/5 mx-auto shadow-inner">
+                <button type="button" onClick={() => setMode('login')} className={cn("px-5 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all", mode === 'login' ? "bg-white text-black shadow-xl" : "text-white/20")}>Вход</button>
+                <button type="button" onClick={() => setMode('register')} className={cn("px-5 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all", mode === 'register' ? "bg-white text-black shadow-xl" : "text-white/20")}>Регистрация</button>
               </div>
               <div className="space-y-1">
                 <CardTitle className="text-3xl font-black text-white tracking-tighter italic uppercase">{mode === 'login' ? 'Привет' : 'Создать'}</CardTitle>
@@ -158,7 +159,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                 <div className="space-y-4">
                   <div className="space-y-1">
                     <Label className="text-[8px] font-black uppercase text-primary/40 ml-2 tracking-widest">Email Адрес</Label>
-                    <Input type="email" placeholder="user@nuxus.fun" value={email} onChange={e => setEmail(e.target.value)} className="h-11 bg-white/[0.02] border-white/5 rounded-xl font-bold text-sm px-4" />
+                    <Input type="email" placeholder="example@gmail.com" value={email} onChange={e => setEmail(e.target.value)} className="h-11 bg-white/[0.02] border-white/5 rounded-xl font-bold text-sm px-4" />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-[8px] font-black uppercase text-primary/40 ml-2 tracking-widest">Пароль доступа</Label>
@@ -176,7 +177,6 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
             </CardContent>
           </Card>
           
-          {/* COPYRIGHT INFO */}
           <div className="mt-8 flex flex-col items-center gap-2 opacity-30">
              <div className="flex items-center gap-1.5 bg-white/5 px-3 py-1 rounded-full border border-white/10">
                 <Copyright className="w-2.5 h-2.5 text-primary" />

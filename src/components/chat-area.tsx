@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, ChevronLeft, X, Paperclip, Mic, StopCircle, 
-  Smile, Trash2, CornerUpLeft, Loader2, Pin, XCircle
+  Smile, Trash2, CornerUpLeft, Loader2, Pin, XCircle, Zap
 } from 'lucide-react';
 import { MessageItem } from './message-item';
 import { ChatInfoModal } from './modals/chat-info-modal';
@@ -19,8 +19,8 @@ import { useUser, useFirestore } from '@/firebase/provider';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { useMemoFirebase } from '@/firebase/firestore/use-memo-firebase';
-import { collection, query, orderBy, doc, addDoc, updateDoc } from 'firebase/firestore';
-import { formatDisplayName, cn, compressImage, encryptSignal, decryptSignal, isUserPremium, getReputationInfo } from '@/lib/utils';
+import { collection, query, orderBy, doc, addDoc, updateDoc, increment } from 'firebase/firestore';
+import { formatDisplayName, cn, compressImage, encryptSignal, decryptSignal, isUserPremium, getReputationInfo, triggerHaptic } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -52,6 +52,7 @@ const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelRepl
 
   const handleSend = () => {
     if (!messageInput.trim()) return;
+    triggerHaptic();
     onSendMessage(messageInput, 'text', null);
     setMessageInput('');
     setLocalDrafts(prev => ({ ...prev, [currentChatId]: '' }));
@@ -79,6 +80,7 @@ const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelRepl
 
   const handleSendFiles = async () => {
     setIsUploading(true);
+    triggerHaptic();
     try {
       for (const item of pendingFiles) {
         let content = item.url;
@@ -115,7 +117,7 @@ const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelRepl
       <div className="flex gap-3 items-end w-full max-w-5xl mx-auto">
         {!isRecording ? (
           <>
-            <Button variant="ghost" size="icon" className="h-12 w-12 shrink-0 rounded-2xl obsidian-glass hover:bg-white/10 border border-white/5 shadow-xl transition-all" onClick={() => fileInputRef.current?.click()}><Paperclip className="w-6 h-6 text-white/40" /></Button>
+            <Button variant="ghost" size="icon" className="h-12 w-12 shrink-0 rounded-2xl obsidian-glass hover:bg-white/10 border border-white/5 shadow-xl transition-all" onClick={() => { triggerHaptic(); fileInputRef.current?.click(); }}><Paperclip className="w-6 h-6 text-white/40" /></Button>
             
             <div className="flex-1 flex items-end bg-white/5 rounded-[2.2rem] border border-white/5 min-h-[48px] px-5 py-2.5 shadow-inner transition-all focus-within:border-primary/40 focus-within:bg-white/[0.08]">
               <Textarea 
@@ -126,7 +128,7 @@ const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelRepl
               />
               <Popover open={isEmojiPickerOpen} onOpenChange={setIsEmojiPickerOpen}>
                  <PopoverTrigger asChild>
-                   <Button variant="ghost" size="icon" className="text-white/20 h-8 w-8 hover:text-white/40 active:scale-90"><Smile className="w-6 h-6" /></Button>
+                   <Button variant="ghost" size="icon" className="text-white/20 h-8 w-8 hover:text-white/40 active:scale-90" onClick={triggerHaptic}><Smile className="w-6 h-6" /></Button>
                  </PopoverTrigger>
                  <PopoverContent side="top" className="p-0 border-none bg-transparent w-[320px] mb-6">
                    <EmojiPicker onEmojiSelect={(e) => setMessageInput(messageInput + e)} onStickerSelect={(url) => { onSendMessage(url, 'sticker', null); setIsEmojiPickerOpen(false); }} />
@@ -137,7 +139,7 @@ const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelRepl
             {messageInput.trim() ? (
               <Button size="icon" className="h-12 w-12 rounded-2xl bg-primary text-white active:scale-90 shadow-[0_10px_30px_rgba(var(--primary),0.3)] transition-all border border-white/10" onClick={handleSend}><Send className="w-5 h-5" /></Button>
             ) : (
-              <button className="h-12 w-12 rounded-2xl flex items-center justify-center transition-all bg-white/5 text-white/30 hover:bg-primary hover:text-white active:scale-90 shadow-xl border border-white/5">
+              <button onClick={triggerHaptic} className="h-12 w-12 rounded-2xl flex items-center justify-center transition-all bg-white/5 text-white/30 hover:bg-primary hover:text-white active:scale-90 shadow-xl border border-white/5">
                 <Mic className="w-6 h-6" />
               </button>
             )}
@@ -229,11 +231,12 @@ export default function ChatArea() {
       msgData.replyToContent = replyTo.contentType === 'text' ? replyTo.content : `[Вложение]`; 
       setReplyTo(null); 
     }
-    addDoc(collection(db, 'chats', currentChatId, 'messages'), msgData);
-    updateDoc(doc(db, 'chats', currentChatId), { lastMessageAt: new Date().toISOString() });
+    await addDoc(collection(db, 'chats', currentChatId, 'messages'), msgData);
+    await updateDoc(doc(db, 'chats', currentChatId), { lastMessageAt: new Date().toISOString() });
     
+    // INCREASE REPUTATION ON MESSAGE SEND
     if (userProfile) {
-       updateDoc(doc(db, 'users', firebaseUser.uid), { reputation: (userProfile.reputation || 0) + 0.1 });
+       await updateDoc(doc(db, 'users', firebaseUser.uid), { reputation: increment(0.2) });
     }
   }, [currentChatId, firebaseUser?.uid, db, userProfile, replyTo]);
 
@@ -264,8 +267,8 @@ export default function ChatArea() {
       
       <header className="h-16 border-b border-white/5 bg-white/[0.02] backdrop-blur-[40px] flex items-center px-4 shrink-0 z-30 shadow-2xl">
         <div className="flex items-center gap-4 flex-1 min-w-0">
-          <Button variant="ghost" size="icon" className="md:hidden rounded-2xl text-white/40 h-10 w-10 hover:bg-white/5" onClick={() => setCurrentChatId(null)}><ChevronLeft className="w-6 h-6" /></Button>
-          <div className="flex items-center gap-4 cursor-pointer min-w-0 flex-1 group" onClick={() => otherId ? setInspectedUserId(otherId) : setIsChatInfoOpen(true)}>
+          <Button variant="ghost" size="icon" className="md:hidden rounded-2xl text-white/40 h-10 w-10 hover:bg-white/5" onClick={() => { triggerHaptic(); setCurrentChatId(null); }}><ChevronLeft className="w-6 h-6" /></Button>
+          <div className="flex items-center gap-4 cursor-pointer min-w-0 flex-1 group" onClick={() => { triggerHaptic(); otherId ? setInspectedUserId(otherId) : setIsChatInfoOpen(true); }}>
             <UserAvatar 
               userId={otherId || (chat?.type === 'saved' ? firebaseUser?.uid : null)} 
               className="h-11 w-11 border-2 border-white/10 group-hover:border-primary/40 transition-all shadow-xl" 
@@ -276,7 +279,7 @@ export default function ChatArea() {
             <div className="flex flex-col min-w-0 text-left">
               <div className="flex items-center gap-2 min-w-0">
                 <span className="font-black text-base truncate text-white leading-tight italic tracking-tighter uppercase">{currentDisplayName}</span>
-                <span className={cn("text-[10px] drop-shadow-lg", rep.color)} title={`Lvl ${rep.level}`}>{rep.icon}</span>
+                <span className={cn("text-[10px] drop-shadow-lg", rep.color)} title={rep.name}>{rep.icon}</span>
               </div>
               <span className="text-[9px] font-bold text-primary/60 tracking-widest uppercase italic">{chat?.type === 'private' ? t('online') : chat?.type === 'saved' ? 'Ваш Архив' : chat?.username}</span>
             </div>
@@ -294,7 +297,7 @@ export default function ChatArea() {
               {pinnedMessage.contentType === 'text' ? decryptSignal(pinnedMessage.content) : '[Вложение]'}
             </span>
           </div>
-          <button onClick={unpinMessage} className="text-white/20 hover:text-white transition-colors">
+          <button onClick={() => { triggerHaptic(); unpinMessage(); }} className="text-white/20 hover:text-white transition-colors">
             <XCircle className="w-4 h-4" />
           </button>
         </div>
