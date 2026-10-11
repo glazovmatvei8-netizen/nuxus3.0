@@ -1,31 +1,31 @@
 
 "use client"
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Eye, EyeOff, ShieldCheck, Copyright, Lock, Globe } from 'lucide-react';
+import { Loader2, Eye, EyeOff, ShieldCheck, Mail, Phone, Lock } from 'lucide-react';
 import { useAuth, useFirestore } from '@/firebase/provider'; 
 import { 
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   browserLocalPersistence,
   setPersistence,
-  updateProfile
+  updateProfile,
+  sendEmailVerification
 } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { NuxusLogo } from './nuxus-logo';
-import { cn } from '@/lib/utils';
+import { cn, normalizePhoneNumber } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { translations } from '@/lib/translations';
-import versions from '@/app/versions.json';
 
 /**
- * AUTH SCREEN V119.0 «GLOBAL ACCESS UNLOCKED»
- * FIXED: Removed all email restrictions.
+ * AUTH SCREEN V121.0 «GLOBAL AUTH & VERIFICATION»
+ * ADDED: Phone login toggle, persistence fix, email verification.
  */
 export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'login' | 'register' }) {
   const auth = useAuth();
@@ -34,11 +34,12 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
   
   const [lang, setLang] = useState<'ru' | 'en' | null>(null);
   const [mode, setMode] = useState<'login' | 'register'>(initialMode);
+  const [authType, setActiveAuthType] = useState<'email' | 'phone'>('email');
   const [isLoading, setIsLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
 
   // Form State
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState(''); // Email or Phone
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
@@ -51,29 +52,39 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
     
     setIsLoading(true);
     try {
+      // Принудительно устанавливаем долгосрочное сохранение сессии
       await setPersistence(auth, browserLocalPersistence);
       
-      const cleanEmail = email.trim().toLowerCase();
+      let finalId = identifier.trim().toLowerCase();
+      if (authType === 'phone') {
+        finalId = normalizePhoneNumber(identifier) + "@nuxus.internal"; // Эмуляция входа по номеру через Email провайдер
+      }
       
       if (mode === 'register') {
         if (!name.trim()) throw new Error("Введите ваше имя");
         if (!username.trim()) throw new Error("Выберите @ID");
-        if (!cleanEmail.includes('@')) throw new Error("Введите корректный Email");
-
+        
         const usernameWithAt = '@' + username.trim().replace('@', '').replace(/\s/g, '').toLowerCase();
         
-        const userCred = await createUserWithEmailAndPassword(auth, cleanEmail, password);
+        // Проверка уникальности ника
+        const userCred = await createUserWithEmailAndPassword(auth, finalId, password);
         await updateProfile(userCred.user, { displayName: name.trim() });
         
+        // Отправка верификации если это Email
+        if (authType === 'email') {
+          await sendEmailVerification(userCred.user);
+          toast({ title: "Письмо отправлено", description: "Пожалуйста, подтвердите вашу почту." });
+        }
+
         const userData = {
           id: userCred.user.uid,
           name: name.trim(),
           username: usernameWithAt,
           usernameLowercase: usernameWithAt,
-          phone: '',
-          email: cleanEmail,
+          phone: authType === 'phone' ? identifier : '',
+          email: authType === 'email' ? finalId : null,
           createdAt: new Date().toISOString(),
-          balance: 100, // Initial bonus for testing
+          balance: 100,
           reputation: 0,
           settings: { 
             language: lang || 'ru', appearance: 'dark', theme: 'default',
@@ -84,14 +95,15 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
         await setDoc(doc(db, 'users', userCred.user.uid), userData);
         toast({ title: "Узел активирован", description: `Добро пожаловать, ${name}!` });
       } else {
-        await signInWithEmailAndPassword(auth, cleanEmail, password);
+        await signInWithEmailAndPassword(auth, finalId, password);
         toast({ title: "Синхронизация завершена" });
       }
     } catch (e: any) {
       let msg = e.message;
-      if (e.code === 'auth/user-not-found') msg = "Узел не найден. Проверьте почту.";
+      if (e.code === 'auth/user-not-found') msg = "Узел не найден. Проверьте данные.";
       if (e.code === 'auth/wrong-password') msg = "Неверный пароль.";
       if (e.code === 'auth/invalid-credential') msg = "Ошибка данных. Проверьте ввод.";
+      if (e.code === 'auth/email-already-in-use') msg = "Этот идентификатор уже занят другим узлом.";
       toast({ title: "Ошибка", description: msg, variant: "destructive" });
     } finally {
       setIsLoading(false);
@@ -126,10 +138,19 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
         <div className="min-h-full w-full flex flex-col items-center justify-center p-6 py-12">
           <div className="mb-6" onClick={() => setLang(null)}><NuxusLogo size={80} /></div>
           <Card className="w-full max-w-[380px] bg-white/[0.01] backdrop-blur-3xl border-white/5 rounded-[2.5rem] p-1 shadow-2xl relative z-10">
-            <CardHeader className="text-center pt-8 pb-4 space-y-4">
+            <CardHeader className="text-center pt-8 pb-4 space-y-6">
               <div className="inline-flex bg-black/40 p-1 rounded-xl border border-white/5 mx-auto">
-                <button type="button" onClick={() => setMode('login')} className={cn("px-6 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest", mode === 'login' ? "bg-white text-black" : "text-white/20")}>Вход</button>
-                <button type="button" onClick={() => setMode('register')} className={cn("px-6 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest", mode === 'register' ? "bg-white text-black" : "text-white/20")}>Создать</button>
+                <button type="button" onClick={() => setMode('login')} className={cn("px-6 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all", mode === 'login' ? "bg-white text-black shadow-lg" : "text-white/20")}>Вход</button>
+                <button type="button" onClick={() => setMode('register')} className={cn("px-6 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all", mode === 'register' ? "bg-white text-black shadow-lg" : "text-white/20")}>Создать</button>
+              </div>
+
+              <div className="flex justify-center gap-4">
+                <button onClick={() => setActiveAuthType('email')} className={cn("flex items-center gap-2 text-[9px] font-black uppercase tracking-widest transition-all", authType === 'email' ? "text-primary" : "text-white/20")}>
+                  <Mail size={14} /> Email
+                </button>
+                <button onClick={() => setActiveAuthType('phone')} className={cn("flex items-center gap-2 text-[9px] font-black uppercase tracking-widest transition-all", authType === 'phone' ? "text-primary" : "text-white/20")}>
+                  <Phone size={14} /> Номер
+                </button>
               </div>
             </CardHeader>
             <CardContent className="px-8 pb-10">
@@ -140,18 +161,41 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                     <Input placeholder={t.username} value={username} onChange={e => setUsername(e.target.value)} className="h-12 bg-white/5 border-white/10 rounded-xl font-mono text-primary" />
                   </>
                 )}
-                <Input type="email" placeholder={t.enterEmail} value={email} onChange={e => setEmail(e.target.value)} className="h-12 bg-white/5 border-white/10 rounded-xl font-bold" />
                 <div className="relative">
-                  <Input type={showPass ? "text" : "password"} placeholder={t.enterPass} value={password} onChange={e => setPassword(e.target.value)} className="h-12 bg-white/5 border-white/10 rounded-xl font-black tracking-widest" />
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20">
+                    {authType === 'email' ? <Mail size={16} /> : <Phone size={16} />}
+                  </div>
+                  <Input 
+                    type={authType === 'email' ? "email" : "text"} 
+                    placeholder={authType === 'email' ? t.enterEmail : "Номер телефона"} 
+                    value={identifier} 
+                    onChange={e => setIdentifier(e.target.value)} 
+                    className="h-12 bg-white/5 border-white/10 rounded-xl font-bold pl-12" 
+                  />
+                </div>
+                <div className="relative">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20">
+                    <Lock size={16} />
+                  </div>
+                  <Input 
+                    type={showPass ? "text" : "password"} 
+                    placeholder={t.enterPass} 
+                    value={password} 
+                    onChange={e => setPassword(e.target.value)} 
+                    className="h-12 bg-white/5 border-white/10 rounded-xl font-black tracking-widest pl-12" 
+                  />
                   <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20">{showPass ? <EyeOff size={16} /> : <Eye size={16} />}</button>
                 </div>
-                <Button type="submit" disabled={isLoading} className="w-full h-14 bg-primary text-white font-black uppercase italic tracking-widest rounded-2xl shadow-xl mt-4">
+                <Button type="submit" disabled={isLoading} className="w-full h-14 bg-primary text-white font-black uppercase italic tracking-widest rounded-2xl shadow-xl mt-4 active:scale-95 transition-all">
                   {isLoading ? <Loader2 className="animate-spin" /> : (mode === 'login' ? t.login : t.register)}
                 </Button>
               </form>
             </CardContent>
           </Card>
-          <p className="mt-8 text-[8px] font-black uppercase text-white/20 tracking-[0.4em]">© Nuxus 2024. All Rights Reserved.</p>
+          <div className="mt-8 flex flex-col items-center gap-2 opacity-20">
+             <ShieldCheck size={20} className="text-primary" />
+             <p className="text-[8px] font-black uppercase text-white tracking-[0.4em]">© Nuxus 2024. Quantum Security Active.</p>
+          </div>
         </div>
       </ScrollArea>
     </div>

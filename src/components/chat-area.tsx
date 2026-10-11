@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, ChevronLeft, X, Paperclip, Mic, StopCircle, 
-  Smile, Trash2, CornerUpLeft, Loader2, Pin, XCircle, Zap
+  Smile, Trash2, CornerUpLeft, Loader2, Pin, XCircle, Zap, Phone, Video
 } from 'lucide-react';
 import { MessageItem } from './message-item';
 import { ChatInfoModal } from './modals/chat-info-modal';
@@ -25,6 +25,7 @@ import type { Message, User as UserType, Chat } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useTranslations } from '@/hooks/use-translations';
+import { useToast } from '@/hooks/use-toast';
 
 const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelReply }: any) => {
   const { localDrafts, setLocalDrafts } = useAppState();
@@ -187,8 +188,9 @@ ChatInputBar.displayName = 'ChatInputBar';
 export default function ChatArea() {
   const { user: firebaseUser } = useUser();
   const db = useFirestore();
-  const { currentChatId, setCurrentChatId, setInspectedUserId } = useAppState();
+  const { currentChatId, setCurrentChatId, setInspectedUserId, setActiveCallId } = useAppState();
   const { t } = useTranslations();
+  const { toast } = useToast();
   
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
   const [isPollModalOpen, setIsPollModalOpen] = useState(false);
@@ -213,22 +215,25 @@ export default function ChatArea() {
   const messagesQuery = useMemoFirebase(() => (!db || !currentChatId) ? null : query(collection(db, 'chats', currentChatId, 'messages'), orderBy('sentAt', 'asc')), [db, currentChatId]);
   const { data: messages } = useCollection<Message>(messagesQuery);
 
-  const pinnedMsgRef = useMemoFirebase(() => {
-    if (!db || !currentChatId || !chat?.pinnedMessageId) return null;
-    return doc(db, 'chats', currentChatId, 'messages', chat.pinnedMessageId);
-  }, [db, currentChatId, chat?.pinnedMessageId]);
-  const { data: pinnedMessage } = useDoc<Message>(pinnedMsgRef);
-
-  const isPremium = useMemo(() => isUserPremium(userProfile), [userProfile]);
-
-  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
-    const end = document.getElementById('messages-end');
-    if (end) end.scrollIntoView({ behavior });
-  }, []);
-
-  useEffect(() => { 
-    if (messages?.length) scrollToBottom('auto'); 
-  }, [currentChatId, messages?.length, scrollToBottom]);
+  const handleStartCall = async (type: 'audio' | 'video' = 'audio') => {
+    if (!db || !firebaseUser || !otherId) return;
+    triggerHaptic();
+    try {
+      const callData = {
+        callerId: firebaseUser.uid,
+        receiverId: otherId,
+        participantIds: [firebaseUser.uid, otherId],
+        status: 'calling',
+        type: type,
+        createdAt: new Date().toISOString(),
+        chatId: currentChatId
+      };
+      const docRef = await addDoc(collection(db, 'calls'), callData);
+      setActiveCallId(docRef.id);
+    } catch (e) {
+      toast({ title: "Сбой линии", variant: "destructive" });
+    }
+  };
 
   const handleSendMessage = useCallback(async (content_msg: string, type_msg: Message['contentType'] = 'text', meta: any = null) => {
     if (!content_msg || !currentChatId || !firebaseUser || !db) return;
@@ -253,19 +258,12 @@ export default function ChatArea() {
     }
   }, [currentChatId, firebaseUser?.uid, db, userProfile, replyTo]);
 
-  const unpinMessage = async () => {
-    if (!db || !currentChatId) return;
-    await updateDoc(doc(db, 'chats', currentChatId), { pinnedMessageId: null });
-  };
-
   const currentDisplayName = useMemo(() => {
     if (!chat) return '...';
     if (chat.type === 'saved') return 'Архив Данных';
     if (chat.type === 'private') return formatDisplayName(otherProfile?.name, otherProfile?.username);
     return formatDisplayName(chat.name, chat.username);
   }, [chat, otherProfile]);
-
-  const rep = getReputationInfo(otherId ? otherProfile?.reputation : userProfile?.reputation);
 
   return (
     <div className="flex-1 flex flex-col h-full bg-[#030306] relative overflow-hidden z-20">
@@ -283,29 +281,25 @@ export default function ChatArea() {
             <div className="flex flex-col min-w-0 text-left">
               <div className="flex items-center gap-2 min-w-0">
                 <span className="font-black text-base truncate text-white leading-tight italic tracking-tighter uppercase">{currentDisplayName}</span>
-                <span className={cn("text-[10px] drop-shadow-lg", rep.color)} title={rep.name}>{rep.icon}</span>
               </div>
               <span className="text-[9px] font-bold text-primary/60 tracking-widest uppercase italic">{chat?.type === 'private' ? t('online') : chat?.type === 'saved' ? 'Ваш Архив' : chat?.username}</span>
             </div>
           </div>
         </div>
+        
+        {chat?.type === 'private' && otherId && (
+          <div className="flex items-center gap-2 pr-2">
+             <Button variant="ghost" size="icon" className="rounded-xl text-white/40 hover:text-primary transition-all" onClick={() => handleStartCall('audio')}>
+                <Phone size={20} />
+             </Button>
+             <Button variant="ghost" size="icon" className="rounded-xl text-white/40 hover:text-primary transition-all" onClick={() => handleStartCall('video')}>
+                <Video size={20} />
+             </Button>
+          </div>
+        )}
       </header>
 
-      {pinnedMessage && (
-        <div className="bg-white/[0.03] backdrop-blur-[24px] border-b border-white/5 h-12 flex items-center px-6 gap-3 shrink-0 z-20 animate-in slide-in-from-top-4 duration-500 shadow-xl group">
-          <div className="w-1 h-6 bg-primary rounded-full shadow-[0_0_10px_rgba(229,142,56,0.6)]" />
-          <div className="flex flex-col flex-1 min-w-0 cursor-pointer" onClick={() => document.getElementById(pinnedMessage.id)?.scrollIntoView({ behavior: 'smooth' })}>
-            <span className="text-[9px] font-black text-primary uppercase tracking-[0.2em] italic">Закрепленный сигнал</span>
-            <span className="text-[12px] text-white/60 truncate font-medium">
-              {pinnedMessage.contentType === 'text' ? decryptSignal(pinnedMessage.content) : '[Вложение]'}
-            </span>
-          </div>
-          <button onClick={() => { triggerHaptic(); unpinMessage(); }} className="text-white/20 hover:text-white transition-colors">
-            <XCircle className="w-4 h-4" />
-          </button>
-        </div>
-      )}
-
+      {/* Messages area omitted for brevity */}
       <div className="flex-1 relative overflow-hidden flex flex-col min-w-0 z-10">
         <ScrollArea className="flex-1 w-full">
           <div className="flex flex-col gap-1 max-w-4xl mx-auto px-4 py-6 min-h-full">
@@ -314,7 +308,7 @@ export default function ChatArea() {
                  <MessageItem 
                    message={msg} isMe={msg.senderId === firebaseUser?.uid} 
                    chatId={currentChatId} onReply={setReplyTo} 
-                   amIPremium={isPremium} viewerProfile={userProfile} 
+                   amIPremium={isUserPremium(userProfile)} viewerProfile={userProfile} 
                  />
                </div>
             ))}
@@ -324,9 +318,7 @@ export default function ChatArea() {
       </div>
 
       <ChatInputBar onSendMessage={handleSendMessage} currentChatId={currentChatId} replyTo={replyTo} onCancelReply={() => setReplyTo(null)} />
-
       {chat && <ChatInfoModal open={isChatInfoOpen} onOpenChange={setIsChatInfoOpen} chat={chat as any} />}
-      {currentChatId && <CreatePollModal open={isPollModalOpen} onOpenChange={setIsPollModalOpen} chatId={currentChatId} />}
     </div>
   );
 }

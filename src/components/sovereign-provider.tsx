@@ -10,11 +10,11 @@ import { ThemeApplier } from '@/components/theme-applier';
 import { AppIconApplier } from '@/components/app-icon-applier';
 import { OfflinePlaceholder } from '@/components/offline-placeholder';
 import { Button } from '@/components/ui/button';
-import { X } from 'lucide-react';
+import { X, ShieldAlert } from 'lucide-react';
 
 /**
- * SOVEREIGN PROVIDER V110.0 «UX COMPLETE»
- * Added Cookie Policy Banner and Global Back Navigation Fix.
+ * SOVEREIGN PROVIDER V121.0 «UX STABILITY»
+ * FIXED: Persistent cookie acceptance and session handling.
  */
 export function SovereignProvider({ children }: { children: ReactNode }) {
   const [mounted, setMounted] = useState(false);
@@ -23,32 +23,16 @@ export function SovereignProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setMounted(true);
     
-    // Cookie Check
-    const accepted = localStorage.getItem('nuxus_cookies_accepted');
-    if (!accepted) setShowCookies(true);
-
-    // Prevent default context menu
-    const preventDefault = (e: Event) => {
-       // Allow in inputs
-    };
-    document.addEventListener('contextmenu', preventDefault);
-
-    // Global History Listener to prevent "exit app" on back swipe
-    const handlePopState = (e: PopStateEvent) => {
-       // Simple guard to keep user in SPA
-       window.history.pushState(null, "", window.location.href);
-    };
-    window.history.pushState(null, "", window.location.href);
-    window.addEventListener('popstate', handlePopState);
-
-    return () => {
-      document.removeEventListener('contextmenu', preventDefault);
-      window.removeEventListener('popstate', handlePopState);
-    };
+    // Cookie Check - Persistence Fix
+    const accepted = localStorage.getItem('nuxus_cookies_accepted_v121');
+    if (!accepted) {
+      const timer = setTimeout(() => setShowCookies(true), 2000);
+      return () => clearTimeout(timer);
+    }
   }, []);
 
   const acceptCookies = () => {
-    localStorage.setItem('nuxus_cookies_accepted', 'true');
+    localStorage.setItem('nuxus_cookies_accepted_v121', 'true');
     setShowCookies(false);
   };
 
@@ -57,7 +41,7 @@ export function SovereignProvider({ children }: { children: ReactNode }) {
       <div className="fixed inset-0 z-[10000] bg-[#010103] flex items-center justify-center">
         <div className="flex flex-col items-center gap-6">
           <NuxusLogo size={80} className="opacity-20 animate-pulse" />
-          <p className="text-[10px] font-black uppercase text-white/20 tracking-[0.6em]">Nuxus Kernel V119.0</p>
+          <p className="text-[10px] font-black uppercase text-white/20 tracking-[0.6em]">Nuxus Kernel V121.0</p>
         </div>
       </div>
     );
@@ -76,16 +60,19 @@ export function SovereignProvider({ children }: { children: ReactNode }) {
         </main>
 
         {showCookies && (
-          <div className="fixed bottom-24 left-1/2 -translate-x-1/2 w-[90%] max-w-md bg-[#1c1c1e]/95 backdrop-blur-xl border border-white/10 p-5 rounded-[2.5rem] z-[5000] shadow-2xl animate-in slide-in-from-bottom-10">
-            <div className="flex flex-col gap-4">
+          <div className="fixed bottom-24 left-1/2 -translate-x-1/2 w-[92%] max-w-md bg-[#1c1c1e]/95 backdrop-blur-[60px] border border-white/10 p-6 rounded-[2.5rem] z-[10000] shadow-2xl animate-in slide-in-from-bottom-10 duration-700">
+            <div className="flex flex-col gap-5">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black uppercase text-primary tracking-widest">Cookie Policy</span>
-                <button onClick={() => setShowCookies(false)} className="text-white/20 hover:text-white"><X size={16} /></button>
+                <div className="flex items-center gap-3">
+                   <ShieldAlert className="w-5 h-5 text-primary animate-pulse" />
+                   <span className="text-[11px] font-black uppercase text-white tracking-widest">Cookie Policy</span>
+                </div>
+                <button onClick={() => setShowCookies(false)} className="text-white/20 hover:text-white transition-colors"><X size={18} /></button>
               </div>
-              <p className="text-[9px] font-bold text-white/60 leading-relaxed uppercase tracking-tight">
-                Nuxus использует куки для обеспечения безопасности и стабильности вашего узла. Продолжая использование, вы соглашаетесь с нашей политикой.
+              <p className="text-[10px] font-bold text-white/60 leading-relaxed uppercase tracking-tight italic">
+                Ядро использует зашифрованные куки для идентификации вашего узла и обеспечения 100% стабильности связи.
               </p>
-              <Button onClick={acceptCookies} className="w-full h-11 bg-primary text-white rounded-xl font-black uppercase text-[9px] tracking-widest">Принимаю</Button>
+              <Button onClick={acceptCookies} className="w-full h-12 bg-primary text-white rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] shadow-xl shadow-primary/20 active:scale-95 transition-all">Принять условия</Button>
             </div>
           </div>
         )}
