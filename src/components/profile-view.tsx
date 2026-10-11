@@ -9,7 +9,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   ChevronRight, Star, Fingerprint, Palette, ShieldCheck, 
-  Share2, LayoutGrid, Info, Menu, RefreshCw, Sparkles, Trophy, Zap
+  Share2, LayoutGrid, Info, Menu, RefreshCw, Sparkles, Trophy, Zap, HelpCircle
 } from 'lucide-react';
 import { useAppState } from '@/lib/app-state';
 import { formatDisplayName, cn, isGlobalAdmin, getReputationInfo, triggerHaptic } from '@/lib/utils';
@@ -17,10 +17,16 @@ import type { User } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { AdminPanelModal } from './modals/admin-panel-modal';
 import { Progress } from '@/components/ui/progress';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /**
- * PROFILE VIEW V116.0 «REPUTATION HUB»
- * UPDATED: Added interactive Reputation/Trust bar and gamification elements.
+ * PROFILE VIEW V116.1 «REPUTATION HUB»
+ * UPDATED: Refined Reputation UI and added "How to level up" info.
  */
 export default function ProfileView() {
   const { user } = useUser();
@@ -108,9 +114,18 @@ export default function ProfileView() {
                       <span className="text-[8px] text-white/30 font-bold uppercase tracking-widest">Aegis Trust Node</span>
                    </div>
                 </div>
-                <div className="text-right">
-                   <span className="text-xl font-black text-white italic tabular-nums leading-none">LVL {rep.level}</span>
-                </div>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button className="h-8 w-8 rounded-full bg-white/5 flex items-center justify-center text-white/20 hover:text-primary transition-colors">
+                        <HelpCircle className="w-4 h-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent className="bg-black/90 border-white/10 rounded-2xl p-4 text-[10px] uppercase font-bold text-white tracking-widest max-w-[200px]">
+                      Репутация растет при отправке сигналов (сообщений). Каждый сигнал повышает уровень доверия Ядра к вашему узлу.
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
              </div>
 
              <div className="space-y-2">
@@ -126,9 +141,12 @@ export default function ProfileView() {
                 </div>
              </div>
 
-             <p className="text-[8px] text-white/40 uppercase font-bold tracking-widest leading-relaxed text-center px-4 italic">
-                Отправляйте сообщения и участвуйте в жизни Ядра, чтобы повысить уровень доверия.
-             </p>
+             <div className="flex items-center justify-center gap-2">
+                <Zap className="w-3 h-3 text-primary animate-pulse" />
+                <span className="text-[8px] text-white/40 uppercase font-black tracking-widest italic">
+                   До следующего уровня: {100 - rep.progress}%
+                </span>
+             </div>
           </div>
 
           <div className="space-y-4">
@@ -161,7 +179,8 @@ export default function ProfileView() {
                      label="Передать сигнал" 
                      onClick={() => {
                         triggerHaptic();
-                        navigator.clipboard.writeText(`https://nuxus.fun/?u=${profile?.username?.replace('@','')}`);
+                        const url = typeof window !== 'undefined' ? window.location.origin : 'https://nuxus.fun';
+                        navigator.clipboard.writeText(`${url}/?u=${profile?.username?.replace('@','')}`);
                         toast({ title: "Signal Copied", description: "Инвайт-ссылка в буфере обмена." });
                      }} 
                    />
