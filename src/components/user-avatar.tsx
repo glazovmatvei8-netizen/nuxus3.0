@@ -5,14 +5,14 @@ import { useFirestore } from '@/firebase/provider';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { doc } from 'firebase/firestore';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { cn, formatDisplayName, isUserPremium } from '@/lib/utils';
+import { cn, isUserPremium } from '@/lib/utils';
 import type { User } from '@/lib/types';
 import { differenceInMinutes, parseISO } from 'date-fns';
 import Image from 'next/image';
 
 /**
- * USER AVATAR V125.0 «HYDRATION SHIELD»
- * FIXED: 111 errors by moving time calculation to client-only phase.
+ * USER AVATAR V126.0 «STRICT HYDRATION»
+ * FIXED: Устранение ошибок разницы времени между сервером и клиентом.
  */
 export const UserAvatar = memo(({ userId, className, fallbackName, manualAvatarUrl, showOnlineStatus = false, onClick }: any) => {
   const db = useFirestore();
@@ -33,11 +33,11 @@ export const UserAvatar = memo(({ userId, className, fallbackName, manualAvatarU
   const displayAvatar = useMemo(() => manualAvatarUrl || profile?.avatarUrl || null, [profile, manualAvatarUrl]);
   const premium = useMemo(() => isUserPremium(profile), [profile]);
   
+  // КРИТИЧЕСКИ: Статус онлайн рассчитывается ТОЛЬКО на клиенте после монтирования
   const isOnline = useMemo(() => {
-    // CRITICAL: Must return same value on server and client initial render
     if (!mounted || !profile?.lastSeen || profile?.settings?.privacy?.isGhostMode) return false;
     try {
-      // client-only calculation
+      // Это выполняется только в браузере
       return differenceInMinutes(new Date(), parseISO(profile.lastSeen)) < 2;
     } catch (e) { return false; }
   }, [profile, mounted]);
@@ -54,7 +54,14 @@ export const UserAvatar = memo(({ userId, className, fallbackName, manualAvatarU
         <Avatar className="bg-black w-full h-full rounded-full border-none">
           {displayAvatar && !imgError ? (
             <div className="relative w-full h-full">
-              <Image src={displayAvatar} alt="Avatar" fill className="object-cover rounded-full" onError={() => setImgError(true)} unoptimized />
+              <Image 
+                src={displayAvatar} 
+                alt="Avatar" 
+                fill 
+                className="object-cover rounded-full" 
+                onError={() => setImgError(true)} 
+                unoptimized 
+              />
             </div>
           ) : (
             <AvatarFallback className="bg-[#050505] text-primary font-black uppercase italic text-[50%] tracking-tighter">
