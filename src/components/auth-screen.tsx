@@ -24,8 +24,8 @@ import { translations } from '@/lib/translations';
 import versions from '@/app/versions.json';
 
 /**
- * AUTH SCREEN V116.0 «GLOBAL ACCESS»
- * UPDATED: Removed @nuxus.fun email restriction. Now any email can join the Core.
+ * AUTH SCREEN V119.0 «GLOBAL ACCESS UNLOCKED»
+ * FIXED: Removed all email restrictions.
  */
 export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'login' | 'register' }) {
   const auth = useAuth();
@@ -73,7 +73,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
           phone: '',
           email: cleanEmail,
           createdAt: new Date().toISOString(),
-          balance: 0,
+          balance: 100, // Initial bonus for testing
           reputation: 0,
           settings: { 
             language: lang || 'ru', appearance: 'dark', theme: 'default',
@@ -82,17 +82,17 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
           }
         };
         await setDoc(doc(db, 'users', userCred.user.uid), userData);
-        toast({ title: "Узел успешно активирован", description: `Добро пожаловать в Ядро, ${name}!` });
+        toast({ title: "Узел активирован", description: `Добро пожаловать, ${name}!` });
       } else {
         await signInWithEmailAndPassword(auth, cleanEmail, password);
         toast({ title: "Синхронизация завершена" });
       }
     } catch (e: any) {
       let msg = e.message;
-      if (e.code === 'auth/user-not-found') msg = "Узел не зарегистрирован. Проверьте почту.";
-      if (e.code === 'auth/wrong-password') msg = "Неверный пароль доступа.";
-      if (e.code === 'auth/invalid-credential') msg = "Ошибка авторизации: проверьте данные.";
-      toast({ title: "Ошибка входа", description: msg, variant: "destructive" });
+      if (e.code === 'auth/user-not-found') msg = "Узел не найден. Проверьте почту.";
+      if (e.code === 'auth/wrong-password') msg = "Неверный пароль.";
+      if (e.code === 'auth/invalid-credential') msg = "Ошибка данных. Проверьте ввод.";
+      toast({ title: "Ошибка", description: msg, variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -101,18 +101,18 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
   if (!lang) {
     return (
       <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#010103] px-8 relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.1)_0%,transparent_70%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(229,142,56,0.1)_0%,transparent_70%)]" />
         <div className="relative z-10 flex flex-col items-center animate-in fade-in zoom-in-95 duration-1000">
-          <NuxusLogo size={120} className="mb-10 drop-shadow-[0_0_30px_rgba(168,85,247,0.4)]" />
+          <NuxusLogo size={100} className="mb-10" />
           <div className="space-y-4 w-full max-w-[300px]">
-            <h1 className="text-2xl font-black text-white text-center mb-8 uppercase italic tracking-tighter">NUXUS CORE</h1>
-            <button onClick={() => setLang('ru')} className="w-full h-16 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-between px-6 transition-all active:scale-95 hover:bg-white/10 group shadow-xl">
-              <span className="text-white font-black uppercase italic tracking-widest text-xs">Русский</span>
-              <div className="bg-primary/20 px-2 py-0.5 rounded-lg text-primary text-[8px] font-black uppercase">RU</div>
+            <h1 className="text-xl font-black text-white text-center mb-8 uppercase italic tracking-tighter">NUXUS CORE</h1>
+            <button onClick={() => setLang('ru')} className="w-full h-14 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-between px-6 transition-all active:scale-95">
+              <span className="text-white font-black uppercase italic text-xs">Русский</span>
+              <div className="bg-primary/20 px-2 py-0.5 rounded-lg text-primary text-[8px] font-black">RU</div>
             </button>
-            <button onClick={() => setLang('en')} className="w-full h-16 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-between px-6 transition-all active:scale-95 hover:bg-white/10 group shadow-xl">
-              <span className="text-white font-black uppercase italic tracking-widest text-xs">English</span>
-              <div className="bg-primary/20 px-2 py-0.5 rounded-lg text-primary text-[8px] font-black uppercase">EN</div>
+            <button onClick={() => setLang('en')} className="w-full h-14 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-between px-6 transition-all active:scale-95">
+              <span className="text-white font-black uppercase italic text-xs">English</span>
+              <div className="bg-primary/20 px-2 py-0.5 rounded-lg text-primary text-[8px] font-black">EN</div>
             </button>
           </div>
         </div>
@@ -122,71 +122,36 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
 
   return (
     <div className="h-[100dvh] w-full flex flex-col bg-[#010103] relative overflow-hidden">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(168,85,247,0.1)_0%,transparent_70%)]" />
       <ScrollArea className="w-full h-full">
         <div className="min-h-full w-full flex flex-col items-center justify-center p-6 py-12">
-          <div className="mb-6 cursor-pointer hover:scale-105 transition-transform" onClick={() => setLang(null)}><NuxusLogo size={80} /></div>
-          <Card className="w-full max-w-[380px] bg-white/[0.01] backdrop-blur-[100px] border-white/5 rounded-[2.5rem] p-1 shadow-2xl relative z-10 overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
-            <CardHeader className="text-center pt-6 pb-2 space-y-5">
-              <div className="inline-flex bg-black/60 p-1 rounded-xl border border-white/5 mx-auto shadow-inner">
-                <button type="button" onClick={() => setMode('login')} className={cn("px-5 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all", mode === 'login' ? "bg-white text-black shadow-xl" : "text-white/20")}>Вход</button>
-                <button type="button" onClick={() => setMode('register')} className={cn("px-5 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all", mode === 'register' ? "bg-white text-black shadow-xl" : "text-white/20")}>Регистрация</button>
-              </div>
-              <div className="space-y-1">
-                <CardTitle className="text-3xl font-black text-white tracking-tighter italic uppercase">{mode === 'login' ? 'Привет' : 'Создать'}</CardTitle>
-                <CardDescription className="text-primary/60 font-black uppercase text-[7px] tracking-[0.4em] italic">{t.subtitle}</CardDescription>
+          <div className="mb-6" onClick={() => setLang(null)}><NuxusLogo size={80} /></div>
+          <Card className="w-full max-w-[380px] bg-white/[0.01] backdrop-blur-3xl border-white/5 rounded-[2.5rem] p-1 shadow-2xl relative z-10">
+            <CardHeader className="text-center pt-8 pb-4 space-y-4">
+              <div className="inline-flex bg-black/40 p-1 rounded-xl border border-white/5 mx-auto">
+                <button type="button" onClick={() => setMode('login')} className={cn("px-6 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest", mode === 'login' ? "bg-white text-black" : "text-white/20")}>Вход</button>
+                <button type="button" onClick={() => setMode('register')} className={cn("px-6 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest", mode === 'register' ? "bg-white text-black" : "text-white/20")}>Создать</button>
               </div>
             </CardHeader>
-            <CardContent className="px-6 pb-8">
+            <CardContent className="px-8 pb-10">
               <form onSubmit={handleAuth} className="space-y-4">
                 {mode === 'register' && (
-                  <div className="space-y-3">
-                    <div className="space-y-1">
-                       <Label className="text-[8px] font-black uppercase text-primary/40 ml-2 tracking-widest">Ваше имя</Label>
-                       <Input placeholder="Имя" value={name} onChange={e => setName(e.target.value)} className="h-11 bg-white/[0.02] border-white/5 rounded-xl font-bold text-sm px-4 focus:border-primary/40" />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-[8px] font-black uppercase text-primary/40 ml-2 tracking-widest">ID (@)</Label>
-                      <div className="relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-primary font-black text-sm opacity-40">@</span>
-                        <Input placeholder="username" value={username} onChange={e => setUsername(e.target.value)} className="h-11 bg-white/[0.02] border-white/5 rounded-xl font-bold text-sm pl-8" />
-                      </div>
-                    </div>
-                  </div>
+                  <>
+                    <Input placeholder={t.name} value={name} onChange={e => setName(e.target.value)} className="h-12 bg-white/5 border-white/10 rounded-xl font-bold" />
+                    <Input placeholder={t.username} value={username} onChange={e => setUsername(e.target.value)} className="h-12 bg-white/5 border-white/10 rounded-xl font-mono text-primary" />
+                  </>
                 )}
-                
-                <div className="space-y-4">
-                  <div className="space-y-1">
-                    <Label className="text-[8px] font-black uppercase text-primary/40 ml-2 tracking-widest">Email Адрес</Label>
-                    <Input type="email" placeholder="example@gmail.com" value={email} onChange={e => setEmail(e.target.value)} className="h-11 bg-white/[0.02] border-white/5 rounded-xl font-bold text-sm px-4" />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-[8px] font-black uppercase text-primary/40 ml-2 tracking-widest">Пароль доступа</Label>
-                    <div className="relative">
-                      <Input type={showPass ? "text" : "password"} placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} className="h-11 bg-white/[0.02] border-white/5 rounded-xl font-black text-base px-4 tracking-[0.2em]" />
-                      <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/10 hover:text-primary transition-colors p-1.5">{showPass ? <EyeOff size={14} /> : <Eye size={14} />}</button>
-                    </div>
-                  </div>
+                <Input type="email" placeholder={t.enterEmail} value={email} onChange={e => setEmail(e.target.value)} className="h-12 bg-white/5 border-white/10 rounded-xl font-bold" />
+                <div className="relative">
+                  <Input type={showPass ? "text" : "password"} placeholder={t.enterPass} value={password} onChange={e => setPassword(e.target.value)} className="h-12 bg-white/5 border-white/10 rounded-xl font-black tracking-widest" />
+                  <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20">{showPass ? <EyeOff size={16} /> : <Eye size={16} />}</button>
                 </div>
-
-                <Button type="submit" disabled={isLoading} className="w-full h-14 bg-primary text-white font-black uppercase italic tracking-widest text-sm rounded-xl shadow-xl mt-4 active:scale-95 transition-all">
-                  {isLoading ? <Loader2 className="animate-spin w-5 h-5" /> : (mode === 'login' ? 'Войти' : 'Создать')}
+                <Button type="submit" disabled={isLoading} className="w-full h-14 bg-primary text-white font-black uppercase italic tracking-widest rounded-2xl shadow-xl mt-4">
+                  {isLoading ? <Loader2 className="animate-spin" /> : (mode === 'login' ? t.login : t.register)}
                 </Button>
               </form>
             </CardContent>
           </Card>
-          
-          <div className="mt-8 flex flex-col items-center gap-2 opacity-30">
-             <div className="flex items-center gap-1.5 bg-white/5 px-3 py-1 rounded-full border border-white/10">
-                <Copyright className="w-2.5 h-2.5 text-primary" />
-                <p className="text-[7px] font-black text-white uppercase tracking-[0.3em]">Nuxus 2024. All Rights Reserved.</p>
-             </div>
-             <div className="flex items-center gap-3">
-                <ShieldCheck className="w-3 h-3 text-green-500" />
-                <p className="text-[6px] font-black text-white/40 uppercase tracking-[0.6em]">Secure Enclave Active • Build {versions.build}</p>
-             </div>
-          </div>
+          <p className="mt-8 text-[8px] font-black uppercase text-white/20 tracking-[0.4em]">© Nuxus 2024. All Rights Reserved.</p>
         </div>
       </ScrollArea>
     </div>

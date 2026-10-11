@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -16,7 +17,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Settings2, Camera, ShieldCheck, Loader2, Fingerprint, Palette, 
   ChevronRight, Globe, Trash2, Mail, Phone, Lock, 
-  Info, HelpCircle, UserCheck, ShieldAlert, ImageIcon, Type, LayoutGrid, MessageSquare, Headphones, KeyRound, RefreshCw, AlertTriangle, Sparkles, Crown
+  Info, HelpCircle, UserCheck, ShieldAlert, ImageIcon, Type, LayoutGrid, MessageSquare, Headphones, KeyRound, RefreshCw, AlertTriangle, Sparkles, Crown, FileText
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut, verifyBeforeUpdateEmail } from 'firebase/auth';
@@ -25,6 +26,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppState } from '@/lib/app-state';
 import { isUserPremium, cn, isGlobalAdmin } from '@/lib/utils';
 import type { User } from '@/lib/types';
+import { useTranslations } from '@/hooks/use-translations';
 import versions from '@/app/versions.json';
 
 const ADMIN_ID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
@@ -34,6 +36,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const db = useFirestore();
   const { user } = useUser();
   const { toast } = useToast();
+  const { t } = useTranslations();
   const { settingsTab, setSettingsTab, setIsLegalOpen, setCurrentChatId, setActiveView } = useAppState();
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -103,10 +106,27 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         'settings.messageSize': form.messageSize,
         'settings.privacy.isGhostMode': form.isGhostMode,
       });
-      toast({ title: "Ядро синхронизировано" });
+      toast({ title: t('saved') });
       onOpenChange(false);
-    } catch (e: any) { toast({ title: "Ошибка сохранения", variant: "destructive" }); }
+    } catch (e: any) { toast({ title: t('error'), variant: "destructive" }); }
     finally { setIsSaving(false); }
+  };
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    if (file.size > 2 * 1024 * 1024) {
+      toast({ title: "Ошибка", description: "Максимальный размер фото: 2МБ", variant: "destructive" });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setForm(prev => ({ ...prev, avatarUrl: reader.result as string }));
+      toast({ title: "Превью загружено", description: "Нажмите 'Записать изменения' для сохранения." });
+    };
+    reader.readAsDataURL(file);
   };
 
   const syncAuthIdentity = async () => {
@@ -161,8 +181,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                <Settings2 className="w-6 h-6 text-primary animate-pulse" />
             </div>
             <div className="flex flex-col">
-              <DialogTitle className="text-2xl font-black italic uppercase text-white tracking-tighter">Настройки</DialogTitle>
-              <DialogDescription className="text-[9px] font-bold uppercase text-primary/60 mt-0.5 tracking-widest">Protocol V88.0</DialogDescription>
+              <DialogTitle className="text-2xl font-black italic uppercase text-white tracking-tighter">{t('settings.title')}</DialogTitle>
+              <DialogDescription className="text-[9px] font-bold uppercase text-primary/60 mt-0.5 tracking-widest">Protocol V119.0</DialogDescription>
             </div>
           </div>
         </DialogHeader>
@@ -170,10 +190,10 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         <Tabs value={settingsTab} onValueChange={setSettingsTab} className="flex-1 flex flex-col min-h-0">
           <div className="px-6 mt-4">
             <TabsList className="grid grid-cols-4 bg-white/5 p-1 rounded-xl border border-white/5 shadow-inner">
-              <TabsTrigger value="profile" className="text-[9px] font-black uppercase tracking-widest h-8">Аккаунт</TabsTrigger>
-              <TabsTrigger value="privacy" className="text-[9px] font-black uppercase tracking-widest h-8">Защита</TabsTrigger>
-              <TabsTrigger value="style" className="text-[9px] font-black uppercase tracking-widest h-8">Стиль</TabsTrigger>
-              <TabsTrigger value="data" className="text-[9px] font-black uppercase tracking-widest h-8">Инфо</TabsTrigger>
+              <TabsTrigger value="profile" className="text-[9px] font-black uppercase tracking-widest h-8">{t('settings.tabs.profile')}</TabsTrigger>
+              <TabsTrigger value="privacy" className="text-[9px] font-black uppercase tracking-widest h-8">{t('settings.tabs.privacy')}</TabsTrigger>
+              <TabsTrigger value="style" className="text-[9px] font-black uppercase tracking-widest h-8">{t('settings.tabs.style')}</TabsTrigger>
+              <TabsTrigger value="data" className="text-[9px] font-black uppercase tracking-widest h-8">{t('settings.tabs.data')}</TabsTrigger>
             </TabsList>
           </div>
 
@@ -184,37 +204,21 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
                        <UserAvatar userId={user?.uid} manualAvatarUrl={form.avatarUrl} className="h-32 w-32 border-[4px] border-[#0a0a0c] shadow-xl relative z-10" />
                        <div className="absolute bottom-1 right-1 bg-primary p-2.5 rounded-xl shadow-2xl z-20"><Camera className="w-4 h-4 text-white" /></div>
-                       <input type="file" ref={fileInputRef} className="hidden" accept="image/*" />
+                       <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleAvatarChange} />
                     </div>
                     
                     <div className="w-full space-y-4">
-                       {isAuthMismatch && (
-                         <div className="p-6 bg-red-500/10 border border-red-500/20 rounded-[2rem] space-y-4 animate-in fade-in zoom-in-95">
-                            <div className="flex items-center gap-3 text-red-500">
-                               <AlertTriangle className="w-5 h-5 animate-pulse" />
-                               <span className="text-[10px] font-black uppercase tracking-widest">Разрыв Личности</span>
-                            </div>
-                            <p className="text-[9px] text-white/60 font-bold uppercase leading-relaxed">
-                               Для входа под новой почтой необходимо подтвердить Auth-сигнал.
-                            </p>
-                            <Button onClick={syncAuthIdentity} disabled={isSyncingAuth} className="w-full h-11 bg-red-500 text-white rounded-xl font-black uppercase text-[9px] tracking-widest gap-2 shadow-xl">
-                              {isSyncingAuth ? <Loader2 className="animate-spin w-4 h-4" /> : <RefreshCw className="w-4 h-4" />}
-                              Синхронизировать
-                            </Button>
-                         </div>
-                       )}
-
                        <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5 space-y-4">
                           <div className="space-y-1.5">
-                             <Label className="text-[9px] font-black uppercase text-primary/60 ml-2 tracking-widest">Имя</Label>
+                             <Label className="text-[9px] font-black uppercase text-primary/60 ml-2 tracking-widest">{t('settings.labels.name')}</Label>
                              <Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="h-12 bg-black/40 border-white/10 rounded-xl font-bold" />
                           </div>
                           <div className="space-y-1.5">
-                             <Label className="text-[9px] font-black uppercase text-primary/60 ml-2 tracking-widest">ID (@)</Label>
+                             <Label className="text-[9px] font-black uppercase text-primary/60 ml-2 tracking-widest">{t('settings.labels.username')}</Label>
                              <Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="h-12 bg-black/40 border-white/10 rounded-xl font-mono text-primary" />
                           </div>
                           <div className="space-y-1.5">
-                             <Label className="text-[9px] font-black uppercase text-primary/60 ml-2 tracking-widest">Био</Label>
+                             <Label className="text-[9px] font-black uppercase text-primary/60 ml-2 tracking-widest">{t('settings.labels.bio')}</Label>
                              <Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} placeholder="Описание вашего узла..." className="bg-black/40 border-white/10 rounded-xl h-24 text-sm" />
                           </div>
                        </div>
@@ -301,11 +305,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                        </div>
                     </div>
 
-                    <div className="space-y-3">
-                       <Label className="text-[9px] font-black uppercase text-primary/60 ml-2 flex items-center gap-2 tracking-widest"><ImageIcon className="w-4 h-4" /> Фон чатов (URL)</Label>
-                       <Input value={form.chatBackground} onChange={e => setForm({...form, chatBackground: e.target.value})} placeholder="https://images..." className="h-12 bg-black/40 border-white/10 rounded-xl px-4 text-xs" />
-                    </div>
-
                     <div className="space-y-2">
                        <Label className="text-[9px] font-black uppercase text-white/40 ml-2 flex items-center gap-2 tracking-widest"><Type className="w-3.5 h-3.5" /> Шрифт</Label>
                        <Select value={form.fontFamily} onValueChange={v => setForm({...form, fontFamily: v})}>
@@ -327,15 +326,19 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20"><Info className="w-8 h-8 text-primary" /></div>
                     <div className="space-y-1">
                        <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Nuxus Kernel</h3>
-                       <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.4em]">Версия {versions.latestVersion} • Pulse V88.0</p>
+                       <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.4em]">Версия {versions.latestVersion} • Pulse V119.0</p>
                     </div>
                     <div className="grid grid-cols-1 gap-3 w-full">
                        <Button onClick={openSupport} className="h-14 rounded-2xl bg-white/5 border border-white/10 font-black uppercase text-[10px] tracking-widest gap-3 hover:bg-primary/10 transition-all">
                           <MessageSquare className="w-5 h-5 text-primary" /> Связь с Оператором
                        </Button>
                        <div className="grid grid-cols-2 gap-3">
-                          <Button variant="ghost" onClick={() => setIsLegalOpen(true)} className="h-12 rounded-xl bg-white/5 font-black uppercase text-[8px] tracking-widest gap-2">Правовой узел</Button>
-                          <Button variant="ghost" className="h-12 rounded-xl bg-red-500/10 text-red-500 font-black uppercase text-[8px] tracking-widest gap-2" onClick={() => { if(confirm("Стереть аккаунт навсегда?")) deleteDoc(doc(db!, 'users', user!.uid)); }}>Стереть данные</Button>
+                          <Button variant="ghost" onClick={() => setIsLegalOpen(true)} className="h-12 rounded-xl bg-white/5 font-black uppercase text-[8px] tracking-widest gap-2">
+                             <FileText className="w-3.5 h-3.5" /> Правовой узел
+                          </Button>
+                          <Button variant="ghost" className="h-12 rounded-xl bg-red-500/10 text-red-500 font-black uppercase text-[8px] tracking-widest gap-2" onClick={() => { if(confirm(t('confirmDelete'))) deleteDoc(doc(db!, 'users', user!.uid)); }}>
+                             <Trash2 className="w-3.5 h-3.5" /> Стереть данные
+                          </Button>
                        </div>
                     </div>
                  </div>
@@ -348,7 +351,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                <LogOut className="w-6 h-6" />
             </Button>
             <Button disabled={isSaving} className="flex-1 h-14 rounded-2xl font-black uppercase italic text-sm bg-primary text-white shadow-2xl shadow-primary/30 active:scale-95 transition-all" onClick={handleSave}>
-              {isSaving ? <Loader2 className="animate-spin w-6 h-6" /> : 'Записать изменения'}
+              {isSaving ? <Loader2 className="animate-spin w-6 h-6" /> : t('settings.labels.save')}
             </Button>
           </div>
         </Tabs>

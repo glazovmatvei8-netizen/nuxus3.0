@@ -1,28 +1,31 @@
+
 "use client"
 
-import React, { useState } from 'react';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import React, { useState, useMemo } from 'react';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { 
   Search, Orbit, CircleDollarSign, TowerControl, 
   Satellite, Microscope, Atom, ChevronRight,
-  Sparkles, Layers, Zap, Loader2
+  Sparkles, Layers, Zap, Loader2, Info
 } from 'lucide-react';
 import { useAppState } from '@/lib/app-state';
 import { useUser, useFirestore } from '@/firebase/provider';
 import { collection, query, where, getDocs, doc, updateDoc, arrayUnion, limit } from 'firebase/firestore';
-import { cn, formatDisplayName } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { useTranslations } from '@/hooks/use-translations';
 
 /**
- * NAVIGATOR EXPLORE V98.0 «FUNCTIONAL HUB»
- * Теперь кнопки «Присоединиться» работают и добавляют пользователя в чаты.
+ * NAVIGATOR EXPLORE V105.0 «UX OPTIMIZED»
+ * FIXED: Header size, horizontal scrolling, join logic, and real-time search.
  */
 export default function DiscoveryView() {
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
+  const { t } = useTranslations();
   const [search, setSearch] = useState('');
   const [isJoining, setIsJoining] = useState<string | null>(null);
   const { setCurrentChatId, setActiveView } = useAppState();
@@ -42,13 +45,13 @@ export default function DiscoveryView() {
           await updateDoc(doc(db, 'chats', chatDoc.id), {
             participantIds: arrayUnion(user.uid)
           });
-          toast({ title: "Доступ разрешен", description: "Узел интегрирован в кластер" });
+          toast({ title: t('explore.join'), description: "Узел интегрирован в кластер" });
         }
         
         setCurrentChatId(chatDoc.id);
         setActiveView('chats');
       } else {
-        toast({ title: "Сбой сигнала", description: "Узел не обнаружен в базе", variant: "destructive" });
+        toast({ title: t('explore.devMode'), description: t('explore.nodeNotFound'), variant: "default" });
       }
     } catch (e) {
       toast({ title: "Ошибка шлюза", variant: "destructive" });
@@ -57,22 +60,36 @@ export default function DiscoveryView() {
     }
   };
 
+  const RECOMMEND_NODES = [
+    { id: 'aurora', icon: Orbit, color: 'text-blue-400', title: "Станция 'Аврора'", username: "@aurora_node" },
+    { id: 'kepler', icon: CircleDollarSign, color: 'text-yellow-500', title: "Торговой Путь", username: "@kepler_trade" },
+    { id: 'beacon', icon: TowerControl, color: 'text-primary', title: "Звездный маяк", username: "@star_beacon" }
+  ];
+
+  const filteredNodes = useMemo(() => {
+    if (!search) return RECOMMEND_NODES;
+    return RECOMMEND_NODES.filter(n => n.title.toLowerCase().includes(search.toLowerCase()) || n.username.toLowerCase().includes(search.toLowerCase()));
+  }, [search]);
+
   return (
     <div className="flex flex-col h-full bg-[#121212] overflow-hidden relative">
-      {/* Top Header */}
-      <div className="px-8 pt-16 pb-6 shrink-0 text-center relative z-10">
-        <h1 className="text-4xl font-black text-primary italic tracking-tighter uppercase leading-none drop-shadow-[0_0_30px_hsla(var(--primary),0.3)]">
-          EXPLORE
+      {/* Background Subtle Gradient */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(229,142,56,0.03)_0%,transparent_70%)] pointer-events-none" />
+
+      {/* COMPACT HEADER */}
+      <div className="px-8 pt-8 pb-4 shrink-0 text-center relative z-10">
+        <h1 className="text-3xl font-black text-primary italic tracking-tighter uppercase leading-none drop-shadow-[0_0_20px_hsla(var(--primary),0.3)]">
+          {t('explore.title')}
         </h1>
-        <p className="text-[10px] font-black uppercase tracking-[0.6em] text-white/20 mt-3">Navigator Engine</p>
+        <p className="text-[9px] font-black uppercase tracking-[0.4em] text-white/20 mt-2">{t('explore.subtitle')}</p>
       </div>
 
-      <div className="px-8 pb-8 shrink-0 relative z-10">
+      <div className="px-8 pb-6 shrink-0 relative z-10">
         <div className="relative group">
-          <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20 group-focus-within:text-primary transition-all" />
+          <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-primary transition-all" />
           <Input 
-            placeholder="Поиск узлов, каналов, пользователей..." 
-            className="bg-[#1C1C1E] border-white/[0.05] h-16 rounded-[2rem] pl-16 text-md font-bold text-white placeholder:text-[#8E8E93]/40 focus:ring-2 focus:ring-primary/20 transition-all shadow-inner"
+            placeholder={t('explore.searchPlaceholder')} 
+            className="bg-[#1C1C1E] border-white/[0.05] h-14 rounded-2xl pl-14 text-sm font-bold text-white placeholder:text-[#8E8E93]/40 focus:ring-1 focus:ring-primary/20 transition-all shadow-inner"
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
@@ -80,74 +97,72 @@ export default function DiscoveryView() {
       </div>
 
       <ScrollArea className="flex-1 relative z-10">
-        <div className="px-8 pb-40 space-y-12 animate-in fade-in duration-1000">
+        <div className="px-8 pb-40 space-y-10 animate-in fade-in duration-700">
           
-          {/* RECOMMENDED NODES */}
-          <section className="space-y-6">
-            <h3 className="text-[11px] font-black uppercase text-[#8E8E93] tracking-[0.3em] px-2 italic">
-              Рекомендуемые узлы
+          {/* DESCRIPTION BOX */}
+          <section className="bg-primary/5 border border-primary/10 p-5 rounded-3xl flex gap-4 items-start">
+             <Info className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+             <p className="text-[10px] font-bold text-white/60 leading-relaxed uppercase tracking-tight">
+               {t('explore.description')}
+             </p>
+          </section>
+
+          {/* RECOMMENDED NODES - HORIZONTAL SCROLL FIXED */}
+          <section className="space-y-4">
+            <h3 className="text-[10px] font-black uppercase text-[#8E8E93] tracking-[0.3em] px-2 italic">
+              {t('explore.recommended')}
             </h3>
-            <ScrollArea className="w-full pb-6">
-              <div className="flex gap-5">
-                <RecommendCard 
-                  id="aurora"
-                  icon={<Orbit className="w-10 h-10 text-blue-400" />} 
-                  title="Станция 'Аврора'" 
-                  username="@aurora_node"
-                  loading={isJoining === '@aurora_node'}
-                  onClick={() => handleJoin('@aurora_node')}
-                />
-                <RecommendCard 
-                  id="kepler"
-                  icon={<CircleDollarSign className="w-10 h-10 text-yellow-500" />} 
-                  title="Торговый путь" 
-                  username="@kepler_trade"
-                  loading={isJoining === '@kepler_trade'}
-                  onClick={() => handleJoin('@kepler_trade')}
-                />
-                <RecommendCard 
-                  id="beacon"
-                  icon={<TowerControl className="w-10 h-10 text-primary" />} 
-                  title="Звездный маяк" 
-                  username="@star_beacon"
-                  loading={isJoining === '@star_beacon'}
-                  onClick={() => handleJoin('@star_beacon')}
-                />
+            <ScrollArea className="w-full">
+              <div className="flex gap-4 pb-4 px-1">
+                {filteredNodes.map(node => (
+                  <RecommendCard 
+                    key={node.id}
+                    icon={<node.icon className={cn("w-10 h-10", node.color)} />} 
+                    title={node.title} 
+                    username={node.username}
+                    loading={isJoining === node.username}
+                    onClick={() => handleJoin(node.username)}
+                  />
+                ))}
               </div>
+              <ScrollBar orientation="horizontal" className="bg-white/5" />
             </ScrollArea>
           </section>
 
           {/* CATEGORIES */}
-          <section className="space-y-6">
-            <h3 className="text-[11px] font-black uppercase text-[#8E8E93] tracking-[0.3em] px-2 italic">
-              Категории
+          <section className="space-y-4">
+            <h3 className="text-[10px] font-black uppercase text-[#8E8E93] tracking-[0.3em] px-2 italic">
+              {t('explore.categories')}
             </h3>
             <div className="grid grid-cols-1 gap-3">
-              <CategoryItem icon={Satellite} label="Связь и Коммуникации" />
-              <CategoryItem icon={Layers} label="Торговля и Ресурсы" />
-              <CategoryItem icon={Microscope} label="Наука и Исследования" />
+              <CategoryItem icon={Satellite} label="Связь и Коммуникации" onClick={() => toast({ title: t('explore.devMode') })} />
+              <CategoryItem icon={Layers} label="Торговля и Ресурсы" onClick={() => toast({ title: t('explore.devMode') })} />
+              <CategoryItem icon={Microscope} label="Наука и Исследования" onClick={() => toast({ title: t('explore.devMode') })} />
             </div>
           </section>
 
           {/* ACTIVE EVENTS */}
-          <section className="space-y-6">
-            <h3 className="text-[11px] font-black uppercase text-[#8E8E93] tracking-[0.3em] px-2 italic">
-              Активные События
+          <section className="space-y-4">
+            <h3 className="text-[10px] font-black uppercase text-[#8E8E93] tracking-[0.3em] px-2 italic">
+              {t('explore.events')}
             </h3>
-            <div className="nuxus-event-card p-8 flex items-center gap-8 group cursor-pointer hover:bg-[#1C1C1E]/90 transition-all shadow-2xl relative overflow-hidden">
-               <div className="w-18 h-18 rounded-3xl bg-primary/20 border border-primary/30 flex items-center justify-center relative z-10">
-                  <Atom className="w-10 h-10 text-primary animate-[spin_10s_linear_infinite]" />
+            <div 
+              onClick={() => toast({ title: t('explore.devMode'), description: "Симпозиум начнется через 48 часов." })}
+              className="nuxus-event-card p-6 flex items-center gap-6 group cursor-pointer hover:bg-[#1C1C1E]/90 transition-all shadow-2xl relative overflow-hidden"
+            >
+               <div className="w-14 h-14 rounded-2xl bg-primary/20 border border-primary/30 flex items-center justify-center relative z-10">
+                  <Atom className="w-8 h-8 text-primary animate-[spin_10s_linear_infinite]" />
                </div>
                <div className="flex flex-col text-left relative z-10">
-                  <span className="text-[18px] font-black text-white italic tracking-tighter uppercase group-hover:text-primary transition-colors">
+                  <span className="text-[16px] font-black text-white italic tracking-tighter uppercase group-hover:text-primary transition-colors">
                     Квантовый Симпозиум
                   </span>
-                  <div className="flex items-center gap-3 mt-2">
-                     <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_10px_green]" />
-                     <span className="text-[10px] font-bold text-green-500 uppercase tracking-widest">LIVE NOW</span>
+                  <div className="flex items-center gap-2 mt-1.5">
+                     <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                     <span className="text-[9px] font-bold text-green-500 uppercase tracking-widest">ОЖИДАНИЕ</span>
                   </div>
                </div>
-               <Zap className="absolute right-8 top-1/2 -translate-y-1/2 w-12 h-12 text-primary/5 group-hover:text-primary/20 transition-all" />
+               <Zap className="absolute right-6 top-1/2 -translate-y-1/2 w-10 h-10 text-primary/5 group-hover:text-primary/20 transition-all" />
             </div>
           </section>
 
@@ -158,40 +173,44 @@ export default function DiscoveryView() {
 }
 
 function RecommendCard({ icon, title, username, onClick, loading }: any) {
+  const { t } = useTranslations();
   return (
-    <div className="min-w-[190px] p-6 bg-[#1C1C1E] border border-white/[0.05] rounded-[3rem] flex flex-col gap-6 shadow-2xl group transition-all hover:border-primary/30">
-       <div className="w-16 h-16 rounded-[1.8rem] bg-white/[0.03] border border-white/5 flex items-center justify-center group-hover:bg-primary/10 group-hover:border-primary/20 transition-all">
+    <div className="min-w-[170px] max-w-[170px] p-5 bg-[#1C1C1E] border border-white/[0.05] rounded-[2.5rem] flex flex-col gap-5 shadow-2xl group transition-all hover:border-primary/30">
+       <div className="w-14 h-14 rounded-[1.5rem] bg-white/[0.03] border border-white/5 flex items-center justify-center group-hover:bg-primary/10 group-hover:border-primary/20 transition-all">
           {icon}
        </div>
-       <div className="flex flex-col gap-2 text-left">
-          <span className="text-[15px] font-black text-white italic uppercase leading-tight line-clamp-1">
+       <div className="flex flex-col gap-1.5 text-left">
+          <span className="text-[14px] font-black text-white italic uppercase leading-tight line-clamp-1">
             {title}
           </span>
-          <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">{username}</span>
+          <span className="text-[8px] font-black text-white/20 uppercase tracking-widest">{username}</span>
           <Button 
             onClick={onClick}
             disabled={loading}
-            className="mt-2 h-11 w-full bg-primary/10 border border-primary/20 rounded-2xl text-[10px] font-black uppercase tracking-widest text-primary hover:bg-primary hover:text-white transition-all shadow-lg active:scale-95"
+            className="mt-3 h-10 w-full bg-primary/10 border border-primary/20 rounded-xl text-[9px] font-black uppercase tracking-widest text-primary hover:bg-primary hover:text-white transition-all shadow-lg active:scale-95"
           >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Присоединиться'}
+            {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : t('explore.join')}
           </Button>
        </div>
     </div>
   );
 }
 
-function CategoryItem({ icon: Icon, label }: any) {
+function CategoryItem({ icon: Icon, label, onClick }: any) {
   return (
-    <div className="flex items-center justify-between p-6 bg-[#1C1C1E]/70 rounded-[2.5rem] border border-white/[0.05] hover:bg-[#1C1C1E] transition-all cursor-pointer group shadow-xl">
-       <div className="flex items-center gap-6">
-          <div className="w-12 h-12 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-center text-muted-foreground group-hover:text-primary group-hover:border-primary/20 transition-all">
-             <Icon className="w-6 h-6" />
+    <div 
+      onClick={onClick}
+      className="flex items-center justify-between p-5 bg-[#1C1C1E]/70 rounded-[2rem] border border-white/[0.05] hover:bg-[#1C1C1E] transition-all cursor-pointer group shadow-xl"
+    >
+       <div className="flex items-center gap-5">
+          <div className="w-10 h-10 rounded-xl bg-black/40 border border-white/5 flex items-center justify-center text-muted-foreground group-hover:text-primary transition-all">
+             <Icon className="w-5 h-5" />
           </div>
-          <span className="text-[15px] font-black text-white italic uppercase tracking-tighter">
+          <span className="text-[13px] font-black text-white italic uppercase tracking-tighter">
             {label}
           </span>
        </div>
-       <ChevronRight className="w-5 h-5 text-white/10 group-hover:text-primary group-hover:translate-x-1 transition-all" />
+       <ChevronRight className="w-4 h-4 text-white/10 group-hover:text-primary group-hover:translate-x-1 transition-all" />
     </div>
   );
 }

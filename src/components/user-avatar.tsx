@@ -12,8 +12,8 @@ import { differenceInMinutes, parseISO } from 'date-fns';
 import Image from 'next/image';
 
 /**
- * USER AVATAR V6.7.0 «THERMAL OPTIMIZED»
- * REMOVED: Spin animation to reduce GPU load and follow user request.
+ * USER AVATAR V6.8.0 «UX OPTIMIZED»
+ * UPDATED: Larger fallback font size for better readability.
  */
 export const UserAvatar = memo(({ userId, className, fallbackName, manualAvatarUrl, showOnlineStatus = false, onClick }: any) => {
   const db = useFirestore();
@@ -45,7 +45,6 @@ export const UserAvatar = memo(({ userId, className, fallbackName, manualAvatarU
     <div onClick={onClick} className={cn("relative inline-flex items-center justify-center shrink-0 rounded-full cursor-pointer", className)}>
       {premium && (
         <div className="absolute inset-[-3px] rounded-full p-[1.5px] overflow-hidden z-0">
-          {/* Static premium border (Rotation removed per user request) */}
           <div className="absolute inset-[-100%] bg-gradient-to-tr from-primary via-accent to-primary opacity-30" />
         </div>
       )}
@@ -57,8 +56,8 @@ export const UserAvatar = memo(({ userId, className, fallbackName, manualAvatarU
               <Image src={displayAvatar} alt="Avatar" fill className="object-cover rounded-full" onError={() => setImgError(true)} unoptimized />
             </div>
           ) : (
-            <AvatarFallback className="bg-[#050505] text-primary font-black uppercase italic text-[40%]">
-              {(fallbackName || profile?.name || 'N').slice(0, 2)}
+            <AvatarFallback className="bg-[#050505] text-primary font-black uppercase italic text-[50%] tracking-tighter">
+              {(fallbackName || profile?.name || 'N').slice(0, 1)}
             </AvatarFallback>
           )}
         </Avatar>
