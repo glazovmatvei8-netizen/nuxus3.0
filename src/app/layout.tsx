@@ -4,9 +4,11 @@ import './globals.css';
 import { SovereignProvider } from '@/components/sovereign-provider';
 
 /**
- * NUXUS LAYOUT V117.0 «ABSOLUTE SEO & IDENTITY»
- * UPDATED: Fixed metadata for perfect link previews on all domains.
+ * NUXUS LAYOUT V118.0 «ABSOLUTE SEO & IDENTITY»
+ * UPDATED: Hard reset for favicon and apple-touch-icons to use IMG-2541.jpg.
  */
+const ICON_URL = 'https://i.postimg.cc/T2xvz0mn/IMG-2541.jpg?v=118';
+
 export const metadata: Metadata = {
   title: 'Nuxus 2.0 — Суверенное Ядро Связи',
   description: 'Безопасный мессенджер с квантовым шифрованием QES, системой авторского права и абсолютной приватностью. Все права принадлежат Nuxus.',
@@ -36,8 +38,9 @@ export const metadata: Metadata = {
     images: ['https://i.postimg.cc/T2xvz0mn/IMG-2541.jpg'],
   },
   icons: {
-    icon: 'https://i.postimg.cc/T2xvz0mn/IMG-2541.jpg?v=117',
-    apple: 'https://i.postimg.cc/T2xvz0mn/IMG-2541.jpg?v=117',
+    icon: ICON_URL,
+    shortcut: ICON_URL,
+    apple: ICON_URL,
   }
 };
 

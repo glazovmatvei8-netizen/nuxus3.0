@@ -1,13 +1,13 @@
 
 {
-  "latestVersion": "77.0.0",
-  "qesVersion": "27.2",
-  "build": "Nuxus-Absolute-Native-Core-V77-ID_RESET",
+  "latestVersion": "78.0.0",
+  "qesVersion": "27.5",
+  "build": "Nuxus-Absolute-Native-Core-V118-ULTIMATE_ID",
   "sizeMb": 65,
   "changelog": [
-    "Identity: Hard reset of visual core with IMG-2541.jpg.",
-    "Legal: Reinforced copyright blocks across all gate screens.",
-    "SEO: Finalized OpenGraph cards for social sharing.",
-    "Cache: Implemented V117 signal for global cache invalidation."
+    "Identity: Hard reset of favicon and tab icons with v118 cache busting.",
+    "SEO: Finalized OpenGraph social cards for global sharing.",
+    "Engine: Reinforced identity override logic in the browser tab.",
+    "Legal: Final ownership verification on all landing surfaces."
   ]
 }

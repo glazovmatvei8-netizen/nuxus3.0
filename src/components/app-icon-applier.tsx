@@ -8,8 +8,8 @@ import { doc } from 'firebase/firestore';
 import type { User } from '@/lib/types';
 
 /**
- * ОБНОВЛЯТОР ИКОНОК V113.1 «HARD OVERRIDE»
- * ИСПРАВЛЕНО: Принудительное использование новой иконки IMG-2541.jpg.
+ * ОБНОВЛЯТОР ИКОНОК V118.0 «ULTIMATE OVERRIDE»
+ * ИСПРАВЛЕНО: Принудительная замена favicon на IMG-2541.jpg с агрессивным обходом кэша.
  */
 export function AppIconApplier() {
   const { user } = useUser();
@@ -22,8 +22,8 @@ export function AppIconApplier() {
 
   const { data: profile } = useDoc<User>(userRef);
 
-  // Новая иконка с параметром сброса кэша
-  const TARGET_ICON = 'https://i.postimg.cc/T2xvz0mn/IMG-2541.jpg?v=113';
+  // Новая иконка с параметром сброса кэша v118
+  const TARGET_ICON = 'https://i.postimg.cc/T2xvz0mn/IMG-2541.jpg?v=118';
 
   useEffect(() => {
     if (typeof document === 'undefined') return;
@@ -31,17 +31,27 @@ export function AppIconApplier() {
     const updateIcons = () => {
       const customIcon = profile?.settings?.customAppIconUrl;
       const finalIcon = customIcon 
-        ? (customIcon.includes('?') ? `${customIcon}&v=113` : `${customIcon}?v=113`)
+        ? (customIcon.includes('?') ? `${customIcon}&v=118` : `${customIcon}?v=118`)
         : TARGET_ICON;
 
       const selectors = [
         "link[rel='icon']",
         "link[rel='shortcut icon']",
-        "link[rel='apple-touch-icon']"
+        "link[rel='apple-touch-icon']",
+        "link[rel='apple-touch-icon-precomposed']"
       ];
 
       selectors.forEach(selector => {
         const elements = document.querySelectorAll(selector);
+        
+        if (elements.length === 0 && selector === "link[rel='icon']") {
+          // Создаем тег, если его нет
+          const link = document.createElement('link');
+          link.rel = 'icon';
+          link.href = finalIcon;
+          document.head.appendChild(link);
+        }
+
         elements.forEach(el => {
           if (el.getAttribute('href') !== finalIcon) {
             el.setAttribute('href', finalIcon);
@@ -52,9 +62,14 @@ export function AppIconApplier() {
 
     updateIcons();
     
-    // Запуск через секунду для уверенности, что Next.js не перекрыл иконку
-    const timer = setTimeout(updateIcons, 1000);
-    return () => clearTimeout(timer);
+    // Запускаем несколько раз для борьбы с кэшем браузера
+    const interval = setInterval(updateIcons, 1000);
+    const timeout = setTimeout(updateIcons, 3000);
+
+    return () => {
+      clearInterval(interval);
+      clearTimeout(timeout);
+    };
   }, [profile?.settings?.customAppIconUrl, TARGET_ICON]);
 
   return null;

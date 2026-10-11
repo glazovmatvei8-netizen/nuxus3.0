@@ -3,13 +3,13 @@ import { MetadataRoute } from 'next'
 
 /**
  * КРИТИЧЕСКИЙ ФИКС ДЛЯ СТАТИЧЕСКОГО ЭКСПОРТА (IPA/RU-HOSTING)
- * Принудительно переводит манифест в статический режим.
+ * Принудительно переводит манифест в статический режим и обновляет иконки.
  */
 export const dynamic = 'force-static'
 
 export default function manifest(): MetadataRoute.Manifest {
-  // Новая иконка с cache-buster для принудительного обновления на устройствах
-  const APP_ICON_URL = 'https://i.postimg.cc/T2xvz0mn/IMG-2541.jpg?v=117';
+  // Новая иконка с cache-buster v118 для принудительного обновления на устройствах
+  const APP_ICON_URL = 'https://i.postimg.cc/T2xvz0mn/IMG-2541.jpg?v=118';
   
   return {
     id: 'chat.nuxus.app',
