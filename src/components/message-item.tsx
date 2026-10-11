@@ -14,6 +14,8 @@ import { useAppState } from '@/lib/app-state';
 import { useFirestore, useUser } from '@/firebase/provider';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { doc, updateDoc, arrayUnion, arrayRemove, deleteDoc } from 'firebase/firestore';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import type { User, Message } from '@/lib/types';
 import {
   ContextMenu,
@@ -25,8 +27,8 @@ import {
 import { useToast } from '@/hooks/use-toast';
 
 /**
- * MESSAGE ITEM V120.0 «SIGNAL POLISH»
- * FIXED: Stickers rendering, reply layout, and bubble width constraints.
+ * MESSAGE ITEM V120.1 «SIGNAL POLISH & NON-BLOCKING»
+ * FIXED: "Delete for everyone" logic and overall mutation reliability.
  */
 export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, chatId, onReply }: any) => {
   const { setInspectedUserId, setForwardingMessage } = useAppState();
@@ -59,29 +61,56 @@ export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, cha
     toast({ title: "Скопировано", description: "Текст сигнала в буфере обмена." });
   };
 
-  const handleReaction = async (emoji: string) => {
+  const handleReaction = (emoji: string) => {
     if (!db || !user || !chatId) return;
     const msgRef = doc(db, 'chats', chatId, 'messages', message.id);
     const hasReacted = message.reactions?.[emoji]?.includes(user.uid);
     
-    if (hasReacted) {
-      await updateDoc(msgRef, { [`reactions.${emoji}`]: arrayRemove(user.uid) });
-    } else {
-      await updateDoc(msgRef, { [`reactions.${emoji}`]: arrayUnion(user.uid) });
-    }
+    const updateData = hasReacted 
+      ? { [`reactions.${emoji}`]: arrayRemove(user.uid) }
+      : { [`reactions.${emoji}`]: arrayUnion(user.uid) };
+
+    updateDoc(msgRef, updateData).catch(async () => {
+      const permissionError = new FirestorePermissionError({
+        path: msgRef.path,
+        operation: 'update',
+        requestResourceData: updateData,
+      } satisfies SecurityRuleContext);
+      errorEmitter.emit('permission-error', permissionError);
+    });
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (!db || !chatId) return;
     if (confirm("Аннигилировать этот сигнал для всех?")) {
-      await deleteDoc(doc(db, 'chats', chatId, 'messages', message.id));
+      const msgRef = doc(db, 'chats', chatId, 'messages', message.id);
+      
+      deleteDoc(msgRef).catch(async () => {
+        const permissionError = new FirestorePermissionError({
+          path: msgRef.path,
+          operation: 'delete',
+        } satisfies SecurityRuleContext);
+        errorEmitter.emit('permission-error', permissionError);
+      });
+      
       toast({ title: "Сигнал удален" });
     }
   };
 
-  const handlePin = async () => {
+  const handlePin = () => {
     if (!db || !chatId) return;
-    await updateDoc(doc(db, 'chats', chatId), { pinnedMessageId: message.id });
+    const chatRef = doc(db, 'chats', chatId);
+    const updateData = { pinnedMessageId: message.id };
+
+    updateDoc(chatRef, updateData).catch(async () => {
+      const permissionError = new FirestorePermissionError({
+        path: chatRef.path,
+        operation: 'update',
+        requestResourceData: updateData,
+      } satisfies SecurityRuleContext);
+      errorEmitter.emit('permission-error', permissionError);
+    });
+    
     toast({ title: "Сигнал закреплен" });
   };
 

@@ -15,6 +15,8 @@ import { useCollection } from '@/firebase/firestore/use-collection';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { useMemoFirebase } from '@/firebase/firestore/use-memo-firebase';
 import { collection, query, where, doc, limit, orderBy, deleteDoc, updateDoc } from 'firebase/firestore';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import { formatDisplayName, cn, decryptSignal, isUserPremium, isGlobalAdmin } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useTranslations } from '@/hooks/use-translations';
@@ -75,17 +77,35 @@ const ChatListItem = memo(({
     return formatDisplayName(chat.name, chat.username);
   }, [chat, otherProfile, mounted]);
 
-  const handleDeleteChat = async () => {
+  const handleDeleteChat = () => {
     if (!db) return;
     if (confirm(`Аннигилировать чат ${displayName}?`)) {
-      await deleteDoc(doc(db, 'chats', chat.id));
+      const chatRef = doc(db, 'chats', chat.id);
+      deleteDoc(chatRef).catch(async () => {
+        const permissionError = new FirestorePermissionError({
+          path: chatRef.path,
+          operation: 'delete',
+        } satisfies SecurityRuleContext);
+        errorEmitter.emit('permission-error', permissionError);
+      });
       toast({ title: "Чат удален" });
     }
   };
 
-  const handleArchiveChat = async () => {
+  const handleArchiveChat = () => {
     if (!db) return;
-    await updateDoc(doc(db, 'chats', chat.id), { isArchived: !chat.isArchived });
+    const chatRef = doc(db, 'chats', chat.id);
+    const updateData = { isArchived: !chat.isArchived };
+    
+    updateDoc(chatRef, updateData).catch(async () => {
+      const permissionError = new FirestorePermissionError({
+        path: chatRef.path,
+        operation: 'update',
+        requestResourceData: updateData,
+      } satisfies SecurityRuleContext);
+      errorEmitter.emit('permission-error', permissionError);
+    });
+    
     toast({ title: chat.isArchived ? "Вернулся из архива" : "Отправлено в архив" });
   };
 
