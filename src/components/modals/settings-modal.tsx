@@ -32,8 +32,8 @@ import versions from '@/app/versions.json';
 const ADMIN_ID = 'GCvLucN8CjNcdaxPO2vmpZ84hNl1';
 
 /**
- * SETTINGS MODAL V122.0 «AVATAR PERSISTENCE»
- * FIXED: Аватарка теперь корректно сжимается и сохраняется в Firestore.
+ * SETTINGS MODAL V124.0 «EXIT PROTOCOL»
+ * UPDATED: Refined Logout procedure and account slot synchronization.
  */
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
@@ -41,7 +41,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const { user } = useUser();
   const { toast } = useToast();
   const { t } = useTranslations();
-  const { settingsTab, setSettingsTab, setIsLegalOpen, setCurrentChatId, setActiveView } = useAppState();
+  const { settingsTab, setSettingsTab, setIsLegalOpen, setCurrentChatId, setActiveView, setIs2FAVerified } = useAppState();
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user?.uid]);
@@ -120,6 +120,18 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     }
   };
 
+  const handleLogout = async () => {
+    if (!auth) return;
+    const ok = confirm("Вы уверены, что хотите покинуть Ядро? Текущий узел будет отключен.");
+    if (ok) {
+      triggerHaptic();
+      setIs2FAVerified(false);
+      await signOut(auth);
+      onOpenChange(false);
+      toast({ title: "Узел отключен" });
+    }
+  };
+
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -149,7 +161,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
             </div>
             <div className="flex flex-col">
               <DialogTitle className="text-2xl font-black italic uppercase text-white tracking-tighter">{t('settings.title')}</DialogTitle>
-              <DialogDescription className="text-[9px] font-bold uppercase text-primary/60 mt-0.5 tracking-widest">Nuxus Kernel V122.0</DialogDescription>
+              <DialogDescription className="text-[9px] font-bold uppercase text-primary/60 mt-0.5 tracking-widest">Nuxus Kernel V124.0</DialogDescription>
             </div>
           </div>
         </DialogHeader>
@@ -300,7 +312,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           </ScrollArea>
 
           <div className="p-6 border-t border-white/5 bg-[#0a0a0c]/90 backdrop-blur-3xl shrink-0 flex gap-4 z-[100] pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
-            <Button variant="ghost" className="h-14 w-14 rounded-2xl bg-red-500/10 text-red-500 border border-red-500/20 shadow-lg active:scale-90 transition-all" onClick={() => signOut(auth!)}>
+            <Button variant="ghost" className="h-14 w-14 rounded-2xl bg-red-500/10 text-red-500 border border-red-500/20 shadow-lg active:scale-90 transition-all" onClick={handleLogout}>
                <LogOut className="w-6 h-6" />
             </Button>
             <Button disabled={isSaving} className="flex-1 h-14 rounded-2xl font-black uppercase italic text-sm bg-primary text-white shadow-2xl shadow-primary/30 active:scale-95 transition-all border border-white/10" onClick={handleSave}>

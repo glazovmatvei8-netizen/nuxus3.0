@@ -17,7 +17,7 @@ import { useMemoFirebase } from '@/firebase/firestore/use-memo-firebase';
 import { collection, query, where, doc, limit, orderBy, deleteDoc, updateDoc } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
-import { formatDisplayName, cn, decryptSignal, isUserPremium, isGlobalAdmin } from '@/lib/utils';
+import { formatDisplayName, cn, decryptSignal, isUserPremium, isGlobalAdmin, triggerHaptic } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useTranslations } from '@/hooks/use-translations';
 import { signOut } from 'firebase/auth';
@@ -172,7 +172,7 @@ export default function ChatSidebar() {
   const db = useFirestore();
   const auth = useAuth();
   const { t } = useTranslations();
-  const { currentChatId, setCurrentChatId, setIsSearchOpen, activeAccountIndex, setActiveAccountIndex, slotNames } = useAppState();
+  const { currentChatId, setCurrentChatId, setIsSearchOpen, activeAccountIndex, setActiveAccountIndex, setIs2FAVerified } = useAppState();
   
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
@@ -209,11 +209,21 @@ export default function ChatSidebar() {
     });
   }, [chats]);
 
-  const handleSlotSwitch = (idx: number) => {
-    if (idx === activeAccountIndex) return;
-    if (confirm("Сменить аккаунт? Текущая сессия будет завершена.")) {
+  const handleSlotSwitch = async (idx: number) => {
+    if (idx === activeAccountIndex && user) return;
+    
+    triggerHaptic();
+    const confirmed = confirm("Выйти из текущего узла и переключить слот?");
+    if (confirmed) {
+      // Сброс локального состояния
+      setIs2FAVerified(false);
       setActiveAccountIndex(idx);
-      signOut(auth!);
+      localStorage.setItem('nuxus_active_account_v59', idx.toString());
+      
+      if (auth) {
+        await signOut(auth);
+      }
+      // Приложение само перебросит на AuthScreen так как user станет null
     }
   };
 
@@ -254,33 +264,43 @@ export default function ChatSidebar() {
             </div>
           </div>
 
-          {/* ACCOUNT SLOTS - REPLICA */}
+          {/* ACCOUNT SLOTS - FIXED ADD LOGIC */}
           <div className="px-4 pb-4">
             <ScrollArea className="w-full" orientation="horizontal">
                <div className="flex gap-5 px-2 py-1">
-                  {[0, 1, 2, 3, 4].map(i => (
-                    <div key={i} className="flex flex-col items-center gap-2 shrink-0 group cursor-pointer" onClick={() => handleSlotSwitch(i)}>
-                      <div className={cn(
-                        "h-16 w-16 rounded-full flex items-center justify-center transition-all relative",
-                        activeAccountIndex === i ? "nuxus-orbit-active" : "bg-white/[0.03] border border-white/10"
-                      )}>
-                        {activeAccountIndex === i && <div className="nuxus-orbit-dot" />}
-                        {activeAccountIndex === i ? (
-                          <div className="p-0.5 rounded-full bg-[#121212] h-[calc(100%-4px)] w-[calc(100%-4px)] flex items-center justify-center">
-                            <UserAvatar userId={user?.uid} className="h-full w-full border-none shadow-inner" manualAvatarUrl={profile?.avatarUrl} />
-                          </div>
-                        ) : (
-                          <Plus className="w-6 h-6 text-muted-foreground/40" />
-                        )}
+                  {[0, 1, 2, 3, 4].map(i => {
+                    const isActiveSlot = activeAccountIndex === i;
+                    return (
+                      <div 
+                        key={i} 
+                        className="flex flex-col items-center gap-2 shrink-0 group cursor-pointer" 
+                        onClick={() => handleSlotSwitch(i)}
+                      >
+                        <div className={cn(
+                          "h-16 w-16 rounded-full flex items-center justify-center transition-all relative",
+                          isActiveSlot && user ? "nuxus-orbit-active" : "bg-white/[0.03] border border-white/10 hover:border-primary/40"
+                        )}>
+                          {(isActiveSlot && user) && <div className="nuxus-orbit-dot" />}
+                          {(isActiveSlot && user) ? (
+                            <div className="p-0.5 rounded-full bg-[#121212] h-[calc(100%-4px)] w-[calc(100%-4px)] flex items-center justify-center">
+                              <UserAvatar userId={user?.uid} className="h-full w-full border-none shadow-inner" manualAvatarUrl={profile?.avatarUrl} />
+                            </div>
+                          ) : (
+                            <div className="flex flex-col items-center justify-center gap-0.5">
+                               <Plus className={cn("w-6 h-6", isActiveSlot ? "text-primary" : "text-muted-foreground/40 group-hover:text-primary")} />
+                               <span className="text-[6px] font-black text-white/20 uppercase">SLOT {i+1}</span>
+                            </div>
+                          )}
+                        </div>
+                        <span className={cn(
+                          "text-[9px] font-black uppercase tracking-widest truncate w-16 text-center italic",
+                          (isActiveSlot && user) ? "text-primary" : "text-muted-foreground/40"
+                        )}>
+                          {(isActiveSlot && user) ? formatDisplayName(profile?.name).split(' ')[0] : 'ADD NODE'}
+                        </span>
                       </div>
-                      <span className={cn(
-                        "text-[9px] font-black uppercase tracking-widest truncate w-16 text-center italic",
-                        activeAccountIndex === i ? "text-primary" : "text-muted-foreground/40"
-                      )}>
-                        {activeAccountIndex === i ? 'EVENT HO...' : 'ADD ACCO...'}
-                      </span>
-                    </div>
-                  ))}
+                    );
+                  })}
                </div>
             </ScrollArea>
           </div>
