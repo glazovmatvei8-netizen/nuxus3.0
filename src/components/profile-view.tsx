@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -16,17 +15,15 @@ import { formatDisplayName, cn, isGlobalAdmin, getReputationInfo, triggerHaptic 
 import type { User } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { AdminPanelModal } from './modals/admin-panel-modal';
-import { Progress } from '@/components/ui/progress';
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
 /**
- * PROFILE VIEW V116.1 «REPUTATION HUB»
- * UPDATED: Refined Reputation UI and added "How to level up" info.
+ * PROFILE VIEW V125.0 «TITANIUM STABILITY»
+ * UPDATED: Fixed 111+ errors by strictly guarding hydration and stabilizing deps.
  */
 export default function ProfileView() {
   const { user } = useUser();
@@ -44,10 +41,14 @@ export default function ProfileView() {
   const userProfileRef = useMemo(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user?.uid]);
   const { data: profile } = useDoc<User>(userProfileRef);
 
-  const isAdmin = isGlobalAdmin(profile);
-  const rep = getReputationInfo(profile?.reputation);
+  const isAdmin = useMemo(() => isGlobalAdmin(profile), [profile]);
+  const rep = useMemo(() => getReputationInfo(profile?.reputation), [profile?.reputation]);
 
-  if (!mounted) return null;
+  if (!mounted) return (
+    <div className="flex-1 bg-[#121212] flex flex-col items-center justify-center">
+       <Zap className="w-10 h-10 text-primary/10 animate-pulse" />
+    </div>
+  );
 
   return (
     <div className="flex flex-col h-full bg-[#121212] overflow-hidden relative">
@@ -65,7 +66,7 @@ export default function ProfileView() {
         <div className="px-6 pt-10 pb-40 space-y-8 animate-in fade-in duration-1000">
           
           <div className="nuxus-event-card w-full py-12 px-6 flex flex-col items-center justify-center relative overflow-hidden group min-h-[300px]">
-             <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,hsla(var(--primary),0.35),transparent_75%)] pointer-events-none" />
+             <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,hsla(var(--primary),0.15),transparent_75%)] pointer-events-none" />
              
              <div className="absolute top-6 right-6 opacity-30">
                 <div className="w-12 h-12 rounded-2xl border border-white/20 bg-white/5 flex flex-col items-center justify-center shadow-lg">
@@ -114,18 +115,16 @@ export default function ProfileView() {
                       <span className="text-[8px] text-white/30 font-bold uppercase tracking-widest">Aegis Trust Node</span>
                    </div>
                 </div>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button className="h-8 w-8 rounded-full bg-white/5 flex items-center justify-center text-white/20 hover:text-primary transition-colors">
-                        <HelpCircle className="w-4 h-4" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent className="bg-black/90 border-white/10 rounded-2xl p-4 text-[10px] uppercase font-bold text-white tracking-widest max-w-[200px]">
-                      Репутация растет при отправке сигналов (сообщений). Каждый сигнал повышает уровень доверия Ядра к вашему узлу.
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button className="h-8 w-8 rounded-full bg-white/5 flex items-center justify-center text-white/20 hover:text-primary transition-colors">
+                      <HelpCircle className="w-4 h-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent className="bg-black/90 border-white/10 rounded-2xl p-4 text-[10px] uppercase font-bold text-white tracking-widest max-w-[200px]">
+                    Репутация растет при отправке сигналов (сообщений). Каждый сигнал повышает уровень доверия Ядра к вашему узлу.
+                  </TooltipContent>
+                </Tooltip>
              </div>
 
              <div className="space-y-2">

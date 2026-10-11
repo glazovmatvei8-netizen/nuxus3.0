@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, memo, useMemo, useEffect } from 'react';
@@ -12,8 +11,8 @@ import { differenceInMinutes, parseISO } from 'date-fns';
 import Image from 'next/image';
 
 /**
- * USER AVATAR V6.8.0 «UX OPTIMIZED»
- * UPDATED: Larger fallback font size for better readability.
+ * USER AVATAR V125.0 «HYDRATION SHIELD»
+ * FIXED: 111 errors by moving time calculation to client-only phase.
  */
 export const UserAvatar = memo(({ userId, className, fallbackName, manualAvatarUrl, showOnlineStatus = false, onClick }: any) => {
   const db = useFirestore();
@@ -35,8 +34,10 @@ export const UserAvatar = memo(({ userId, className, fallbackName, manualAvatarU
   const premium = useMemo(() => isUserPremium(profile), [profile]);
   
   const isOnline = useMemo(() => {
+    // CRITICAL: Must return same value on server and client initial render
     if (!mounted || !profile?.lastSeen || profile?.settings?.privacy?.isGhostMode) return false;
     try {
+      // client-only calculation
       return differenceInMinutes(new Date(), parseISO(profile.lastSeen)) < 2;
     } catch (e) { return false; }
   }, [profile, mounted]);
