@@ -1,13 +1,13 @@
 
 {
-  "latestVersion": "76.0.0",
-  "qesVersion": "27.1",
-  "build": "Nuxus-Absolute-Native-Core-V76-STABILITY",
+  "latestVersion": "77.0.0",
+  "qesVersion": "27.2",
+  "build": "Nuxus-Absolute-Native-Core-V77-ID_RESET",
   "sizeMb": 65,
   "changelog": [
-    "Fiber Shield: Fixed ForwardModal render crash.",
-    "Hydration: Added mounting guards for all interactive modals.",
-    "Architecture: Enforced non-blocking signal protocol for chat actions.",
-    "Native: Improved reliability of cross-component state transitions."
+    "Identity: Hard reset of visual core with IMG-2541.jpg.",
+    "Legal: Reinforced copyright blocks across all gate screens.",
+    "SEO: Finalized OpenGraph cards for social sharing.",
+    "Cache: Implemented V117 signal for global cache invalidation."
   ]
 }
