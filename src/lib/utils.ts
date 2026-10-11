@@ -1,7 +1,7 @@
 
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
-import { formatDistanceToNow, parseISO, differenceInSeconds } from 'date-fns';
+import { format, isToday, parseISO, differenceInSeconds } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import type { User, PrivacyOption } from './types';
 
@@ -98,6 +98,9 @@ export function isUserActuallyBanned(user: User | null | undefined): boolean {
   return false;
 }
 
+/**
+ * ПРЕЦИЗИОННЫЙ СТАТУС В СЕТИ V128.0
+ */
 export function formatLastSeen(
   lastSeenIso: string | undefined | null, 
   visibility: PrivacyOption = 'everybody',
@@ -105,11 +108,20 @@ export function formatLastSeen(
 ): string {
   if (!lastSeenIso || visibility === 'nobody') return 'был(а) недавно';
   try {
-    const lastSeen = parseISO(lastSeenIso);
-    const diffSeconds = Math.max(0, differenceInSeconds(new Date(), lastSeen));
-    if (diffSeconds < 60) return onlineString; // Сократили до 60 секунд для точности
-    return `был(а) ${formatDistanceToNow(lastSeen, { addSuffix: true, locale: ru })}`;
-  } catch (e) { return 'был(а) недавно'; }
+    const lastSeenDate = parseISO(lastSeenIso);
+    const now = new Date();
+    const diffSeconds = Math.max(0, differenceInSeconds(now, lastSeenDate));
+    
+    if (diffSeconds < 60) return onlineString;
+
+    if (isToday(lastSeenDate)) {
+      return `был(а) сегодня в ${format(lastSeenDate, 'HH:mm')}`;
+    }
+    
+    return `был(а) ${format(lastSeenDate, 'd MMM в HH:mm', { locale: ru })}`;
+  } catch (e) { 
+    return 'был(а) недавно'; 
+  }
 }
 
 export async function compressImage(dataUrl: string, maxWidth = 1200, quality = 0.6): Promise<string> {

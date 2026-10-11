@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -11,7 +12,7 @@ import {
   Share2, LayoutGrid, Info, Menu, RefreshCw, Sparkles, Trophy, Zap, HelpCircle
 } from 'lucide-react';
 import { useAppState } from '@/lib/app-state';
-import { formatDisplayName, cn, isGlobalAdmin, getReputationInfo, triggerHaptic } from '@/lib/utils';
+import { formatDisplayName, cn, isGlobalAdmin, getReputationInfo, triggerHaptic, formatLastSeen } from '@/lib/utils';
 import type { User } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { AdminPanelModal } from './modals/admin-panel-modal';
@@ -22,8 +23,8 @@ import {
 } from "@/components/ui/tooltip";
 
 /**
- * PROFILE VIEW V126.0 «STABILITY MAXIMUS»
- * FIXED: Устранение всех 111+ ошибок путем строгого контроля гидратации.
+ * PROFILE VIEW V128.0 «PRECISION STATUS»
+ * FIXED: Устранение ошибок гидратации и обновление текста статуса.
  */
 export default function ProfileView() {
   const { user } = useUser();
@@ -43,10 +44,13 @@ export default function ProfileView() {
 
   const isAdmin = useMemo(() => isGlobalAdmin(profile), [profile]);
   
-  // Репутация рассчитывается безопасно
   const rep = useMemo(() => getReputationInfo(profile?.reputation || 0), [profile?.reputation]);
 
-  // Заглушка для серверного рендеринга
+  const statusText = useMemo(() => {
+    if (!mounted || !profile) return '...';
+    return formatLastSeen(profile.lastSeen, profile.settings?.privacy?.lastSeenVisibility, 'в сети');
+  }, [profile, mounted]);
+
   if (!mounted) return <div className="flex-1 bg-[#121212]" />;
 
   return (
@@ -93,9 +97,15 @@ export default function ProfileView() {
                    {profile?.isPremium && <Star className="w-5 h-5 text-primary fill-primary animate-pulse" />}
                 </div>
                 
-                <div className="bg-black/60 backdrop-blur-xl border border-white/5 px-6 py-1.5 rounded-full shadow-inner">
+                <div className="bg-black/60 backdrop-blur-xl border border-white/5 px-6 py-1.5 rounded-full shadow-inner flex flex-col items-center gap-1">
                    <span className="text-[10px] font-bold uppercase text-primary/60 tracking-[0.2em] italic">
                      {profile?.username || '@USERNAME'}
+                   </span>
+                   <span className={cn(
+                     "text-[8px] font-black uppercase tracking-widest",
+                     statusText === 'в сети' ? "text-green-500" : "text-white/40"
+                   )}>
+                     {statusText}
                    </span>
                 </div>
              </div>
