@@ -13,8 +13,8 @@ import { Button } from '@/components/ui/button';
 import { X, ShieldAlert } from 'lucide-react';
 
 /**
- * SOVEREIGN PROVIDER V121.0 «UX STABILITY»
- * FIXED: Persistent cookie acceptance and session handling.
+ * SOVEREIGN PROVIDER V123.0 «UX STABILITY»
+ * FIXED: Persistent cookie acceptance with specific version key.
  */
 export function SovereignProvider({ children }: { children: ReactNode }) {
   const [mounted, setMounted] = useState(false);
@@ -23,8 +23,8 @@ export function SovereignProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setMounted(true);
     
-    // Cookie Check - Persistence Fix
-    const accepted = localStorage.getItem('nuxus_cookies_accepted_v121');
+    // Cookie Check - Persistence Fix with V123 key
+    const accepted = localStorage.getItem('nuxus_cookies_accepted_v123');
     if (!accepted) {
       const timer = setTimeout(() => setShowCookies(true), 2000);
       return () => clearTimeout(timer);
@@ -32,7 +32,7 @@ export function SovereignProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const acceptCookies = () => {
-    localStorage.setItem('nuxus_cookies_accepted_v121', 'true');
+    localStorage.setItem('nuxus_cookies_accepted_v123', 'true');
     setShowCookies(false);
   };
 
@@ -41,7 +41,7 @@ export function SovereignProvider({ children }: { children: ReactNode }) {
       <div className="fixed inset-0 z-[10000] bg-[#010103] flex items-center justify-center">
         <div className="flex flex-col items-center gap-6">
           <NuxusLogo size={80} className="opacity-20 animate-pulse" />
-          <p className="text-[10px] font-black uppercase text-white/20 tracking-[0.6em]">Nuxus Kernel V121.0</p>
+          <p className="text-[10px] font-black uppercase text-white/20 tracking-[0.6em]">Nuxus Kernel V123.0</p>
         </div>
       </div>
     );

@@ -8,8 +8,8 @@ import { firebaseConfig } from '@/firebase/config';
 import { Preferences } from '@capacitor/preferences';
 
 /**
- * NUXUS ENGINE V87.0 «STABILITY MAXIMUS»
- * ОПТИМИЗИРОВАНО: Переход на persistentSingleTabManager для устранения ошибки ca9 в APK.
+ * NUXUS ENGINE V123.0 «STABILITY MAXIMUS»
+ * ОПТИМИЗИРОВАНО: Forced Persistence for both PWA and Native.
  */
 
 let appInstance: FirebaseApp | undefined;
@@ -41,22 +41,18 @@ const ignite = () => {
 
     const isNative = !!(window as any).Capacitor?.isNativePlatform?.();
     
+    // Принудительно устанавливаем долгосрочное сохранение сессии
     authInstance = initializeAuth(appInstance, {
-      // @ts-ignore
-      persistence: isNative && typeof window !== 'undefined' && (window as any).getReactNativePersistence 
-        // @ts-ignore
-        ? (window as any).getReactNativePersistence(capacitorPersistence)
-        : [indexedDBLocalPersistence, browserLocalPersistence]
+      persistence: [indexedDBLocalPersistence, browserLocalPersistence]
     });
 
-    // ФИКС ОШИБКИ ca9: Используем singleTabManager, так как в APK нет вкладок
     dbInstance = initializeFirestore(appInstance, {
       localCache: persistentLocalCache({
         tabManager: persistentSingleTabManager()
       })
     });
     
-    console.log('%c🛰️ NUXUS KERNEL: STABLE PERSISTENCE ACTIVE', 'color: #34C759; font-weight: bold;');
+    console.log('%c🛰️ NUXUS KERNEL: STABLE PERSISTENCE ACTIVE V123', 'color: #34C759; font-weight: bold;');
   } catch (e) {
     console.error("NUXUS KERNEL: IGNITION CRASHED", e);
     if (!appInstance) appInstance = initializeApp(firebaseConfig);

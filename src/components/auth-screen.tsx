@@ -7,8 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Eye, EyeOff, ShieldCheck, Mail, Phone, Lock } from 'lucide-react';
-import { useAuth, useFirestore } from '@/firebase/provider'; 
+import { Loader2, Eye, EyeOff, ShieldCheck, Mail, Phone, Lock, RefreshCw, Send } from 'lucide-react';
+import { useAuth, useFirestore, useUser } from '@/firebase/provider'; 
 import { 
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -17,47 +17,54 @@ import {
   updateProfile,
   sendEmailVerification
 } from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { NuxusLogo } from './nuxus-logo';
-import { cn, normalizePhoneNumber } from '@/lib/utils';
+import { cn, normalizePhoneNumber, triggerHaptic } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { translations } from '@/lib/translations';
 
 /**
- * AUTH SCREEN V121.0 «GLOBAL AUTH & VERIFICATION»
- * ADDED: Phone login toggle, persistence fix, email verification.
+ * AUTH SCREEN V123.0 «STRICT VERIFICATION»
+ * ADDED: Verification Required screen, reload status logic.
  */
 export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'login' | 'register' }) {
   const auth = useAuth();
   const db = useFirestore();
+  const { user } = useUser();
   const { toast } = useToast();
   
   const [lang, setLang] = useState<'ru' | 'en' | null>(null);
-  const [mode, setMode] = useState<'login' | 'register'>(initialMode);
+  const [mode, setMode] = useState<'login' | 'register' | 'verify'>(initialMode);
   const [authType, setActiveAuthType] = useState<'email' | 'phone'>('email');
   const [isLoading, setIsLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
 
   // Form State
-  const [identifier, setIdentifier] = useState(''); // Email or Phone
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   
   const t = lang ? translations[lang].auth : translations.ru.auth;
 
+  useEffect(() => {
+    if (user && !user.emailVerified && !user.email?.includes('@nuxus.internal')) {
+      setMode('verify');
+    }
+  }, [user]);
+
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!db || !auth) return;
     
     setIsLoading(true);
+    triggerHaptic();
     try {
-      // Принудительно устанавливаем долгосрочное сохранение сессии
       await setPersistence(auth, browserLocalPersistence);
       
       let finalId = identifier.trim().toLowerCase();
       if (authType === 'phone') {
-        finalId = normalizePhoneNumber(identifier) + "@nuxus.internal"; // Эмуляция входа по номеру через Email провайдер
+        finalId = normalizePhoneNumber(identifier) + "@nuxus.internal";
       }
       
       if (mode === 'register') {
@@ -66,14 +73,13 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
         
         const usernameWithAt = '@' + username.trim().replace('@', '').replace(/\s/g, '').toLowerCase();
         
-        // Проверка уникальности ника
         const userCred = await createUserWithEmailAndPassword(auth, finalId, password);
         await updateProfile(userCred.user, { displayName: name.trim() });
         
-        // Отправка верификации если это Email
         if (authType === 'email') {
           await sendEmailVerification(userCred.user);
-          toast({ title: "Письмо отправлено", description: "Пожалуйста, подтвердите вашу почту." });
+          setMode('verify');
+          toast({ title: "Письмо отправлено", description: "Проверьте входящие или папку Спам." });
         }
 
         const userData = {
@@ -88,15 +94,18 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
           reputation: 0,
           settings: { 
             language: lang || 'ru', appearance: 'dark', theme: 'default',
-            fontFamily: 'jakarta', bubbleStyle: 'default', messageSize: 'medium',
+            bubbleStyle: 'default', messageSize: 'medium',
             privacy: { phoneVisibility: 'everybody', lastSeenVisibility: 'everybody', allowGroupsFrom: 'everybody' }
           }
         };
         await setDoc(doc(db, 'users', userCred.user.uid), userData);
-        toast({ title: "Узел активирован", description: `Добро пожаловать, ${name}!` });
       } else {
-        await signInWithEmailAndPassword(auth, finalId, password);
-        toast({ title: "Синхронизация завершена" });
+        const cred = await signInWithEmailAndPassword(auth, finalId, password);
+        if (!cred.user.emailVerified && !cred.user.email?.includes('@nuxus.internal')) {
+          setMode('verify');
+        } else {
+          toast({ title: "Синхронизация завершена" });
+        }
       }
     } catch (e: any) {
       let msg = e.message;
@@ -108,6 +117,31 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleReload = async () => {
+    if (!auth?.currentUser) return;
+    setIsLoading(true);
+    await auth.currentUser.reload();
+    if (auth.currentUser.emailVerified) {
+      toast({ title: "Узел верифицирован" });
+      window.location.reload();
+    } else {
+      toast({ title: "Статус не изменился", description: "Пожалуйста, перейдите по ссылке в письме." });
+    }
+    setIsLoading(false);
+  };
+
+  const handleResend = async () => {
+    if (!auth?.currentUser) return;
+    setIsLoading(true);
+    try {
+      await sendEmailVerification(auth.currentUser);
+      toast({ title: "Сигнал отправлен повторно" });
+    } catch (e) {
+      toast({ title: "Сбой шлюза", variant: "destructive" });
+    }
+    setIsLoading(false);
   };
 
   if (!lang) {
@@ -127,6 +161,34 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
               <div className="bg-primary/20 px-2 py-0.5 rounded-lg text-primary text-[8px] font-black">EN</div>
             </button>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (mode === 'verify') {
+    return (
+      <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#010103] p-8 text-center relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.05)_0%,transparent_70%)]" />
+        <div className="relative z-10 space-y-8 max-w-sm">
+          <div className="h-20 w-20 rounded-[2.2rem] bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mx-auto shadow-2xl">
+             <Mail className="w-10 h-10 text-blue-500 animate-pulse" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-3xl font-black uppercase italic text-white tracking-tighter">Верификация</h2>
+            <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest leading-relaxed">
+              Мы отправили зашифрованный сигнал на <b>{auth?.currentUser?.email}</b>. Пожалуйста, подтвердите вашу личность.
+            </p>
+          </div>
+          <div className="flex flex-col gap-3">
+             <Button onClick={handleReload} disabled={isLoading} className="w-full h-14 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-xl">
+               {isLoading ? <Loader2 className="animate-spin" /> : <><RefreshCw className="w-4 h-4 mr-2" /> Проверить статус</>}
+             </Button>
+             <Button onClick={handleResend} variant="ghost" disabled={isLoading} className="w-full h-12 text-white/30 font-black uppercase text-[10px] tracking-widest hover:text-white">
+               <Send className="w-3 h-3 mr-2" /> Отправить повторно
+             </Button>
+          </div>
+          <p className="text-[8px] font-black uppercase text-white/10 tracking-[0.4em] pt-10">Security Protocol V123.0 Active</p>
         </div>
       </div>
     );
