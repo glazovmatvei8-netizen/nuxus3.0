@@ -41,10 +41,6 @@ const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelRepl
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
-  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const startTimeRef = useRef<number>(0);
 
   useEffect(() => {
     setMessageInput(localDrafts[currentChatId] || '');
@@ -90,7 +86,7 @@ const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelRepl
         await onSendMessage(content, item.type, null);
       }
       setPendingFiles([]);
-      isPreviewOpen(false);
+      setIsPreviewOpen(false);
     } finally {
       setIsUploading(false);
     }
@@ -100,52 +96,64 @@ const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelRepl
 
   return (
     <>
-    <footer className="p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] bg-black/80 backdrop-blur-[40px] border-t border-white/5 shrink-0 z-40 relative flex flex-col gap-2">
+    <footer className="p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] bg-black/90 backdrop-blur-[50px] border-t border-white/5 shrink-0 z-40 relative flex flex-col gap-2">
       {replyTo && (
-        <div className="bg-white/5 p-3 rounded-2xl flex items-center justify-between border border-white/5 mb-1 animate-in slide-in-from-bottom-2 shadow-xl">
+        <div className="bg-white/5 p-3 rounded-2xl flex items-center justify-between border border-white/5 mb-1 animate-in slide-in-from-bottom-2 shadow-xl mx-auto w-full max-w-5xl">
           <div className="flex items-center gap-4 min-w-0">
-            <CornerUpLeft className="w-4 h-4 text-primary shrink-0" />
+            <div className="w-1 h-8 bg-primary rounded-full shrink-0" />
             <div className="flex flex-col min-w-0">
               <span className="text-[10px] font-black text-primary uppercase tracking-widest">{replyTo.senderName}</span>
-              <span className="text-[12px] text-white/40 truncate italic">{decryptSignal(replyTo.content)}</span>
+              <span className="text-[12px] text-white/60 truncate italic">
+                {replyTo.contentType === 'text' ? decryptSignal(replyTo.content) : `[${replyTo.contentType}]`}
+              </span>
             </div>
           </div>
           <button className="h-8 w-8 text-white/20 hover:text-white" onClick={onCancelReply}><X className="w-4 h-4" /></button>
         </div>
       )}
 
-      <div className="flex gap-3 items-end w-full max-w-5xl mx-auto">
+      <div className="flex gap-3 items-end w-full max-w-5xl mx-auto relative">
         {!isRecording ? (
           <>
-            <Button variant="ghost" size="icon" className="h-12 w-12 shrink-0 rounded-2xl obsidian-glass hover:bg-white/10 border border-white/5 shadow-xl transition-all" onClick={() => { triggerHaptic(); fileInputRef.current?.click(); }}><Paperclip className="w-6 h-6 text-white/40" /></Button>
+            <Button variant="ghost" size="icon" className="h-12 w-12 shrink-0 rounded-2xl bg-white/[0.03] hover:bg-white/10 border border-white/5 shadow-xl transition-all" onClick={() => { triggerHaptic(); fileInputRef.current?.click(); }}><Paperclip className="w-6 h-6 text-white/40" /></Button>
             
-            <div className="flex-1 flex items-end bg-white/5 rounded-[2.2rem] border border-white/5 min-h-[48px] px-5 py-2.5 shadow-inner transition-all focus-within:border-primary/40 focus-within:bg-white/[0.08]">
+            <div className="flex-1 flex items-end bg-white/[0.04] rounded-[1.8rem] border border-white/5 min-h-[48px] px-5 py-2.5 shadow-inner transition-all focus-within:border-primary/30 focus-within:bg-white/[0.06]">
               <Textarea 
                 placeholder={t('chat.placeholder')} 
-                className="bg-transparent border-none focus-visible:ring-0 text-white min-h-[26px] max-h-[180px] py-0 text-[15px] resize-none w-full scrollbar-hide font-medium tracking-tight" 
+                className="bg-transparent border-none focus-visible:ring-0 text-white min-h-[26px] max-h-[160px] py-0 text-[15px] resize-none w-full scrollbar-hide font-medium tracking-tight shadow-none" 
                 value={messageInput} 
-                onChange={e => setMessageInput(e.target.value)} 
+                onChange={e => {
+                  setMessageInput(e.target.value);
+                  setLocalDrafts(prev => ({ ...prev, [currentChatId]: e.target.value }));
+                }} 
               />
               <Popover open={isEmojiPickerOpen} onOpenChange={setIsEmojiPickerOpen}>
                  <PopoverTrigger asChild>
                    <Button variant="ghost" size="icon" className="text-white/20 h-8 w-8 hover:text-white/40 active:scale-90" onClick={triggerHaptic}><Smile className="w-6 h-6" /></Button>
                  </PopoverTrigger>
                  <PopoverContent side="top" className="p-0 border-none bg-transparent w-[320px] mb-6">
-                   <EmojiPicker onEmojiSelect={(e) => setMessageInput(messageInput + e)} onStickerSelect={(url) => { onSendMessage(url, 'sticker', null); setIsEmojiPickerOpen(false); }} />
+                   <EmojiPicker 
+                     onEmojiSelect={(e) => setMessageInput(messageInput + e)} 
+                     onStickerSelect={(url) => { 
+                       onSendMessage(url, 'sticker', null); 
+                       setIsEmojiPickerOpen(false); 
+                       triggerHaptic();
+                     }} 
+                   />
                  </PopoverContent>
               </Popover>
             </div>
 
             {messageInput.trim() ? (
-              <Button size="icon" className="h-12 w-12 rounded-2xl bg-primary text-white active:scale-90 shadow-[0_10px_30px_rgba(var(--primary),0.3)] transition-all border border-white/10" onClick={handleSend}><Send className="w-5 h-5" /></Button>
+              <Button size="icon" className="h-12 w-12 rounded-2xl bg-primary text-white active:scale-90 shadow-xl shadow-primary/20 transition-all border border-white/10" onClick={handleSend}><Send className="w-5 h-5" /></Button>
             ) : (
-              <button onClick={triggerHaptic} className="h-12 w-12 rounded-2xl flex items-center justify-center transition-all bg-white/5 text-white/30 hover:bg-primary hover:text-white active:scale-90 shadow-xl border border-white/5">
+              <button onClick={triggerHaptic} className="h-12 w-12 rounded-2xl flex items-center justify-center transition-all bg-white/[0.04] text-white/30 hover:bg-primary/20 hover:text-primary active:scale-90 shadow-xl border border-white/5">
                 <Mic className="w-6 h-6" />
               </button>
             )}
           </>
         ) : (
-          <div className="flex-1 flex items-center bg-primary/10 border border-primary/20 rounded-[2rem] h-12 px-5 gap-4 animate-in slide-in-from-right-4 shadow-2xl">
+          <div className="flex-1 flex items-center bg-primary/10 border border-primary/20 rounded-[1.8rem] h-12 px-5 gap-4 animate-in slide-in-from-right-4 shadow-2xl">
             <div className="flex items-center gap-3 text-primary animate-pulse"><div className="w-2.5 h-2.5 rounded-full bg-primary" /><span className="text-[10px] font-black tracking-widest">REC</span></div>
             <span className="text-base font-black flex-1 tabular-nums text-white italic">
               {Math.floor(recordingDuration / 60).toString().padStart(2, '0')}:{(recordingDuration % 60).toString().padStart(2, '0')}
@@ -159,7 +167,12 @@ const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelRepl
     </footer>
     <ImagePreviewModal 
       open={isPreviewOpen} 
-      onOpenChange={setIsPreviewOpen}
+      onOpenChange={(val) => {
+        if (!val) {
+          setPendingFiles([]);
+        }
+        setIsPreviewOpen(val);
+      }}
       files={pendingFiles.map(p => ({ url: p.url, type: p.type }))}
       onRemove={(idx) => setPendingFiles(prev => prev.filter((_, i) => i !== idx))}
       onSend={handleSendFiles}
@@ -229,12 +242,12 @@ export default function ChatArea() {
     if (replyTo) { 
       msgData.replyToId = replyTo.id; 
       msgData.replyToContent = replyTo.contentType === 'text' ? replyTo.content : `[Вложение]`; 
+      msgData.replyToSenderName = replyTo.senderName;
       setReplyTo(null); 
     }
     await addDoc(collection(db, 'chats', currentChatId, 'messages'), msgData);
     await updateDoc(doc(db, 'chats', currentChatId), { lastMessageAt: new Date().toISOString() });
     
-    // INCREASE REPUTATION ON MESSAGE SEND
     if (userProfile) {
        await updateDoc(doc(db, 'users', firebaseUser.uid), { reputation: increment(0.2) });
     }
@@ -244,13 +257,6 @@ export default function ChatArea() {
     if (!db || !currentChatId) return;
     await updateDoc(doc(db, 'chats', currentChatId), { pinnedMessageId: null });
   };
-
-  const bgStyle = useMemo(() => {
-    if (userProfile?.settings?.chatBackground) {
-      return { backgroundImage: `url(${userProfile.settings.chatBackground})`, backgroundSize: 'cover', backgroundPosition: 'center' };
-    }
-    return {};
-  }, [userProfile?.settings?.chatBackground]);
 
   const currentDisplayName = useMemo(() => {
     if (!chat) return '...';
@@ -263,8 +269,6 @@ export default function ChatArea() {
 
   return (
     <div className="flex-1 flex flex-col h-full bg-[#030306] relative overflow-hidden z-20">
-      <div className="absolute inset-0 z-0 opacity-[0.2] pointer-events-none" style={bgStyle} />
-      
       <header className="h-16 border-b border-white/5 bg-white/[0.02] backdrop-blur-[40px] flex items-center px-4 shrink-0 z-30 shadow-2xl">
         <div className="flex items-center gap-4 flex-1 min-w-0">
           <Button variant="ghost" size="icon" className="md:hidden rounded-2xl text-white/40 h-10 w-10 hover:bg-white/5" onClick={() => { triggerHaptic(); setCurrentChatId(null); }}><ChevronLeft className="w-6 h-6" /></Button>
@@ -287,7 +291,6 @@ export default function ChatArea() {
         </div>
       </header>
 
-      {/* Pinned Message Bar */}
       {pinnedMessage && (
         <div className="bg-white/[0.03] backdrop-blur-[24px] border-b border-white/5 h-12 flex items-center px-6 gap-3 shrink-0 z-20 animate-in slide-in-from-top-4 duration-500 shadow-xl group">
           <div className="w-1 h-6 bg-primary rounded-full shadow-[0_0_10px_rgba(229,142,56,0.6)]" />

@@ -25,8 +25,8 @@ import {
 import { useToast } from '@/hooks/use-toast';
 
 /**
- * MESSAGE ITEM V96.0 «SIGNAL CONTROL»
- * UPDATED: Context menu, reactions, copy, forward, and absolute elite styling.
+ * MESSAGE ITEM V120.0 «SIGNAL POLISH»
+ * FIXED: Stickers rendering, reply layout, and bubble width constraints.
  */
 export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, chatId, onReply }: any) => {
   const { setInspectedUserId, setForwardingMessage } = useAppState();
@@ -111,7 +111,7 @@ export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, cha
       <ContextMenu>
         <ContextMenuTrigger className="w-full flex flex-col items-inherit">
           <div className={cn(
-            "flex gap-3 max-w-[90%] items-end", 
+            "flex gap-3 max-w-[85%] items-end", 
             isMe ? "flex-row-reverse" : "flex-row"
           )}>
             {!isMe && (
@@ -134,9 +134,10 @@ export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, cha
               
               <div className="relative group">
                 <div className={cn(
-                  "p-4 px-6 rounded-[2.2rem] relative shadow-2xl transition-all duration-500 border overflow-hidden",
+                  "p-3.5 px-5 rounded-[1.8rem] relative shadow-2xl transition-all duration-500 border overflow-hidden",
                   styleClasses[bubbleStyle as keyof typeof styleClasses] || styleClasses.default,
-                  isMe ? "rounded-br-lg" : "rounded-bl-lg"
+                  isMe ? "rounded-br-lg" : "rounded-bl-lg",
+                  message.contentType === 'sticker' && "bg-transparent border-none shadow-none p-1"
                 )}>
                   {message.forwardFrom && (
                     <div className="flex items-center gap-1.5 mb-1.5 opacity-40">
@@ -145,7 +146,18 @@ export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, cha
                     </div>
                   )}
 
-                  {message.contentType === 'audio' ? (
+                  {message.replyToId && (
+                    <div className="mb-2.5 p-2 bg-white/10 rounded-xl border-l-4 border-primary flex flex-col gap-0.5 opacity-80 cursor-pointer" onClick={() => document.getElementById(message.replyToId)?.scrollIntoView({ behavior: 'smooth' })}>
+                       <span className="text-[10px] font-black text-primary uppercase tracking-widest">{message.replyToSenderName || 'Signal'}</span>
+                       <span className="text-[11px] text-white/60 truncate italic">{decryptSignal(message.replyToContent)}</span>
+                    </div>
+                  )}
+
+                  {message.contentType === 'sticker' ? (
+                    <div className="w-48 h-48 select-none">
+                      <img src={message.content} alt="Sticker" className="w-full h-full object-contain" draggable={false} crossOrigin="anonymous" />
+                    </div>
+                  ) : message.contentType === 'audio' ? (
                     <div className="flex items-center gap-4 min-w-[200px] py-1">
                        <button className="h-10 w-10 rounded-full bg-white/10 shrink-0 flex items-center justify-center hover:bg-white/20 transition-all"><Play className="w-5 h-5 fill-current" /></button>
                        <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
@@ -154,7 +166,7 @@ export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, cha
                        <span className="text-[10px] font-black opacity-30 tabular-nums">{message.metadata?.duration ? `${Math.floor(message.metadata.duration / 60)}:${(message.metadata.duration % 60).toString().padStart(2, '0')}` : '0:01'}</span>
                     </div>
                   ) : message.contentType === 'image' ? (
-                    <div className="relative rounded-2xl overflow-hidden border border-white/5 max-w-[300px] shadow-2xl">
+                    <div className="relative rounded-2xl overflow-hidden border border-white/5 max-w-full shadow-2xl">
                        <img src={message.content} alt="Attachment" className="w-full h-auto object-cover" />
                     </div>
                   ) : (
@@ -163,9 +175,9 @@ export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, cha
                     </div>
                   )}
 
-                  <div className="mt-2 flex items-center gap-2 opacity-30 justify-end h-4">
-                     <span className="text-[9px] font-black tabular-nums">{formattedTime}</span>
-                     {isMe && (message.isRead ? <CheckCheck className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5" />)}
+                  <div className={cn("mt-1.5 flex items-center gap-2 opacity-30 justify-end h-3", message.contentType === 'sticker' && "absolute bottom-0 right-0 p-1 bg-black/40 rounded-full")}>
+                     <span className="text-[8px] font-black tabular-nums">{formattedTime}</span>
+                     {isMe && (message.isRead ? <CheckCheck className="w-3 w-3" /> : <Check className="w-3 w-3" />)}
                   </div>
                 </div>
 

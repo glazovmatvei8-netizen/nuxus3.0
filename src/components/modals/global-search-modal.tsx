@@ -16,8 +16,8 @@ import { cn } from '@/lib/utils';
 type SearchFilter = 'all' | 'users' | 'groups';
 
 /**
- * ГЛОБАЛЬНЫЙ ПОИСК V102.0 «ORDER PROTOCOL»
- * Удалены боты, исправлена логика создания дубликатов чатов.
+ * ГЛОБАЛЬНЫЙ ПОИСК V120.0 «SEARCH STABILITY»
+ * FIXED: Reliable people search by refining the query logic.
  */
 export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const { user } = useUser();
@@ -32,50 +32,69 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
 
   const handleSearch = useCallback(async (val: string) => {
     setSearchQuery(val);
-    if (val.trim().length < 2 || !db) {
+    const input = val.toLowerCase().trim();
+    
+    if (input.length < 2 || !db) {
       setResults([]);
       return;
     }
 
     setIsLoading(true);
     try {
-      const input = val.toLowerCase().trim();
       const searchTarget = input.startsWith('@') ? input : '@' + input;
-      
       const foundResults: any[] = [];
 
-      const userQ = query(
-        collection(db, 'users'),
-        where('usernameLowercase', '>=', searchTarget),
-        where('usernameLowercase', '<=', searchTarget + '\uf8ff'),
-        limit(20)
-      );
+      // 1. Поиск пользователей по usernameLowercase (самый стабильный)
+      if (activeFilter === 'all' || activeFilter === 'users') {
+        const userQ = query(
+          collection(db, 'users'),
+          where('usernameLowercase', '>=', searchTarget),
+          where('usernameLowercase', '<=', searchTarget + '\uf8ff'),
+          limit(20)
+        );
 
-      const [userSnap] = await Promise.all([getDocs(userQ)]);
+        const userSnap = await getDocs(userQ);
+        userSnap.docs.forEach(d => {
+          const data = d.data();
+          if (d.id !== user?.uid) {
+            foundResults.push({ type: 'user', data: { id: d.id, ...data } });
+          }
+        });
 
-      userSnap.docs.forEach(d => {
-        const data = d.data();
-        if (d.id !== user?.uid && !foundResults.some(r => r.data.id === d.id)) {
-          foundResults.push({ type: 'user', data: { id: d.id, ...data } });
+        // Дополнительный поиск по имени если не нашли много
+        if (foundResults.length < 5) {
+          const nameQ = query(
+            collection(db, 'users'),
+            where('name', '>=', val),
+            where('name', '<=', val + '\uf8ff'),
+            limit(10)
+          );
+          const nameSnap = await getDocs(nameQ);
+          nameSnap.docs.forEach(d => {
+            const data = d.data();
+            if (d.id !== user?.uid && !foundResults.some(r => r.data.id === d.id)) {
+              foundResults.push({ type: 'user', data: { id: d.id, ...data } });
+            }
+          });
         }
-      });
+      }
 
+      // 2. Поиск публичных чатов/каналов
       if (activeFilter === 'all' || activeFilter === 'groups') {
-        const chatQ = query(collection(db, 'chats'), where('isPublic', '==', true), limit(10));
+        const chatQ = query(collection(db, 'chats'), where('isPublic', '==', true), limit(20));
         const chatSnap = await getDocs(chatQ);
         chatSnap.docs.forEach(d => {
           const data = d.data();
-          if (data.username?.toLowerCase().includes(input) || data.name?.toLowerCase().includes(input)) {
+          if (
+            data.username?.toLowerCase().includes(input) || 
+            data.name?.toLowerCase().includes(input)
+          ) {
             foundResults.push({ type: 'chat', data: { id: d.id, ...data } });
           }
         });
       }
 
-      let filtered = foundResults;
-      if (activeFilter === 'users') filtered = foundResults.filter(r => r.type === 'user');
-      if (activeFilter === 'groups') filtered = foundResults.filter(r => r.type === 'chat');
-
-      setResults(filtered);
+      setResults(foundResults);
     } catch (e) {
       console.error("Search Error:", e);
     } finally {
@@ -101,7 +120,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
            <DialogTitle className="text-white font-black uppercase italic tracking-tighter text-2xl">Discovery Hub</DialogTitle>
            <div className="relative group">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
-              <Input placeholder="Имя, ник (@) или ID..." value={searchQuery} onChange={e => handleSearch(e.target.value)} className="bg-white/5 border-white/10 h-14 rounded-2xl pl-12 text-lg focus:border-primary/40 transition-all font-bold" autoFocus />
+              <Input placeholder="Имя или @username..." value={searchQuery} onChange={e => handleSearch(e.target.value)} className="bg-white/5 border-white/10 h-14 rounded-2xl pl-12 text-lg focus:border-primary/40 transition-all font-bold" autoFocus />
               {isLoading && <div className="absolute right-4 top-1/2 -translate-y-1/2"><Loader2 className="w-5 h-5 text-primary animate-spin" /></div>}
            </div>
            <div className="flex gap-2 overflow-x-auto scrollbar-hide py-1">
@@ -120,12 +139,12 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
           <div className="p-4 space-y-2">
             {results.length > 0 ? (
               results.map((res, idx) => (
-                <div key={idx} onClick={() => handleSelectResult(res)} className="flex items-center justify-between p-4 bg-white/5 rounded-[1.8rem] hover:bg-white/10 cursor-pointer border border-white/5 transition-all group">
+                <div key={idx} onClick={() => handleSelectResult(res)} className="flex items-center justify-between p-4 bg-white/[0.03] rounded-[1.8rem] hover:bg-white/10 cursor-pointer border border-white/5 transition-all group shadow-md">
                    <div className="flex items-center gap-4 min-w-0">
-                      <UserAvatar userId={res.type === 'user' ? res.data.id : null} manualAvatarUrl={res.data.avatarUrl} className="h-12 w-12 shrink-0 border border-white/10" fallbackName={res.data.name} />
+                      <UserAvatar userId={res.type === 'user' ? res.data.id : null} manualAvatarUrl={res.data.avatarUrl} className="h-12 w-12 shrink-0 border border-white/10 shadow-lg" fallbackName={res.data.name} />
                       <div className="flex flex-col text-left min-w-0">
-                         <span className="font-bold text-white truncate">{res.data.name || 'Анонимный узел'}</span>
-                         <span className="text-[10px] text-muted-foreground uppercase font-black truncate tracking-widest">
+                         <span className="font-bold text-white truncate italic">{res.data.name || 'Анонимный узел'}</span>
+                         <span className="text-[10px] text-primary/60 uppercase font-black truncate tracking-widest">
                            {res.data.username} {res.type === 'chat' && `• ${res.data.type}`}
                          </span>
                       </div>
@@ -136,11 +155,11 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
             ) : searchQuery.length >= 2 ? (
               <div className="flex flex-col items-center justify-center py-24 opacity-20">
                  <Search className="w-16 h-16 mb-4" />
-                 <p className="text-[11px] font-black uppercase tracking-[0.5em] text-center">Узел не обнаружен</p>
+                 <p className="text-[11px] font-black uppercase tracking-[0.5em] text-center">Сигнал не обнаружен</p>
               </div>
             ) : (
               <div className="p-10 text-center opacity-30">
-                 <p className="text-[10px] font-black uppercase tracking-[0.3em]">Начните ввод для сканирования сети</p>
+                 <p className="text-[10px] font-black uppercase tracking-[0.3em]">Введите ID узла для синхронизации</p>
               </div>
             )}
           </div>

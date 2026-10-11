@@ -13,8 +13,8 @@ import { doc, collection, query, where } from 'firebase/firestore';
 import type { User, StickerPack } from '@/lib/types';
 
 /**
- * EMOJI PICKER V5.2.2 «TITANIUM DIRECT»
- * ИСПРАВЛЕНО: Прямые импорты Firebase.
+ * EMOJI PICKER V120.0 «CLEAN GRID»
+ * FIXED: Artifacts and sizing for stickers.
  */
 
 const EMOJI_CATEGORIES = [
@@ -88,7 +88,7 @@ export function EmojiPicker({ onEmojiSelect, onStickerSelect, className }: Emoji
   }, [activePackId, stickerPacks, activeTab]);
 
   return (
-    <div className={cn("bg-[#1c1c1e]/95 backdrop-blur-[10px] border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col h-[480px] animate-in slide-in-from-bottom-4 duration-500 z-[1000]", className)}>
+    <div className={cn("bg-[#1c1c1e]/98 backdrop-blur-[20px] border border-white/10 rounded-[2rem] overflow-hidden shadow-2xl flex flex-col h-[480px] animate-in slide-in-from-bottom-4 duration-500 z-[1000]", className)}>
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
         <TabsList className="grid grid-cols-2 h-14 bg-white/5 border-b border-white/5 shrink-0 rounded-none p-1 gap-1">
           <TabsTrigger value="emoji" className="h-full rounded-2xl data-[state=active]:bg-primary data-[state=active]:text-white gap-2 transition-all font-black uppercase text-[10px] tracking-widest">
@@ -168,20 +168,19 @@ export function EmojiPicker({ onEmojiSelect, onStickerSelect, className }: Emoji
           </div>
 
           <ScrollArea className="flex-1">
-            <div className="p-5">
-              <div className="grid grid-cols-4 gap-4">
+            <div className="p-4">
+              <div className="grid grid-cols-4 gap-3">
                 {displayedStickers.map((url, idx) => (
                   <button 
                     key={idx} 
                     onClick={() => onStickerSelect(url)}
-                    className="aspect-square rounded-[1.5rem] overflow-hidden hover:bg-white/10 active:scale-90 transition-all p-2 bg-white/5 border border-white/5 flex items-center justify-center relative min-w-[64px] min-h-[64px]"
+                    className="aspect-square rounded-2xl overflow-hidden hover:bg-white/5 active:scale-95 transition-all p-1.5 flex items-center justify-center bg-white/[0.03] border border-white/[0.05]"
                   >
                     <img 
                       src={url} 
                       alt="Sticker" 
                       className="w-full h-full object-contain" 
-                      style={{ width: '100%', height: '100%' }}
-                      loading="eager"
+                      loading="lazy"
                       crossOrigin="anonymous"
                     />
                   </button>
