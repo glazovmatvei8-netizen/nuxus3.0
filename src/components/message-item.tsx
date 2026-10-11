@@ -27,8 +27,8 @@ import {
 import { useToast } from '@/hooks/use-toast';
 
 /**
- * MESSAGE ITEM V120.1 «SIGNAL POLISH & NON-BLOCKING»
- * FIXED: "Delete for everyone" logic and overall mutation reliability.
+ * MESSAGE ITEM V127.0 «GEOMETRY PRECISION»
+ * FIXED: Time and checkmarks layout in the bottom right corner.
  */
 export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, chatId, onReply }: any) => {
   const { setInspectedUserId, setForwardingMessage } = useAppState();
@@ -163,10 +163,10 @@ export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, cha
               
               <div className="relative group">
                 <div className={cn(
-                  "p-3.5 px-5 rounded-[1.8rem] relative shadow-2xl transition-all duration-500 border overflow-hidden",
+                  "p-3.5 px-5 rounded-[1.8rem] relative shadow-2xl transition-all duration-500 border overflow-hidden pb-6",
                   styleClasses[bubbleStyle as keyof typeof styleClasses] || styleClasses.default,
                   isMe ? "rounded-br-lg" : "rounded-bl-lg",
-                  message.contentType === 'sticker' && "bg-transparent border-none shadow-none p-1"
+                  message.contentType === 'sticker' && "bg-transparent border-none shadow-none p-1 pb-1"
                 )}>
                   {message.forwardFrom && (
                     <div className="flex items-center gap-1.5 mb-1.5 opacity-40">
@@ -204,9 +204,17 @@ export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, cha
                     </div>
                   )}
 
-                  <div className={cn("mt-1.5 flex items-center gap-2 opacity-30 justify-end h-3", message.contentType === 'sticker' && "absolute bottom-0 right-0 p-1 bg-black/40 rounded-full")}>
+                  {/* 🕒 TIME & STATUS: Moved to corner */}
+                  <div className={cn(
+                    "absolute bottom-1 right-3 flex items-center gap-1.5 opacity-40",
+                    message.contentType === 'sticker' && "bg-black/40 rounded-full px-2 py-0.5"
+                  )}>
                      <span className="text-[8px] font-black tabular-nums">{formattedTime}</span>
-                     {isMe && (message.isRead ? <CheckCheck className="w-3 w-3" /> : <Check className="w-3 w-3" />)}
+                     {isMe && (message.isRead ? (
+                       <CheckCheck className="w-3.5 h-3.5 text-blue-400" />
+                     ) : (
+                       <Check className="w-3.5 h-3.5" />
+                     ))}
                   </div>
                 </div>
 

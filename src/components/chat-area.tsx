@@ -19,7 +19,7 @@ import { useUser, useFirestore } from '@/firebase/provider';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { useMemoFirebase } from '@/firebase/firestore/use-memo-firebase';
-import { collection, query, orderBy, doc, addDoc, updateDoc, increment } from 'firebase/firestore';
+import { collection, query, orderBy, doc, addDoc, updateDoc, increment, writeBatch, getDocs, where } from 'firebase/firestore';
 import { formatDisplayName, cn, compressImage, encryptSignal, decryptSignal, isUserPremium, getReputationInfo, triggerHaptic } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -215,6 +215,29 @@ export default function ChatArea() {
   const messagesQuery = useMemoFirebase(() => (!db || !currentChatId) ? null : query(collection(db, 'chats', currentChatId, 'messages'), orderBy('sentAt', 'asc')), [db, currentChatId]);
   const { data: messages } = useCollection<Message>(messagesQuery);
 
+  // 🛰️ AUTO-READ LOGIC: Mark incoming messages as read
+  useEffect(() => {
+    if (!db || !currentChatId || !firebaseUser || !messages) return;
+
+    const unreadMessages = messages.filter(m => m.senderId !== firebaseUser.uid && !m.isRead);
+    if (unreadMessages.length === 0) return;
+
+    const markAsRead = async () => {
+      const batch = writeBatch(db);
+      unreadMessages.forEach(msg => {
+        const msgRef = doc(db, 'chats', currentChatId, 'messages', msg.id);
+        batch.update(msgRef, { isRead: true });
+      });
+      try {
+        await batch.commit();
+      } catch (e) {
+        console.warn("Nuxus Signal: Read-receipt sync failed");
+      }
+    };
+
+    markAsRead();
+  }, [db, currentChatId, firebaseUser, messages]);
+
   const handleStartCall = async (type: 'audio' | 'video' = 'audio') => {
     if (!db || !firebaseUser || !otherId) return;
     triggerHaptic();
@@ -299,7 +322,6 @@ export default function ChatArea() {
         )}
       </header>
 
-      {/* Messages area omitted for brevity */}
       <div className="flex-1 relative overflow-hidden flex flex-col min-w-0 z-10">
         <ScrollArea className="flex-1 w-full">
           <div className="flex flex-col gap-1 max-w-4xl mx-auto px-4 py-6 min-h-full">

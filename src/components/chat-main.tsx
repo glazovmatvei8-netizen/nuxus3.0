@@ -13,7 +13,7 @@ import { useAppState } from '@/lib/app-state';
 import { cn } from '@/lib/utils';
 import { useUser, useFirestore } from '@/firebase/provider';
 import { useCollection } from '@/firebase/firestore/use-collection';
-import { collection, query, where, limit } from 'firebase/firestore';
+import { collection, query, where, limit, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { CallOverlay } from './modals/call-overlay';
 import { NotificationListener } from './notification-listener';
 import { SettingsModal } from './modals/settings-modal';
@@ -28,9 +28,8 @@ import {
 } from 'lucide-react';
 
 /**
- * NUXUS CHAT MAIN V107.0 «ULTRA PERFORMANCE»
- * Максимальная оптимизация для 60Гц мониторов и ПК.
- * Удалены тяжелые фильтры, добавлена изоляция слоев.
+ * NUXUS CHAT MAIN V127.0 «PRESENCE HEARTBEAT»
+ * Внедрен механизм обновления статуса "В сети" в реальном времени.
  */
 export default function ChatMain() {
   const { 
@@ -40,6 +39,27 @@ export default function ChatMain() {
   } = useAppState();
   const { user } = useUser();
   const db = useFirestore();
+
+  // 1. PRESENCE HEARTBEAT
+  useEffect(() => {
+    if (!db || !user) return;
+
+    const updatePresence = async () => {
+      const userRef = doc(db, 'users', user.uid);
+      try {
+        await updateDoc(userRef, {
+          lastSeen: new Date().toISOString()
+        });
+      } catch (e) {
+        console.warn("Nuxus Presence: Heartbeat failed");
+      }
+    };
+
+    updatePresence(); // Сразу при входе
+    const interval = setInterval(updatePresence, 30000); // Каждые 30 секунд
+
+    return () => clearInterval(interval);
+  }, [db, user?.uid]);
 
   const incomingCallsQuery = useMemo(() => {
     if (!db || !user) return null;
@@ -73,7 +93,7 @@ export default function ChatMain() {
       
       <div className="flex-1 flex overflow-hidden w-full relative h-full z-10">
         
-        {/* Desktop Sidebar - Optimized with simpler backgrounds */}
+        {/* Desktop Sidebar */}
         <nav className="hidden md:flex flex-col items-center py-8 w-20 bg-[#0a0a0c] border-r border-white/5 shrink-0 z-[100] gap-8 transform translate-z-0">
            <div className="p-2.5 rounded-2xl bg-primary/10 border border-primary/20 mb-4 shadow-sm">
               <LayoutGrid className="w-6 h-6 text-primary" />
@@ -134,7 +154,7 @@ export default function ChatMain() {
         </div>
       </div>
 
-      {/* MOBILE BOTTOM NAV - Optimized for performance */}
+      {/* MOBILE BOTTOM NAV */}
       {(!currentChatId || activeView !== 'chats') && (
         <div className="md:hidden nuxus-floating-nav">
           {NAV_ITEMS.map((item) => (

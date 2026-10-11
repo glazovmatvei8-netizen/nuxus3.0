@@ -107,7 +107,7 @@ export function formatLastSeen(
   try {
     const lastSeen = parseISO(lastSeenIso);
     const diffSeconds = Math.max(0, differenceInSeconds(new Date(), lastSeen));
-    if (diffSeconds < 120) return onlineString;
+    if (diffSeconds < 60) return onlineString; // Сократили до 60 секунд для точности
     return `был(а) ${formatDistanceToNow(lastSeen, { addSuffix: true, locale: ru })}`;
   } catch (e) { return 'был(а) недавно'; }
 }
