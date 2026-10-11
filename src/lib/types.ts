@@ -1,3 +1,4 @@
+
 export type MessageType = 'text' | 'image' | 'audio' | 'video' | 'video_note' | 'service' | 'gift' | 'payment_request' | 'album' | 'poll' | 'broadcast' | 'sticker' | 'music';
 
 export interface BotButton {
@@ -126,6 +127,14 @@ export interface Call {
   createdAt: string;
   startedAt?: string;
   endedAt?: string;
+  offer?: {
+    sdp?: string;
+    type?: string;
+  };
+  answer?: {
+    sdp?: string;
+    type?: string;
+  };
 }
 
 export type ChatType = 'private' | 'group' | 'channel' | 'saved';
