@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, memo, useMemo, useEffect } from 'react';
@@ -11,8 +12,8 @@ import { differenceInMinutes, parseISO } from 'date-fns';
 import Image from 'next/image';
 
 /**
- * USER AVATAR V126.0 «STRICT HYDRATION»
- * FIXED: Устранение ошибок разницы времени между сервером и клиентом.
+ * USER AVATAR V129.0 «FINAL AUDIT»
+ * FIXED: Larger fallback letters, hydration stability.
  */
 export const UserAvatar = memo(({ userId, className, fallbackName, manualAvatarUrl, showOnlineStatus = false, onClick }: any) => {
   const db = useFirestore();
@@ -33,20 +34,23 @@ export const UserAvatar = memo(({ userId, className, fallbackName, manualAvatarU
   const displayAvatar = useMemo(() => manualAvatarUrl || profile?.avatarUrl || null, [profile, manualAvatarUrl]);
   const premium = useMemo(() => isUserPremium(profile), [profile]);
   
-  // КРИТИЧЕСКИ: Статус онлайн рассчитывается ТОЛЬКО на клиенте после монтирования
   const isOnline = useMemo(() => {
     if (!mounted || !profile?.lastSeen || profile?.settings?.privacy?.isGhostMode) return false;
     try {
-      // Это выполняется только в браузере
       return differenceInMinutes(new Date(), parseISO(profile.lastSeen)) < 2;
     } catch (e) { return false; }
   }, [profile, mounted]);
 
+  const initials = useMemo(() => {
+    const text = fallbackName || profile?.name || 'Node';
+    return text.trim().slice(0, 1).toUpperCase();
+  }, [fallbackName, profile?.name]);
+
   return (
-    <div onClick={onClick} className={cn("relative inline-flex items-center justify-center shrink-0 rounded-full cursor-pointer", className)}>
+    <div onClick={onClick} className={cn("relative inline-flex items-center justify-center shrink-0 rounded-full cursor-pointer transition-transform active:scale-95", className)}>
       {premium && (
         <div className="absolute inset-[-3px] rounded-full p-[1.5px] overflow-hidden z-0">
-          <div className="absolute inset-[-100%] bg-gradient-to-tr from-primary via-accent to-primary opacity-30" />
+          <div className="absolute inset-[-100%] bg-gradient-to-tr from-primary via-accent to-primary opacity-40 animate-pulse" />
         </div>
       )}
 
@@ -64,15 +68,15 @@ export const UserAvatar = memo(({ userId, className, fallbackName, manualAvatarU
               />
             </div>
           ) : (
-            <AvatarFallback className="bg-[#050505] text-primary font-black uppercase italic text-[50%] tracking-tighter">
-              {(fallbackName || profile?.name || 'N').slice(0, 1)}
+            <AvatarFallback className="bg-[#050505] text-primary font-black uppercase italic text-[24px] tracking-tighter">
+              {initials}
             </AvatarFallback>
           )}
         </Avatar>
       </div>
 
       {showOnlineStatus && isOnline && (
-        <div className="absolute top-[8%] right-[8%] z-20 w-3 h-3 bg-green-500 rounded-full border-2 border-[#0a0a0c] shadow-[0_0_8px_rgba(34,197,94,1)]" />
+        <div className="absolute top-[8%] right-[8%] z-20 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-[#0a0a0c] shadow-[0_0_10px_rgba(34,197,94,1)]" />
       )}
     </div>
   );

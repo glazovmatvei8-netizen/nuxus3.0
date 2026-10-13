@@ -78,11 +78,11 @@ export const translations = {
     explore: {
       title: "Навигатор",
       subtitle: "Исследование узлов сети Nuxus",
-      description: "Здесь вы можете найти открытые каналы, торговые пути и научные сообщества. Присоединяйтесь к глобальной сети.",
+      description: "Навигатор позволяет находить публичные каналы, открытые сообщества и новых пользователей. Присоединяйтесь к глобальной структуре.",
       recommended: "Рекомендуемые узлы",
       categories: "Категории",
       events: "Активные события",
-      searchPlaceholder: "Поиск узлов, каналов, пользователей...",
+      searchPlaceholder: "Поиск узлов и каналов...",
       join: "Присоединиться",
       joining: "Подключение...",
       devMode: "Функционал в разработке",
@@ -96,8 +96,8 @@ export const translations = {
       assets: "Мои активы",
       topup: "Пополнение",
       transfer: "Перевод STK",
-      info: "STK (Stellar Credits) — это внутренняя единица Ядра для обмена артефактами и подарками. Не является финансовым инструментом.",
-      disclaimer: "Все права защищены ООО «Nuxus Quantum Platforms»."
+      info: "STK (Stellar Credits) — это внутренняя единица Ядра для обмена подарками и артефактами. Не является криптовалютой или финансовым активом.",
+      disclaimer: "Все операции защищены протоколом QES. © Nuxus Quantum Platforms."
     },
     initializing: "Загрузка системы...",
     online: "в сети",
@@ -184,11 +184,11 @@ export const translations = {
     explore: {
       title: "Explore",
       subtitle: "Discover Nuxus Network Nodes",
-      description: "Find public channels, trade routes, and research communities. Join the global network.",
+      description: "Explore find public channels, open communities and new nodes. Join the global network.",
       recommended: "Recommended Nodes",
       categories: "Categories",
       events: "Active Events",
-      searchPlaceholder: "Search nodes, channels, users...",
+      searchPlaceholder: "Search nodes, channels...",
       join: "Join",
       joining: "Connecting...",
       devMode: "Feature in development",

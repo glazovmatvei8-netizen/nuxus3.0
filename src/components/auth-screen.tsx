@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Eye, EyeOff, ShieldCheck, Mail, Phone, Lock, RefreshCw, Send } from 'lucide-react';
+import { Loader2, Eye, EyeOff, ShieldCheck, Mail, Phone, Lock, RefreshCw, Send, ChevronLeft } from 'lucide-react';
 import { useAuth, useFirestore, useUser } from '@/firebase/provider'; 
 import { 
   signInWithEmailAndPassword,
@@ -24,10 +24,10 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { translations } from '@/lib/translations';
 
 /**
- * AUTH SCREEN V123.0 «STRICT VERIFICATION»
- * ADDED: Verification Required screen, reload status logic.
+ * AUTH SCREEN V129.0 «FINAL AUDIT»
+ * FIXED: No domain restriction, forced verification logic, full localization.
  */
-export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'login' | 'register' }) {
+export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'login' | 'register' | 'verify' }) {
   const auth = useAuth();
   const db = useFirestore();
   const { user } = useUser();
@@ -64,22 +64,24 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
       
       let finalId = identifier.trim().toLowerCase();
       if (authType === 'phone') {
+        // Эмуляция входа по номеру через внутренний домен
         finalId = normalizePhoneNumber(identifier) + "@nuxus.internal";
       }
       
       if (mode === 'register') {
-        if (!name.trim()) throw new Error("Введите ваше имя");
-        if (!username.trim()) throw new Error("Выберите @ID");
+        if (!name.trim()) throw new Error(lang === 'en' ? "Enter your name" : "Введите ваше имя");
+        if (!username.trim()) throw new Error(lang === 'en' ? "Choose @ID" : "Выберите @ID");
         
-        const usernameWithAt = '@' + username.trim().replace('@', '').replace(/\s/g, '').toLowerCase();
+        const usernameWithAt = username.trim().startsWith('@') ? username.trim().toLowerCase() : '@' + username.trim().toLowerCase();
         
         const userCred = await createUserWithEmailAndPassword(auth, finalId, password);
         await updateProfile(userCred.user, { displayName: name.trim() });
         
+        // Верификация обязательна для email
         if (authType === 'email') {
           await sendEmailVerification(userCred.user);
           setMode('verify');
-          toast({ title: "Письмо отправлено", description: "Проверьте входящие или папку Спам." });
+          toast({ title: lang === 'en' ? "Verification Sent" : "Письмо отправлено", description: lang === 'en' ? "Check your inbox or spam folder." : "Проверьте входящие или папку Спам." });
         }
 
         const userData = {
@@ -104,16 +106,16 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
         if (!cred.user.emailVerified && !cred.user.email?.includes('@nuxus.internal')) {
           setMode('verify');
         } else {
-          toast({ title: "Синхронизация завершена" });
+          toast({ title: lang === 'en' ? "Sync Complete" : "Синхронизация завершена" });
         }
       }
     } catch (e: any) {
       let msg = e.message;
-      if (e.code === 'auth/user-not-found') msg = "Узел не найден. Проверьте данные.";
-      if (e.code === 'auth/wrong-password') msg = "Неверный пароль.";
-      if (e.code === 'auth/invalid-credential') msg = "Ошибка данных. Проверьте ввод.";
-      if (e.code === 'auth/email-already-in-use') msg = "Этот идентификатор уже занят другим узлом.";
-      toast({ title: "Ошибка", description: msg, variant: "destructive" });
+      if (e.code === 'auth/user-not-found') msg = lang === 'en' ? "Node not found." : "Узел не найден.";
+      if (e.code === 'auth/wrong-password') msg = lang === 'en' ? "Incorrect password." : "Неверный пароль.";
+      if (e.code === 'auth/invalid-credential') msg = lang === 'en' ? "Check your credentials." : "Ошибка данных. Проверьте ввод.";
+      if (e.code === 'auth/email-already-in-use') msg = lang === 'en' ? "Identity already in use." : "Этот идентификатор уже занят.";
+      toast({ title: lang === 'en' ? "Signal Error" : "Ошибка", description: msg, variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -124,10 +126,10 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
     setIsLoading(true);
     await auth.currentUser.reload();
     if (auth.currentUser.emailVerified) {
-      toast({ title: "Узел верифицирован" });
+      toast({ title: lang === 'en' ? "Verified" : "Узел верифицирован" });
       window.location.reload();
     } else {
-      toast({ title: "Статус не изменился", description: "Пожалуйста, перейдите по ссылке в письме." });
+      toast({ title: lang === 'en' ? "Status Unchanged" : "Статус не изменился", description: lang === 'en' ? "Please click the link in your email." : "Пожалуйста, перейдите по ссылке в письме." });
     }
     setIsLoading(false);
   };
@@ -137,9 +139,9 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
     setIsLoading(true);
     try {
       await sendEmailVerification(auth.currentUser);
-      toast({ title: "Сигнал отправлен повторно" });
+      toast({ title: lang === 'en' ? "Signal Resent" : "Сигнал отправлен повторно" });
     } catch (e) {
-      toast({ title: "Сбой шлюза", variant: "destructive" });
+      toast({ title: lang === 'en' ? "Gateway Failed" : "Сбой шлюза", variant: "destructive" });
     }
     setIsLoading(false);
   };
@@ -175,20 +177,22 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
              <Mail className="w-10 h-10 text-blue-500 animate-pulse" />
           </div>
           <div className="space-y-2">
-            <h2 className="text-3xl font-black uppercase italic text-white tracking-tighter">Верификация</h2>
+            <h2 className="text-3xl font-black uppercase italic text-white tracking-tighter">{lang === 'en' ? "Verification" : "Верификация"}</h2>
             <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest leading-relaxed">
-              Мы отправили зашифрованный сигнал на <b>{auth?.currentUser?.email}</b>. Пожалуйста, подтвердите вашу личность.
+              {lang === 'en' ? "We sent an encrypted signal to " : "Мы отправили зашифрованный сигнал на "} <b>{auth?.currentUser?.email}</b>. {lang === 'en' ? "Please confirm your identity." : "Пожалуйста, подтвердите вашу личность."}
             </p>
           </div>
           <div className="flex flex-col gap-3">
              <Button onClick={handleReload} disabled={isLoading} className="w-full h-14 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-xl">
-               {isLoading ? <Loader2 className="animate-spin" /> : <><RefreshCw className="w-4 h-4 mr-2" /> Проверить статус</>}
+               {isLoading ? <Loader2 className="animate-spin" /> : <><RefreshCw className="w-4 h-4 mr-2" /> {lang === 'en' ? "Check Status" : "Проверить статус"}</>}
              </Button>
              <Button onClick={handleResend} variant="ghost" disabled={isLoading} className="w-full h-12 text-white/30 font-black uppercase text-[10px] tracking-widest hover:text-white">
-               <Send className="w-3 h-3 mr-2" /> Отправить повторно
+               <Send className="w-3 h-3 mr-2" /> {lang === 'en' ? "Resend Email" : "Отправить повторно"}
              </Button>
           </div>
-          <p className="text-[8px] font-black uppercase text-white/10 tracking-[0.4em] pt-10">Security Protocol V123.0 Active</p>
+          <button onClick={() => { auth?.signOut(); setMode('login'); }} className="text-[9px] font-black uppercase text-white/20 hover:text-white underline tracking-widest">
+            {lang === 'en' ? "Use another account" : "Использовать другой узел"}
+          </button>
         </div>
       </div>
     );
@@ -198,12 +202,15 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
     <div className="h-[100dvh] w-full flex flex-col bg-[#010103] relative overflow-hidden">
       <ScrollArea className="w-full h-full">
         <div className="min-h-full w-full flex flex-col items-center justify-center p-6 py-12">
-          <div className="mb-6" onClick={() => setLang(null)}><NuxusLogo size={80} /></div>
+          <div className="mb-6 cursor-pointer active:scale-95 transition-transform" onClick={() => setLang(null)}>
+            <NuxusLogo size={80} />
+          </div>
+          
           <Card className="w-full max-w-[380px] bg-white/[0.01] backdrop-blur-3xl border-white/5 rounded-[2.5rem] p-1 shadow-2xl relative z-10">
             <CardHeader className="text-center pt-8 pb-4 space-y-6">
               <div className="inline-flex bg-black/40 p-1 rounded-xl border border-white/5 mx-auto">
-                <button type="button" onClick={() => setMode('login')} className={cn("px-6 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all", mode === 'login' ? "bg-white text-black shadow-lg" : "text-white/20")}>Вход</button>
-                <button type="button" onClick={() => setMode('register')} className={cn("px-6 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all", mode === 'register' ? "bg-white text-black shadow-lg" : "text-white/20")}>Создать</button>
+                <button type="button" onClick={() => setMode('login')} className={cn("px-6 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all", mode === 'login' ? "bg-white text-black shadow-lg" : "text-white/20")}>{t.login}</button>
+                <button type="button" onClick={() => setMode('register')} className={cn("px-6 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all", mode === 'register' ? "bg-white text-black shadow-lg" : "text-white/20")}>{t.register}</button>
               </div>
 
               <div className="flex justify-center gap-4">
@@ -211,7 +218,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                   <Mail size={14} /> Email
                 </button>
                 <button onClick={() => setActiveAuthType('phone')} className={cn("flex items-center gap-2 text-[9px] font-black uppercase tracking-widest transition-all", authType === 'phone' ? "text-primary" : "text-white/20")}>
-                  <Phone size={14} /> Номер
+                  <Phone size={14} /> {lang === 'en' ? "Phone" : "Номер"}
                 </button>
               </div>
             </CardHeader>
@@ -229,7 +236,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                   </div>
                   <Input 
                     type={authType === 'email' ? "email" : "text"} 
-                    placeholder={authType === 'email' ? t.enterEmail : "Номер телефона"} 
+                    placeholder={authType === 'email' ? t.enterEmail : (lang === 'en' ? "Phone Number" : "Номер телефона")} 
                     value={identifier} 
                     onChange={e => setIdentifier(e.target.value)} 
                     className="h-12 bg-white/5 border-white/10 rounded-xl font-bold pl-12" 

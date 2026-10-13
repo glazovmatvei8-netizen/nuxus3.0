@@ -13,13 +13,13 @@ import {
 import { useAppState } from '@/lib/app-state';
 import { useUser, useFirestore } from '@/firebase/provider';
 import { collection, query, where, getDocs, doc, updateDoc, arrayUnion, limit } from 'firebase/firestore';
-import { cn } from '@/lib/utils';
+import { cn, triggerHaptic } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslations } from '@/hooks/use-translations';
 
 /**
- * NAVIGATOR EXPLORE V105.0 «UX OPTIMIZED»
- * FIXED: Header size, horizontal scrolling, join logic, and real-time search.
+ * NAVIGATOR EXPLORE V129.0 «FINAL AUDIT»
+ * FIXED: Compact header, better search, horizontal scroll, full localization.
  */
 export default function DiscoveryView() {
   const { user } = useUser();
@@ -32,6 +32,7 @@ export default function DiscoveryView() {
 
   const handleJoin = async (chatUsername: string) => {
     if (!db || !user) return;
+    triggerHaptic();
     setIsJoining(chatUsername);
     try {
       const q = query(collection(db, 'chats'), where('username', '==', chatUsername), limit(1));
@@ -51,7 +52,7 @@ export default function DiscoveryView() {
         setCurrentChatId(chatDoc.id);
         setActiveView('chats');
       } else {
-        toast({ title: t('explore.devMode'), description: t('explore.nodeNotFound'), variant: "default" });
+        toast({ title: t('explore.devMode'), description: t('explore.nodeNotFound') });
       }
     } catch (e) {
       toast({ title: "Ошибка шлюза", variant: "destructive" });
@@ -68,28 +69,30 @@ export default function DiscoveryView() {
 
   const filteredNodes = useMemo(() => {
     if (!search) return RECOMMEND_NODES;
-    return RECOMMEND_NODES.filter(n => n.title.toLowerCase().includes(search.toLowerCase()) || n.username.toLowerCase().includes(search.toLowerCase()));
+    return RECOMMEND_NODES.filter(n => 
+      n.title.toLowerCase().includes(search.toLowerCase()) || 
+      n.username.toLowerCase().includes(search.toLowerCase())
+    );
   }, [search]);
 
   return (
     <div className="flex flex-col h-full bg-[#121212] overflow-hidden relative">
-      {/* Background Subtle Gradient */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(229,142,56,0.03)_0%,transparent_70%)] pointer-events-none" />
 
       {/* COMPACT HEADER */}
-      <div className="px-8 pt-8 pb-4 shrink-0 text-center relative z-10">
-        <h1 className="text-3xl font-black text-primary italic tracking-tighter uppercase leading-none drop-shadow-[0_0_20px_hsla(var(--primary),0.3)]">
+      <div className="px-6 pt-12 pb-4 shrink-0 text-center relative z-10">
+        <h1 className="text-2xl font-black text-primary italic tracking-tighter uppercase leading-none">
           {t('explore.title')}
         </h1>
-        <p className="text-[9px] font-black uppercase tracking-[0.4em] text-white/20 mt-2">{t('explore.subtitle')}</p>
+        <p className="text-[8px] font-black uppercase tracking-[0.4em] text-white/20 mt-2">{t('explore.subtitle')}</p>
       </div>
 
-      <div className="px-8 pb-6 shrink-0 relative z-10">
+      <div className="px-6 pb-6 shrink-0 relative z-10">
         <div className="relative group">
-          <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-primary transition-all" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-primary transition-all" />
           <Input 
             placeholder={t('explore.searchPlaceholder')} 
-            className="bg-[#1C1C1E] border-white/[0.05] h-14 rounded-2xl pl-14 text-sm font-bold text-white placeholder:text-[#8E8E93]/40 focus:ring-1 focus:ring-primary/20 transition-all shadow-inner"
+            className="bg-[#1C1C1E] border-white/[0.05] h-12 rounded-2xl pl-12 text-sm font-bold text-white focus:border-primary/40 transition-all shadow-inner"
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
@@ -97,7 +100,7 @@ export default function DiscoveryView() {
       </div>
 
       <ScrollArea className="flex-1 relative z-10">
-        <div className="px-8 pb-40 space-y-10 animate-in fade-in duration-700">
+        <div className="px-6 pb-40 space-y-10">
           
           {/* DESCRIPTION BOX */}
           <section className="bg-primary/5 border border-primary/10 p-5 rounded-3xl flex gap-4 items-start">
@@ -113,7 +116,7 @@ export default function DiscoveryView() {
               {t('explore.recommended')}
             </h3>
             <ScrollArea className="w-full">
-              <div className="flex gap-4 pb-4 px-1">
+              <div className="flex gap-4 pb-4">
                 {filteredNodes.map(node => (
                   <RecommendCard 
                     key={node.id}
