@@ -58,7 +58,9 @@ export const translations = {
         save: "Записать изменения", 
         language: "Язык приложения",
         logout: "Выйти из системы",
-        deleteData: "Стереть данные"
+        deleteData: "Стереть данные",
+        appIcon: "Иконка приложения",
+        changeIcon: "Выбрать иконку"
       } 
     },
     auth: { 
@@ -164,7 +166,9 @@ export const translations = {
         save: "Save Changes", 
         language: "App Language",
         logout: "Sign Out",
-        deleteData: "Erase Data"
+        deleteData: "Erase Data",
+        appIcon: "App Icon",
+        changeIcon: "Change Icon"
       } 
     },
     auth: { 

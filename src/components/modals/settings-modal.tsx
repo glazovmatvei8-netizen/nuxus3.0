@@ -17,7 +17,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Settings2, Camera, ShieldCheck, Loader2, Fingerprint, Palette, 
   ChevronRight, Globe, Trash2, Mail, Phone, Lock, Image as ImageIcon,
-  Info, HelpCircle, UserCheck, ShieldAlert, RefreshCw, KeyRound, Crown, FileText, Sun, Moon, Type
+  Info, HelpCircle, UserCheck, ShieldAlert, RefreshCw, KeyRound, Crown, FileText, Sun, Moon, Type, LayoutGrid
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -28,10 +28,18 @@ import { isUserPremium, cn, compressImage, triggerHaptic } from '@/lib/utils';
 import type { User } from '@/lib/types';
 import { useTranslations } from '@/hooks/use-translations';
 import versions from '@/app/versions.json';
+import Image from 'next/image';
 
 const NAME_COLORS = [
   'text-orange-500', 'text-blue-500', 'text-green-500', 
   'text-purple-500', 'text-red-500', 'text-pink-500', 'text-cyan-500'
+];
+
+const APP_ICON_PRESETS = [
+  { id: 'default', name: 'Original', url: 'https://i.postimg.cc/T2xvz0mn/IMG-2541.jpg' },
+  { id: 'gold', name: 'Golden Core', url: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?w=200&h=200&fit=crop' },
+  { id: 'neon', name: 'Neon Pulse', url: 'https://images.unsplash.com/photo-1614850523459-c2f4c699c52e?w=200&h=200&fit=crop' },
+  { id: 'obsidian', name: 'Obsidian', url: 'https://images.unsplash.com/photo-1614850523531-15e5743b179b?w=200&h=200&fit=crop' }
 ];
 
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
@@ -44,12 +52,15 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bgInputRef = useRef<HTMLInputElement>(null);
+  const iconInputRef = useRef<HTMLInputElement>(null);
+  
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user?.uid]);
   const { data: profile, isLoading: isProfileLoading } = useDoc<User>(userRef);
 
   const [isSaving, setIsSaving] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [bgPreview, setBgPreview] = useState<string | null>(null);
+  const [iconPreview, setIconPreview] = useState<string | null>(null);
   
   const [form, setForm] = useState({
     name: '', username: '', bio: '', phone: '', email: '',
@@ -82,6 +93,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       });
       setAvatarPreview(profile.avatarUrl || null);
       setBgPreview(profile.settings?.chatBackground || null);
+      setIconPreview(profile.settings?.customAppIconUrl || null);
     }
   }, [profile, open]);
 
@@ -110,6 +122,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         'settings.messageRadius': form.borderRadius,
         'settings.nameColor': form.nameColor,
         'settings.chatBackground': bgPreview,
+        'settings.customAppIconUrl': iconPreview,
         'settings.privacy.isGhostMode': form.isGhostMode,
       };
 
@@ -134,25 +147,13 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     }
   };
 
-  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, setter: (v: string) => void, width = 400) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onloadend = async () => {
-      const compressed = await compressImage(reader.result as string, 400, 0.7);
-      setAvatarPreview(compressed);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleBgChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      const compressed = await compressImage(reader.result as string, 1200, 0.6);
-      setBgPreview(compressed);
-      toast({ title: "Обои выбраны", description: "Нажмите 'Записать изменения' для применения" });
+      const compressed = await compressImage(reader.result as string, width, 0.7);
+      setter(compressed);
     };
     reader.readAsDataURL(file);
   };
@@ -171,7 +172,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 <DialogDescription className="text-[9px] font-bold uppercase text-primary/60 mt-0.5 tracking-widest italic">Node Sync Active</DialogDescription>
               </div>
             </div>
-            <button onClick={() => triggerHaptic()} className="h-10 w-10 rounded-xl bg-white/5 flex items-center justify-center text-white/40 hover:text-white transition-all">
+            <button onClick={() => { triggerHaptic(); toast({ title: "Синхронизация..." }); }} className="h-10 w-10 rounded-xl bg-white/5 flex items-center justify-center text-white/40 hover:text-white transition-all">
                <RefreshCw className="w-4 h-4" />
             </button>
           </div>
@@ -199,7 +200,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                           </div>
                        </div>
                        <div className="absolute bottom-1 right-1 bg-primary p-2.5 rounded-xl shadow-2xl z-20 border border-white/10"><RefreshCw className="w-4 h-4 text-white" /></div>
-                       <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleAvatarChange} />
+                       <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => handleFileChange(e, setAvatarPreview)} />
                     </div>
                     
                     <div className="w-full space-y-4">
@@ -222,6 +223,41 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               </TabsContent>
 
               <TabsContent value="style" className="space-y-8 m-0 animate-in fade-in duration-300">
+                 {/* APP ICON SELECTOR */}
+                 <div className="bg-white/5 p-5 rounded-[1.8rem] border border-white/5 space-y-5">
+                    <div className="flex items-center justify-between">
+                       <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                             <LayoutGrid className="w-5 h-5 text-primary" />
+                          </div>
+                          <span className="text-[13px] font-black uppercase italic tracking-widest text-white">{t('settings.labels.appIcon')}</span>
+                       </div>
+                       <Button variant="ghost" size="sm" onClick={() => iconInputRef.current?.click()} className="text-[8px] font-black uppercase bg-white/5 border border-white/10 rounded-lg h-7 px-3 hover:bg-primary/20">Своя иконка</Button>
+                       <input type="file" ref={iconInputRef} className="hidden" accept="image/*" onChange={(e) => handleFileChange(e, setIconPreview, 200)} />
+                    </div>
+                    
+                    <div className="flex gap-3 overflow-x-auto scrollbar-hide py-1">
+                       {APP_ICON_PRESETS.map(icon => (
+                         <button 
+                           key={icon.id} 
+                           onClick={() => setIconPreview(icon.url)}
+                           className={cn(
+                             "flex flex-col items-center gap-2 shrink-0 group transition-all",
+                             iconPreview === icon.url ? "scale-110" : "opacity-40 hover:opacity-100"
+                           )}
+                         >
+                           <div className={cn(
+                             "h-14 w-14 rounded-2xl overflow-hidden border-2 transition-all",
+                             iconPreview === icon.url ? "border-primary shadow-[0_0_15px_rgba(var(--primary),0.5)]" : "border-transparent"
+                           )}>
+                             <img src={icon.url} className="w-full h-full object-cover" alt={icon.name} />
+                           </div>
+                           <span className="text-[7px] font-black uppercase text-white/40 group-hover:text-white">{icon.name}</span>
+                         </button>
+                       ))}
+                    </div>
+                 </div>
+
                  {/* WALLPAPER & NAME COLOR */}
                  <div className="space-y-4">
                     <button 
@@ -239,7 +275,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                           <ChevronRight className="w-4 h-4 text-white/20" />
                        </div>
                     </button>
-                    <input type="file" ref={bgInputRef} className="hidden" accept="image/*" onChange={handleBgChange} />
+                    <input type="file" ref={bgInputRef} className="hidden" accept="image/*" onChange={(e) => handleFileChange(e, setBgPreview, 1200)} />
 
                     <div className="p-5 bg-white/5 rounded-[1.8rem] border border-white/5 space-y-5">
                        <div className="flex items-center justify-between">
