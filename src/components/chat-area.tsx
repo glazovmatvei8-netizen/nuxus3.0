@@ -215,26 +215,19 @@ export default function ChatArea() {
   const messagesQuery = useMemoFirebase(() => (!db || !currentChatId) ? null : query(collection(db, 'chats', currentChatId, 'messages'), orderBy('sentAt', 'asc')), [db, currentChatId]);
   const { data: messages } = useCollection<Message>(messagesQuery);
 
-  // 🛰️ AUTO-READ LOGIC: Mark incoming messages as read
+  // Mark incoming messages as read
   useEffect(() => {
     if (!db || !currentChatId || !firebaseUser || !messages) return;
-
     const unreadMessages = messages.filter(m => m.senderId !== firebaseUser.uid && !m.isRead);
     if (unreadMessages.length === 0) return;
-
     const markAsRead = async () => {
       const batch = writeBatch(db);
       unreadMessages.forEach(msg => {
         const msgRef = doc(db, 'chats', currentChatId, 'messages', msg.id);
         batch.update(msgRef, { isRead: true });
       });
-      try {
-        await batch.commit();
-      } catch (e) {
-        console.warn("Nuxus Signal: Read-receipt sync failed");
-      }
+      try { await batch.commit(); } catch (e) {}
     };
-
     markAsRead();
   }, [db, currentChatId, firebaseUser, messages]);
 
@@ -288,8 +281,18 @@ export default function ChatArea() {
     return formatDisplayName(chat.name, chat.username);
   }, [chat, otherProfile]);
 
+  const customBg = userProfile?.settings?.chatBackground;
+
   return (
     <div className="flex-1 flex flex-col h-full bg-[#030306] relative overflow-hidden z-20">
+      {/* CUSTOM WALLPAPER LAYER */}
+      {customBg && (
+        <div className="absolute inset-0 z-0 opacity-40 transition-opacity duration-1000">
+          <img src={customBg} className="w-full h-full object-cover blur-[2px]" alt="Background" />
+          <div className="absolute inset-0 bg-black/40" />
+        </div>
+      )}
+
       <header className="h-16 border-b border-white/5 bg-white/[0.02] backdrop-blur-[40px] flex items-center px-4 shrink-0 z-30 shadow-2xl">
         <div className="flex items-center gap-4 flex-1 min-w-0">
           <Button variant="ghost" size="icon" className="md:hidden rounded-2xl text-white/40 h-10 w-10 hover:bg-white/5" onClick={() => { triggerHaptic(); setCurrentChatId(null); }}><ChevronLeft className="w-6 h-6" /></Button>

@@ -26,10 +26,6 @@ import {
 } from "@/components/ui/context-menu";
 import { useToast } from '@/hooks/use-toast';
 
-/**
- * MESSAGE ITEM V130.0 «VISUAL PERFECTION»
- * FIXED: Sticker rendering, max-width constraints, and reply block styling.
- */
 export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, chatId, onReply }: any) => {
   const { setInspectedUserId, setForwardingMessage } = useAppState();
   const { user } = useUser();
@@ -65,18 +61,11 @@ export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, cha
     if (!db || !user || !chatId) return;
     const msgRef = doc(db, 'chats', chatId, 'messages', message.id);
     const hasReacted = message.reactions?.[emoji]?.includes(user.uid);
-    
     const updateData = hasReacted 
       ? { [`reactions.${emoji}`]: arrayRemove(user.uid) }
       : { [`reactions.${emoji}`]: arrayUnion(user.uid) };
-
     updateDoc(msgRef, updateData).catch(async () => {
-      const permissionError = new FirestorePermissionError({
-        path: msgRef.path,
-        operation: 'update',
-        requestResourceData: updateData,
-      } satisfies SecurityRuleContext);
-      errorEmitter.emit('permission-error', permissionError);
+      errorEmitter.emit('permission-error', new FirestorePermissionError({ path: msgRef.path, operation: 'update', requestResourceData: updateData }));
     });
   };
 
@@ -84,38 +73,16 @@ export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, cha
     if (!db || !chatId) return;
     if (confirm("Аннигилировать этот сигнал для всех?")) {
       const msgRef = doc(db, 'chats', chatId, 'messages', message.id);
-      
       deleteDoc(msgRef).catch(async () => {
-        const permissionError = new FirestorePermissionError({
-          path: msgRef.path,
-          operation: 'delete',
-        } satisfies SecurityRuleContext);
-        errorEmitter.emit('permission-error', permissionError);
+        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: msgRef.path, operation: 'delete' }));
       });
-      
       toast({ title: "Сигнал удален" });
     }
   };
 
-  const handlePin = () => {
-    if (!db || !chatId) return;
-    const chatRef = doc(db, 'chats', chatId);
-    const updateData = { pinnedMessageId: message.id };
-
-    updateDoc(chatRef, updateData).catch(async () => {
-      const permissionError = new FirestorePermissionError({
-        path: chatRef.path,
-        operation: 'update',
-        requestResourceData: updateData,
-      } satisfies SecurityRuleContext);
-      errorEmitter.emit('permission-error', permissionError);
-    });
-    
-    toast({ title: "Сигнал закреплен" });
-  };
-
   const bubbleStyle = viewerProfile?.settings?.bubbleStyle || message.metadata?.bubbleStyle || 'default';
   const textSize = viewerProfile?.settings?.messageSize || 'medium';
+  const borderRadius = viewerProfile?.settings?.messageRadius ?? 24;
 
   const styleClasses = {
     default: isMe ? "bg-primary text-white border-white/10 shadow-lg shadow-primary/10" : "obsidian-glass text-white/95 border-white/5",
@@ -124,25 +91,15 @@ export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, cha
     ocean: isMe ? "bg-gradient-to-br from-cyan-500/30 to-blue-700/30 text-white border-cyan-500/20 shadow-2xl" : "bg-white/5 border-white/10 text-white",
   };
 
-  const textClasses = {
-    small: "text-[13px]",
-    medium: "text-[15px]",
-    large: "text-[18px]",
-  };
-
+  const textClasses = { small: "text-[13px]", medium: "text-[15px]", large: "text-[18px]" };
   const rep = getReputationInfo(senderProfile?.reputation);
+  const nameColor = senderProfile?.settings?.nameColor || 'text-primary/60';
 
   return (
-    <div className={cn(
-      "w-full flex flex-col mb-3 animate-in fade-in slide-in-from-bottom-2 duration-500", 
-      isMe ? "items-end" : "items-start"
-    )}>
+    <div className={cn("w-full flex flex-col mb-3 animate-in fade-in slide-in-from-bottom-2 duration-500", isMe ? "items-end" : "items-start")}>
       <ContextMenu>
         <ContextMenuTrigger className="w-full flex flex-col items-inherit">
-          <div className={cn(
-            "flex gap-3 max-w-[85%] items-end", 
-            isMe ? "flex-row-reverse" : "flex-row"
-          )}>
+          <div className={cn("flex gap-3 max-w-[85%] items-end", isMe ? "flex-row-reverse" : "flex-row")}>
             {!isMe && (
               <UserAvatar 
                 userId={message.senderId} 
@@ -154,7 +111,7 @@ export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, cha
             <div className={cn("flex flex-col min-w-[60px]", isMe ? "items-end" : "items-start")}>
               {!isMe && (
                 <div className="flex items-center gap-2 ml-2 mb-1">
-                   <span className="text-[10px] font-black text-primary/60 uppercase tracking-widest italic">
+                   <span className={cn("text-[10px] font-black uppercase tracking-widest italic", nameColor)}>
                      {message.senderName || 'User'}
                    </span>
                    <span className={cn("text-[8px]", rep.color)}>{rep.icon}</span>
@@ -162,12 +119,15 @@ export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, cha
               )}
               
               <div className="relative group">
-                <div className={cn(
-                  "p-3 px-4 rounded-[1.6rem] relative shadow-2xl transition-all duration-500 border overflow-hidden pb-6",
-                  styleClasses[bubbleStyle as keyof typeof styleClasses] || styleClasses.default,
-                  isMe ? "rounded-br-lg" : "rounded-bl-lg",
-                  message.contentType === 'sticker' && "bg-transparent border-none shadow-none p-0 pb-1"
-                )}>
+                <div 
+                  className={cn(
+                    "p-3 px-4 relative shadow-2xl transition-all duration-500 border overflow-hidden pb-6",
+                    styleClasses[bubbleStyle as keyof typeof styleClasses] || styleClasses.default,
+                    isMe ? "rounded-br-lg" : "rounded-bl-lg",
+                    message.contentType === 'sticker' && "bg-transparent border-none shadow-none p-0 pb-1"
+                  )}
+                  style={{ borderRadius: `${borderRadius}px`, borderBottomRightRadius: isMe ? '4px' : `${borderRadius}px`, borderBottomLeftRadius: isMe ? `${borderRadius}px` : '4px' }}
+                >
                   {message.forwardFrom && (
                     <div className="flex items-center gap-1.5 mb-1.5 opacity-40">
                       <Share2 className="w-2.5 h-2.5" />
@@ -204,38 +164,21 @@ export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, cha
                     </div>
                   )}
 
-                  {/* 🕒 TIME & STATUS - POSITIONED ACCURATELY */}
-                  <div className={cn(
-                    "absolute bottom-1 right-2.5 flex items-center gap-1 opacity-40",
-                    message.contentType === 'sticker' && "bg-black/40 rounded-full px-2 py-0.5"
-                  )}>
+                  <div className={cn("absolute bottom-1 right-2.5 flex items-center gap-1 opacity-40", message.contentType === 'sticker' && "bg-black/40 rounded-full px-2 py-0.5")}>
                      <span className="text-[8px] font-black tabular-nums">{formattedTime}</span>
-                     {isMe && (message.isRead ? (
-                       <CheckCheck className="w-3 h-3 text-blue-400" />
-                     ) : (
-                       <Check className="w-3 h-3" />
-                     ))}
+                     {isMe && (message.isRead ? <CheckCheck className="w-3 h-3 text-blue-400" /> : <Check className="w-3 h-3" />)}
                   </div>
                 </div>
 
-                {/* Reactions */}
                 {message.reactions && Object.keys(message.reactions).length > 0 && (
-                  <div className={cn(
-                    "flex gap-1 mt-1 flex-wrap",
-                    isMe ? "justify-end" : "justify-start"
-                  )}>
+                  <div className={cn("flex gap-1 mt-1 flex-wrap", isMe ? "justify-end" : "justify-start")}>
                     {Object.entries(message.reactions).map(([emoji, uids]: any) => (
                       uids.length > 0 && (
                         <button 
-                          key={emoji}
-                          onClick={() => handleReaction(emoji)}
-                          className={cn(
-                            "flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-black border transition-all",
-                            uids.includes(user?.uid) ? "bg-primary/20 border-primary text-white" : "bg-white/5 border-white/10 text-white/40 hover:bg-white/10"
-                          )}
+                          key={emoji} onClick={() => handleReaction(emoji)}
+                          className={cn("flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-black border transition-all", uids.includes(user?.uid) ? "bg-primary/20 border-primary text-white" : "bg-white/5 border-white/10 text-white/40 hover:bg-white/10")}
                         >
-                          <span>{emoji}</span>
-                          <span className="tabular-nums">{uids.length}</span>
+                          <span>{emoji}</span> <span className="tabular-nums">{uids.length}</span>
                         </button>
                       )
                     ))}
@@ -248,15 +191,11 @@ export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, cha
 
         <ContextMenuContent className="w-52 bg-[#121212]/98 backdrop-blur-2xl border-white/10 rounded-2xl p-2 shadow-2xl">
           <div className="flex justify-around p-1.5 mb-2 bg-white/5 rounded-xl border border-white/5">
-            {['❤️', '🔥', '👍', '😂', '😮', '😢'].map(e => (
-              <button key={e} onClick={() => handleReaction(e)} className="text-base hover:scale-125 transition-transform active:scale-90">{e}</button>
-            ))}
+            {['❤️', '🔥', '👍', '😂', '😮', '😢'].map(e => (<button key={e} onClick={() => handleReaction(e)} className="text-base hover:scale-125 transition-transform active:scale-90">{e}</button>))}
           </div>
           <ContextMenuItem onClick={() => onReply(message)} className="gap-3 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest text-white"><Reply className="w-3.5 h-3.5 text-primary" /> Ответить</ContextMenuItem>
           <ContextMenuItem onClick={handleCopy} className="gap-3 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest text-white"><Copy className="w-3.5 h-3.5 text-primary" /> Копировать</ContextMenuItem>
           <ContextMenuItem onClick={() => setForwardingMessage(message)} className="gap-3 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest text-white"><Share2 className="w-3.5 h-3.5 text-primary" /> Переслать</ContextMenuItem>
-          <ContextMenuItem onClick={handlePin} className="gap-3 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest text-white"><Pin className="w-3.5 h-3.5 text-primary" /> Закрепить</ContextMenuItem>
-          <ContextMenuSeparator className="bg-white/5" />
           <ContextMenuItem onClick={handleDelete} className="gap-3 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest text-red-500"><Trash2 className="w-3.5 h-3.5" /> Удалить для всех</ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>

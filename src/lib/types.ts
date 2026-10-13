@@ -162,6 +162,7 @@ export interface Chat {
     avatarUrl: string | null;
     isPremium?: boolean;
     customTitle?: string;
+    nameColor?: string;
   }>;
 }
 
@@ -183,6 +184,8 @@ export interface UserSettings {
   bubbleStyle?: 'default' | 'neon' | 'gold' | 'ocean';
   fontFamily?: 'jakarta' | 'inter' | 'system';
   messageSize: 'small' | 'medium' | 'large';
+  messageRadius?: number;
+  nameColor?: string;
   privacy: UserPrivacy;
   statusText?: string;
   language?: string;

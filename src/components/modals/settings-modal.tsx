@@ -9,14 +9,15 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
+import { Slider } from '@/components/ui/slider';
 import { useAuth, useUser, useFirestore } from '@/firebase/provider';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { useMemoFirebase } from '@/firebase/firestore/use-memo-firebase';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Settings2, Camera, ShieldCheck, Loader2, Fingerprint, Palette, 
-  ChevronRight, Globe, Trash2, Mail, Phone, Lock, 
-  Info, HelpCircle, UserCheck, ShieldAlert, RefreshCw, KeyRound, Crown, FileText
+  ChevronRight, Globe, Trash2, Mail, Phone, Lock, Image as ImageIcon,
+  Info, HelpCircle, UserCheck, ShieldAlert, RefreshCw, KeyRound, Crown, FileText, Sun, Moon, Type
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -28,10 +29,11 @@ import type { User } from '@/lib/types';
 import { useTranslations } from '@/hooks/use-translations';
 import versions from '@/app/versions.json';
 
-/**
- * SETTINGS MODAL V129.0 «FINAL AUDIT»
- * FIXED: Proper tabs for Security/Style, working Legal link, avatar Base64 preservation, Refresh stay-in-place.
- */
+const NAME_COLORS = [
+  'text-orange-500', 'text-blue-500', 'text-green-500', 
+  'text-purple-500', 'text-red-500', 'text-pink-500', 'text-cyan-500'
+];
+
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const auth = useAuth();
   const db = useFirestore();
@@ -41,16 +43,18 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const { settingsTab, setSettingsTab, setIsLegalOpen, setIs2FAVerified } = useAppState();
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const bgInputRef = useRef<HTMLInputElement>(null);
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user?.uid]);
   const { data: profile, isLoading: isProfileLoading } = useDoc<User>(userRef);
 
   const [isSaving, setIsSaving] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [bgPreview, setBgPreview] = useState<string | null>(null);
   
   const [form, setForm] = useState({
     name: '', username: '', bio: '', phone: '', email: '',
     appearance: 'dark' as 'light' | 'dark', theme: 'default',
-    customPrimaryColor: '', chatBackground: '',
+    nameColor: 'text-orange-500', borderRadius: 24,
     bubbleStyle: 'default' as any, fontFamily: 'jakarta' as any,
     messageSize: 'medium' as any,
     isGhostMode: false, twoFactorEnabled: false, twoFactorPin: '', twoFactorPinLength: '6' as '4' | '6'
@@ -66,8 +70,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         email: profile.email || '',
         appearance: profile.settings?.appearance || 'dark',
         theme: profile.settings?.theme || 'default',
-        customPrimaryColor: profile.settings?.customPrimaryColor || '',
-        chatBackground: profile.settings?.chatBackground || '',
+        nameColor: profile.settings?.nameColor || 'text-orange-500',
+        borderRadius: profile.settings?.messageRadius ?? 24,
         bubbleStyle: profile.settings?.bubbleStyle || 'default',
         fontFamily: profile.settings?.fontFamily || 'jakarta',
         messageSize: profile.settings?.messageSize || 'medium',
@@ -77,6 +81,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         twoFactorPinLength: profile.twoFactorPinLength || '6'
       });
       setAvatarPreview(profile.avatarUrl || null);
+      setBgPreview(profile.settings?.chatBackground || null);
     }
   }, [profile, open]);
 
@@ -102,6 +107,9 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         'settings.bubbleStyle': form.bubbleStyle,
         'settings.fontFamily': form.fontFamily,
         'settings.messageSize': form.messageSize,
+        'settings.messageRadius': form.borderRadius,
+        'settings.nameColor': form.nameColor,
+        'settings.chatBackground': bgPreview,
         'settings.privacy.isGhostMode': form.isGhostMode,
       };
 
@@ -129,29 +137,24 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
-    if (file.size > 5 * 1024 * 1024) {
-      toast({ title: "Файл слишком большой", variant: "destructive" });
-      return;
-    }
-
     const reader = new FileReader();
     reader.onloadend = async () => {
-      const base64 = reader.result as string;
-      const compressed = await compressImage(base64, 400, 0.7);
+      const compressed = await compressImage(reader.result as string, 400, 0.7);
       setAvatarPreview(compressed);
-      toast({ title: "Готово", description: "Нажмите 'Записать изменения'" });
     };
     reader.readAsDataURL(file);
   };
 
-  const handleRefreshData = () => {
-    triggerHaptic();
-    // Просто обновляем состояние из текущего профиля без перезагрузки всей страницы
-    if (profile) {
-      setAvatarPreview(profile.avatarUrl || null);
-      toast({ title: "Данные синхронизированы" });
-    }
+  const handleBgChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const compressed = await compressImage(reader.result as string, 1200, 0.6);
+      setBgPreview(compressed);
+      toast({ title: "Обои выбраны", description: "Нажмите 'Записать изменения' для применения" });
+    };
+    reader.readAsDataURL(file);
   };
 
   return (
@@ -168,7 +171,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 <DialogDescription className="text-[9px] font-bold uppercase text-primary/60 mt-0.5 tracking-widest italic">Node Sync Active</DialogDescription>
               </div>
             </div>
-            <button onClick={handleRefreshData} className="h-10 w-10 rounded-xl bg-white/5 flex items-center justify-center text-white/40 hover:text-white transition-all">
+            <button onClick={() => triggerHaptic()} className="h-10 w-10 rounded-xl bg-white/5 flex items-center justify-center text-white/40 hover:text-white transition-all">
                <RefreshCw className="w-4 h-4" />
             </button>
           </div>
@@ -185,7 +188,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
           </div>
 
           <ScrollArea className="flex-1">
-            <div className="p-6 pb-20 space-y-6"> 
+            <div className="p-6 pb-20 space-y-8"> 
               <TabsContent value="profile" className="space-y-6 m-0 animate-in fade-in duration-300">
                  <div className="flex flex-col items-center gap-6">
                     <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
@@ -215,6 +218,103 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                           </div>
                        </div>
                     </div>
+                 </div>
+              </TabsContent>
+
+              <TabsContent value="style" className="space-y-8 m-0 animate-in fade-in duration-300">
+                 {/* WALLPAPER & NAME COLOR */}
+                 <div className="space-y-4">
+                    <button 
+                      onClick={() => bgInputRef.current?.click()}
+                      className="w-full flex items-center justify-between p-5 bg-white/5 rounded-[1.8rem] border border-white/5 hover:bg-white/10 transition-all group"
+                    >
+                       <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                             <ImageIcon className="w-5 h-5 text-primary" />
+                          </div>
+                          <span className="text-[13px] font-black uppercase italic tracking-widest text-white">Изменить обои</span>
+                       </div>
+                       <div className="flex items-center gap-2">
+                          {bgPreview && <div className="h-8 w-8 rounded-lg overflow-hidden border border-white/10"><img src={bgPreview} className="h-full w-full object-cover" /></div>}
+                          <ChevronRight className="w-4 h-4 text-white/20" />
+                       </div>
+                    </button>
+                    <input type="file" ref={bgInputRef} className="hidden" accept="image/*" onChange={handleBgChange} />
+
+                    <div className="p-5 bg-white/5 rounded-[1.8rem] border border-white/5 space-y-5">
+                       <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                                <Palette className="w-5 h-5 text-primary" />
+                             </div>
+                             <span className="text-[13px] font-black uppercase italic tracking-widest text-white">Цвет имени</span>
+                          </div>
+                          <div className={cn("px-4 py-1.5 rounded-full bg-white/5 text-[10px] font-black uppercase italic", form.nameColor)}>{form.name || 'User'}</div>
+                       </div>
+                       <div className="flex gap-2 overflow-x-auto scrollbar-hide py-1">
+                          {NAME_COLORS.map(color => (
+                            <button 
+                              key={color} 
+                              onClick={() => setForm({...form, nameColor: color})}
+                              className={cn(
+                                "h-8 min-w-[32px] rounded-full border-2 transition-all",
+                                form.nameColor === color ? "border-white scale-110 shadow-lg" : "border-transparent opacity-60",
+                                color.replace('text-', 'bg-')
+                              )}
+                            />
+                          ))}
+                       </div>
+                    </div>
+                 </div>
+
+                 {/* COLOR THEMES */}
+                 <div className="space-y-4">
+                    <h3 className="text-[10px] font-black uppercase text-primary/60 ml-2 tracking-widest">Цветовая тема</h3>
+                    <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2">
+                       {['default', 'event-horizon', 'neon', 'gold'].map(theme => (
+                         <button 
+                           key={theme} 
+                           onClick={() => setForm({...form, theme})}
+                           className={cn(
+                             "aspect-[4/5] min-w-[100px] rounded-[1.8rem] border-2 flex flex-col items-center justify-center gap-3 transition-all",
+                             form.theme === theme ? "border-primary bg-primary/10" : "border-white/5 bg-white/5 opacity-50"
+                           )}
+                         >
+                           <div className={cn("w-10 h-10 rounded-full shadow-2xl", theme === 'default' ? 'bg-primary' : theme === 'event-horizon' ? 'bg-orange-600' : theme === 'neon' ? 'bg-purple-600' : 'bg-yellow-600')} />
+                           <span className="text-[8px] font-black uppercase tracking-widest text-white">{theme}</span>
+                         </button>
+                       ))}
+                    </div>
+                 </div>
+
+                 {/* MODE SWITCH */}
+                 <div className="space-y-4">
+                    <button 
+                      onClick={() => setForm({...form, appearance: form.appearance === 'dark' ? 'light' : 'dark'})}
+                      className="w-full flex items-center justify-between p-5 bg-white/5 rounded-[1.8rem] border border-white/5 hover:bg-white/10 transition-all"
+                    >
+                       <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                             {form.appearance === 'dark' ? <Moon className="w-5 h-5 text-primary" /> : <Sun className="w-5 h-5 text-primary" />}
+                          </div>
+                          <span className="text-[13px] font-black uppercase italic tracking-widest text-white">Переключить на {form.appearance === 'dark' ? 'дневную' : 'ночную'} тему</span>
+                       </div>
+                    </button>
+                 </div>
+
+                 {/* BORDER RADIUS */}
+                 <div className="bg-white/5 p-6 rounded-[2.2rem] border border-white/5 space-y-6">
+                    <div className="flex items-center justify-between">
+                       <h3 className="text-[13px] font-black uppercase italic tracking-widest text-white">Углы блоков с сообщениями</h3>
+                       <span className="text-sm font-black text-primary italic tabular-nums">{form.borderRadius}</span>
+                    </div>
+                    <Slider 
+                      value={[form.borderRadius]} 
+                      onValueChange={([v]) => setForm({...form, borderRadius: v})} 
+                      max={40} 
+                      min={0} 
+                      step={1} 
+                    />
                  </div>
               </TabsContent>
 
@@ -253,45 +353,14 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                  </div>
               </TabsContent>
 
-              <TabsContent value="style" className="space-y-6 m-0 animate-in fade-in duration-300">
-                 <div className="bg-white/5 p-6 rounded-[2.5rem] border border-white/5 space-y-8">
-                    <div className="space-y-4">
-                       <Label className="text-[9px] font-black uppercase text-primary/60 ml-2 tracking-widest">Пресет оформления</Label>
-                       <div className="grid grid-cols-2 gap-3">
-                          <button onClick={() => { triggerHaptic(); setForm({...form, theme: 'default'}); }} className={cn("h-14 rounded-2xl border transition-all text-[10px] font-black uppercase", form.theme === 'default' ? "border-primary bg-primary/10 text-white" : "border-white/5 bg-black/20 text-white/40")}>Стандарт</button>
-                          <button onClick={() => { triggerHaptic(); setForm({...form, theme: 'event-horizon'}); }} className={cn("h-14 rounded-2xl border transition-all text-[10px] font-black uppercase", form.theme === 'event-horizon' ? "border-orange-500 bg-orange-500/10 text-white" : "border-white/5 bg-black/20 text-white/40")}>Горизонт</button>
-                       </div>
-                    </div>
-
-                    <div className="space-y-4">
-                       <Label className="text-[9px] font-black uppercase text-primary/60 ml-2 tracking-widest">Размер текста</Label>
-                       <div className="grid grid-cols-3 gap-2">
-                          {['small', 'medium', 'large'].map(s => (
-                             <button key={s} onClick={() => { triggerHaptic(); setForm({...form, messageSize: s as any}); }} className={cn("h-11 rounded-xl border transition-all text-[9px] font-black uppercase", form.messageSize === s ? "border-primary bg-primary/10 text-white" : "border-white/5 bg-black/20 text-white/40")}>{s}</button>
-                          ))}
-                       </div>
-                    </div>
-                 </div>
-              </TabsContent>
-
               <TabsContent value="data" className="space-y-6 m-0 animate-in fade-in duration-300">
                  <div className="bg-white/5 p-8 rounded-[3rem] border border-white/5 flex flex-col items-center text-center gap-6">
-                    <NuxusLogo size={80} />
+                    <UserAvatar userId={user?.uid} size={100} className="shadow-2xl" />
                     <div className="space-y-2">
                        <h3 className="text-2xl font-black text-white italic uppercase tracking-tighter leading-none">Nuxus Kernel</h3>
                        <p className="text-[10px] text-white/30 font-bold uppercase tracking-[0.4em]">Build {versions.build}</p>
                     </div>
                     <div className="w-full h-px bg-white/5" />
-                    <div className="grid grid-cols-2 w-full gap-4">
-                       <div className="text-left">
-                          <p className="text-[8px] font-black text-white/20 uppercase tracking-widest">Protocol</p>
-                          <p className="text-xs font-black text-primary italic">QES {versions.qesVersion}</p>
-                       </div>
-                       <div className="text-right">
-                          <p className="text-[8px] font-black text-white/20 uppercase tracking-widest">Core Version</p>
-                          <p className="text-xs font-black text-white italic">v{versions.latestVersion}</p>
-                       </div>
-                    </div>
                     <Button variant="ghost" onClick={() => setIsLegalOpen(true)} className="w-full h-14 rounded-2xl bg-white/5 font-black uppercase text-[10px] tracking-widest text-primary gap-3 border border-white/5">
                        <FileText className="w-5 h-5" /> Правовые документы
                     </Button>
