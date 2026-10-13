@@ -52,6 +52,7 @@ export const translations = {
         name: "Ваше имя", 
         username: "Никнейм (@)", 
         bio: "О себе (Био)", 
+        birthday: "Дата рождения",
         avatar: "Изменить аватар", 
         theme: "Тема оформления", 
         textSize: "Размер текста", 
@@ -60,7 +61,8 @@ export const translations = {
         logout: "Выйти из системы",
         deleteData: "Стереть данные",
         appIcon: "Иконка приложения",
-        changeIcon: "Выбрать иконку"
+        changeIcon: "Выбрать иконку",
+        energySaving: "Энергосбережение"
       } 
     },
     auth: { 
@@ -160,6 +162,7 @@ export const translations = {
         name: "Full Name", 
         username: "Username (@)", 
         bio: "Bio", 
+        birthday: "Date of Birth",
         avatar: "Change Photo", 
         theme: "Theme", 
         textSize: "Text Size", 
@@ -168,7 +171,8 @@ export const translations = {
         logout: "Sign Out",
         deleteData: "Erase Data",
         appIcon: "App Icon",
-        changeIcon: "Change Icon"
+        changeIcon: "Change Icon",
+        energySaving: "Power Saving"
       } 
     },
     auth: { 

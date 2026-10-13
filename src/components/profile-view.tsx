@@ -9,7 +9,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   ChevronRight, Star, Fingerprint, Palette, ShieldCheck, 
-  Share2, LayoutGrid, Info, Menu, RefreshCw, Sparkles, Trophy, Zap, HelpCircle
+  Share2, LayoutGrid, Info, Menu, RefreshCw, Sparkles, Trophy, Zap, HelpCircle, Calendar
 } from 'lucide-react';
 import { useAppState } from '@/lib/app-state';
 import { formatDisplayName, cn, isGlobalAdmin, getReputationInfo, triggerHaptic, formatLastSeen } from '@/lib/utils';
@@ -21,10 +21,12 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { format, parseISO } from 'date-fns';
+import { ru } from 'date-fns/locale';
 
 /**
- * PROFILE VIEW V129.0 «FINAL AUDIT»
- * FIXED: Proper refresh behavior, compact UI, accurate presence text.
+ * PROFILE VIEW V130.0 «HYPER PERSISTENCE»
+ * FIXED: Birthday display and energy saving awareness.
  */
 export default function ProfileView() {
   const { user } = useUser();
@@ -51,11 +53,16 @@ export default function ProfileView() {
     return formatLastSeen(profile.lastSeen, profile.settings?.privacy?.lastSeenVisibility, 'в сети');
   }, [profile, mounted]);
 
+  const birthdayText = useMemo(() => {
+    if (!profile?.birthday) return null;
+    try {
+      return format(parseISO(profile.birthday), 'd MMMM', { locale: ru });
+    } catch (e) { return null; }
+  }, [profile?.birthday]);
+
   const handleRefresh = () => {
     triggerHaptic();
     toast({ title: "Синхронизация..." });
-    // В Next.js 15 и Firestore hooks, данные обновятся автоматически через Snapshot.
-    // Мы просто имитируем процесс для UX.
   };
 
   if (!mounted) return <div className="flex-1 bg-[#121212]" />;
@@ -115,6 +122,13 @@ export default function ProfileView() {
                      {statusText}
                    </span>
                 </div>
+
+                {birthdayText && (
+                  <div className="mt-2 flex items-center gap-2 text-primary">
+                    <Calendar className="w-3.5 h-3.5" />
+                    <span className="text-[10px] font-black uppercase tracking-widest">{birthdayText}</span>
+                  </div>
+                )}
              </div>
           </div>
 

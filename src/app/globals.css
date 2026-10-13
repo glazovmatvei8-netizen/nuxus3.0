@@ -65,7 +65,7 @@
 .nuxus-event-card {
   @apply relative rounded-[3.5rem] border-2 border-white/[0.05] overflow-hidden;
   background: hsla(var(--primary), 0.12);
-  backdrop-filter: blur(16px); /* Оптимизировано для 60Гц ПК */
+  backdrop-filter: blur(16px);
   box-shadow: 0 20px 40px rgba(0,0,0,0.4), inset 0 0 20px hsla(var(--primary), 0.05);
   transition: transform 0.3s ease, opacity 0.3s ease;
   transform: translateZ(0);
@@ -87,7 +87,7 @@
   max-width: 480px;
   height: 84px;
   background: rgba(28, 28, 30, 0.85);
-  backdrop-filter: blur(20px); /* Снижено для стабильности FPS */
+  backdrop-filter: blur(20px);
   border-radius: 4rem;
   border: 1px solid rgba(255,255,255,0.08);
   box-shadow: 0 15px 30px rgba(0,0,0,0.6);
@@ -149,4 +149,25 @@
   background: rgba(28, 28, 30, 0.7);
   backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* ENERGY SAVING MODE */
+.energy-saving * {
+  animation: none !important;
+  transition: none !important;
+  backdrop-filter: none !important;
+  box-shadow: none !important;
+}
+
+.energy-saving .nuxus-event-card, 
+.energy-saving .nuxus-floating-nav,
+.energy-saving .obsidian-glass {
+  background: #1c1c1e !important;
+  border-color: #333 !important;
+}
+
+.energy-saving .animate-pulse,
+.energy-saving .animate-bounce,
+.energy-saving .animate-spin {
+  animation: none !important;
 }

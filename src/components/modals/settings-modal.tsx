@@ -17,7 +17,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Settings2, Camera, ShieldCheck, Loader2, Fingerprint, Palette, 
   ChevronRight, Globe, Trash2, Mail, Phone, Lock, Image as ImageIcon,
-  Info, HelpCircle, UserCheck, ShieldAlert, RefreshCw, KeyRound, Crown, FileText, Sun, Moon, Type, LayoutGrid
+  Info, HelpCircle, UserCheck, ShieldAlert, RefreshCw, KeyRound, Crown, FileText, Sun, Moon, Type, LayoutGrid, Zap, Calendar
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -63,12 +63,12 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const [iconPreview, setIconPreview] = useState<string | null>(null);
   
   const [form, setForm] = useState({
-    name: '', username: '', bio: '', phone: '', email: '',
+    name: '', username: '', bio: '', phone: '', email: '', birthday: '',
     appearance: 'dark' as 'light' | 'dark', theme: 'default',
     nameColor: 'text-orange-500', borderRadius: 24,
     bubbleStyle: 'default' as any, fontFamily: 'jakarta' as any,
     messageSize: 'medium' as any,
-    isGhostMode: false, twoFactorEnabled: false, twoFactorPin: '', twoFactorPinLength: '6' as '4' | '6'
+    isGhostMode: false, isEnergySaving: false, twoFactorEnabled: false, twoFactorPin: '', twoFactorPinLength: '6' as '4' | '6'
   });
 
   useEffect(() => {
@@ -77,6 +77,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         name: profile.name || '',
         username: (profile.username || '').replace('@', ''),
         bio: profile.bio || '',
+        birthday: profile.birthday || '',
         phone: profile.phone || '',
         email: profile.email || '',
         appearance: profile.settings?.appearance || 'dark',
@@ -87,6 +88,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         fontFamily: profile.settings?.fontFamily || 'jakarta',
         messageSize: profile.settings?.messageSize || 'medium',
         isGhostMode: !!profile.settings?.privacy?.isGhostMode,
+        isEnergySaving: !!profile.settings?.privacy?.isEnergySaving,
         twoFactorEnabled: !!profile.twoFactorEnabled,
         twoFactorPin: profile.twoFactorPin || '',
         twoFactorPinLength: profile.twoFactorPinLength || '6'
@@ -108,6 +110,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         username: usernameWithAt,
         usernameLowercase: usernameWithAt,
         bio: form.bio.trim(),
+        birthday: form.birthday,
         avatarUrl: avatarPreview,
         phone: form.phone.trim(),
         email: form.email.trim(),
@@ -124,6 +127,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         'settings.chatBackground': bgPreview,
         'settings.customAppIconUrl': iconPreview,
         'settings.privacy.isGhostMode': form.isGhostMode,
+        'settings.privacy.isEnergySaving': form.isEnergySaving,
       };
 
       await updateDoc(doc(db, 'users', user.uid), updateData);
@@ -214,6 +218,13 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                              <Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="h-12 bg-black/40 border-white/10 rounded-xl font-mono text-primary" />
                           </div>
                           <div className="space-y-1.5">
+                             <Label className="text-[9px] font-black uppercase text-primary/60 ml-2 tracking-widest">{t('settings.labels.birthday')}</Label>
+                             <div className="relative">
+                               <Input type="date" value={form.birthday} onChange={e => setForm({...form, birthday: e.target.value})} className="h-12 bg-black/40 border-white/10 rounded-xl font-bold pl-12" />
+                               <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
+                             </div>
+                          </div>
+                          <div className="space-y-1.5">
                              <Label className="text-[9px] font-black uppercase text-primary/60 ml-2 tracking-widest">{t('settings.labels.bio')}</Label>
                              <Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} placeholder="Био узла..." className="bg-black/40 border-white/10 rounded-xl h-24 text-sm" />
                           </div>
@@ -223,7 +234,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               </TabsContent>
 
               <TabsContent value="style" className="space-y-8 m-0 animate-in fade-in duration-300">
-                 {/* APP ICON SELECTOR */}
                  <div className="bg-white/5 p-5 rounded-[1.8rem] border border-white/5 space-y-5">
                     <div className="flex items-center justify-between">
                        <div className="flex items-center gap-4">
@@ -258,7 +268,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     </div>
                  </div>
 
-                 {/* WALLPAPER & NAME COLOR */}
                  <div className="space-y-4">
                     <button 
                       onClick={() => bgInputRef.current?.click()}
@@ -303,7 +312,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     </div>
                  </div>
 
-                 {/* COLOR THEMES */}
                  <div className="space-y-4">
                     <h3 className="text-[10px] font-black uppercase text-primary/60 ml-2 tracking-widest">Цветовая тема</h3>
                     <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2">
@@ -323,7 +331,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     </div>
                  </div>
 
-                 {/* MODE SWITCH */}
                  <div className="space-y-4">
                     <button 
                       onClick={() => setForm({...form, appearance: form.appearance === 'dark' ? 'light' : 'dark'})}
@@ -338,7 +345,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     </button>
                  </div>
 
-                 {/* BORDER RADIUS */}
                  <div className="bg-white/5 p-6 rounded-[2.2rem] border border-white/5 space-y-6">
                     <div className="flex items-center justify-between">
                        <h3 className="text-[13px] font-black uppercase italic tracking-widest text-white">Углы блоков с сообщениями</h3>
@@ -385,6 +391,16 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     <div className="flex items-center justify-between">
                        <span className="text-xs font-bold text-white uppercase tracking-tight">Режим Призрака</span>
                        <Switch checked={form.isGhostMode} onCheckedChange={(v) => { triggerHaptic(); setForm({...form, isGhostMode: v}); }} />
+                    </div>
+                    
+                    <div className="flex items-center justify-between pt-4 border-t border-white/5">
+                       <div className="flex flex-col">
+                          <span className="text-xs font-bold text-white uppercase tracking-tight flex items-center gap-2">
+                             <Zap className="w-3.5 h-3.5 text-primary" /> {t('settings.labels.energySaving')}
+                          </span>
+                          <span className="text-[8px] text-white/30 uppercase font-bold tracking-widest">Отключает блюр и анимации</span>
+                       </div>
+                       <Switch checked={form.isEnergySaving} onCheckedChange={(v) => { triggerHaptic(); setForm({...form, isEnergySaving: v}); }} />
                     </div>
                  </div>
               </TabsContent>

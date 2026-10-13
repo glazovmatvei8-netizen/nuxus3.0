@@ -173,6 +173,7 @@ export interface UserPrivacy {
   lastSeenVisibility: PrivacyOption;
   allowGroupsFrom: PrivacyOption;
   isGhostMode?: boolean;
+  isEnergySaving?: boolean;
 }
 
 export interface UserSettings {
@@ -199,6 +200,7 @@ export interface User {
   username: string;
   usernameLowercase?: string;
   bio?: string;
+  birthday?: string;
   avatarUrl: string | null;
   lastSeen?: string;
   createdAt: string;

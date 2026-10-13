@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useMemo } from 'react';
@@ -7,9 +8,8 @@ import { doc } from 'firebase/firestore';
 import type { User } from '@/lib/types';
 
 /**
- * ПРИМЕНИТЕЛЬ ТЕМЫ V11.0 «AESTHETIC OVERRIDE»
- * ОПТИМИЗИРОВАНО: Элитные темы (Event Horizon, Crimson Nebula) принудительно 
- * отключают пользовательский цвет для сохранения дизайнерской гармонии.
+ * ПРИМЕНИТЕЛЬ ТЕМЫ V12.0 «POWER & AESTHETIC»
+ * ОПТИМИЗИРОВАНО: Добавлена поддержка энергосберегающего режима.
  */
 export function ThemeApplier() {
   const { user } = useUser();
@@ -28,6 +28,14 @@ export function ThemeApplier() {
     const theme = profile?.settings?.theme || 'default';
     const isEliteTheme = theme === 'event-horizon' || theme === 'crimson-nebula';
 
+    // Энергосбережение
+    const isEnergySaving = !!profile?.settings?.privacy?.isEnergySaving;
+    if (isEnergySaving) {
+      document.documentElement.classList.add('energy-saving');
+    } else {
+      document.documentElement.classList.remove('energy-saving');
+    }
+
     // Применяем атрибут темы
     document.documentElement.setAttribute('data-theme', theme);
 
@@ -42,8 +50,6 @@ export function ThemeApplier() {
     }
 
     const applyColor = (hex: string) => {
-      // Если выбрана Элитная тема, мы УДАЛЯЕМ инлайновые стили цветов,
-      // чтобы цвета из globals.css (amber/burgundy) взяли верх.
       if (isEliteTheme) {
         document.documentElement.style.removeProperty('--primary');
         document.documentElement.style.removeProperty('--ring');
@@ -77,11 +83,10 @@ export function ThemeApplier() {
     if (profile?.settings?.customPrimaryColor) {
       applyColor(profile.settings.customPrimaryColor);
     } else {
-      // Очистка если цвета нет
       document.documentElement.style.removeProperty('--primary');
       document.documentElement.style.removeProperty('--ring');
     }
-  }, [profile?.settings?.theme, profile?.settings?.appearance, profile?.settings?.customPrimaryColor]);
+  }, [profile?.settings?.theme, profile?.settings?.appearance, profile?.settings?.customPrimaryColor, profile?.settings?.privacy?.isEnergySaving]);
 
   return null;
 }
