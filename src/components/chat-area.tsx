@@ -8,19 +8,18 @@ import { Textarea } from '@/components/ui/textarea';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, ChevronLeft, X, Paperclip, Mic, StopCircle, 
-  Smile, Trash2, CornerUpLeft, Loader2, Pin, XCircle, Zap, Phone, Video
+  Smile, Trash2, CornerUpLeft, Loader2, Pin, XCircle, Zap, Phone, Video, Camera
 } from 'lucide-react';
 import { MessageItem } from './message-item';
 import { ChatInfoModal } from './modals/chat-info-modal';
-import { CreatePollModal } from './modals/create-poll-modal';
 import { EmojiPicker } from './emoji-picker';
 import { ImagePreviewModal } from './modals/image-preview-modal';
 import { useUser, useFirestore } from '@/firebase/provider';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { useMemoFirebase } from '@/firebase/firestore/use-memo-firebase';
-import { collection, query, orderBy, doc, addDoc, updateDoc, increment, writeBatch, getDocs, where } from 'firebase/firestore';
-import { formatDisplayName, cn, compressImage, encryptSignal, decryptSignal, isUserPremium, getReputationInfo, triggerHaptic } from '@/lib/utils';
+import { collection, query, orderBy, doc, addDoc, updateDoc, increment, writeBatch } from 'firebase/firestore';
+import { formatDisplayName, cn, compressImage, encryptSignal, triggerHaptic } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -30,11 +29,16 @@ import { useToast } from '@/hooks/use-toast';
 const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelReply }: any) => {
   const { localDrafts, setLocalDrafts } = useAppState();
   const { t } = useTranslations();
+  const { toast } = useToast();
   
   const [messageInput, setMessageInput] = useState(localDrafts[currentChatId] || '');
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
+  
+  // Recording State
+  const [recordMode, setRecordMode] = useState<'voice' | 'video'>('voice');
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
+  const [recordingPreview, setRecordingPreview] = useState<string | null>(null);
 
   const [pendingFiles, setPendingFiles] = useState<{url: string, type: 'image' | 'video', file: File}[]>([]);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
@@ -42,6 +46,9 @@ const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelRepl
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     setMessageInput(localDrafts[currentChatId] || '');
@@ -53,6 +60,76 @@ const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelRepl
     onSendMessage(messageInput, 'text', null);
     setMessageInput('');
     setLocalDrafts(prev => ({ ...prev, [currentChatId]: '' }));
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: recordMode === 'video'
+      });
+      streamRef.current = stream;
+      
+      const recorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = recorder;
+      chunksRef.current = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+
+      recorder.onstop = async () => {
+        const blob = new Blob(chunksRef.current, { type: recordMode === 'voice' ? 'audio/ogg' : 'video/webm' });
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64 = reader.result as string;
+          onSendMessage(base64, recordMode === 'voice' ? 'audio' : 'video_note', { duration: recordingDuration });
+        };
+        reader.readAsDataURL(blob);
+        
+        stream.getTracks().forEach(track => track.stop());
+        setIsRecording(false);
+        setRecordingDuration(0);
+      };
+
+      recorder.start();
+      setIsRecording(true);
+      triggerHaptic();
+
+      timerRef.current = setInterval(() => {
+        setRecordingDuration(prev => prev + 1);
+      }, 1000);
+
+    } catch (e) {
+      toast({ title: "Нет доступа к медиа", variant: "destructive" });
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+    if (timerRef.current) clearInterval(timerRef.current);
+  };
+
+  const cancelRecording = () => {
+    if (mediaRecorderRef.current) {
+      mediaRecorderRef.current.onstop = () => {};
+      mediaRecorderRef.current.stop();
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+    }
+    if (timerRef.current) clearInterval(timerRef.current);
+    setIsRecording(false);
+    setRecordingDuration(0);
+    toast({ title: "Запись отменена" });
+  };
+
+  const toggleRecordMode = () => {
+    if (isRecording) return;
+    triggerHaptic();
+    setRecordMode(prev => prev === 'voice' ? 'video' : 'voice');
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -93,8 +170,6 @@ const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelRepl
     }
   };
 
-  const stopAudioRecording = () => { if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') mediaRecorderRef.current.stop(); };
-
   return (
     <>
     <footer className="p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] bg-[#030306]/95 backdrop-blur-[40px] border-t border-white/5 shrink-0 z-40 relative flex flex-col gap-2">
@@ -105,7 +180,7 @@ const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelRepl
             <div className="flex flex-col min-w-0">
               <span className="text-[10px] font-black text-primary uppercase tracking-widest">{replyTo.senderName}</span>
               <span className="text-[12px] text-white/60 truncate italic">
-                {replyTo.contentType === 'text' ? decryptSignal(replyTo.content) : `[${replyTo.contentType}]`}
+                {replyTo.contentType === 'text' ? replyTo.content : `[${replyTo.contentType}]`}
               </span>
             </div>
           </div>
@@ -148,19 +223,29 @@ const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelRepl
             {messageInput.trim() ? (
               <Button size="icon" className="h-12 w-12 rounded-2xl bg-primary text-white active:scale-90 shadow-xl shadow-primary/20 transition-all border border-white/10" onClick={handleSend}><Send className="w-5 h-5" /></Button>
             ) : (
-              <button onClick={triggerHaptic} className="h-12 w-12 rounded-2xl flex items-center justify-center transition-all bg-white/[0.04] text-white/30 hover:bg-primary/20 hover:text-primary active:scale-90 border border-white/5">
-                <Mic className="w-6 h-6" />
+              <button 
+                onMouseDown={startRecording}
+                onMouseUp={stopRecording}
+                onContextMenu={(e) => { e.preventDefault(); toggleRecordMode(); }}
+                className="h-12 w-12 rounded-2xl flex items-center justify-center transition-all bg-white/[0.04] text-white/30 hover:bg-primary/20 hover:text-primary active:scale-90 border border-white/5"
+              >
+                {recordMode === 'voice' ? <Mic className="w-6 h-6" /> : <Camera className="w-6 h-6" />}
               </button>
             )}
           </>
         ) : (
           <div className="flex-1 flex items-center bg-primary/10 border border-primary/20 rounded-[1.8rem] h-12 px-5 gap-4 animate-in slide-in-from-right-4 shadow-2xl">
-            <div className="flex items-center gap-3 text-primary animate-pulse"><div className="w-2.5 h-2.5 rounded-full bg-primary" /><span className="text-[10px] font-black tracking-widest">REC</span></div>
+            <div className="flex items-center gap-3 text-primary animate-pulse">
+               <div className="w-2.5 h-2.5 rounded-full bg-primary" />
+               <span className="text-[10px] font-black tracking-widest">{recordMode === 'voice' ? 'AUDIO' : 'VIDEO'} REC</span>
+            </div>
             <span className="text-base font-black flex-1 tabular-nums text-white italic">
               {Math.floor(recordingDuration / 60).toString().padStart(2, '0')}:{(recordingDuration % 60).toString().padStart(2, '0')}
             </span>
-            <Button variant="ghost" size="icon" className="h-9 w-9 text-white/30 hover:text-red-500 rounded-full" onClick={() => { setIsRecording(false); setRecordingDuration(0); }}><Trash2 className="w-5 h-5" /></Button>
-            <Button variant="ghost" size="icon" className="h-10 w-10 text-primary active:scale-90" onPointerUp={stopAudioRecording}><StopCircle className="w-6 h-6 fill-current" /></Button>
+            <Button variant="ghost" size="icon" className="h-9 w-9 text-white/30 hover:text-red-500 rounded-full" onClick={cancelRecording}><Trash2 className="w-5 h-5" /></Button>
+            <Button variant="ghost" size="icon" className="h-10 w-10 text-primary animate-pulse" onClick={stopRecording}>
+               <StopCircle className="w-6 h-6 fill-current" />
+            </Button>
           </div>
         )}
       </div>
@@ -169,9 +254,7 @@ const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelRepl
     <ImagePreviewModal 
       open={isPreviewOpen} 
       onOpenChange={(val) => {
-        if (!val) {
-          setPendingFiles([]);
-        }
+        if (!val) setPendingFiles([]);
         setIsPreviewOpen(val);
       }}
       files={pendingFiles.map(p => ({ url: p.url, type: p.type }))}
@@ -193,7 +276,6 @@ export default function ChatArea() {
   const { toast } = useToast();
   
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
-  const [isPollModalOpen, setIsPollModalOpen] = useState(false);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
 
   const userProfileRef = useMemoFirebase(() => (!db || !firebaseUser) ? null : doc(db, 'users', firebaseUser.uid), [db, firebaseUser?.uid]);
@@ -215,7 +297,6 @@ export default function ChatArea() {
   const messagesQuery = useMemoFirebase(() => (!db || !currentChatId) ? null : query(collection(db, 'chats', currentChatId, 'messages'), orderBy('sentAt', 'asc')), [db, currentChatId]);
   const { data: messages } = useCollection<Message>(messagesQuery);
 
-  // Mark incoming messages as read
   useEffect(() => {
     if (!db || !currentChatId || !firebaseUser || !messages) return;
     const unreadMessages = messages.filter(m => m.senderId !== firebaseUser.uid && !m.isRead);
@@ -253,11 +334,10 @@ export default function ChatArea() {
 
   const handleSendMessage = useCallback(async (content_msg: string, type_msg: Message['contentType'] = 'text', meta: any = null) => {
     if (!content_msg || !currentChatId || !firebaseUser || !db) return;
-    let finalContent = (type_msg === 'text' || type_msg === 'reply') ? encryptSignal(content_msg) : content_msg;
     
     const msgData: any = { 
       chatId: currentChatId, senderId: firebaseUser.uid, senderName: userProfile?.name || 'User', 
-      content: finalContent, contentType: type_msg, sentAt: new Date().toISOString(), isRead: false,
+      content: content_msg, contentType: type_msg, sentAt: new Date().toISOString(), isRead: false,
       metadata: { bubbleStyle: userProfile?.settings?.bubbleStyle || 'default', ...meta }
     };
     if (replyTo) { 
@@ -285,7 +365,6 @@ export default function ChatArea() {
 
   return (
     <div className="flex-1 flex flex-col h-full bg-[#030306] relative overflow-hidden z-20">
-      {/* CUSTOM WALLPAPER LAYER */}
       {customBg && (
         <div className="absolute inset-0 z-0 opacity-40 transition-opacity duration-1000">
           <img src={customBg} className="w-full h-full object-cover blur-[2px]" alt="Background" />
