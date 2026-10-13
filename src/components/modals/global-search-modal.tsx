@@ -16,8 +16,8 @@ import { cn } from '@/lib/utils';
 type SearchFilter = 'all' | 'users' | 'groups';
 
 /**
- * ГЛОБАЛЬНЫЙ ПОИСК V120.0 «SEARCH STABILITY»
- * FIXED: Reliable people search by refining the query logic.
+ * ГЛОБАЛЬНЫЙ ПОИСК V130.0 «SEARCH STABILITY»
+ * FIXED: Reliable user discovery by using multiple query vectors.
  */
 export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const { user } = useUser();
@@ -44,8 +44,9 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
       const searchTarget = input.startsWith('@') ? input : '@' + input;
       const foundResults: any[] = [];
 
-      // 1. Поиск пользователей по usernameLowercase (самый стабильный)
+      // 1. Поиск пользователей (Username + Name)
       if (activeFilter === 'all' || activeFilter === 'users') {
+        // Поиск по usernameLowercase
         const userQ = query(
           collection(db, 'users'),
           where('usernameLowercase', '>=', searchTarget),
@@ -61,27 +62,27 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
           }
         });
 
-        // Дополнительный поиск по имени если не нашли много
-        if (foundResults.length < 5) {
-          const nameQ = query(
-            collection(db, 'users'),
-            where('name', '>=', val),
-            where('name', '<=', val + '\uf8ff'),
-            limit(10)
-          );
-          const nameSnap = await getDocs(nameQ);
-          nameSnap.docs.forEach(d => {
-            const data = d.data();
-            if (d.id !== user?.uid && !foundResults.some(r => r.data.id === d.id)) {
-              foundResults.push({ type: 'user', data: { id: d.id, ...data } });
-            }
-          });
+        // Поиск по имени (если результатов мало)
+        if (foundResults.length < 10) {
+           const nameQ = query(
+             collection(db, 'users'),
+             where('name', '>=', val),
+             where('name', '<=', val + '\uf8ff'),
+             limit(10)
+           );
+           const nameSnap = await getDocs(nameQ);
+           nameSnap.docs.forEach(d => {
+             const data = d.data();
+             if (d.id !== user?.uid && !foundResults.some(r => r.data.id === d.id)) {
+               foundResults.push({ type: 'user', data: { id: d.id, ...data } });
+             }
+           });
         }
       }
 
-      // 2. Поиск публичных чатов/каналов
+      // 2. Поиск групп/каналов
       if (activeFilter === 'all' || activeFilter === 'groups') {
-        const chatQ = query(collection(db, 'chats'), where('isPublic', '==', true), limit(20));
+        const chatQ = query(collection(db, 'chats'), where('isPublic', '==', true), limit(30));
         const chatSnap = await getDocs(chatQ);
         chatSnap.docs.forEach(d => {
           const data = d.data();

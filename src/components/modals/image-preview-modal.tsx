@@ -17,30 +17,35 @@ interface ImagePreviewModalProps {
 }
 
 /**
- * IMAGE PREVIEW MODAL V120.0 «TRUE PREVIEW»
- * FIXED: Black screens by using direct img tags for base64.
+ * IMAGE PREVIEW MODAL V130.0 «TRUE PREVIEW»
+ * FIXED: Visibility issues and sending logic.
  */
 export function ImagePreviewModal({ open, onOpenChange, files, onRemove, onSend, isSending }: ImagePreviewModalProps) {
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(val) => !isSending && onOpenChange(val)}>
       <DialogContent className="max-w-2xl bg-[#0a0a0c] border-white/10 rounded-[2.5rem] p-0 overflow-hidden shadow-2xl flex flex-col h-[85vh] outline-none">
         <DialogHeader className="p-6 border-b border-white/5 shrink-0 bg-primary/5">
           <DialogTitle className="text-xl font-black uppercase italic text-white flex items-center gap-2">
             <ImageIcon className="w-5 h-5 text-primary" /> Подготовка к отправке
           </DialogTitle>
           <DialogDescription className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
-            Проверьте файлы перед загрузкой в Ядро
+            Просмотрите файлы перед загрузкой в Ядро
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 p-6">
+        <ScrollArea className="flex-1 p-6 bg-black/40">
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             {files.map((file, idx) => (
               <div key={idx} className="relative aspect-square rounded-2xl overflow-hidden border border-white/10 group bg-white/[0.03] shadow-lg">
                 {file.type === 'video' ? (
                   <video src={file.url} className="w-full h-full object-cover" />
                 ) : (
-                  <img src={file.url} alt="Preview" className="w-full h-full object-cover" />
+                  <img 
+                    src={file.url} 
+                    alt="Preview" 
+                    className="w-full h-full object-cover" 
+                    draggable={false}
+                  />
                 )}
                 <button 
                   onClick={(e) => {
@@ -56,14 +61,14 @@ export function ImagePreviewModal({ open, onOpenChange, files, onRemove, onSend,
           </div>
         </ScrollArea>
 
-        <DialogFooter className="p-6 border-t border-white/5 bg-white/[0.02] flex gap-3 sm:justify-between items-center">
+        <DialogFooter className="p-6 border-t border-white/5 bg-[#0a0a0c] flex gap-3 sm:justify-between items-center">
           <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
             Выбрано: {files.length} / 30
           </span>
           <div className="flex gap-2">
             <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-xl font-bold uppercase text-[10px] tracking-widest h-12 px-6 hover:bg-white/5">Отмена</Button>
             <Button 
-              onClick={onSend} 
+              onClick={(e) => { e.preventDefault(); onSend(); }} 
               disabled={isSending || files.length === 0}
               className="h-12 bg-primary hover:bg-primary/90 text-white rounded-xl font-black uppercase tracking-widest px-8 shadow-lg shadow-primary/20 transition-all active:scale-95 border border-white/10"
             >

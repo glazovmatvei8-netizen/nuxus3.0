@@ -97,7 +97,7 @@ const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelRepl
 
   return (
     <>
-    <footer className="p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] bg-black/90 backdrop-blur-[50px] border-t border-white/5 shrink-0 z-40 relative flex flex-col gap-2">
+    <footer className="p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] bg-[#030306]/95 backdrop-blur-[40px] border-t border-white/5 shrink-0 z-40 relative flex flex-col gap-2">
       {replyTo && (
         <div className="bg-white/5 p-3 rounded-2xl flex items-center justify-between border border-white/5 mb-1 animate-in slide-in-from-bottom-2 shadow-xl mx-auto w-full max-w-5xl">
           <div className="flex items-center gap-4 min-w-0">
@@ -116,9 +116,9 @@ const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelRepl
       <div className="flex gap-3 items-end w-full max-w-5xl mx-auto relative">
         {!isRecording ? (
           <>
-            <Button variant="ghost" size="icon" className="h-12 w-12 shrink-0 rounded-2xl bg-white/[0.03] hover:bg-white/10 border border-white/5 shadow-xl transition-all" onClick={() => { triggerHaptic(); fileInputRef.current?.click(); }}><Paperclip className="w-6 h-6 text-white/40" /></Button>
+            <Button variant="ghost" size="icon" className="h-12 w-12 shrink-0 rounded-2xl bg-white/[0.03] hover:bg-white/10 border border-white/5 transition-all" onClick={() => { triggerHaptic(); fileInputRef.current?.click(); }}><Paperclip className="w-6 h-6 text-white/40" /></Button>
             
-            <div className="flex-1 flex items-end bg-white/[0.04] rounded-[1.8rem] border border-white/5 min-h-[48px] px-5 py-2.5 shadow-inner transition-all focus-within:border-primary/30 focus-within:bg-white/[0.06]">
+            <div className="flex-1 flex items-end bg-white/[0.04] rounded-[1.8rem] border border-white/10 min-h-[48px] px-5 py-2.5 transition-all focus-within:border-primary/30">
               <Textarea 
                 placeholder={t('chat.placeholder')} 
                 className="bg-transparent border-none focus-visible:ring-0 text-white min-h-[26px] max-h-[160px] py-0 text-[15px] resize-none w-full scrollbar-hide font-medium tracking-tight shadow-none" 
@@ -148,7 +148,7 @@ const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelRepl
             {messageInput.trim() ? (
               <Button size="icon" className="h-12 w-12 rounded-2xl bg-primary text-white active:scale-90 shadow-xl shadow-primary/20 transition-all border border-white/10" onClick={handleSend}><Send className="w-5 h-5" /></Button>
             ) : (
-              <button onClick={triggerHaptic} className="h-12 w-12 rounded-2xl flex items-center justify-center transition-all bg-white/[0.04] text-white/30 hover:bg-primary/20 hover:text-primary active:scale-90 shadow-xl border border-white/5">
+              <button onClick={triggerHaptic} className="h-12 w-12 rounded-2xl flex items-center justify-center transition-all bg-white/[0.04] text-white/30 hover:bg-primary/20 hover:text-primary active:scale-90 border border-white/5">
                 <Mic className="w-6 h-6" />
               </button>
             )}

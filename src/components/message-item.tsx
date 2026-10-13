@@ -27,8 +27,8 @@ import {
 import { useToast } from '@/hooks/use-toast';
 
 /**
- * MESSAGE ITEM V127.0 «GEOMETRY PRECISION»
- * FIXED: Time and checkmarks layout in the bottom right corner.
+ * MESSAGE ITEM V130.0 «VISUAL PERFECTION»
+ * FIXED: Sticker rendering, max-width constraints, and reply block styling.
  */
 export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, chatId, onReply }: any) => {
   const { setInspectedUserId, setForwardingMessage } = useAppState();
@@ -118,7 +118,7 @@ export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, cha
   const textSize = viewerProfile?.settings?.messageSize || 'medium';
 
   const styleClasses = {
-    default: isMe ? "bg-primary text-white border-white/10 shadow-lg shadow-primary/10" : "obsidian-glass text-white/95",
+    default: isMe ? "bg-primary text-white border-white/10 shadow-lg shadow-primary/10" : "obsidian-glass text-white/95 border-white/5",
     neon: isMe ? "bg-primary/20 text-white border-primary shadow-[0_0_25px_rgba(var(--primary),0.3)]" : "bg-white/5 border-white/10 text-white",
     gold: isMe ? "bg-gradient-to-br from-yellow-500/30 to-amber-700/30 text-white border-yellow-500/20 shadow-2xl" : "bg-white/5 border-white/10 text-white",
     ocean: isMe ? "bg-gradient-to-br from-cyan-500/30 to-blue-700/30 text-white border-cyan-500/20 shadow-2xl" : "bg-white/5 border-white/10 text-white",
@@ -134,7 +134,7 @@ export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, cha
 
   return (
     <div className={cn(
-      "w-full flex flex-col mb-4 animate-in fade-in slide-in-from-bottom-2 duration-500", 
+      "w-full flex flex-col mb-3 animate-in fade-in slide-in-from-bottom-2 duration-500", 
       isMe ? "items-end" : "items-start"
     )}>
       <ContextMenu>
@@ -146,27 +146,27 @@ export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, cha
             {!isMe && (
               <UserAvatar 
                 userId={message.senderId} 
-                className="h-10 w-10 border border-white/5 shadow-2xl mb-1 cursor-pointer hover:scale-110 transition-transform" 
+                className="h-9 w-9 border border-white/5 shadow-2xl mb-1 cursor-pointer hover:scale-110 transition-transform" 
                 onClick={() => setInspectedUserId(message.senderId)} 
               />
             )}
             
-            <div className={cn("flex flex-col", isMe ? "items-end" : "items-start")}>
+            <div className={cn("flex flex-col min-w-[60px]", isMe ? "items-end" : "items-start")}>
               {!isMe && (
-                <div className="flex items-center gap-2 ml-1 mb-1">
-                   <span className="text-[11px] font-black text-primary/60 uppercase tracking-widest italic">
+                <div className="flex items-center gap-2 ml-2 mb-1">
+                   <span className="text-[10px] font-black text-primary/60 uppercase tracking-widest italic">
                      {message.senderName || 'User'}
                    </span>
-                   <span className={cn("text-[9px]", rep.color)}>{rep.icon}</span>
+                   <span className={cn("text-[8px]", rep.color)}>{rep.icon}</span>
                 </div>
               )}
               
               <div className="relative group">
                 <div className={cn(
-                  "p-3.5 px-5 rounded-[1.8rem] relative shadow-2xl transition-all duration-500 border overflow-hidden pb-6",
+                  "p-3 px-4 rounded-[1.6rem] relative shadow-2xl transition-all duration-500 border overflow-hidden pb-6",
                   styleClasses[bubbleStyle as keyof typeof styleClasses] || styleClasses.default,
                   isMe ? "rounded-br-lg" : "rounded-bl-lg",
-                  message.contentType === 'sticker' && "bg-transparent border-none shadow-none p-1 pb-1"
+                  message.contentType === 'sticker' && "bg-transparent border-none shadow-none p-0 pb-1"
                 )}>
                   {message.forwardFrom && (
                     <div className="flex items-center gap-1.5 mb-1.5 opacity-40">
@@ -176,52 +176,52 @@ export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, cha
                   )}
 
                   {message.replyToId && (
-                    <div className="mb-2.5 p-2 bg-white/10 rounded-xl border-l-4 border-primary flex flex-col gap-0.5 opacity-80 cursor-pointer" onClick={() => document.getElementById(message.replyToId)?.scrollIntoView({ behavior: 'smooth' })}>
-                       <span className="text-[10px] font-black text-primary uppercase tracking-widest">{message.replyToSenderName || 'Signal'}</span>
+                    <div className="mb-2.5 p-2 bg-white/10 rounded-xl border-l-4 border-primary flex flex-col gap-0.5 opacity-80 cursor-pointer overflow-hidden" onClick={() => document.getElementById(message.replyToId)?.scrollIntoView({ behavior: 'smooth' })}>
+                       <span className="text-[9px] font-black text-primary uppercase tracking-widest truncate">{message.replyToSenderName || 'Signal'}</span>
                        <span className="text-[11px] text-white/60 truncate italic">{decryptSignal(message.replyToContent)}</span>
                     </div>
                   )}
 
                   {message.contentType === 'sticker' ? (
-                    <div className="w-48 h-48 select-none">
+                    <div className="w-40 h-40 select-none">
                       <img src={message.content} alt="Sticker" className="w-full h-full object-contain" draggable={false} crossOrigin="anonymous" />
                     </div>
                   ) : message.contentType === 'audio' ? (
-                    <div className="flex items-center gap-4 min-w-[200px] py-1">
-                       <button className="h-10 w-10 rounded-full bg-white/10 shrink-0 flex items-center justify-center hover:bg-white/20 transition-all"><Play className="w-5 h-5 fill-current" /></button>
-                       <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
+                    <div className="flex items-center gap-4 min-w-[180px] py-1">
+                       <button className="h-9 w-9 rounded-full bg-white/10 shrink-0 flex items-center justify-center hover:bg-white/20 transition-all"><Play className="w-4 h-4 fill-current" /></button>
+                       <div className="flex-1 h-1 bg-white/5 rounded-full overflow-hidden">
                           <div className="h-full bg-primary/40 w-1/3 shadow-[0_0_15px_rgba(var(--primary),0.5)]" />
                        </div>
-                       <span className="text-[10px] font-black opacity-30 tabular-nums">{message.metadata?.duration ? `${Math.floor(message.metadata.duration / 60)}:${(message.metadata.duration % 60).toString().padStart(2, '0')}` : '0:01'}</span>
+                       <span className="text-[9px] font-black opacity-30 tabular-nums">{message.metadata?.duration ? `${Math.floor(message.metadata.duration / 60)}:${(message.metadata.duration % 60).toString().padStart(2, '0')}` : '0:01'}</span>
                     </div>
                   ) : message.contentType === 'image' ? (
-                    <div className="relative rounded-2xl overflow-hidden border border-white/5 max-w-full shadow-2xl">
+                    <div className="relative rounded-xl overflow-hidden border border-white/5 max-w-full shadow-2xl">
                        <img src={message.content} alt="Attachment" className="w-full h-auto object-cover" />
                     </div>
                   ) : (
-                    <div className={cn("whitespace-pre-wrap font-medium leading-relaxed tracking-tight", textClasses[textSize as keyof typeof textClasses])}>
+                    <div className={cn("whitespace-pre-wrap font-medium leading-relaxed tracking-tight break-words", textClasses[textSize as keyof typeof textClasses])}>
                       {displayContent}
                     </div>
                   )}
 
-                  {/* 🕒 TIME & STATUS: Moved to corner */}
+                  {/* 🕒 TIME & STATUS - POSITIONED ACCURATELY */}
                   <div className={cn(
-                    "absolute bottom-1 right-3 flex items-center gap-1.5 opacity-40",
+                    "absolute bottom-1 right-2.5 flex items-center gap-1 opacity-40",
                     message.contentType === 'sticker' && "bg-black/40 rounded-full px-2 py-0.5"
                   )}>
                      <span className="text-[8px] font-black tabular-nums">{formattedTime}</span>
                      {isMe && (message.isRead ? (
-                       <CheckCheck className="w-3.5 h-3.5 text-blue-400" />
+                       <CheckCheck className="w-3 h-3 text-blue-400" />
                      ) : (
-                       <Check className="w-3.5 h-3.5" />
+                       <Check className="w-3 h-3" />
                      ))}
                   </div>
                 </div>
 
-                {/* Reactions Display */}
+                {/* Reactions */}
                 {message.reactions && Object.keys(message.reactions).length > 0 && (
                   <div className={cn(
-                    "flex gap-1 mt-1.5 flex-wrap",
+                    "flex gap-1 mt-1 flex-wrap",
                     isMe ? "justify-end" : "justify-start"
                   )}>
                     {Object.entries(message.reactions).map(([emoji, uids]: any) => (
@@ -230,7 +230,7 @@ export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, cha
                           key={emoji}
                           onClick={() => handleReaction(emoji)}
                           className={cn(
-                            "flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black border transition-all",
+                            "flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-black border transition-all",
                             uids.includes(user?.uid) ? "bg-primary/20 border-primary text-white" : "bg-white/5 border-white/10 text-white/40 hover:bg-white/10"
                           )}
                         >
@@ -246,18 +246,18 @@ export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, cha
           </div>
         </ContextMenuTrigger>
 
-        <ContextMenuContent className="w-56 bg-[#121212]/95 backdrop-blur-xl border-white/10 rounded-2xl p-2 shadow-2xl">
-          <div className="flex justify-around p-2 mb-2 bg-white/5 rounded-xl border border-white/5">
+        <ContextMenuContent className="w-52 bg-[#121212]/98 backdrop-blur-2xl border-white/10 rounded-2xl p-2 shadow-2xl">
+          <div className="flex justify-around p-1.5 mb-2 bg-white/5 rounded-xl border border-white/5">
             {['❤️', '🔥', '👍', '😂', '😮', '😢'].map(e => (
-              <button key={e} onClick={() => handleReaction(e)} className="text-lg hover:scale-125 transition-transform active:scale-90">{e}</button>
+              <button key={e} onClick={() => handleReaction(e)} className="text-base hover:scale-125 transition-transform active:scale-90">{e}</button>
             ))}
           </div>
-          <ContextMenuItem onClick={() => onReply(message)} className="gap-3 py-3 rounded-xl font-bold text-[11px] uppercase tracking-widest text-white"><Reply className="w-4 h-4 text-primary" /> Ответить</ContextMenuItem>
-          <ContextMenuItem onClick={handleCopy} className="gap-3 py-3 rounded-xl font-bold text-[11px] uppercase tracking-widest text-white"><Copy className="w-4 h-4 text-primary" /> Копировать</ContextMenuItem>
-          <ContextMenuItem onClick={() => setForwardingMessage(message)} className="gap-3 py-3 rounded-xl font-bold text-[11px] uppercase tracking-widest text-white"><Share2 className="w-4 h-4 text-primary" /> Переслать</ContextMenuItem>
-          <ContextMenuItem onClick={handlePin} className="gap-3 py-3 rounded-xl font-bold text-[11px] uppercase tracking-widest text-white"><Pin className="w-4 h-4 text-primary" /> Закрепить</ContextMenuItem>
+          <ContextMenuItem onClick={() => onReply(message)} className="gap-3 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest text-white"><Reply className="w-3.5 h-3.5 text-primary" /> Ответить</ContextMenuItem>
+          <ContextMenuItem onClick={handleCopy} className="gap-3 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest text-white"><Copy className="w-3.5 h-3.5 text-primary" /> Копировать</ContextMenuItem>
+          <ContextMenuItem onClick={() => setForwardingMessage(message)} className="gap-3 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest text-white"><Share2 className="w-3.5 h-3.5 text-primary" /> Переслать</ContextMenuItem>
+          <ContextMenuItem onClick={handlePin} className="gap-3 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest text-white"><Pin className="w-3.5 h-3.5 text-primary" /> Закрепить</ContextMenuItem>
           <ContextMenuSeparator className="bg-white/5" />
-          <ContextMenuItem onClick={handleDelete} className="gap-3 py-3 rounded-xl font-bold text-[11px] uppercase tracking-widest text-red-500"><Trash2 className="w-4 h-4" /> Удалить для всех</ContextMenuItem>
+          <ContextMenuItem onClick={handleDelete} className="gap-3 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest text-red-500"><Trash2 className="w-3.5 h-3.5" /> Удалить для всех</ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>
     </div>

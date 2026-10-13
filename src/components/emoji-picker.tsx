@@ -13,8 +13,8 @@ import { doc, collection, query, where } from 'firebase/firestore';
 import type { User, StickerPack } from '@/lib/types';
 
 /**
- * EMOJI PICKER V120.0 «CLEAN GRID»
- * FIXED: Artifacts and sizing for stickers.
+ * EMOJI PICKER V130.0 «CLEAN GRID»
+ * FIXED: Artifacts and visual glitches in the grid layout.
  */
 
 const EMOJI_CATEGORIES = [
@@ -22,9 +22,7 @@ const EMOJI_CATEGORIES = [
   { id: 'gestures', label: 'Жесты', icon: LayoutGrid, emojis: ['👋', '🤚', '🖐️', '✋', '🖖', '👌', '🤏', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆', '🖕', '👇', '☝️', '👍', '👎', '✊', '👊', '🤛', '🤜', '👏', '🙌', '👐', '🤲', '🤝', '🙏', '✍️', '💅', '🤳', '💪', '🦾'] },
   { id: 'animals', label: 'Природа', icon: Ghost, emojis: ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🐔', '🐧', '🐦', '🐤', '🦆', '🦅', '🦉', '🦇', '🐺', '🐗', '🐴', '🦄', '🐝', '🦋', '🐌', '🐞', '🐜', '🕷️', '🦂', '🐢', '🐍', '🦎', '🦖', '🐙', '🦑', '🦐', '🦀', '🐡', '🐠', '🐟', '🐬', '🐳', '🐋', '🦈', '🐊', '🐅', '🐘', '🦛', '🦒', '🦘', '🐒', '🦍', '🦧', '🐾'] },
   { id: 'food', label: 'Еда', icon: Coffee, emojis: ['🍏', '🍎', '🍐', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🍈', '🍒', '🍑', '🥭', '🍍', '🥥', '🥝', '🍅', '🍆', '🥑', '🥦', '🥬', '🥒', '🌽', '🥕', '🥔', '🍠', '🥐', '🥖', '🥨', '🧀', '🥚', '🍳', '🥞', '🥓', '🥩', '🍗', '🍖', '🌭', '🍔', '🍟', '🍕', '🥪', '🥙', '🌮', '🌯', '🥗', '🥘', '🍲', '🍜', '🍝', '🍣', '🍱', '🍦', '🍧', '🍨', '🍩', '🍪', '🎂', '🍰', '🧁', '🥧', '🍫', '🍬', '🍭', '🍮', '🍯', '🍼', '🥛', '☕', '🍵', '🍶', '🍺', '🍻', '🥂', '🍷', '🥃', '🍸', '🍹', '🧉', '🥤', '🧊'] },
-  { id: 'activity', label: 'Активность', icon: Bike, emojis: ['⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉', '🥏', '🎱', '🪀', '🏓', '🏸', '🏒', '🏑', '🥍', '🏏', '🥅', '⛳', '🪁', '🏹', '🎣', '🤿', '🥊', '🥋', '🎽', '🛹', '🛼', '🛷', '⛸️', '🎿', '⛷️', '🏂', '🏋️', '🤺', '🤼', '🤸', '⛹️', '⛹️‍♂️', '⛹️‍♀️', '🤾', '🧗', '🚵', '🚴', '🏆', '🥇', '🥈', '🥉', '🏅', '🎖️', '🎟️', '🎫', '🎭', '🎨', '🎬', '🎤', '🎧', '🎼', '🎹', '🥁', '🎷', '🎺', '🎸', '🪕', '🎻', '🎲', '🧩', '♟️', '🎯', '🎳', '🎮', '🎰', '👾'] },
-  { id: 'travel', label: 'Транспорт', icon: MapPin, emojis: ['🚗', '🚕', '🚙', '🚌', '🚎', '🏎️', '🚓', '🚑', '🚒', '🚐', '🚚', '🚛', '🚜', '🚲', '🛴', '🛵', '🏍️', '🛺', '🚂', '🚆', '🚄', '🔥', '✈️', '🛫', '🛬', '🪂', '🚁', '🛰️', '🚀', '🛸', '⛵', '🛶', '🚤', '🚢', '⚓', '⛽', '🚧', '🚦', '🚥', '🛑', '🗺️', '🗿', '🗽', '🗼', '🏰', '🏯', '🏟️', '🎡', '🎢', '🎠', '⛲', '⛱️', '🏖️', '🏝️', '🏜️', '🌋', '⛰️', '🏔️', '🗻', '🏠', '🏡', '🏢', '🏣', '🏤', '🏥', '🏦', '🏨', '🏪', '🏫', '🏬', '🏭', '🏗️', '⛪', '🕌', '🕍', '🕋', '⛩️', '🌃', '🏙️', '🌇', '🌅', '🌠', '🌌', '🌉', '🌁'] },
-  { id: 'objects', label: 'Предметы', icon: Camera, emojis: ['⌚', '📱', '📲', '💻', '⌨️', '🖥️', '🖨️', '🖱️', '🕹️', '🗜️', '💽', '💾', '💿', '📀', '📼', '📷', '📸', '📹', '🎥', '📽️', '🎞️', '📞', '☎️', '📟', '📠', '📺', '📻', '🎙️', '🎚️', '🎛️', '🧭', '⏱️', '⏲️', '⏰', '🕰️', '⌛', '⏳', '📡', '🔋', '🔌', '💡', '🔦', '🕯️', '🪔', '🧯', '🗑️', '🛢️', '💸', '💵', '💴', '💶', '💷', '🪙', '💰', '💳', '💎', '⚖️', '🪜', '🧰', '🪛', '🔧', '🔨', '⚒️', '🛠️', '⛏️', '🪚', '🔩', '⚙️', '🧱', '⛓️', '🧲', '🔫', '💣', '🧨', '🪓', '🔪', '🗡️', '⚔️', '🛡️', '🚬', '⚰️', '⚱️', '🏺', '🔮', '📿', '🧿', '💈', '⚗️', '🔭', '🔬', '🕳️', '🩺', '🩹', '💊', '💉', '🩸', '🧬', '🦠', '🧼', '🧹', '🧺', '🧻', '🚽', '🚿', '🛀', '🛁', '🧴'] },
+  { id: 'activity', label: 'Активность', icon: Bike, emojis: ['⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉', '🥏', '🎱', '🪀', '🏓', '🏸', '🏒', '🏑', '🥍', '🏏', '🥅', '⛳', '🪁', '🏹', '🎣', '🤿', '🥊', '🥋', '🎽', '🛹', '🛼', '🛷', '⛸️', '🎿', '⛷️', '🏂', '🏋️', '🤺', '🤼', '🤸', '⛹️', '⛹️‍♂️', '⛹️‍♀️', '🤾', '🧗', '🚵', '🚴', '🏆', '🥇', '🥈', '🥉', '🏅', '🎖️', '🎖️', '🎭', '🎨', '🎬', '🎤', '🎧', '🎼', '🎹', '🥁', '🎷', '🎺', '🎸', '🪕', '🎻', '🎲', '🧩', '♟️', '🎯', '🎳', '🎮', '🎰', '👾'] },
   { id: 'symbols', label: 'Символы', icon: Heart, emojis: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '☮️', '✝️', '☪️', '🕉️', '☸️', '✡️', '🔯', '🕎', '☯️', '☦️', '🛐', '⛎', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑', '♒', '♓', '🆔', '⚛️', '🉑', '☢️', '☣️', '📴', '📳', '🈶', '🈚', '🈸', '🈺', '🈷️', '✴️', '🆚', '💮', '🉐', '㊙️', '㊗️', '🈴', '🈵', '🈹', '🈲', '🅰️', '🅱️', '🆎', '🆑', '🅾️', '🆘', '❌', '⭕', '🛑', '⛔', '📛', '🚫', '💯', '💢', '♨️', '🚷', '🚯', '🚳', '🚱', '🔞', '📵', '🚭', '❗️', '❕', '❓', '❔', '‼️', '⁉️', '🔅', '🔆', '〽️', '⚠️', '🚸', '🔱', '⚜️', '🔰', '♻️', '✅', '🈯', '💹', '❇️', '✳️', '❎', '🌐', '💠', 'Ⓜ️', '🌀', '💤', '🏧', '🚾', '♿', '🅿️', '🛗', '🈂️', '🛂', '🛃', '🛄', '🛅', '🚹', '🚺', '🚼', '🚻', '🚮', '🎦', '📶', '🈁', '🔣', 'ℹ️', '🔤', '🔡', '🔠', '🆖', '🆗', '🆙', '🆒', '🆕', '🆓', '0️⃣', '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟', '🔢', '#️⃣', '*️⃣', '▶️', '⏸️', '⏹️', '⏺️', '⏭️', '⏮️', '⏩', '⏪', '⏫', '⏬', '◀️', '🔼', '🔽', '➡️', '⬅️', '⬆️', '⬇️', '↗️', '↘️', '↙️', '↖️', '↕️', '↔️', '🔄', '🔃'] },
   { id: 'flags', label: 'Флаги', icon: Flag, emojis: ['🏳️', '🏴', '🏁', '🚩', '🏳️‍🌈', '🏴‍☠️', '🇦🇫', '🇦🇱', '🇩🇿', '🇦🇸', '🇦🇩', '🇦🇴', '🇦🇷', '🇦🇲', '🇦🇺', '🇦🇹', '🇦🇿', '🇧🇸', '🇧🇭', '🇧🇩', '🇧🇧', '🇧🇾', '🇧🇪', '🇧🇿', '🇧🇯', '🇧🇲', '🇧🇹', '🇧🇴', '🇧🇦', '🇧🇼', '🇧🇷', '🇧🇳', '🇧🇬', '🇰🇭', '🇨🇲', '🇨🇦', '🇮🇨', '🇨🇻', '🇨🇱', '🇨🇳', '🇨🇴', '🇰🇲', '🇨🇬', '🇨🇷', '🇭🇷', '🇨🇺', '🇨🇾', '🇨🇿', '🇩🇰', '🇩🇯', '🇩🇴', '🇪🇨', '🇪🇬', '🇸🇻', '🇪🇪', '🇪🇹', '🇪🇺', '🇫🇯', '🇫🇮', '🇫🇷', '🇬🇦', '🇬🇲', '🇬🇪', '🇩🇪', '🇬🇭', '🇬🇷', '🇬🇱', '🇬🇹', '🇬🇳', '🇬🇾', '🇭🇹', '🇭🇰', '🇭🇺', '🇮🇸', '🇮🇳', '🇮🇩', '🇮🇷', '🇮🇶', '🇮🇪', '🇮🇱', '🇮🇹', '🇯🇲', '🇯🇵', '🇯🇴', '🇰🇿', '🇰🇪', '🇰🇮', '🇰🇼', '🇰🇬', '🇱🇦', '🇱🇻', '🇱🇧', '🇱🇸', '🇱🇷', '🇱🇾', '🇱🇮', '🇱🇹', '🇱🇺', '🇲🇴', '🇲🇰', '🇲🇬', '🇲🇾', '🇲🇻', '🇲🇱', '🇲🇹', '🇲🇽', '🇲🇩', '🇲🇨', '🇲🇳', '🇲🇪', '🇲🇦', '🇲🇿', '🇲🇲', '🇳🇦', '🇳🇵', '🇳🇱', '🇳🇿', '🇳🇮', '🇳🇪', '🇳🇬', '🇰🇵', '🇳🇴', '🇴🇲', '🇵🇰', '🇵🇼', '🇵🇸', '🇵🇦', '🇵🇬', '🇵🇾', '🇵🇪', '🇵🇭', '🇵🇱', '🇵🇹', '🇵🇷', '🇶🇦', '🇷🇴', '🇷🇺', '🇷🇼', '🇼🇸', '🇸🇦', '🇸🇳', '🇷🇸', '🇸🇨', '🇸🇬', '🇸🇰', '🇸🇮', '🇿🇦', '🇰🇷', '🇪🇸', '🇱🇰', '🇸🇪', '🇨🇭', '🇸🇾', '🇹🇼', '🇹🇯', '🇹🇿', '🇹🇭', '🇹🇱', '🇹🇬', '🇹🇷', '🇹🇲', '🇺🇦', '🇦🇪', '🇬🇧', '🇺🇸', '🇺🇾', '🇺🇿', '🇻🇦', '🇻🇪', '🇻🇳', '🇾🇪', '🇿🇲', '🇿🇼'] }
 ];
@@ -88,7 +86,7 @@ export function EmojiPicker({ onEmojiSelect, onStickerSelect, className }: Emoji
   }, [activePackId, stickerPacks, activeTab]);
 
   return (
-    <div className={cn("bg-[#1c1c1e]/98 backdrop-blur-[20px] border border-white/10 rounded-[2rem] overflow-hidden shadow-2xl flex flex-col h-[480px] animate-in slide-in-from-bottom-4 duration-500 z-[1000]", className)}>
+    <div className={cn("bg-[#1c1c1e]/98 backdrop-blur-[40px] border border-white/10 rounded-[2rem] overflow-hidden shadow-2xl flex flex-col h-[480px] animate-in slide-in-from-bottom-4 duration-500 z-[1000]", className)}>
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
         <TabsList className="grid grid-cols-2 h-14 bg-white/5 border-b border-white/5 shrink-0 rounded-none p-1 gap-1">
           <TabsTrigger value="emoji" className="h-full rounded-2xl data-[state=active]:bg-primary data-[state=active]:text-white gap-2 transition-all font-black uppercase text-[10px] tracking-widest">
@@ -100,7 +98,7 @@ export function EmojiPicker({ onEmojiSelect, onStickerSelect, className }: Emoji
         </TabsList>
 
         <TabsContent value="emoji" className="flex-1 min-h-0 m-0 outline-none flex flex-col">
-          <div className="flex gap-1 p-2 bg-white/5 border-b border-white/5 overflow-x-auto scrollbar-hide shrink-0">
+          <div className="flex gap-1 p-2 bg-black/20 border-b border-white/5 overflow-x-auto scrollbar-hide shrink-0">
              {EMOJI_CATEGORIES.map(cat => (
                <button 
                  key={cat.id} 
@@ -116,13 +114,13 @@ export function EmojiPicker({ onEmojiSelect, onStickerSelect, className }: Emoji
           </div>
 
           <ScrollArea className="flex-1">
-            <div className="p-5 space-y-8">
+            <div className="p-5 space-y-6">
               {recent.length > 0 && activeEmojiCategory === 'smiles' && (
                 <div>
-                  <h3 className="text-[9px] font-black uppercase text-primary/40 mb-4 tracking-[0.3em] px-1 flex items-center gap-2">
+                  <h3 className="text-[9px] font-black uppercase text-primary/40 mb-3 tracking-[0.3em] px-1 flex items-center gap-2">
                     <Star className="w-3 h-3 fill-current" /> Недавние
                   </h3>
-                  <div className="grid grid-cols-8 gap-3">
+                  <div className="grid grid-cols-7 gap-3">
                     {recent.map((emoji, i) => (
                       <button key={`recent-${i}`} onClick={() => handleEmojiClick(emoji)} className="text-3xl hover:scale-125 active:scale-90 transition-transform duration-200">
                         {emoji}
@@ -134,8 +132,8 @@ export function EmojiPicker({ onEmojiSelect, onStickerSelect, className }: Emoji
               
               {EMOJI_CATEGORIES.map((cat) => (activeEmojiCategory === cat.id || activeEmojiCategory === 'all') && (
                 <div key={cat.id}>
-                  <h3 className="text-[9px] font-black uppercase text-white/20 mb-4 tracking-[0.3em] px-1">{cat.label}</h3>
-                  <div className="grid grid-cols-8 gap-3">
+                  <h3 className="text-[9px] font-black uppercase text-white/20 mb-3 tracking-[0.3em] px-1">{cat.label}</h3>
+                  <div className="grid grid-cols-7 gap-3">
                     {cat.emojis.map((emoji, j) => (
                       <button key={j} onClick={() => handleEmojiClick(emoji)} className="text-3xl hover:scale-125 active:scale-90 transition-transform duration-200">
                         {emoji}
@@ -149,10 +147,10 @@ export function EmojiPicker({ onEmojiSelect, onStickerSelect, className }: Emoji
         </TabsContent>
 
         <TabsContent value="stickers" className="flex-1 min-h-0 m-0 outline-none flex flex-col">
-          <div className="flex gap-2 p-3 bg-white/5 border-b border-white/5 overflow-x-auto scrollbar-hide shrink-0 items-center">
+          <div className="flex gap-2 p-3 bg-black/20 border-b border-white/5 overflow-x-auto scrollbar-hide shrink-0 items-center">
             <button 
               onClick={() => setActivePackId('default')}
-              className={cn("h-11 min-w-[44px] rounded-xl flex items-center justify-center border transition-all", activePackId === 'default' ? "bg-primary border-primary" : "bg-black/40 border-white/10 opacity-60")}
+              className={cn("h-11 min-w-[44px] rounded-xl flex items-center justify-center border transition-all", activePackId === 'default' ? "bg-primary border-primary" : "bg-white/5 border-white/10 opacity-60")}
             >
               <Zap className="w-5 h-5 text-white" />
             </button>
@@ -169,12 +167,12 @@ export function EmojiPicker({ onEmojiSelect, onStickerSelect, className }: Emoji
 
           <ScrollArea className="flex-1">
             <div className="p-4">
-              <div className="grid grid-cols-4 gap-3">
+              <div className="grid grid-cols-4 gap-2">
                 {displayedStickers.map((url, idx) => (
                   <button 
                     key={idx} 
                     onClick={() => onStickerSelect(url)}
-                    className="aspect-square rounded-2xl overflow-hidden hover:bg-white/5 active:scale-95 transition-all p-1.5 flex items-center justify-center bg-white/[0.03] border border-white/[0.05]"
+                    className="aspect-square rounded-xl overflow-hidden hover:bg-white/5 active:scale-95 transition-all p-1 flex items-center justify-center bg-white/[0.03] border border-white/[0.03]"
                   >
                     <img 
                       src={url} 
