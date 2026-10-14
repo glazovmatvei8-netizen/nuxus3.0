@@ -147,7 +147,7 @@ export async function compressImage(dataUrl: string, maxWidth = 1200, quality = 
 export function getReputationInfo(reputation: number = 0) {
   const safeRep = typeof reputation === 'number' ? reputation : 0;
   const level = Math.floor(safeRep / 10) + 1;
-  const currentExp = Math.floor((safeRep % 10) * 10); // Experience percentage in current level
+  const currentExp = Math.floor((safeRep % 10) * 10); 
 
   if (safeRep >= 100) return { level, name: 'Core Architect', color: 'text-red-500', icon: '💎', shadow: 'shadow-red-500/30', progress: 100 };
   if (safeRep >= 70) return { level, name: 'Legendary Node', color: 'text-orange-500', icon: '👑', shadow: 'shadow-orange-500/20', progress: currentExp };

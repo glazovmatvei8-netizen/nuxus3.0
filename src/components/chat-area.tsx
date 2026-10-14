@@ -19,7 +19,7 @@ import { useCollection } from '@/firebase/firestore/use-collection';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { useMemoFirebase } from '@/firebase/firestore/use-memo-firebase';
 import { collection, query, orderBy, doc, addDoc, updateDoc, increment, writeBatch } from 'firebase/firestore';
-import { formatDisplayName, cn, compressImage, encryptSignal, triggerHaptic } from '@/lib/utils';
+import { formatDisplayName, cn, compressImage, encryptSignal, triggerHaptic, isUserPremium } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -38,7 +38,6 @@ const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelRepl
   const [recordMode, setRecordMode] = useState<'voice' | 'video'>('voice');
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
-  const [recordingPreview, setRecordingPreview] = useState<string | null>(null);
 
   const [pendingFiles, setPendingFiles] = useState<{url: string, type: 'image' | 'video', file: File}[]>([]);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
