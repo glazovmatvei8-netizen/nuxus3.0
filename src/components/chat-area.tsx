@@ -179,7 +179,7 @@ const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelRepl
             <div className="flex flex-col min-w-0">
               <span className="text-[10px] font-black text-primary uppercase tracking-widest">{replyTo.senderName}</span>
               <span className="text-[12px] text-white/60 truncate italic">
-                {replyTo.contentType === 'text' ? replyTo.content : `[${replyTo.contentType}]`}
+                {replyTo.contentType === 'text' ? decryptSignal(replyTo.content) : `[${replyTo.contentType}]`}
               </span>
             </div>
           </div>
@@ -334,14 +334,17 @@ export default function ChatArea() {
   const handleSendMessage = useCallback(async (content_msg: string, type_msg: Message['contentType'] = 'text', meta: any = null) => {
     if (!content_msg || !currentChatId || !firebaseUser || !db) return;
     
+    // QES ENCRYPTION
+    const finalContent = type_msg === 'text' ? encryptSignal(content_msg) : content_msg;
+
     const msgData: any = { 
       chatId: currentChatId, senderId: firebaseUser.uid, senderName: userProfile?.name || 'User', 
-      content: content_msg, contentType: type_msg, sentAt: new Date().toISOString(), isRead: false,
+      content: finalContent, contentType: type_msg, sentAt: new Date().toISOString(), isRead: false,
       metadata: { bubbleStyle: userProfile?.settings?.bubbleStyle || 'default', ...meta }
     };
     if (replyTo) { 
       msgData.replyToId = replyTo.id; 
-      msgData.replyToContent = replyTo.contentType === 'text' ? replyTo.content : `[Вложение]`; 
+      msgData.replyToContent = replyTo.content; // Content is already encrypted in DB
       msgData.replyToSenderName = replyTo.senderName;
       setReplyTo(null); 
     }

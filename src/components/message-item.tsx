@@ -9,9 +9,9 @@ import {
   Copy, Share2, Pin, Trash2, Heart, Smile,
   Reply, ReplyAll, Mic
 } from 'lucide-react';
-import { cn, getReputationInfo, triggerHaptic } from '@/lib/utils';
+import { cn, getReputationInfo, triggerHaptic, decryptSignal, isUserPremium } from '@/lib/utils';
 import { useAppState } from '@/lib/app-state';
-import { useFirestore, useUser } from '@/firebase/provider';
+import { useUser, useFirestore } from '@/firebase/provider';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { doc, updateDoc, arrayUnion, arrayRemove, deleteDoc } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -60,7 +60,8 @@ export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, cha
   };
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(message.content);
+    const textToCopy = message.contentType === 'text' ? decryptSignal(message.content) : message.content;
+    navigator.clipboard.writeText(textToCopy);
     toast({ title: "Скопировано" });
   };
 
@@ -100,6 +101,14 @@ export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, cha
   const textClasses = { small: "text-[13px]", medium: "text-[15px]", large: "text-[18px]" };
   const rep = getReputationInfo(senderProfile?.reputation);
 
+  // DECIPHERED CONTENT
+  const displayContent = useMemo(() => {
+    if (message.contentType === 'text') {
+      return decryptSignal(message.content);
+    }
+    return message.content;
+  }, [message.content, message.contentType]);
+
   return (
     <div className={cn("w-full flex flex-col mb-3 animate-in fade-in slide-in-from-bottom-2 duration-500", isMe ? "items-end" : "items-start")}>
       <ContextMenu>
@@ -136,7 +145,7 @@ export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, cha
                   {message.replyToId && (
                     <div className="mb-2.5 p-2 bg-white/10 rounded-xl border-l-4 border-primary flex flex-col gap-0.5 opacity-80 cursor-pointer overflow-hidden" onClick={() => document.getElementById(message.replyToId)?.scrollIntoView({ behavior: 'smooth' })}>
                        <span className="text-[9px] font-black text-primary uppercase tracking-widest truncate">{message.replyToSenderName || 'Signal'}</span>
-                       <span className="text-[11px] text-white/60 truncate italic">{message.replyToContent}</span>
+                       <span className="text-[11px] text-white/60 truncate italic">{decryptSignal(message.replyToContent)}</span>
                     </div>
                   )}
 
@@ -170,7 +179,7 @@ export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, cha
                     </div>
                   ) : (
                     <div className={cn("whitespace-pre-wrap font-medium leading-relaxed tracking-tight break-words", textClasses[textSize as keyof typeof textClasses])}>
-                      {message.content}
+                      {displayContent}
                     </div>
                   )}
 
