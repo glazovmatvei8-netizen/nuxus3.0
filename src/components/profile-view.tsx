@@ -9,7 +9,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   ChevronRight, Star, Fingerprint, Palette, ShieldCheck, 
-  Share2, LayoutGrid, Info, Menu, RefreshCw, Sparkles, Trophy, Zap, HelpCircle, Calendar
+  Share2, LayoutGrid, Info, Menu, RefreshCw, Sparkles, Trophy, Zap, HelpCircle, Calendar, Loader2
 } from 'lucide-react';
 import { useAppState } from '@/lib/app-state';
 import { formatDisplayName, cn, isGlobalAdmin, getReputationInfo, triggerHaptic, formatLastSeen } from '@/lib/utils';
@@ -25,8 +25,8 @@ import { format, parseISO } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 /**
- * PROFILE VIEW V130.0 «HYPER PERSISTENCE»
- * FIXED: Birthday display and energy saving awareness.
+ * PROFILE VIEW V135.0 «TITANIUM HARDENING»
+ * FIXED: Добавлены защитные механизмы от вылета при загрузке данных.
  */
 export default function ProfileView() {
   const { user } = useUser();
@@ -66,6 +66,15 @@ export default function ProfileView() {
   };
 
   if (!mounted) return <div className="flex-1 bg-[#121212]" />;
+
+  if (isLoading && !profile) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center bg-[#121212] gap-6">
+        <Loader2 className="w-10 h-10 text-primary animate-spin" />
+        <p className="text-[10px] font-black uppercase text-white/20 tracking-[0.4em]">Синхронизация узла...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full bg-[#121212] overflow-hidden relative">

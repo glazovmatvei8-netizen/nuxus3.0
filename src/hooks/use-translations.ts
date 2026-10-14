@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useUser, useFirestore } from '@/firebase/provider';
@@ -9,7 +10,7 @@ import type { User } from '@/lib/types';
 
 /**
  * TITANIUM SYNC HOOK: useTranslations
- * ИСПРАВЛЕНО: Прямые импорты для устранения ошибок 'is not a function'.
+ * ОПТИМИЗИРОВАНО: Добавлены защитные механизмы против вылета приложения при отсутствии ключей.
  */
 export function useTranslations() {
   const { user } = useUser();
@@ -29,26 +30,30 @@ export function useTranslations() {
    * Функция перевода. Поддерживает вложенные ключи, например 'app.chats'.
    */
   const t = (key: string): string => {
-    if (profile?.settings?.interfaceOverrides?.[key]) {
-      return profile.settings.interfaceOverrides[key];
-    }
-
-    const keys = key.split('.');
-    let value: any = dictionary;
-    
-    for (const k of keys) {
-      if (value && value[k]) {
-        value = value[k];
-      } else {
-        // Резервный поиск по всему словарю, если вложенность не сработала
-        if (dictionary[key as keyof typeof dictionary]) {
-          return dictionary[key as keyof typeof dictionary] as string;
-        }
-        return key;
+    try {
+      if (profile?.settings?.interfaceOverrides?.[key]) {
+        return profile.settings.interfaceOverrides[key];
       }
+
+      const keys = key.split('.');
+      let value: any = dictionary;
+      
+      for (const k of keys) {
+        if (value && typeof value === 'object' && value[k]) {
+          value = value[k];
+        } else {
+          // Резервный поиск по всему словарю
+          const fallbackValue = (dictionary as any)[key];
+          if (typeof fallbackValue === 'string') return fallbackValue;
+          return key;
+        }
+      }
+      
+      return typeof value === 'string' ? value : key;
+    } catch (e) {
+      console.warn("Translation Error for key:", key, e);
+      return key;
     }
-    
-    return typeof value === 'string' ? value : key;
   };
 
   return { t, currentLang: langCode };

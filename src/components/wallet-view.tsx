@@ -6,29 +6,28 @@ import { useUser, useFirestore } from '@/firebase/provider';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { useMemoFirebase } from '@/firebase/firestore/use-memo-firebase';
 import { useCollection } from '@/firebase/firestore/use-collection';
-import { doc, collection, query, orderBy, limit, addDoc, getDocs, where, writeBatch, increment } from 'firebase/firestore';
+import { doc, collection, query, orderBy, limit } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { 
   Send, ArrowDown, RefreshCcw, 
-  Wallet, ArrowRight, Loader2, Search, XCircle, Info, ShieldAlert, FileText
+  Wallet, Info, FileText, Loader2
 } from 'lucide-react';
 import { cn, triggerHaptic } from '@/lib/utils';
-import type { User, Transaction, ReceivedGift } from '@/lib/types';
+import type { User, Transaction } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslations } from '@/hooks/use-translations';
 import { useAppState } from '@/lib/app-state';
 
 /**
- * WALLET VIEW V129.0 «FINAL AUDIT»
- * ADDED: Info sections, legal disclaimer, full localization.
+ * WALLET VIEW V135.0 «TITANIUM HARDENING»
+ * FIXED: Исправлен вылет из-за неопределенных переменных и отсутствия проверок данных.
  */
 export default function WalletView() {
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
-  const { t } = useTranslations();
+  const { t, currentLang } = useTranslations();
   const { setIsLegalOpen } = useAppState();
   const [mounted, setMounted] = useState(false);
   
@@ -37,13 +36,15 @@ export default function WalletView() {
   }, []);
 
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user?.uid]);
-  const { data: profile } = useDoc<User>(userRef);
+  const { data: profile, isLoading: isProfileLoading } = useDoc<User>(userRef);
 
   const transactionsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
     return query(collection(db, 'users', user.uid, 'transactions'), orderBy('createdAt', 'desc'), limit(15));
   }, [db, user?.uid]);
-  const { data: transactions } = useCollection<Transaction>(transactionsQuery);
+  const { data: transactions, isLoading: isTxLoading } = useCollection<Transaction>(transactionsQuery);
+
+  if (!mounted) return <div className="flex-1 bg-[#121212]" />;
 
   return (
     <div className="flex flex-col h-full bg-[#121212] overflow-hidden relative">
@@ -54,11 +55,17 @@ export default function WalletView() {
           <div className="relative h-48 w-full rounded-[3rem] p-[1.5px] bg-gradient-to-r from-primary/40 via-primary/80 to-primary/40 shadow-[0_20px_60px_rgba(229,142,56,0.3)]">
              <div className="h-full w-full bg-[#121212] rounded-[3rem] flex flex-col items-center justify-center relative overflow-hidden">
                 <div className="relative z-10 text-center space-y-1">
-                  <div className="flex items-baseline justify-center gap-2">
-                    <span className="text-5xl font-black text-white italic tracking-tighter tabular-nums">{(profile?.balance ?? 0).toFixed(2)}</span>
-                    <span className="text-2xl font-black text-primary italic">STK</span>
-                  </div>
-                  <p className="text-[11px] font-bold text-[#8E8E93] uppercase tracking-widest">{t('wallet.balance')}</p>
+                  {isProfileLoading ? (
+                    <Loader2 className="w-8 h-8 text-primary animate-spin mx-auto" />
+                  ) : (
+                    <>
+                      <div className="flex items-baseline justify-center gap-2">
+                        <span className="text-5xl font-black text-white italic tracking-tighter tabular-nums">{(profile?.balance ?? 0).toFixed(2)}</span>
+                        <span className="text-2xl font-black text-primary italic">STK</span>
+                      </div>
+                      <p className="text-[11px] font-bold text-[#8E8E93] uppercase tracking-widest">{t('wallet.balance')}</p>
+                    </>
+                  )}
                 </div>
                 <div className="absolute top-[-20%] right-[-10%] w-40 h-40 bg-primary/10 blur-3xl rounded-full" />
              </div>
@@ -73,7 +80,7 @@ export default function WalletView() {
                {t('wallet.info')}
              </p>
              <Button variant="ghost" onClick={() => setIsLegalOpen(true)} className="w-full h-10 bg-white/5 rounded-xl text-[9px] font-black uppercase gap-2 hover:bg-white/10 transition-all">
-                <FileText className="w-3.5 h-3.5" /> {lang === 'en' ? "Legal Disclaimer" : "Юридический отказ"}
+                <FileText className="w-3.5 h-3.5" /> {currentLang === 'en' ? "Legal Disclaimer" : "Юридический отказ"}
              </Button>
           </section>
 
@@ -89,7 +96,9 @@ export default function WalletView() {
           <div className="space-y-4">
              <h3 className="text-[11px] font-black uppercase text-[#8E8E93] tracking-[0.2em] px-2 italic">{t('wallet.history')}</h3>
              <div className="space-y-2">
-               {transactions && transactions.length > 0 ? (
+               {isTxLoading ? (
+                 <div className="py-10 text-center opacity-20"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>
+               ) : transactions && transactions.length > 0 ? (
                  transactions.map(tx => <TxItem key={tx.id} tx={tx} />)
                ) : (
                  <div className="py-10 text-center opacity-10 space-y-3">

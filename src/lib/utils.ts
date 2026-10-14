@@ -145,14 +145,15 @@ export async function compressImage(dataUrl: string, maxWidth = 1200, quality = 
  * REPUTATION SYSTEM V2.0
  */
 export function getReputationInfo(reputation: number = 0) {
-  const level = Math.floor(reputation / 10) + 1;
-  const currentExp = Math.floor((reputation % 10) * 10); // Experience percentage in current level
+  const safeRep = typeof reputation === 'number' ? reputation : 0;
+  const level = Math.floor(safeRep / 10) + 1;
+  const currentExp = Math.floor((safeRep % 10) * 10); // Experience percentage in current level
 
-  if (reputation >= 100) return { level, name: 'Core Architect', color: 'text-red-500', icon: '💎', shadow: 'shadow-red-500/30', progress: 100 };
-  if (reputation >= 70) return { level, name: 'Legendary Node', color: 'text-orange-500', icon: '👑', shadow: 'shadow-orange-500/20', progress: currentExp };
-  if (reputation >= 45) return { level, name: 'Elite Node', color: 'text-yellow-500', icon: '🌟', shadow: 'shadow-yellow-500/20', progress: currentExp };
-  if (reputation >= 25) return { level, name: 'Trusted Node', color: 'text-purple-500', icon: '🛡️', shadow: 'shadow-purple-500/20', progress: currentExp };
-  if (reputation >= 10) return { level, name: 'Active Node', color: 'text-green-500', icon: '⚡', shadow: 'shadow-green-500/20', progress: currentExp };
+  if (safeRep >= 100) return { level, name: 'Core Architect', color: 'text-red-500', icon: '💎', shadow: 'shadow-red-500/30', progress: 100 };
+  if (safeRep >= 70) return { level, name: 'Legendary Node', color: 'text-orange-500', icon: '👑', shadow: 'shadow-orange-500/20', progress: currentExp };
+  if (safeRep >= 45) return { level, name: 'Elite Node', color: 'text-yellow-500', icon: '🌟', shadow: 'shadow-yellow-500/20', progress: currentExp };
+  if (safeRep >= 25) return { level, name: 'Trusted Node', color: 'text-purple-500', icon: '🛡️', shadow: 'shadow-purple-500/20', progress: currentExp };
+  if (safeRep >= 10) return { level, name: 'Active Node', color: 'text-green-500', icon: '⚡', shadow: 'shadow-green-500/20', progress: currentExp };
   return { level, name: 'New Node', color: 'text-white/40', icon: '🛰️', shadow: 'shadow-white/5', progress: currentExp };
 }
 
