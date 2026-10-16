@@ -13,10 +13,9 @@ import { useFirestore, useUser, useAuth } from '@/firebase/provider';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { useMemoFirebase } from '@/firebase/firestore/use-memo-firebase';
-import { collection, query, where, doc, limit, orderBy, deleteDoc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, doc, limit, orderBy } from 'firebase/firestore';
 import { formatDisplayName, cn, decryptSignal, isUserPremium, triggerHaptic } from '@/lib/utils';
 import { format } from 'date-fns';
-import { useTranslations } from '@/hooks/use-translations';
 import { signOut } from 'firebase/auth';
 import {
   ContextMenu,
@@ -25,17 +24,15 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { useToast } from '@/hooks/use-toast';
-import { signalService } from '@/services/signal-service';
 
 /**
- * OPTIMIZED CHAT LIST ITEM V140.0
- * Использует Signal API для работы с данными.
+ * CHAT LIST ITEM V141.0 «THIN VIEW»
+ * Компонент только отображает данные, не управляя ими напрямую.
  */
 const ChatListItem = memo(({ 
   chat, isActive, otherId, onClick, currentUserId
 }: any) => {
   const db = useFirestore();
-  const { toast } = useToast();
   const [mounted, setMounted] = useState(false);
   
   useEffect(() => {

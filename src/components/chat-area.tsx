@@ -17,7 +17,7 @@ import { useUser, useFirestore } from '@/firebase/provider';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { useMemoFirebase } from '@/firebase/firestore/use-memo-firebase';
-import { collection, query, orderBy, doc, addDoc, updateDoc } from 'firebase/firestore';
+import { collection, query, orderBy, doc, addDoc } from 'firebase/firestore';
 import { formatDisplayName, cn, compressImage, triggerHaptic, isUserPremium } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -26,6 +26,10 @@ import { useTranslations } from '@/hooks/use-translations';
 import { useToast } from '@/hooks/use-toast';
 import { signalService } from '@/services/signal-service';
 
+/**
+ * CHAT AREA V141.0 «THIN VIEW»
+ * Логика JS удалена и заменена вызовами Kernel API (signalService).
+ */
 const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelReply }: any) => {
   const { localDrafts, setLocalDrafts } = useAppState();
   const { t } = useTranslations();
@@ -181,8 +185,9 @@ ChatInputBar.displayName = 'ChatInputBar';
 export default function ChatArea() {
   const { user: firebaseUser } = useUser();
   const db = useFirestore();
-  const { currentChatId, setCurrentChatId, setInspectedUserId, setActiveCallId } = useAppState();
+  const { currentChatId, setCurrentChatId, setInspectedUserId } = useAppState();
   const { t } = useTranslations();
+  const { toast } = useToast();
   
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
@@ -200,27 +205,33 @@ export default function ChatArea() {
   const messagesQuery = useMemoFirebase(() => (!db || !currentChatId) ? null : query(collection(db, 'chats', currentChatId, 'messages'), orderBy('sentAt', 'asc')), [db, currentChatId]);
   const { data: messages } = useCollection<Message>(messagesQuery);
 
+  // Kernel Sync: Acknowledge signals via API
   useEffect(() => {
     if (currentChatId && messages && firebaseUser) {
-      signalService.markAsRead(currentChatId, messages, firebaseUser.uid);
+      signalService.acknowledgeSignals(currentChatId, messages, firebaseUser.uid);
     }
   }, [currentChatId, messages, firebaseUser?.uid]);
 
+  // View Handler: Send message via Kernel API
   const handleSendMessage = useCallback(async (content: string, type: Message['contentType'] = 'text', meta: any = null) => {
     if (!content || !currentChatId || !firebaseUser) return;
     
-    if (type === 'text') {
-      await signalService.sendText(currentChatId, firebaseUser.uid, userProfile?.name || 'User', content, replyTo);
-    } else {
-      // Для медиа пока оставляем прямой метод, но в рамках Signal API
-      const msgData = { 
-        chatId: currentChatId, senderId: firebaseUser.uid, senderName: userProfile?.name || 'User', 
-        content, contentType: type, sentAt: new Date().toISOString(), isRead: false, metadata: meta
-      };
-      await addDoc(collection(db!, 'chats', currentChatId, 'messages'), msgData);
+    try {
+      if (type === 'text') {
+        await signalService.broadcastSignal(currentChatId, firebaseUser.uid, userProfile?.name || 'User', content, replyTo);
+      } else {
+        // Media Signal Processing (Placeholder for full API integration)
+        const msgData = { 
+          chatId: currentChatId, senderId: firebaseUser.uid, senderName: userProfile?.name || 'User', 
+          content, contentType: type, sentAt: new Date().toISOString(), isRead: false, metadata: meta
+        };
+        await addDoc(collection(db!, 'chats', currentChatId, 'messages'), msgData);
+      }
+      setReplyTo(null);
+    } catch (e) {
+      toast({ title: "Сбой шлюза", variant: "destructive" });
     }
-    setReplyTo(null);
-  }, [currentChatId, firebaseUser?.uid, userProfile, replyTo, db]);
+  }, [currentChatId, firebaseUser?.uid, userProfile, replyTo, db, toast]);
 
   const currentDisplayName = useMemo(() => {
     if (!chat) return '...';
@@ -232,7 +243,9 @@ export default function ChatArea() {
   return (
     <div className="flex-1 flex flex-col h-full bg-[#030306] relative overflow-hidden z-20">
       {userProfile?.settings?.chatBackground && (
-        <div className="absolute inset-0 z-0 opacity-40"><img src={userProfile.settings.chatBackground} className="w-full h-full object-cover blur-[2px]" alt="BG" /></div>
+        <div className="absolute inset-0 z-0 opacity-40">
+           <img src={userProfile.settings.chatBackground} className="w-full h-full object-cover blur-[2px]" alt="BG" />
+        </div>
       )}
 
       <header className="h-16 border-b border-white/5 bg-white/[0.02] backdrop-blur-xl flex items-center px-4 shrink-0 z-30 shadow-2xl">
@@ -252,7 +265,15 @@ export default function ChatArea() {
         <ScrollArea className="h-full w-full">
           <div className="flex flex-col gap-1 px-4 py-6">
             {messages?.map(msg => (
-              <MessageItem key={msg.id} message={msg} isMe={msg.senderId === firebaseUser?.uid} chatId={currentChatId} onReply={setReplyTo} amIPremium={isUserPremium(userProfile)} viewerProfile={userProfile} />
+              <MessageItem 
+                key={msg.id} 
+                message={msg} 
+                isMe={msg.senderId === firebaseUser?.uid} 
+                chatId={currentChatId} 
+                onReply={setReplyTo} 
+                amIPremium={isUserPremium(userProfile)} 
+                viewerProfile={userProfile} 
+              />
             ))}
           </div>
         </ScrollArea>
