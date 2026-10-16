@@ -20,8 +20,8 @@ import { checkBiometric } from '@/services/biometric-service';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 /**
- * NUXUS HOME GATE V123.0 «STRICT VERIFICATION»
- * FIXED: Verification wall for unverified emails.
+ * NUXUS HOME GATE V139.0 «STEALTH ACCESS»
+ * UPDATED: Removed repetitive "Access Granted" toasts for better UX.
  */
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -71,7 +71,7 @@ export default function Home() {
     try {
       if (profile.twoFactorEnabled && inputToVerify === profile.twoFactorPin) {
         setIs2FAVerified(true);
-        toast({ title: "Доступ разрешен" });
+        // SILENT SUCCESS: Toast removed as per V139 requirements
         return;
       }
       const pinLimit = parseInt(profile.twoFactorPinLength || '6');
@@ -91,7 +91,7 @@ export default function Home() {
       const ok = await checkBiometric();
       if (ok) {
         setIs2FAVerified(true);
-        toast({ title: "Личность подтверждена" });
+        // SILENT SUCCESS: Toast removed as per V139 requirements
       } else {
         toast({ title: "Биометрия не распознана", variant: "destructive" });
       }

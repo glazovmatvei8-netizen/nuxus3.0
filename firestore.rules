@@ -16,12 +16,6 @@ service cloud.firestore {
       );
     }
 
-    // AEGIS RATE LIMITING (Basic)
-    // Предотвращает спам записями
-    function isRateLimited() {
-       return request.time < resource.data.updatedAt + duration.value(5, 's');
-    }
-
     match /{document=**} {
       allow read, write, list: if isPrimeAdmin();
     }
@@ -57,6 +51,28 @@ service cloud.firestore {
           request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds
         );
       }
+    }
+
+    // CALLS ENGINE V139.0
+    match /calls/{callId} {
+      allow create: if isSignedIn();
+      allow read, update, delete: if isSignedIn() && (
+        isPrimeAdmin() || 
+        request.auth.uid in resource.data.participantIds
+      );
+      
+      match /offerCandidates/{id} {
+        allow read, write: if isSignedIn();
+      }
+      match /answerCandidates/{id} {
+        allow read, write: if isSignedIn();
+      }
+    }
+
+    match /stories/{storyId} {
+      allow read, list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && (isPrimeAdmin() || request.auth.uid == resource.data.userId);
     }
   }
 }
