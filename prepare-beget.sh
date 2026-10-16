@@ -1,8 +1,8 @@
 
 #!/bin/bash
 
-# Nuxus Beget Packager v1.2
-# Скрипт для принудительной генерации папки out и создания архива.
+# Nuxus Beget Packager v1.3
+# Скрипт для генерации папки out и создания архива с сохранением структуры папки.
 
 echo "🚀 Запуск процесса сборки Ядра..."
 
@@ -19,7 +19,8 @@ npm run build
 if [ -d "out" ]; then
     echo "✅ Папка 'out' успешно создана!"
     echo "📦 Упаковываю содержимое в nuxus-beget-deploy.zip..."
-    cd out && zip -r ../nuxus-beget-deploy.zip . && cd ..
+    # Упаковываем так, чтобы папка out была корневой в архиве
+    zip -r nuxus-beget-deploy.zip out/
     echo "--------------------------------------------------------"
     echo "🎉 ГОТОВО! Скачай файл nuxus-beget-deploy.zip и"
     echo "🚀 загрузи его в public_html на Beget."
