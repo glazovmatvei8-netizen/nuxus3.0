@@ -42,15 +42,13 @@ service cloud.firestore {
     }
 
     match /chats/{chatId} {
-      allow read, update, list: if isSignedIn() && (isPrimeAdmin() || request.auth.uid in resource.data.participantIds);
+      allow read, update, list: if isSignedIn() && (isPrimeAdmin() || request.auth.uid == resource.data.userId);
       allow create: if isSignedIn();
+    }
 
-      match /messages/{messageId} {
-        allow read, write, list: if isSignedIn() && (
-          isPrimeAdmin() || 
-          request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds
-        );
-      }
+    match /subscriptions/{subscriptionId} {
+      allow read: if isSignedIn() && (isPrimeAdmin() || request.auth.uid == resource.data.userId);
+      allow create, update: if isPrimeAdmin();
     }
 
     // CALLS ENGINE V139.0

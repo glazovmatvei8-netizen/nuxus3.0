@@ -4,7 +4,7 @@ import React, { useState, useMemo, memo, useEffect } from 'react';
 import { useAppState } from '@/lib/app-state';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
-import { Plus, Search, Star, MessageSquare, Loader2, Trash2, Archive } from 'lucide-react';
+import { Plus, Search, Star, MessageSquare, Loader2, Trash2, Archive, Sparkles, Bot } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CreateChatModal } from './modals/create-chat-modal';
 import { StoriesBar } from './stories-bar';
@@ -137,7 +137,7 @@ export default function ChatSidebar() {
   const { user } = useUser();
   const db = useFirestore();
   const auth = useAuth();
-  const { currentChatId, setCurrentChatId, setIsSearchOpen, activeAccountIndex, setActiveAccountIndex, setIs2FAVerified } = useAppState();
+  const { currentChatId, setCurrentChatId, setIsSearchOpen, activeAccountIndex, setActiveAccountIndex, setIs2FAVerified, setActiveView } = useAppState();
   
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
@@ -241,6 +241,40 @@ export default function ChatSidebar() {
           <StoriesBar />
 
           <div className="mt-4">
+             {/* Pinned Nuxus AI Assistant */}
+             <div className="px-4 py-1">
+               <div 
+                 onClick={() => { triggerHaptic(); setActiveView('ai'); }}
+                 className="relative flex items-center gap-4 p-4 rounded-[2.5rem] bg-gradient-to-r from-primary/15 via-primary/5 to-white/[0.02] border border-primary/30 hover:border-primary/50 transition-all duration-300 cursor-pointer group shadow-lg shadow-primary/5"
+               >
+                 <div className="relative shrink-0">
+                   <div className="h-14 w-14 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
+                     <Sparkles className="w-7 h-7 text-primary animate-pulse" />
+                   </div>
+                   <div className="absolute top-0 right-0 w-3.5 h-3.5 bg-emerald-500 rounded-full border-4 border-[#121212] shadow-[0_0_10px_rgba(16,185,129,0.8)]" />
+                 </div>
+                 <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+                   <div className="flex items-center justify-between">
+                     <div className="flex items-center gap-2 min-w-0">
+                       <span className="font-bold text-[15px] truncate text-white uppercase tracking-tight italic">
+                         Nuxus AI Core
+                       </span>
+                       <span className="px-2 py-0.5 text-[8px] font-black uppercase tracking-widest rounded-md bg-primary/20 text-primary border border-primary/30">
+                         BOT
+                       </span>
+                     </div>
+                     <span className="text-[10px] text-emerald-400 font-bold whitespace-nowrap">
+                       ONLINE
+                     </span>
+                   </div>
+                   <p className="text-[13px] text-muted-foreground/80 truncate font-medium tracking-tight">
+                     Решение задач, точные расчеты (2+2), чистый ответ
+                   </p>
+                 </div>
+               </div>
+               <div className="h-[1px] w-full bg-white/[0.03] mt-2 mb-1" />
+             </div>
+
              {isChatsLoading ? (
                <div className="flex flex-col items-center justify-center py-20 opacity-10">
                   <Loader2 className="w-10 h-10 animate-spin text-primary" />

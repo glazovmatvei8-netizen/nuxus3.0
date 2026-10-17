@@ -15,7 +15,7 @@ function getAiEndpoint(): string {
 }
 
 export const aiService = {
-  async chat(prompt: string, history: { role: string; content: string }[] = []): Promise<string> {
+  async chat(prompt: string, history: { role: string; content: string }[] = [], model: string = 'gemini-2.0-flash'): Promise<string> {
     try {
       const res = await fetch(getAiEndpoint(), {
         method: 'POST',
@@ -24,6 +24,7 @@ export const aiService = {
           mode: 'chat',
           prompt,
           history,
+          model,
         }),
       });
       const data = await res.json();

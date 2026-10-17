@@ -122,7 +122,8 @@ export default function ChatMain() {
 
         <div className="flex-1 flex overflow-hidden h-full relative">
           <div className={cn(
-            "w-full md:w-[400px] lg:w-[440px] h-full flex-shrink-0 z-30 bg-transparent border-r border-white/5 relative overflow-hidden transition-all duration-300", 
+            "w-full h-full flex-shrink-0 z-30 bg-transparent relative overflow-hidden transition-all duration-300", 
+            activeView === 'ai' ? "w-full border-r-0" : "md:w-[400px] lg:w-[440px] border-r border-white/5",
             (currentChatId && activeView === 'chats') ? "hidden md:block" : "block"
           )}>
             <div className="h-full w-full contain-strict">
@@ -136,11 +137,12 @@ export default function ChatMain() {
             </div>
           </div>
           
-          <div className={cn(
-            "flex-1 h-full flex flex-col min-w-0 bg-[#0a0a0c]/50 relative z-20 overflow-hidden transition-all duration-300", 
-            (!currentChatId || ['profile', 'wallet', 'discovery', 'calls', 'ai'].includes(activeView)) ? "hidden md:flex" : "flex"
-          )}>
-            <div className="h-full w-full overflow-hidden flex flex-col bg-transparent contain-content">
+          {activeView !== 'ai' && (
+            <div className={cn(
+              "flex-1 h-full flex flex-col min-w-0 bg-[#0a0a0c]/50 relative z-20 overflow-hidden transition-all duration-300", 
+              (!currentChatId || ['profile', 'wallet', 'discovery', 'calls'].includes(activeView)) ? "hidden md:flex" : "flex"
+            )}>
+              <div className="h-full w-full overflow-hidden flex flex-col bg-transparent contain-content">
               {currentChatId ? <ChatArea /> : (
                 <div className="hidden md:flex flex-1 flex-col items-center justify-center p-16 text-center space-y-12 opacity-30">
                    <div className="relative">
@@ -154,6 +156,7 @@ export default function ChatMain() {
               )}
             </div>
           </div>
+        )}
         </div>
       </div>
 
