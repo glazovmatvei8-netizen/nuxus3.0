@@ -1,0 +1,32 @@
+
+{
+  "entities": {
+    "UserProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserProfile",
+      "type": "object",
+      "description": "Represents a user's profile information within the Nuxus application.",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "username": { "type": "string" },
+        "phone": { "type": "string" },
+        "phoneVerified": { "type": "boolean" },
+        "email": { "type": "string", "format": "email" },
+        "emailVerified": { "type": "boolean" },
+        "emailLastChangedAt": { "type": "string", "format": "date-time" },
+        "avatarUrl": { "type": "string", "format": "uri" },
+        "lastSeen": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "isPremium": { "type": "boolean" },
+        "balance": { "type": "number", "default": 0 },
+        "installedStickerPackIds": { "type": "array", "items": { "type": "string" } },
+        "countryCode": { "type": "string", "description": "ISO 3166-1 alpha-2 country code." }
+      },
+      "required": ["id", "name", "username", "phone", "createdAt"]
+    }
+  },
+  "auth": {
+    "providers": ["phone", "email"]
+  }
+}

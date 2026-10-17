@@ -1,0 +1,24 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Nuxus Loading...</title>
+    <style>
+      body { background: #0a0a0c; margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; color: white; font-family: sans-serif; }
+      .loader { border: 2px solid rgba(255,255,255,0.1); border-top: 2px solid #8B5CF6; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; }
+      @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+  </head>
+  <body>
+    <div class="loader"></div>
+    <script>
+      // Если по какой-то причине Firebase Hosting выдал этот файл вместо Next.js,
+      // мы просто просим браузер еще раз проверить маршруты.
+      if (window.location.pathname === '/index.html') {
+        window.location.href = '/';
+      }
+    </script>
+  </body>
+</html>

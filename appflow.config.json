@@ -1,0 +1,12 @@
+
+{
+  "apps": [
+    {
+      "appId": "f6ed6622",
+      "root": ".",
+      "dependencyInstallCommand": "npm install",
+      "buildCommand": "npm run build",
+      "webDir": "out"
+    }
+  ]
+}

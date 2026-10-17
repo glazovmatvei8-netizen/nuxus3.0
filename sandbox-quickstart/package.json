@@ -1,0 +1,17 @@
+{
+  "name": "sandbox-quickstart",
+  "version": "1.0.0",
+  "description": "Vercel Sandbox SDK quickstart for Nuxus 2.0",
+  "main": "index.ts",
+  "type": "module",
+  "scripts": {
+    "start": "tsx index.ts"
+  },
+  "dependencies": {
+    "@vercel/sandbox": "^3.0.0",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2"
+  }
+}

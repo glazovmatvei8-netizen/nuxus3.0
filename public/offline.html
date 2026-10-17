@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nuxus — Офлайн</title>
+    <style>
+        body {
+            background-color: #0a0a0c;
+            color: white;
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            text-align: center;
+        }
+        .logo {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #8B5CF6, #0EA5E9);
+            border-radius: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 0 30px rgba(139, 92, 246, 0.3);
+        }
+        h1 { font-size: 24px; font-weight: 900; text-transform: uppercase; letter-spacing: -0.05em; margin: 0; }
+        p { color: #666; font-size: 12px; margin-top: 8px; text-transform: uppercase; letter-spacing: 0.2em; }
+        .btn {
+            margin-top: 32px;
+            padding: 12px 24px;
+            background: #8B5CF6;
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 10px;
+            letter-spacing: 0.1em;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="logo"></div>
+    <h1>Нет связи</h1>
+    <p>Ядро Nuxus перешло в автономный режим</p>
+    <button class="btn" onclick="window.location.reload()">Повторить попытку</button>
+</body>
+</html>

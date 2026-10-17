@@ -1,0 +1,74 @@
+name: Build iOS IPA
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build iOS App
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Fix manifest for static export
+        run: |
+          find src/app -name "*manifest*" -exec rm -rf {} + 2>/dev/null || true
+          echo "Manifest cleanup completed."
+
+      - name: Build Web Project
+        run: |
+          npm run build
+          if [ ! -d "out" ]; then
+            echo "Error: Directory 'out' not found. Ensure output: 'export' is in next.config.ts"
+            exit 1
+          fi
+
+      - name: Capacitor Sync & Add
+        run: |
+          mkdir -p out
+          if [ ! -d "ios" ]; then
+            npx cap add ios
+          fi
+          npx cap sync ios
+          npx cap copy ios
+
+      - name: Install CocoaPods Dependencies
+        run: |
+          cd ios/App && pod install
+
+      - name: Build iOS Archive
+        run: |
+          xcodebuild -workspace ios/App/App.xcworkspace \
+                     -scheme App \
+                     -configuration Release \
+                     -destination 'generic/platform=iOS' \
+                     -archivePath "ios/App/build/App.xcarchive" \
+                     CODE_SIGN_IDENTITY="" \
+                     CODE_SIGNING_REQUIRED=NO \
+                     CODE_SIGNING_ALLOWED=NO \
+                     COMPILER_INDEX_STORE_ENABLE=NO \
+                     archive
+
+      - name: Create IPA
+        run: |
+          cd ios/App/build
+          mkdir -p Payload
+          cp -r App.xcarchive/Products/Applications/*.app Payload/
+          zip -r Nuxus.ipa Payload
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Nuxus-Unsigned-IPA
+          path: ios/App/build/Nuxus.ipa

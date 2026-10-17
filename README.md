@@ -1,11 +1,25 @@
-<div align="center">
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+# Nuxus 2.0 — Premium Communication Kernel
 
-  <h1>Built with AI Studio</h2>
+Nuxus — это не просто мессенджер, это квантовая среда для безопасной связи.
 
-  <p>The fastest path from prompt to production with Gemini.</p>
+## 🚀 КАК ПОЛУЧИТЬ ПРИЛОЖЕНИЕ (IPA) ПРЯМО СЕЙЧАС
 
-  <a href="https://aistudio.google.com/apps">Start building</a>
+Если тебе нужен готовый файл для iPhone:
+1. Перейди в этом репозитории на вкладку **Actions**.
+2. Выбери рабочий процесс **Build iOS IPA** в левой колонке.
+3. Нажми кнопку **Run workflow** (синяя кнопка справа) и подтверди запуск.
+4. Дождись окончания (около 8 минут).
+5. Нажми на строку завершенного процесса, прокрути вниз до **Artifacts** и нажми на **Nuxus-Unsigned-IPA**.
 
-</div>
+## ⚡ Система обновлений (Live-Sync)
+Ядро Nuxus использует технологию гибридной синхронизации. 
+- **Веб-обновления**: Доставляются мгновенно при загрузке. Тебе не нужно пересобирать IPA после каждого `sh push.sh`!
+- **Нативные обновления**: Требуют новый IPA только при изменении иконок или нативных модулей.
+
+## 🛡️ Безопасность (QES)
+Система использует протокол QES (Quantum Encryption Signal) версии 24.1. Все текстовые сигналы шифруются на конечном устройстве (E2EE).
+
+---
+**Официальный узел:** [nuxus.fun](https://nuxus.fun)
+**Nuxus — Технологии на вашей стороне.**
