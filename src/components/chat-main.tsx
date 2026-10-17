@@ -9,6 +9,7 @@ import CallsView from './calls-view';
 import ProfileView from './profile-view';
 import WalletView from './wallet-view';
 import DiscoveryView from './discovery-view';
+import NuxusAiView from './nuxus-ai-view';
 import { useAppState } from '@/lib/app-state';
 import { cn } from '@/lib/utils';
 import { useUser, useFirestore } from '@/firebase/provider';
@@ -24,7 +25,7 @@ import { UserAvatar } from './user-avatar';
 import type { Call } from '@/lib/types';
 import { 
   MessageSquare, Settings, Phone, Wallet, 
-  Globe, LayoutGrid
+  Globe, LayoutGrid, Sparkles
 } from 'lucide-react';
 
 /**
@@ -83,6 +84,7 @@ export default function ChatMain() {
     { id: 'discovery', icon: Globe, label: 'EXPLORE' },
     { id: 'calls', icon: Phone, label: 'CALLS' },
     { id: 'chats', icon: MessageSquare, label: 'CHATS' },
+    { id: 'ai', icon: Sparkles, label: 'AI CORE' },
     { id: 'wallet', icon: Wallet, label: 'WALLET' },
     { id: 'profile', icon: LayoutGrid, label: 'NODES' },
   ];
@@ -127,6 +129,7 @@ export default function ChatMain() {
               {activeView === 'chats' && <ChatSidebar />}
               {activeView === 'contacts' && <ContactsView />}
               {activeView === 'calls' && <CallsView />}
+              {activeView === 'ai' && <NuxusAiView />}
               {activeView === 'profile' && <ProfileView />}
               {activeView === 'wallet' && <WalletView />}
               {activeView === 'discovery' && <DiscoveryView />}
@@ -135,7 +138,7 @@ export default function ChatMain() {
           
           <div className={cn(
             "flex-1 h-full flex flex-col min-w-0 bg-[#0a0a0c]/50 relative z-20 overflow-hidden transition-all duration-300", 
-            (!currentChatId || ['profile', 'wallet', 'discovery', 'calls'].includes(activeView)) ? "hidden md:flex" : "flex"
+            (!currentChatId || ['profile', 'wallet', 'discovery', 'calls', 'ai'].includes(activeView)) ? "hidden md:flex" : "flex"
           )}>
             <div className="h-full w-full overflow-hidden flex flex-col bg-transparent contain-content">
               {currentChatId ? <ChatArea /> : (

@@ -9,7 +9,7 @@ import type { Message, Story, Track } from './types';
  * Централизованное хранилище состояния, изолированное от Firebase.
  */
 
-export type MainView = 'chats' | 'contacts' | 'calls' | 'profile' | 'archive' | 'music' | 'wallet' | 'games' | 'discovery';
+export type MainView = 'chats' | 'contacts' | 'calls' | 'profile' | 'archive' | 'music' | 'wallet' | 'games' | 'discovery' | 'ai';
 
 interface AppState {
   currentChatId: string | null;
