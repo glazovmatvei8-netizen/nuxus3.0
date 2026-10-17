@@ -1,7 +1,9 @@
 import type { NextConfig } from 'next';
 
+const isStaticExport = process.env.STATIC_EXPORT === 'true';
+
 const nextConfig: NextConfig = {
-  output: 'standalone',
+  output: isStaticExport ? 'export' : 'standalone',
   trailingSlash: true,
   images: {
     unoptimized: true,
@@ -12,6 +14,7 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  ...(isStaticExport ? {} : { distDir: '.next' }),
 };
 
 export default nextConfig;

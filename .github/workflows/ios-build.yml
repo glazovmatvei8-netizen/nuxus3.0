@@ -19,18 +19,20 @@ jobs:
           cache: 'npm'
 
       - name: Install Dependencies
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Fix manifest for static export
         run: |
           find src/app -name "*manifest*" -exec rm -rf {} + 2>/dev/null || true
           echo "Manifest cleanup completed."
 
-      - name: Build Web Project
+      - name: Build Web Project (Static Export)
+        env:
+          STATIC_EXPORT: 'true'
         run: |
-          npm run build
+          npm run export
           if [ ! -d "out" ]; then
-            echo "Error: Directory 'out' not found. Ensure output: 'export' is in next.config.ts"
+            echo "Error: Directory 'out' not found."
             exit 1
           fi
 
