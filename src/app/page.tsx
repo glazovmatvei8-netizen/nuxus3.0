@@ -6,7 +6,7 @@ import { useDoc } from '@/firebase/firestore/use-doc';
 import { useAppState } from '@/lib/app-state';
 import AuthScreen from '@/components/auth-screen';
 import ChatMain from '@/components/chat-main';
-import { Fingerprint, AlertTriangle, Lock, ShieldCheck, Loader2, RefreshCcw, Mail } from 'lucide-react';
+import { Fingerprint, AlertTriangle, Lock, ShieldCheck, Loader2, RefreshCcw } from 'lucide-react';
 import { doc } from 'firebase/firestore';
 import type { User as UserType } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -18,10 +18,6 @@ import { NuxusLogo } from '@/components/nuxus-logo';
 import { checkBiometric } from '@/services/biometric-service';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-/**
- * NUXUS HOME GATE V156.0 «ABSOLUTE CLEAN»
- * ОПТИМИЗИРОВАНО: Полная очистка от маркеров конфликта.
- */
 export default function Home() {
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
@@ -56,7 +52,6 @@ export default function Home() {
   const isBanned = useMemo(() => isUserActuallyBanned(profile), [profile]);
   const isAnomaly = useMemo(() => isUserAnomaly(profile), [profile]);
 
-  // Проверка верификации почты
   const needsVerification = useMemo(() => {
     if (!user) return false;
     if (user.email?.includes('@nuxus.internal')) return false;
@@ -133,7 +128,7 @@ export default function Home() {
     return (
       <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#010103] text-white">
         <NuxusLogo size={80} className="animate-pulse opacity-40" />
-        <p className="mt-8 text-[8px] font-black uppercase tracking-[0.6em] text-primary/40">Syncing Engine V123.0</p>
+        <p className="mt-8 text-[8px] font-black uppercase tracking-[0.6em] text-primary/40">Syncing Engine V157.0</p>
       </div>
     );
   }

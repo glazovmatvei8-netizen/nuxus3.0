@@ -8,10 +8,6 @@ import { FirestorePermissionError } from '@/firebase/errors';
 
 export type WithId<T> = T & { id: string; isPending?: boolean };
 
-/**
- * NUXUS ENGINE HOOK: useCollection V156.0
- * ОПТИМИЗИРОВАНО: Полная очистка от артефактов и защита от сбоев SDK.
- */
 export function useCollection<T = any>(
   target: (CollectionReference<DocumentData> | Query<DocumentData>) | null | undefined
 ) {

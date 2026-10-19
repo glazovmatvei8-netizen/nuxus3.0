@@ -8,10 +8,6 @@ import { FirestorePermissionError } from '@/firebase/errors';
 
 export type WithId<T> = T & { id: string; isPending?: boolean };
 
-/**
- * NUXUS ENGINE HOOK: useDoc V156.0
- * ОПТИМИЗИРОВАНО: Полная очистка от артефактов и защита от сбоев SDK.
- */
 export function useDoc<T = any>(docRef: DocumentReference<DocumentData> | null | undefined) {
   const [data, setData] = useState<WithId<T> | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(!!docRef);
@@ -55,7 +51,7 @@ export function useDoc<T = any>(docRef: DocumentReference<DocumentData> | null |
           const errMsg = err.message || "";
           
           if (errMsg.includes('ca9') || errMsg.includes('Unexpected state')) {
-            console.warn("🛰️ Nuxus Kernel: ca9 Detected. Intercepting crash...");
+            console.warn("🛰️ Nuxus Kernel: Aggregator Out of Sync (ca9). Recalibrating...");
             unsubscribe();
             if (retryCount.current < 3) {
               retryCount.current++;
