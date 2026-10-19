@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -10,6 +9,7 @@ import { doc, collection, query, orderBy, limit, addDoc } from 'firebase/firesto
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { 
   Send, ArrowDown, RefreshCcw, 
@@ -21,6 +21,10 @@ import { useToast } from '@/hooks/use-toast';
 import { useTranslations } from '@/hooks/use-translations';
 import { useAppState } from '@/lib/app-state';
 
+/**
+ * WALLET VIEW V147.0 «INTEGRITY FIX»
+ * FIXED: ReferenceError: Label is not defined.
+ */
 export default function WalletView() {
   const { user } = useUser();
   const db = useFirestore();
@@ -108,7 +112,9 @@ export default function WalletView() {
 
           <section className="bg-white/5 border border-white/10 p-6 rounded-[2.2rem] space-y-4">
              <div className="flex items-center gap-3 text-primary">
-                <Info className="w-5 h-5" />
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
+                  <Info className="w-5 h-5 text-primary" />
+                </div>
                 <span className="text-[11px] font-black uppercase tracking-widest">О Системе STK</span>
              </div>
              <p className="text-[10px] font-bold text-white/50 uppercase leading-relaxed tracking-tight italic">
