@@ -65,7 +65,7 @@ export interface Transaction {
   id: string;
   userId: string;
   amount: number;
-  type: 'deposit' | 'withdrawal' | 'transfer_in' | 'transfer_out' | 'gift_purchase';
+  type: 'deposit' | 'withdrawal' | 'transfer_in' | 'transfer_out' | 'gift_purchase' | 'subscription_activation' | 'subscription_renewal';
   status: 'completed' | 'pending' | 'failed';
   otherPartyId?: string;
   otherPartyName?: string;
@@ -208,6 +208,9 @@ export interface User {
   contactIds?: string[]; 
   isBanned?: boolean;
   isPremium?: boolean;
+  premiumTier?: 'none' | 'plus' | 'one';
+  premiumUntil?: string;
+  autoRenew?: boolean;
   isAdmin?: boolean;
   reputation?: number;
   twoFactorEnabled?: boolean;

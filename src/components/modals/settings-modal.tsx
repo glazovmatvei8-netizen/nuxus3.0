@@ -28,7 +28,8 @@ import { isUserPremium, cn, compressImage, triggerHaptic } from '@/lib/utils';
 import type { User } from '@/lib/types';
 import { useTranslations } from '@/hooks/use-translations';
 import versions from '@/app/versions.json';
-import Image from 'next/image';
+import { addDays, format, parseISO } from 'date-fns';
+import { ru } from 'date-fns/locale';
 
 const NAME_COLORS = [
   'text-orange-500', 'text-blue-500', 'text-green-500', 
@@ -69,7 +70,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     nameColor: 'text-orange-500', borderRadius: 24,
     bubbleStyle: 'default' as any, fontFamily: 'jakarta' as any,
     messageSize: 'medium' as any,
-    isGhostMode: false, isEnergySaving: false, twoFactorEnabled: false, twoFactorPin: '', twoFactorPinLength: '6' as '4' | '6'
+    isGhostMode: false, isEnergySaving: false, twoFactorEnabled: false, twoFactorPin: '', twoFactorPinLength: '6' as '4' | '6',
+    autoRenew: false
   });
 
   useEffect(() => {
@@ -92,7 +94,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         isEnergySaving: !!profile.settings?.privacy?.isEnergySaving,
         twoFactorEnabled: !!profile.twoFactorEnabled,
         twoFactorPin: profile.twoFactorPin || '',
-        twoFactorPinLength: profile.twoFactorPinLength || '6'
+        twoFactorPinLength: profile.twoFactorPinLength || '6',
+        autoRenew: !!profile.autoRenew
       });
       setAvatarPreview(profile.avatarUrl || null);
       setBgPreview(profile.settings?.chatBackground || null);
@@ -118,6 +121,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         twoFactorEnabled: form.twoFactorEnabled,
         twoFactorPin: form.twoFactorPin,
         twoFactorPinLength: form.twoFactorPinLength,
+        autoRenew: form.autoRenew,
         'settings.appearance': form.appearance,
         'settings.theme': form.theme,
         'settings.bubbleStyle': form.bubbleStyle,
@@ -143,6 +147,13 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
   const handleBuySubscription = async (tier: 'plus' | 'one', price: number) => {
     if (!db || !user || !profile) return;
+    
+    // Если подписка уже активна
+    if (profile.premiumTier === tier && profile.premiumUntil && new Date(profile.premiumUntil) > new Date()) {
+      toast({ title: "Уже активно", description: `Подписка действует до ${format(parseISO(profile.premiumUntil), 'd MMMM yyyy', { locale: ru })}` });
+      return;
+    }
+
     if ((profile.balance || 0) < price) {
       toast({ title: "Недостаточно STK", description: "Пополните кошелек для активации", variant: "destructive" });
       return;
@@ -152,9 +163,13 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     triggerHaptic();
     try {
       const planName = tier === 'plus' ? 'Nuxus Plus' : 'Nuxus One+';
+      const expiryDate = addDays(new Date(), 30).toISOString();
+      
       await updateDoc(doc(db, 'users', user.uid), {
         balance: increment(-price),
         isPremium: true,
+        premiumTier: tier,
+        premiumUntil: expiryDate,
         reputation: increment(tier === 'one' ? 15 : 7)
       });
       
@@ -166,7 +181,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         createdAt: new Date().toISOString()
       });
 
-      toast({ title: `${planName} Активен!`, description: "Привилегии применены к вашему узлу." });
+      toast({ title: `${planName} Активен!`, description: `Привилегии до ${format(parseISO(expiryDate), 'd MMMM', { locale: ru })}` });
     } catch (e) {
       toast({ title: "Сбой активации", variant: "destructive" });
     } finally {
@@ -196,7 +211,11 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     reader.readAsDataURL(file);
   };
 
-  // Безопасное получение массивов фич
+  const isTierActive = (tier: string) => {
+    if (!profile?.premiumTier || !profile?.premiumUntil) return false;
+    return profile.premiumTier === tier && new Date(profile.premiumUntil) > new Date();
+  };
+
   const plusFeatures = Array.isArray(t('prime.plus.features')) ? t('prime.plus.features') : [];
   const oneFeatures = Array.isArray(t('prime.one.features')) ? t('prime.one.features') : [];
 
@@ -278,7 +297,16 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                    <p className="text-[10px] font-bold text-primary uppercase tracking-[0.4em]">{t('prime.subtitle')}</p>
                 </div>
 
+                <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5 flex items-center justify-between shadow-inner">
+                   <div className="flex flex-col gap-1">
+                      <span className="text-sm font-black text-white uppercase italic">{t('prime.autoRenew')}</span>
+                      <span className="text-[8px] text-white/30 font-bold uppercase tracking-widest leading-none">{t('prime.autoRenewDesc')}</span>
+                   </div>
+                   <Switch checked={form.autoRenew} onCheckedChange={(v) => { triggerHaptic(); setForm({...form, autoRenew: v}); }} />
+                </div>
+
                 <div className="grid grid-cols-1 gap-6">
+                   {/* NUXUS PLUS */}
                    <div className="bg-[#1C1C1E] rounded-[2.5rem] border border-white/5 overflow-hidden flex flex-col shadow-2xl relative group">
                       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-accent" />
                       <div className="p-8 space-y-6">
@@ -306,14 +334,18 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                             <Button 
                               onClick={() => handleBuySubscription('plus', 299)} 
                               disabled={!!isBuying}
-                              className="h-12 px-8 bg-primary text-white rounded-xl font-black uppercase italic tracking-widest text-[10px] shadow-lg active:scale-95 transition-all"
+                              className={cn(
+                                "h-12 px-8 rounded-xl font-black uppercase italic tracking-widest text-[10px] shadow-lg active:scale-95 transition-all",
+                                isTierActive('plus') ? "bg-green-500/20 text-green-500 border border-green-500/30" : "bg-primary text-white"
+                              )}
                             >
-                               {isBuying === 'plus' ? <Loader2 className="animate-spin" /> : t('prime.buy')}
+                               {isBuying === 'plus' ? <Loader2 className="animate-spin" /> : isTierActive('plus') ? t('prime.active') : t('prime.buy')}
                             </Button>
                          </div>
                       </div>
                    </div>
 
+                   {/* NUXUS ONE+ */}
                    <div className="bg-primary/5 rounded-[2.5rem] border border-primary/30 overflow-hidden flex flex-col shadow-2xl relative group">
                       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,hsla(var(--primary),0.15),transparent_70%)]" />
                       <div className="p-8 space-y-6 relative z-10">
@@ -341,9 +373,12 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                             <Button 
                               onClick={() => handleBuySubscription('one', 500)} 
                               disabled={!!isBuying}
-                              className="h-12 px-8 bg-white text-black hover:bg-primary hover:text-white rounded-xl font-black uppercase italic tracking-widest text-[10px] shadow-xl active:scale-95 transition-all"
+                              className={cn(
+                                "h-12 px-8 rounded-xl font-black uppercase italic tracking-widest text-[10px] shadow-xl active:scale-95 transition-all",
+                                isTierActive('one') ? "bg-green-500/20 text-green-500 border border-green-500/30" : "bg-white text-black hover:bg-primary hover:text-white"
+                              )}
                             >
-                               {isBuying === 'one' ? <Loader2 className="animate-spin" /> : t('prime.buy')}
+                               {isBuying === 'one' ? <Loader2 className="animate-spin" /> : isTierActive('one') ? t('prime.active') : t('prime.buy')}
                             </Button>
                          </div>
                       </div>

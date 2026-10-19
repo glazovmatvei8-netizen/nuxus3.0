@@ -80,7 +80,12 @@ export const translations = {
         price: "500 STK/мес",
         features: ["Все из Plus", "Режим Призрака", "Кастомные иконки", "Приоритетный узел"]
       },
-      buy: "Активировать"
+      buy: "Активировать",
+      active: "Активно",
+      activeUntil: "Активно до",
+      autoRenew: "Автосписание",
+      autoRenewDesc: "Сумма будет списываться автоматически каждый месяц",
+      renewing: "Продление..."
     },
     auth: { 
       title: "Вход в аккаунт", 
@@ -207,7 +212,12 @@ export const translations = {
         price: "500 STK/mo",
         features: ["All Plus features", "Ghost Mode", "Custom App Icons", "Priority Sync"]
       },
-      buy: "Activate"
+      buy: "Activate",
+      active: "Active",
+      activeUntil: "Active until",
+      autoRenew: "Auto-renewal",
+      autoRenewDesc: "The amount will be deducted automatically each month",
+      renewing: "Renewing..."
     },
     auth: { 
       title: "Sign In", 
