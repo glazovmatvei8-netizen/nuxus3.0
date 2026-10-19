@@ -3,15 +3,14 @@
 /**
  * NUXUS KERNEL API SERVICE V141.0 «BLACK BOX EDITION»
  * Централизованный шлюз для управления сигналами и данными Ядра.
- * Этот файл является единственным местом, где JS взаимодействует с базой данных.
  */
 import { 
   collection, doc, addDoc, updateDoc, writeBatch, 
-  increment, getDoc, query, where, getDocs, limit, orderBy
+  increment, query, where, getDocs
 } from 'firebase/firestore';
 import { nuxus } from '@/lib/nuxus-engine';
-import { encryptSignal, decryptSignal, triggerHaptic } from '@/lib/utils';
-import type { Message, Chat, User } from '@/lib/types';
+import { encryptSignal } from '@/lib/utils';
+import type { Message, User } from '@/lib/types';
 
 export const signalService = {
   /**
@@ -20,7 +19,6 @@ export const signalService = {
   async broadcastSignal(chatId: string, userId: string, userName: string, text: string, replyTo?: Message | null) {
     if (!nuxus.db || !text.trim()) return;
 
-    // Слой шифрования QES 24.1
     const encrypted = encryptSignal(text);
     
     const msgData: any = {
@@ -35,30 +33,24 @@ export const signalService = {
 
     if (replyTo) {
       msgData.replyToId = replyTo.id;
-      msgData.replyToContent = replyTo.content; // Берем уже зашифрованный контент
+      msgData.replyToContent = replyTo.content;
       msgData.replyToSenderName = replyTo.senderName;
     }
 
     try {
       const msgRef = await addDoc(collection(nuxus.db, 'chats', chatId, 'messages'), msgData);
       
-      // Атомарное обновление метаданных чата
       await updateDoc(doc(nuxus.db, 'chats', chatId), { 
         lastMessageAt: new Date().toISOString(),
         isManualUnread: false
       });
 
-      // Начисление репутации через Kernel API
       await updateDoc(doc(nuxus.db, 'users', userId), { 
         reputation: increment(0.2) 
       });
 
       return msgRef.id;
     } catch (e) {
-<<<<<<< HEAD
-=======
-      console.error("Kernel API Error: Signal Delivery Failed", e);
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
       throw new Error("Kernel API Error: Signal Delivery Failed");
     }
   },
@@ -79,11 +71,7 @@ export const signalService = {
       });
       await batch.commit();
     } catch (e) {
-<<<<<<< HEAD
-      // Тихий сбой, повторная попытка при следующем тике
-=======
-      console.error("Kernel API Error: Failed to acknowledge signals", e);
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
+      // Quiet fail
     }
   },
 
@@ -94,7 +82,6 @@ export const signalService = {
     if (!nuxus.db) return;
     
     try {
-      // Проверка на существующий узел
       const q = query(
         collection(nuxus.db, 'chats'),
         where('type', '==', 'private'),
@@ -109,7 +96,6 @@ export const signalService = {
 
       if (existing) return existing.id;
 
-      // Инициализация нового узла
       const newChatData = {
         type: 'private' as const,
         participantIds: [currentUser.id, otherUser.id],
@@ -128,33 +114,7 @@ export const signalService = {
       const docRef = await addDoc(collection(nuxus.db, 'chats'), newChatData);
       return docRef.id;
     } catch (e) {
-<<<<<<< HEAD
-=======
-      console.error("Kernel API Error: Node Initialization Failed", e);
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
       throw new Error("Kernel API Error: Node Initialization Failed");
-    }
-  },
-
-  /**
-   * Аннигиляция сообщения
-   */
-  async annihilateSignal(chatId: string, messageId: string) {
-    if (!nuxus.db) return;
-    try {
-      const ref = doc(nuxus.db, 'chats', chatId, 'messages', messageId);
-      // Вместо физического удаления можно использовать флаг для безопасности
-      await updateDoc(ref, { 
-        contentType: 'service', 
-        content: encryptSignal("Сигнал аннигилирован"),
-        isDeleted: true 
-      });
-    } catch (e) {
-<<<<<<< HEAD
-=======
-      console.error("Kernel API Error: Signal Annihilation Failed", e);
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
-      throw e;
     }
   }
 };

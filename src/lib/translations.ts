@@ -1,4 +1,3 @@
-
 export const translations = {
   ru: {
     app: { 
@@ -41,21 +40,12 @@ export const translations = {
       title: "Настройки Ядра", 
       tabs: { 
         profile: "Аккаунт", 
-<<<<<<< HEAD
         style: "Визуальный", 
         privacy: "Защита", 
         language: "Язык", 
         prime: "Premium", 
         interface: "Интерфейс",
         data: "Инфо"
-=======
-        style: "Визуальный код", 
-        privacy: "Безопасность", 
-        language: "Язык", 
-        prime: "Premium", 
-        interface: "Интерфейс",
-        data: "Информация"
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
       }, 
       labels: { 
         name: "Ваше имя", 
@@ -74,7 +64,6 @@ export const translations = {
         energySaving: "Энергосбережение"
       } 
     },
-<<<<<<< HEAD
     prime: {
       title: "Nuxus Premium",
       subtitle: "Активируйте максимальный потенциал Ядра",
@@ -97,8 +86,6 @@ export const translations = {
       autoRenewDesc: "Сумма будет списываться автоматически каждый месяц",
       renewing: "Продление..."
     },
-=======
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
     auth: { 
       title: "Вход в аккаунт", 
       subtitle: "Ваш безопасный мессенджер", 
@@ -134,11 +121,7 @@ export const translations = {
       assets: "Мои активы",
       topup: "Пополнение",
       transfer: "Перевод STK",
-<<<<<<< HEAD
       info: "STK (Stellar Credits) — это внутренняя единица Ядра. Курс: 1 STK = 1 RUB. Используется для обмена подарками и артефактами.",
-=======
-      info: "STK (Stellar Credits) — это внутренняя единица Ядра для обмена подарками и артефактами. Не является криптовалютой или финансовым активом.",
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
       disclaimer: "Все операции защищены протоколом QES. © Nuxus Quantum Platforms."
     },
     initializing: "Загрузка системы...",
@@ -213,7 +196,6 @@ export const translations = {
         energySaving: "Power Saving"
       } 
     },
-<<<<<<< HEAD
     prime: {
       title: "Nuxus Premium",
       subtitle: "Activate Core maximum potential",
@@ -236,8 +218,6 @@ export const translations = {
       autoRenewDesc: "The amount will be deducted automatically each month",
       renewing: "Renewing..."
     },
-=======
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
     auth: { 
       title: "Sign In", 
       subtitle: "Secure messaging starts here", 
@@ -255,11 +235,7 @@ export const translations = {
     explore: {
       title: "Explore",
       subtitle: "Discover Nuxus Network Nodes",
-<<<<<<< HEAD
       description: "Explore find public channels, open communities and new nodes. 1 STK = 1 RUB rate active. Join the global network.",
-=======
-      description: "Explore find public channels, open communities and new nodes. Join the global network.",
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
       recommended: "Recommended Nodes",
       categories: "Categories",
       events: "Active Events",
@@ -277,11 +253,7 @@ export const translations = {
       assets: "My Assets",
       topup: "Top Up",
       transfer: "Transfer STK",
-<<<<<<< HEAD
       info: "STK (Stellar Credits) is internal Core unit. Rate: 1 STK = 1 RUB. Not a financial instrument.",
-=======
-      info: "STK (Stellar Credits) is internal Core unit for artifacts and gifts. Not a financial instrument.",
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
       disclaimer: "All rights reserved by Nuxus Quantum Platforms."
     },
     initializing: "Initializing...",
