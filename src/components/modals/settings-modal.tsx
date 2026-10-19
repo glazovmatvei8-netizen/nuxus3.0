@@ -196,6 +196,10 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     reader.readAsDataURL(file);
   };
 
+  // Безопасное получение массивов фич
+  const plusFeatures = Array.isArray(t('prime.plus.features')) ? t('prime.plus.features') : [];
+  const oneFeatures = Array.isArray(t('prime.one.features')) ? t('prime.one.features') : [];
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg bg-[#0a0a0c]/98 backdrop-blur-[80px] border-white/10 p-0 overflow-hidden h-[85dvh] flex flex-col rounded-[3rem] shadow-2xl outline-none">
@@ -275,7 +279,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 </div>
 
                 <div className="grid grid-cols-1 gap-6">
-                   {/* NUXUS PLUS */}
                    <div className="bg-[#1C1C1E] rounded-[2.5rem] border border-white/5 overflow-hidden flex flex-col shadow-2xl relative group">
                       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-accent" />
                       <div className="p-8 space-y-6">
@@ -290,7 +293,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                          </div>
                          
                          <div className="space-y-3">
-                            {t('prime.plus.features').map((f: string, i: number) => (
+                            {plusFeatures.map((f: string, i: number) => (
                               <div key={i} className="flex items-center gap-3">
                                  <CheckCircle2 className="w-4 h-4 text-primary" />
                                  <span className="text-xs font-bold text-white/80 uppercase tracking-tight">{f}</span>
@@ -311,7 +314,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                       </div>
                    </div>
 
-                   {/* NUXUS ONE+ */}
                    <div className="bg-primary/5 rounded-[2.5rem] border border-primary/30 overflow-hidden flex flex-col shadow-2xl relative group">
                       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,hsla(var(--primary),0.15),transparent_70%)]" />
                       <div className="p-8 space-y-6 relative z-10">
@@ -326,7 +328,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                          </div>
                          
                          <div className="space-y-3">
-                            {t('prime.one.features').map((f: string, i: number) => (
+                            {oneFeatures.map((f: string, i: number) => (
                               <div key={i} className="flex items-center gap-3">
                                  <Zap className="w-4 h-4 text-primary fill-current" />
                                  <span className="text-xs font-bold text-white uppercase tracking-tight">{f}</span>

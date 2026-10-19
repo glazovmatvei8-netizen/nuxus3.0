@@ -16,8 +16,8 @@ export const FirebaseContext = createContext<FirebaseContextState>({
 });
 
 /**
- * NUXUS FIREBASE PROVIDER V75.0
- * ОПТИМИЗИРОВАНО: Гарантированный выход из состояния загрузки.
+ * NUXUS FIREBASE PROVIDER V145.0
+ * ОПТИМИЗИРОВАНО: Принудительное сохранение сессии и моментальный выход из загрузки.
  */
 export const FirebaseProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -26,12 +26,11 @@ export const FirebaseProvider: React.FC<{ children: ReactNode }> = ({ children }
   useEffect(() => {
     const auth = nuxus.auth;
     if (!auth) {
-      console.warn("NUXUS PROVIDER: Auth engine not responding");
       setIsUserLoading(false);
       return;
     }
 
-    // Слушатель состояния
+    // Слушатель состояния с приоритетом на существующую сессию
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser);
       setIsUserLoading(false);
@@ -40,10 +39,10 @@ export const FirebaseProvider: React.FC<{ children: ReactNode }> = ({ children }
       setIsUserLoading(false);
     });
 
-    // Резервный сброс через 5 секунд если слушатель молчит
+    // Резервный сброс сокращен до 2 секунд для моментального входа
     const fallback = setTimeout(() => {
       setIsUserLoading(false);
-    }, 5000);
+    }, 2000);
 
     return () => {
       unsubscribe();

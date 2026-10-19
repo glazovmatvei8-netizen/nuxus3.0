@@ -10,7 +10,7 @@ import type { User } from '@/lib/types';
 
 /**
  * TITANIUM SYNC HOOK: useTranslations
- * ОПТИМИЗИРОВАНО: Добавлены защитные механизмы против вылета приложения при отсутствии ключей.
+ * ОПТИМИЗИРОВАНО: Добавлена поддержка возврата массивов и защита от вылетов.
  */
 export function useTranslations() {
   const { user } = useUser();
@@ -27,9 +27,9 @@ export function useTranslations() {
   const dictionary = translations[langCode] || translations.ru;
 
   /**
-   * Функция перевода. Поддерживает вложенные ключи, например 'app.chats'.
+   * Функция перевода. Поддерживает строки и массивы.
    */
-  const t = (key: string): string => {
+  const t = (key: string): any => {
     try {
       if (profile?.settings?.interfaceOverrides?.[key]) {
         return profile.settings.interfaceOverrides[key];
@@ -39,17 +39,17 @@ export function useTranslations() {
       let value: any = dictionary;
       
       for (const k of keys) {
-        if (value && typeof value === 'object' && value[k]) {
+        if (value && typeof value === 'object' && value[k] !== undefined) {
           value = value[k];
         } else {
-          // Резервный поиск по всему словарю
           const fallbackValue = (dictionary as any)[key];
-          if (typeof fallbackValue === 'string') return fallbackValue;
+          if (fallbackValue !== undefined) return fallbackValue;
           return key;
         }
       }
       
-      return typeof value === 'string' ? value : key;
+      // Возвращаем значение, если это строка или массив
+      return (typeof value === 'string' || Array.isArray(value)) ? value : key;
     } catch (e) {
       console.warn("Translation Error for key:", key, e);
       return key;
