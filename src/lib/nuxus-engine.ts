@@ -1,77 +1,90 @@
 
 'use client';
 
-import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
-import { initializeAuth, indexedDBLocalPersistence, browserLocalPersistence, Auth } from 'firebase/auth';
-import { initializeFirestore, Firestore, persistentLocalCache, persistentSingleTabManager, terminate, clearIndexedDbPersistence } from 'firebase/firestore';
+import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
+import { getAuth, Auth, indexedDBLocalPersistence, browserLocalPersistence, setPersistence } from 'firebase/auth';
+import { getFirestore, Firestore, persistentLocalCache, terminate, clearIndexedDbPersistence, initializeFirestore } from 'firebase/firestore';
 import { firebaseConfig } from '@/firebase/config';
-import { Preferences } from '@capacitor/preferences';
 
 /**
- * NUXUS ENGINE V149.0 «TITANIUM STABILITY»
- * ОПТИМИЗИРОВАНО: Предотвращение дублирования инстансов для исключения ошибки 'ca9'.
+ * NUXUS ENGINE V150.0 «TITANIUM SHIELD»
+ * ОПТИМИЗИРОВАНО: Глобальный Singleton-паттерн через window для исключения ошибки 'ca9'.
  */
 
-let appInstance: FirebaseApp | undefined;
-let authInstance: Auth | undefined;
-let dbInstance: Firestore | undefined;
+declare global {
+  interface Window {
+    __NUXUS_APP__: FirebaseApp;
+    __NUXUS_AUTH__: Auth;
+    __NUXUS_DB__: Firestore;
+    __NUXUS_IGNITED__: boolean;
+  }
+}
 
 const ignite = () => {
-  if (typeof window === 'undefined') return;
-  
-  // Singleton pattern check
-  if (appInstance && dbInstance) return;
+  if (typeof window === 'undefined' || window.__NUXUS_IGNITED__) return;
 
   try {
     const apps = getApps();
-    appInstance = apps.length > 0 ? apps[0] : initializeApp(firebaseConfig);
+    const app = apps.length > 0 ? apps[0] : initializeApp(firebaseConfig);
     
-    // Инициализация Auth (только если не создана)
-    if (!authInstance) {
-      authInstance = initializeAuth(appInstance, {
-        persistence: [indexedDBLocalPersistence, browserLocalPersistence]
-      });
-    }
+    // Используем упрощенную инициализацию без TabManager для стабильности в Capacitor/PWA
+    const db = initializeFirestore(app, {
+      localCache: persistentLocalCache({})
+    });
 
-    // Инициализация Firestore с защитой от повторного вызова
-    if (!dbInstance) {
-      dbInstance = initializeFirestore(appInstance, {
-        localCache: persistentLocalCache({
-          tabManager: persistentSingleTabManager()
-        })
-      });
+    const auth = getAuth(app);
+    // Принудительная установка персистентности
+    setPersistence(auth, indexedDBLocalPersistence).catch(() => {
+      setPersistence(auth, browserLocalPersistence);
+    });
+
+    window.__NUXUS_APP__ = app;
+    window.__NUXUS_DB__ = db;
+    window.__NUXUS_AUTH__ = auth;
+    window.__NUXUS_IGNITED__ = true;
+
+    console.log('%c🛰️ NUXUS KERNEL: TITANIUM SHIELD ACTIVE V150', 'color: #E58E38; font-weight: bold;');
+  } catch (e: any) {
+    if (e.code === 'failed-precondition') {
+      console.warn("Nuxus Kernel: Persistence multi-tab conflict.");
+    } else {
+      console.error("NUXUS KERNEL: IGNITION CRASHED", e);
     }
-    
-    console.log('%c🛰️ NUXUS KERNEL: TITANIUM STABILITY ACTIVE V149', 'color: #34C759; font-weight: bold;');
-  } catch (e) {
-    console.error("NUXUS KERNEL: IGNITION CRASHED", e);
-    // Аварийный сброс при критическом сбое инициализации
-    if (!appInstance) appInstance = initializeApp(firebaseConfig);
   }
 };
 
 export const nuxus = {
   get app() { 
-    if (typeof window !== 'undefined' && !appInstance) ignite();
-    return appInstance; 
+    if (typeof window !== 'undefined') {
+      if (!window.__NUXUS_IGNITED__) ignite();
+      return window.__NUXUS_APP__;
+    }
+    return undefined;
   },
   get auth() { 
-    if (typeof window !== 'undefined' && !authInstance) ignite();
-    return authInstance; 
+    if (typeof window !== 'undefined') {
+      if (!window.__NUXUS_IGNITED__) ignite();
+      return window.__NUXUS_AUTH__;
+    }
+    return undefined;
   },
   get db() { 
-    if (typeof window !== 'undefined' && !dbInstance) ignite();
-    return dbInstance; 
+    if (typeof window !== 'undefined') {
+      if (!window.__NUXUS_IGNITED__) ignite();
+      return window.__NUXUS_DB__;
+    }
+    return undefined;
   },
   
-  /**
-   * Принудительная перезагрузка Ядра при системных сбоях
-   */
   async emergencyReset() {
-    if (dbInstance) {
-      await terminate(dbInstance);
-      await clearIndexedDbPersistence(dbInstance);
-      window.location.reload();
+    if (typeof window !== 'undefined' && window.__NUXUS_DB__) {
+      try {
+        await terminate(window.__NUXUS_DB__);
+        await clearIndexedDbPersistence(window.__NUXUS_DB__);
+        window.location.reload();
+      } catch (e) {
+        window.location.reload();
+      }
     }
   }
 };

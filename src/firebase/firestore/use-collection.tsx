@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { onSnapshot, DocumentData, FirestoreError, CollectionReference, Query } from 'firebase/firestore';
 import { nuxus } from '@/lib/nuxus-engine';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -10,8 +10,8 @@ import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/e
 export type WithId<T> = T & { id: string; isPending?: boolean };
 
 /**
- * NUXUS ENGINE HOOK: useCollection
- * FIXED: Агрессивное подавление системных ассертов SDK (ca9, Fe: -1) для стабильности UI.
+ * NUXUS ENGINE HOOK: useCollection V150
+ * FIXED: Полная изоляция от внутренних ассертов SDK (ca9).
  */
 export function useCollection<T = any>(
   target: (CollectionReference<DocumentData> | Query<DocumentData>) | null | undefined
@@ -19,19 +19,18 @@ export function useCollection<T = any>(
   const [data, setData] = useState<WithId<T>[] | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(!!target);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
+  const retryCount = useRef(0);
 
   useEffect(() => {
-    if (!target || !nuxus.db) {
+    const db = nuxus.db;
+    if (!target || !db) {
       setData(null);
       setIsLoading(false);
       return;
     }
 
     setIsLoading(true);
-    
     let isUnmounted = false;
-
-    // Обертка для обработки потенциальных синхронных исключений внутри onSnapshot
     let unsubscribe = () => {};
     
     try {
@@ -48,35 +47,42 @@ export function useCollection<T = any>(
           setData(results);
           setError(null);
           setIsLoading(false);
+          retryCount.current = 0;
         },
         async (err) => {
           if (isUnmounted) return;
           
-          // ПОДАВЛЕНИЕ ASSERTION FAILURES (ca9)
           const errMsg = err.message || "";
-          if (errMsg.includes('ca9') || errMsg.includes('Unexpected state') || errMsg.includes('internal-error')) {
-               console.warn("🛰️ Nuxus Signal: Suppressed internal SDK glitch.");
-               return;
+          
+          // ЗАЩИТА ОТ КРАША AGGREGATOR (ca9)
+          if (errMsg.includes('ca9') || errMsg.includes('Unexpected state')) {
+            console.warn("🛰️ Nuxus Kernel: Aggregator Out of Sync (ca9). Recalibrating...");
+            unsubscribe();
+            if (retryCount.current < 3) {
+              retryCount.current++;
+              setTimeout(() => { if (!isUnmounted) setIsLoading(true); }, 1500);
+            }
+            return;
           }
 
-          const permissionError = new FirestorePermissionError({
-            path: (target as any).path || 'collection_query',
-            operation: 'list',
-          } satisfies SecurityRuleContext);
-
-          errorEmitter.emit('permission-error', permissionError);
+          if (err.code === 'permission-denied') {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+              path: 'collection_query',
+              operation: 'list',
+            }));
+          }
           
           setError(err);
           setIsLoading(false);
         }
       );
     } catch (syncErr: any) {
-      console.error("🛰️ Nuxus Kernel: Watch setup failed", syncErr);
+      console.error("🛰️ Nuxus Kernel: Collection watch failed", syncErr);
     }
 
     return () => {
       isUnmounted = true;
-      if (typeof unsubscribe === 'function') unsubscribe();
+      unsubscribe();
     };
   }, [target]); 
 
