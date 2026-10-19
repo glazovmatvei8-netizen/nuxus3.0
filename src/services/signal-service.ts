@@ -51,6 +51,7 @@ export const signalService = {
 
       return msgRef.id;
     } catch (e) {
+      console.error("Signal broadcast error:", e);
       throw new Error("Kernel API Error: Signal Delivery Failed");
     }
   },
@@ -71,7 +72,7 @@ export const signalService = {
       });
       await batch.commit();
     } catch (e) {
-      // Quiet fail
+      console.error("Signal acknowledge error:", e);
     }
   },
 
@@ -114,6 +115,7 @@ export const signalService = {
       const docRef = await addDoc(collection(nuxus.db, 'chats'), newChatData);
       return docRef.id;
     } catch (e) {
+      console.error("Node initialization error:", e);
       throw new Error("Kernel API Error: Node Initialization Failed");
     }
   }

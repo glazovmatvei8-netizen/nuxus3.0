@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
@@ -9,11 +8,7 @@ import type { Message, Story, Track } from './types';
  * Централизованное хранилище состояния, изолированное от Firebase.
  */
 
-<<<<<<< HEAD
-export type MainView = 'chats' | 'contacts' | 'calls' | 'profile' | 'archive' | 'music' | 'wallet' | 'games' | 'discovery';
-=======
 export type MainView = 'chats' | 'contacts' | 'calls' | 'profile' | 'archive' | 'music' | 'wallet' | 'games' | 'discovery' | 'ai';
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
 
 interface AppState {
   currentChatId: string | null;
@@ -78,13 +73,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (savedNames) {
         try {
           setSlotNames(JSON.parse(savedNames));
-<<<<<<< HEAD
-        } catch (e) {}
-=======
         } catch (e) {
-          console.error("Failed to parse slot names from localStorage:", e);
+          console.error("Failed to parse slot names:", e);
         }
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
       }
     }
   }, []);

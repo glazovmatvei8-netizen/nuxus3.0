@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useEffect, useMemo } from 'react';
@@ -9,40 +8,26 @@ import CallsView from './calls-view';
 import ProfileView from './profile-view';
 import WalletView from './wallet-view';
 import DiscoveryView from './discovery-view';
-<<<<<<< HEAD
-=======
-import NuxusAiView from './nuxus-ai-view';
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
 import { useAppState } from '@/lib/app-state';
-import { cn } from '@/lib/utils';
+import { cn, triggerHaptic } from '@/lib/utils';
 import { useUser, useFirestore } from '@/firebase/provider';
 import { useCollection } from '@/firebase/firestore/use-collection';
-import { collection, query, where, limit, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, limit, doc, updateDoc } from 'firebase/firestore';
 import { CallOverlay } from './modals/call-overlay';
 import { NotificationListener } from './notification-listener';
 import { SettingsModal } from './modals/settings-modal';
 import { GlobalSearchModal } from './modals/global-search-modal';
 import { ForwardModal } from './modals/forward-modal';
 import { UserProfileModal } from './modals/user-profile-modal';
-import { UserAvatar } from './user-avatar';
 import type { Call } from '@/lib/types';
 import { 
-  MessageSquare, Settings, Phone, Wallet, 
-<<<<<<< HEAD
+  MessageSquare, Phone, Wallet, 
   Globe, LayoutGrid
 } from 'lucide-react';
 
 /**
  * NUXUS CHAT MAIN V143.0 «PRIME NAVIGATION»
- * ОПТИМИЗИРОВАНО: 5 кнопок в нижней панели для идеального баланса на мобильных устройствах.
-=======
-  Globe, LayoutGrid, Sparkles
-} from 'lucide-react';
-
-/**
- * NUXUS CHAT MAIN V127.0 «PRESENCE HEARTBEAT»
- * Внедрен механизм обновления статуса "В сети" в реальном времени.
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
+ * ОПТИМИЗИРОВАНО: Cleaned from merge conflict markers.
  */
 export default function ChatMain() {
   const { 
@@ -64,16 +49,12 @@ export default function ChatMain() {
           lastSeen: new Date().toISOString()
         });
       } catch (e) {
-<<<<<<< HEAD
-        console.warn("Nuxus Presence: Heartbeat failed");
-=======
         console.error("Nuxus Presence: Heartbeat failed", e);
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
       }
     };
 
-    updatePresence(); // Сразу при входе
-    const interval = setInterval(updatePresence, 30000); // Каждые 30 секунд
+    updatePresence();
+    const interval = setInterval(updatePresence, 30000);
 
     return () => clearInterval(interval);
   }, [db, user?.uid]);
@@ -96,18 +77,10 @@ export default function ChatMain() {
     }
   }, [incomingCalls, activeCallId, setActiveCallId]);
 
-<<<<<<< HEAD
-  // ГАРАНТИРОВАННЫЕ 5 КНОПОК ДЛЯ МОБИЛЬНОЙ ВЕРСИИ
-=======
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
   const NAV_ITEMS = [
     { id: 'discovery', icon: Globe, label: 'EXPLORE' },
     { id: 'calls', icon: Phone, label: 'CALLS' },
     { id: 'chats', icon: MessageSquare, label: 'CHATS' },
-<<<<<<< HEAD
-=======
-    { id: 'ai', icon: Sparkles, label: 'AI CORE' },
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
     { id: 'wallet', icon: Wallet, label: 'WALLET' },
     { id: 'profile', icon: LayoutGrid, label: 'NODES' },
   ];
@@ -145,42 +118,24 @@ export default function ChatMain() {
 
         <div className="flex-1 flex overflow-hidden h-full relative">
           <div className={cn(
-<<<<<<< HEAD
             "w-full md:w-[400px] lg:w-[440px] h-full flex-shrink-0 z-30 bg-transparent border-r border-white/5 relative overflow-hidden transition-all duration-300", 
-=======
-            "w-full h-full flex-shrink-0 z-30 bg-transparent relative overflow-hidden transition-all duration-300", 
-            activeView === 'ai' ? "w-full border-r-0" : "md:w-[400px] lg:w-[440px] border-r border-white/5",
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
             (currentChatId && activeView === 'chats') ? "hidden md:block" : "block"
           )}>
             <div className="h-full w-full contain-strict">
               {activeView === 'chats' && <ChatSidebar />}
               {activeView === 'contacts' && <ContactsView />}
               {activeView === 'calls' && <CallsView />}
-<<<<<<< HEAD
-=======
-              {activeView === 'ai' && <NuxusAiView />}
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
               {activeView === 'profile' && <ProfileView />}
               {activeView === 'wallet' && <WalletView />}
               {activeView === 'discovery' && <DiscoveryView />}
             </div>
           </div>
           
-<<<<<<< HEAD
           <div className={cn(
             "flex-1 h-full flex flex-col min-w-0 bg-[#0a0a0c]/50 relative z-20 overflow-hidden transition-all duration-300", 
             (!currentChatId || ['profile', 'wallet', 'discovery', 'calls'].includes(activeView)) ? "hidden md:flex" : "flex"
           )}>
             <div className="h-full w-full overflow-hidden flex flex-col bg-transparent contain-content">
-=======
-          {activeView !== 'ai' && (
-            <div className={cn(
-              "flex-1 h-full flex flex-col min-w-0 bg-[#0a0a0c]/50 relative z-20 overflow-hidden transition-all duration-300", 
-              (!currentChatId || ['profile', 'wallet', 'discovery', 'calls'].includes(activeView)) ? "hidden md:flex" : "flex"
-            )}>
-              <div className="h-full w-full overflow-hidden flex flex-col bg-transparent contain-content">
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
               {currentChatId ? <ChatArea /> : (
                 <div className="hidden md:flex flex-1 flex-col items-center justify-center p-16 text-center space-y-12 opacity-30">
                    <div className="relative">
@@ -194,18 +149,9 @@ export default function ChatMain() {
               )}
             </div>
           </div>
-<<<<<<< HEAD
         </div>
       </div>
 
-      {/* MOBILE BOTTOM NAV - GUAARANTEED 5 BUTTONS FOR MAX COMFORT */}
-=======
-        )}
-        </div>
-      </div>
-
-      {/* MOBILE BOTTOM NAV */}
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
       {(!currentChatId || activeView !== 'chats') && (
         <div className="md:hidden nuxus-floating-nav">
           {NAV_ITEMS.map((item) => (
@@ -214,11 +160,7 @@ export default function ChatMain() {
                icon={item.icon} 
                label={item.label}
                active={activeView === item.id} 
-<<<<<<< HEAD
                onClick={() => { triggerHaptic(); setActiveView(item.id as any); }} 
-=======
-               onClick={() => setActiveView(item.id as any)} 
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
                isProfile={item.id === 'profile'}
                userId={user?.uid}
              />
@@ -240,11 +182,7 @@ function NavButton({ icon: Icon, label, active, onClick, isProfile, userId }: an
     <button 
       onClick={onClick} 
       className={cn(
-<<<<<<< HEAD
         "flex flex-col items-center justify-center gap-1 transition-all duration-300 relative flex-1 min-w-0", 
-=======
-        "flex flex-col items-center justify-center gap-1.5 transition-all duration-300 relative min-w-[60px]", 
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
         active ? "text-white" : "text-muted-foreground/60"
       )}
     >
@@ -262,11 +200,7 @@ function NavButton({ icon: Icon, label, active, onClick, isProfile, userId }: an
         )}
       </div>
       <span className={cn(
-<<<<<<< HEAD
         "text-[7px] font-black uppercase tracking-widest italic transition-colors truncate w-full",
-=======
-        "text-[8px] font-black uppercase tracking-widest italic transition-colors",
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
         active ? "text-primary" : "text-muted-foreground/40"
       )}>
         {label}

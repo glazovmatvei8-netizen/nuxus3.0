@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -17,31 +16,19 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Settings2, Camera, ShieldCheck, Loader2, Fingerprint, Palette, 
   ChevronRight, Globe, Trash2, Mail, Phone, Lock, Image as ImageIcon,
-<<<<<<< HEAD
   Info, HelpCircle, UserCheck, ShieldAlert, RefreshCw, KeyRound, Crown, FileText, Sun, Moon, Type, LayoutGrid, Zap, Calendar, Star, Sparkles, CheckCircle2
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
 import { doc, updateDoc, increment, collection, addDoc } from 'firebase/firestore';
-=======
-  Info, HelpCircle, UserCheck, ShieldAlert, RefreshCw, KeyRound, Crown, FileText, Sun, Moon, Type, LayoutGrid, Zap, Calendar
-} from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { signOut } from 'firebase/auth';
-import { doc, updateDoc } from 'firebase/firestore';
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppState } from '@/lib/app-state';
 import { isUserPremium, cn, compressImage, triggerHaptic } from '@/lib/utils';
 import type { User } from '@/lib/types';
 import { useTranslations } from '@/hooks/use-translations';
 import versions from '@/app/versions.json';
-<<<<<<< HEAD
 import { addDays, format, parseISO } from 'date-fns';
 import { ru } from 'date-fns/locale';
-=======
-import Image from 'next/image';
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
 
 const NAME_COLORS = [
   'text-orange-500', 'text-blue-500', 'text-green-500', 
@@ -71,10 +58,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const { data: profile, isLoading: isProfileLoading } = useDoc<User>(userRef);
 
   const [isSaving, setIsSaving] = useState(false);
-<<<<<<< HEAD
   const [isBuying, setIsBuying] = useState<string | null>(null);
-=======
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [bgPreview, setBgPreview] = useState<string | null>(null);
   const [iconPreview, setIconPreview] = useState<string | null>(null);
@@ -85,12 +69,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     nameColor: 'text-orange-500', borderRadius: 24,
     bubbleStyle: 'default' as any, fontFamily: 'jakarta' as any,
     messageSize: 'medium' as any,
-<<<<<<< HEAD
     isGhostMode: false, isEnergySaving: false, twoFactorEnabled: false, twoFactorPin: '', twoFactorPinLength: '6' as '4' | '6',
     autoRenew: false
-=======
-    isGhostMode: false, isEnergySaving: false, twoFactorEnabled: false, twoFactorPin: '', twoFactorPinLength: '6' as '4' | '6'
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
   });
 
   useEffect(() => {
@@ -113,12 +93,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         isEnergySaving: !!profile.settings?.privacy?.isEnergySaving,
         twoFactorEnabled: !!profile.twoFactorEnabled,
         twoFactorPin: profile.twoFactorPin || '',
-<<<<<<< HEAD
         twoFactorPinLength: profile.twoFactorPinLength || '6',
         autoRenew: !!profile.autoRenew
-=======
-        twoFactorPinLength: profile.twoFactorPinLength || '6'
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
       });
       setAvatarPreview(profile.avatarUrl || null);
       setBgPreview(profile.settings?.chatBackground || null);
@@ -144,10 +120,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         twoFactorEnabled: form.twoFactorEnabled,
         twoFactorPin: form.twoFactorPin,
         twoFactorPinLength: form.twoFactorPinLength,
-<<<<<<< HEAD
         autoRenew: form.autoRenew,
-=======
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
         'settings.appearance': form.appearance,
         'settings.theme': form.theme,
         'settings.bubbleStyle': form.bubbleStyle,
@@ -165,21 +138,16 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
       toast({ title: t('saved') });
       onOpenChange(false);
     } catch (e: any) { 
-<<<<<<< HEAD
-=======
-      console.error("Failed to save settings in settings-modal:", e);
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
+      console.error("Failed to save settings:", e);
       toast({ title: t('error'), variant: "destructive" }); 
     } finally { 
       setIsSaving(false); 
     }
   };
 
-<<<<<<< HEAD
   const handleBuySubscription = async (tier: 'plus' | 'one', price: number) => {
     if (!db || !user || !profile) return;
     
-    // Если подписка уже активна
     if (profile.premiumTier === tier && profile.premiumUntil && new Date(profile.premiumUntil) > new Date()) {
       toast({ title: "Уже активно", description: `Подписка действует до ${format(parseISO(profile.premiumUntil), 'd MMMM yyyy', { locale: ru })}` });
       return;
@@ -214,14 +182,13 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
       toast({ title: `${planName} Активен!`, description: `Привилегии до ${format(parseISO(expiryDate), 'd MMMM', { locale: ru })}` });
     } catch (e) {
+      console.error("Failed to activate premium:", e);
       toast({ title: "Сбой активации", variant: "destructive" });
     } finally {
       setIsBuying(null);
     }
   };
 
-=======
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
   const handleLogout = async () => {
     if (!auth) return;
     const ok = confirm("Выйти из этого узла?");
@@ -244,7 +211,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     reader.readAsDataURL(file);
   };
 
-<<<<<<< HEAD
   const isTierActive = (tier: string) => {
     if (!profile?.premiumTier || !profile?.premiumUntil) return false;
     return profile.premiumTier === tier && new Date(profile.premiumUntil) > new Date();
@@ -253,8 +219,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const plusFeatures = Array.isArray(t('prime.plus.features')) ? t('prime.plus.features') : [];
   const oneFeatures = Array.isArray(t('prime.one.features')) ? t('prime.one.features') : [];
 
-=======
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg bg-[#0a0a0c]/98 backdrop-blur-[80px] border-white/10 p-0 overflow-hidden h-[85dvh] flex flex-col rounded-[3rem] shadow-2xl outline-none">
@@ -277,20 +241,12 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         
         <Tabs value={settingsTab} onValueChange={setSettingsTab} className="flex-1 flex flex-col min-h-0">
           <div className="px-6 mt-4">
-<<<<<<< HEAD
             <TabsList className="grid grid-cols-5 bg-white/5 p-1 rounded-xl border border-white/5 shadow-inner">
               <TabsTrigger value="profile" className="text-[8px] font-black uppercase tracking-tight h-8">Профиль</TabsTrigger>
               <TabsTrigger value="privacy" className="text-[8px] font-black uppercase tracking-tight h-8">Защита</TabsTrigger>
               <TabsTrigger value="style" className="text-[8px] font-black uppercase tracking-tight h-8">Стиль</TabsTrigger>
               <TabsTrigger value="prime" className="text-[8px] font-black uppercase tracking-tight h-8 text-primary">Premium</TabsTrigger>
               <TabsTrigger value="data" className="text-[8px] font-black uppercase tracking-tight h-8">Инфо</TabsTrigger>
-=======
-            <TabsList className="grid grid-cols-4 bg-white/5 p-1 rounded-xl border border-white/5 shadow-inner">
-              <TabsTrigger value="profile" className="text-[9px] font-black uppercase tracking-widest h-8">Аккаунт</TabsTrigger>
-              <TabsTrigger value="privacy" className="text-[9px] font-black uppercase tracking-widest h-8">Защита</TabsTrigger>
-              <TabsTrigger value="style" className="text-[9px] font-black uppercase tracking-widest h-8">Стиль</TabsTrigger>
-              <TabsTrigger value="data" className="text-[9px] font-black uppercase tracking-widest h-8">Инфо</TabsTrigger>
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
             </TabsList>
           </div>
 
@@ -335,7 +291,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                  </div>
               </TabsContent>
 
-<<<<<<< HEAD
               <TabsContent value="prime" className="space-y-8 m-0 animate-in fade-in duration-500">
                 <div className="text-center space-y-2">
                    <h2 className="text-3xl font-black italic uppercase text-white tracking-tighter">{t('prime.title')}</h2>
@@ -351,7 +306,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 </div>
 
                 <div className="grid grid-cols-1 gap-6">
-                   {/* NUXUS PLUS */}
                    <div className="bg-[#1C1C1E] rounded-[2.5rem] border border-white/5 overflow-hidden flex flex-col shadow-2xl relative group">
                       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-accent" />
                       <div className="p-8 space-y-6">
@@ -390,7 +344,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                       </div>
                    </div>
 
-                   {/* NUXUS ONE+ */}
                    <div className="bg-primary/5 rounded-[2.5rem] border border-primary/30 overflow-hidden flex flex-col shadow-2xl relative group">
                       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,hsla(var(--primary),0.15),transparent_70%)]" />
                       <div className="p-8 space-y-6 relative z-10">
@@ -431,8 +384,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 </div>
               </TabsContent>
 
-=======
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
               <TabsContent value="style" className="space-y-8 m-0 animate-in fade-in duration-300">
                  <div className="bg-white/5 p-5 rounded-[1.8rem] border border-white/5 space-y-5">
                     <div className="flex items-center justify-between">

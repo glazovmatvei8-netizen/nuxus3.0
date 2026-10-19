@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-
-=======
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
 "use client"
 
 import React, { useState, useMemo } from 'react';
@@ -15,29 +11,22 @@ import { Progress } from '@/components/ui/progress';
 import { useFirestore } from '@/firebase/provider'; 
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { useMemoFirebase } from '@/firebase/firestore/use-memo-firebase';
-<<<<<<< HEAD
-import { collection, query, doc, limit, writeBatch, increment, updateDoc, deleteDoc, orderBy } from 'firebase/firestore';
-=======
-import { collection, query, doc, limit, writeBatch } from 'firebase/firestore';
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
+import { collection, query, doc, limit, writeBatch, increment, deleteDoc, orderBy } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   ShieldAlert, Users, Ban, Activity, 
-  Search, Crown, Mail, Send, Sparkles,
-<<<<<<< HEAD
+  Search, Crown, Mail, Send, 
   Loader2, Terminal, Coins, Check, X
 } from 'lucide-react';
-import type { User, Transaction, TopUpRequest } from '@/lib/types';
+import type { User, TopUpRequest } from '@/lib/types';
 import { formatDisplayName, cn, isUserPremium, triggerHaptic } from '@/lib/utils';
-=======
-  Loader2, Terminal
-} from 'lucide-react';
-import type { User } from '@/lib/types';
-import { formatDisplayName, cn, isUserPremium } from '@/lib/utils';
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
 import { useToast } from '@/hooks/use-toast';
 import { useAppState } from '@/lib/app-state';
 
+/**
+ * ADMIN PANEL V155.0 «ORDER PROTOCOL»
+ * UPDATED: Cleaned from merge conflict markers.
+ */
 export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const db = useFirestore();
   const { toast } = useToast();
@@ -50,7 +39,6 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   const [broadcastBody, setBroadcastBody] = useState('');
   const [isBroadcasting, setIsBroadcasting] = useState(false);
 
-<<<<<<< HEAD
   // Queries
   const usersQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'users'), limit(500))), [db]);
   const { data: allUsers, isLoading: isUsersLoading } = useCollection<User>(usersQuery);
@@ -58,23 +46,14 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   const requestsQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'topUpRequests'), orderBy('createdAt', 'desc'), limit(100))), [db]);
   const { data: topUpRequests, isLoading: isRequestsLoading } = useCollection<TopUpRequest>(requestsQuery);
 
-=======
-  const usersQuery = useMemoFirebase(() => {
-    if (!db) return null;
-    return query(collection(db, 'users'), limit(500));
-  }, [db]);
-  const { data: allUsers, isLoading: isUsersLoading } = useCollection<User>(usersQuery);
-
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
   const stats = useMemo(() => {
     if (!allUsers) return { total: 0, active: 0, premium: 0, banned: 0, emails: 0 };
     const banned = allUsers.filter(u => u.isBanned).length;
     const premium = allUsers.filter(u => isUserPremium(u)).length;
-    const emails = allUsers.filter(u => u.email && !u.email.includes('@nuxus.chat')).length;
+    const emails = allUsers.filter(u => u.email && !u.email.includes('@nuxus.internal')).length;
     return { total: allUsers.length, active: allUsers.length - banned, premium, banned, emails };
   }, [allUsers]);
 
-<<<<<<< HEAD
   const handleApproveRequest = async (request: TopUpRequest) => {
     if (!db) return;
     triggerHaptic();
@@ -115,14 +94,12 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     }
   };
 
-=======
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
   const handleStartBroadcast = async () => {
     if (!broadcastSubject.trim() || !broadcastBody.trim() || !allUsers || !db) {
       toast({ title: "Ошибка данных" });
       return;
     }
-    const targets = allUsers.filter(u => u.email && !u.email.includes('@nuxus.chat'));
+    const targets = allUsers.filter(u => u.email && !u.email.includes('@nuxus.internal'));
     if (targets.length === 0) { toast({ title: "Нет адресатов" }); return; }
     
     setIsBroadcasting(true);
@@ -140,10 +117,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
       toast({ title: "Рассылка запущена" });
       setBroadcastSubject(''); setBroadcastBody('');
     } catch (e) { 
-<<<<<<< HEAD
-=======
       console.error("Admin broadcast error:", e);
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
       toast({ title: "Сбой шлюза", variant: "destructive" }); 
     } finally { 
       setIsBroadcasting(false); 
@@ -163,11 +137,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               </div>
               <div className="flex flex-col text-left">
                 <DialogTitle className="text-2xl font-black uppercase italic text-white tracking-tighter">AEGIS CONTROL</DialogTitle>
-<<<<<<< HEAD
-                <DialogDescription className="text-[8px] font-black uppercase text-primary/60 tracking-[0.4em]">Node Protocol V146.0</DialogDescription>
-=======
-                <DialogDescription className="text-[8px] font-black uppercase text-primary/60 tracking-[0.4em]">Node Protocol V100.1</DialogDescription>
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
+                <DialogDescription className="text-[8px] font-black uppercase text-primary/60 tracking-[0.4em]">Node Protocol V155.0</DialogDescription>
               </div>
             </div>
           </div>
@@ -175,7 +145,6 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
           <div className="px-6 md:px-8 py-4 bg-black/20 border-b border-white/5 shrink-0">
-<<<<<<< HEAD
             <TabsList className="flex bg-white/5 p-1 rounded-xl border border-white/5 overflow-x-auto no-scrollbar justify-start md:justify-center gap-1">
               <TabsTrigger value="analytics" className="px-5 text-[9px] font-black uppercase tracking-widest py-2.5 data-[state=active]:bg-primary data-[state=active]:text-white">Статистика</TabsTrigger>
               <TabsTrigger value="finance" className="px-5 text-[9px] font-black uppercase tracking-widest py-2.5 data-[state=active]:bg-primary data-[state=active]:text-white flex items-center gap-2">
@@ -183,13 +152,6 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               </TabsTrigger>
               <TabsTrigger value="users" className="px-5 text-[9px] font-black uppercase tracking-widest py-2.5 data-[state=active]:bg-primary data-[state=active]:text-white">База узлов</TabsTrigger>
               <TabsTrigger value="broadcast" className="px-5 text-[9px] font-black uppercase tracking-widest py-2.5 data-[state=active]:bg-primary data-[state=active]:text-white">Рассылка</TabsTrigger>
-=======
-            <TabsList className="flex bg-white/5 p-1 rounded-xl border border-white/5 overflow-x-auto no-scrollbar justify-start md:justify-center">
-              <TabsTrigger value="analytics" className="flex-1 min-w-[100px] text-[9px] font-black uppercase tracking-widest py-2.5 data-[state=active]:bg-primary data-[state=active]:text-white">Статистика</TabsTrigger>
-              <TabsTrigger value="users" className="flex-1 min-w-[100px] text-[9px] font-black uppercase tracking-widest py-2.5 data-[state=active]:bg-primary data-[state=active]:text-white">База узлов</TabsTrigger>
-              <TabsTrigger value="broadcast" className="flex-1 min-w-[100px] text-[9px] font-black uppercase tracking-widest py-2.5 data-[state=active]:bg-primary data-[state=active]:text-white">Рассылка</TabsTrigger>
-              <TabsTrigger value="logs" className="flex-1 min-w-[100px] text-[9px] font-black uppercase tracking-widest py-2.5 data-[state=active]:bg-primary data-[state=active]:text-white">Логи</TabsTrigger>
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
             </TabsList>
           </div>
 
@@ -219,7 +181,6 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                    </div>
                 </TabsContent>
 
-<<<<<<< HEAD
                 <TabsContent value="finance" className="m-0 space-y-6 animate-in fade-in duration-500">
                    <div className="flex items-center gap-3 px-2">
                       <Coins className="w-5 h-5 text-primary" />
@@ -269,8 +230,6 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                    </div>
                 </TabsContent>
 
-=======
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
                 <TabsContent value="users" className="m-0 space-y-6 animate-in fade-in duration-500">
                    <div className="relative group sticky top-0 z-20">
                       <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-primary transition-colors" />
@@ -313,10 +272,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                            </div>
                         </div>
                       ))}
-<<<<<<< HEAD
-=======
                       {isUsersLoading && <div className="text-center py-10 animate-pulse text-white/10 uppercase font-black text-[10px]">Syncing Nodes...</div>}
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
                    </div>
                 </TabsContent>
 
@@ -360,14 +316,6 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                    </div>
                 </TabsContent>
 
-<<<<<<< HEAD
-=======
-                <TabsContent value="logs" className="m-0 text-center py-20 opacity-20">
-                   <Activity className="w-12 h-12 mx-auto mb-4" />
-                   <p className="text-[10px] font-black uppercase tracking-widest">Логирование в режиме ожидания</p>
-                </TabsContent>
-
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
               </div>
             </ScrollArea>
           </div>

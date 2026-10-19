@@ -1,4 +1,3 @@
-
 export type MessageType = 'text' | 'image' | 'audio' | 'video' | 'video_note' | 'service' | 'gift' | 'payment_request' | 'album' | 'poll' | 'broadcast' | 'sticker' | 'music';
 
 export interface BotButton {
@@ -65,11 +64,7 @@ export interface Transaction {
   id: string;
   userId: string;
   amount: number;
-<<<<<<< HEAD
   type: 'deposit' | 'withdrawal' | 'transfer_in' | 'transfer_out' | 'gift_purchase' | 'subscription_activation' | 'subscription_renewal';
-=======
-  type: 'deposit' | 'withdrawal' | 'transfer_in' | 'transfer_out' | 'gift_purchase';
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
   status: 'completed' | 'pending' | 'failed';
   otherPartyId?: string;
   otherPartyName?: string;
@@ -86,6 +81,7 @@ export interface Message {
   contentType: MessageType;
   replyToId?: string;
   replyToContent?: string;
+  replyToSenderName?: string;
   editedAt?: string;
   isRead?: boolean;
   isSilent?: boolean;
@@ -212,12 +208,9 @@ export interface User {
   contactIds?: string[]; 
   isBanned?: boolean;
   isPremium?: boolean;
-<<<<<<< HEAD
   premiumTier?: 'none' | 'plus' | 'one';
   premiumUntil?: string;
   autoRenew?: boolean;
-=======
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
   isAdmin?: boolean;
   reputation?: number;
   twoFactorEnabled?: boolean;

@@ -6,17 +6,16 @@ import { Button } from '@/components/ui/button';
 import { useUser, useFirestore } from '@/firebase/provider';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { useMemoFirebase } from '@/firebase/firestore/use-memo-firebase';
-import { useCollection } from '@/firebase/firestore/use-collection';
-import { doc, collection, writeBatch, increment, addDoc, query, where } from 'firebase/firestore';
-import { Gift, Sparkles, Loader2, Wallet, Zap, ChevronRight, Gem } from 'lucide-react';
+import { doc, collection, writeBatch, increment, addDoc } from 'firebase/firestore';
+import { Gift, Loader2, Wallet, ChevronRight, Gem } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import type { User, StickerPack } from '@/lib/types';
-import { cn } from '@/lib/utils';
+import type { User } from '@/lib/types';
+import { cn, triggerHaptic } from '@/lib/utils';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 
 /**
  * GIFT MODAL V5.2.2 «TITANIUM SYNC»
- * ИСПРАВЛЕНО: Прямые импорты хуков.
+ * UPDATED: Cleaned from merge conflict markers.
  */
 
 const PREDEFINED_GIFTS = [
@@ -55,6 +54,7 @@ export function GiftModal({ open, onOpenChange, targetUser, chatId }: { open: bo
     }
 
     setIsSending(true);
+    triggerHaptic();
     try {
       const batch = writeBatch(db);
       
@@ -110,10 +110,7 @@ export function GiftModal({ open, onOpenChange, targetUser, chatId }: { open: bo
       toast({ title: "Подарок отправлен!", description: `${gift.name} теперь в коллекции ${targetUser.name}` });
       onOpenChange(false);
     } catch (e: any) {
-<<<<<<< HEAD
-=======
-      console.error("Failed to send gift in gift-modal:", e);
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
+      console.error("Failed to send gift:", e);
       toast({ title: "Ошибка отправки", description: e.message, variant: "destructive" });
     } finally {
       setIsSending(false);

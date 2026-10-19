@@ -1,4 +1,3 @@
-
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { format, isToday, parseISO, differenceInSeconds } from 'date-fns';
@@ -9,9 +8,6 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-/**
- * ИНТЕЛЛЕКТУАЛЬНЫЙ НОРМАЛИЗАТОР НОМЕРОВ V83.0
- */
 export function normalizePhoneNumber(phone: string): string {
   if (!phone) return '';
   let cleaned = phone.replace(/\D/g, '');
@@ -25,9 +21,6 @@ export function normalizePhoneNumber(phone: string): string {
   return cleaned ? `+${cleaned}` : '';
 }
 
-/**
- * АБСОЛЮТНЫЙ ИДЕНТИФИКАТОР V74.1
- */
 export function formatDisplayName(name: string | undefined | null, username?: string | null): string {
   if (
     name && 
@@ -46,9 +39,6 @@ export function formatDisplayName(name: string | undefined | null, username?: st
   return 'Узел Сети';
 }
 
-/**
- * ПРОВЕРКА АНОМАЛИЙ V102.0
- */
 export function isUserAnomaly(user: User | null | undefined): boolean {
   if (!user) return false;
   const username = (user.username || '').trim().replace('@', '');
@@ -61,14 +51,10 @@ export function encryptSignal(text: string): string {
   try {
     const encoded = btoa(encodeURIComponent(text.trim()));
     return `NX_${encoded}`;
-<<<<<<< HEAD
-  } catch (e) { return text; }
-=======
-  } catch (e) {
+  } catch (e) { 
     console.error("encryptSignal error:", e);
-    return text;
+    return text; 
   }
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
 }
 
 export function decryptSignal(content: string | undefined | null): string {
@@ -81,10 +67,7 @@ export function decryptSignal(content: string | undefined | null): string {
     if (!/^[A-Za-z0-9+/=]+$/.test(raw)) return content;
     return decodeURIComponent(atob(raw));
   } catch (e) { 
-<<<<<<< HEAD
-=======
     console.error("decryptSignal error:", e);
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
     return "Сигнал зашифрован"; 
   }
 }
@@ -109,9 +92,6 @@ export function isUserActuallyBanned(user: User | null | undefined): boolean {
   return false;
 }
 
-/**
- * ПРЕЦИЗИОННЫЙ СТАТУС В СЕТИ V128.0
- */
 export function formatLastSeen(
   lastSeenIso: string | undefined | null, 
   visibility: PrivacyOption = 'everybody',
@@ -131,10 +111,7 @@ export function formatLastSeen(
     
     return `был(а) ${format(lastSeenDate, 'd MMM в HH:mm', { locale: ru })}`;
   } catch (e) { 
-<<<<<<< HEAD
-=======
     console.error("formatLastSeen error:", e);
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
     return 'был(а) недавно'; 
   }
 }
@@ -156,9 +133,6 @@ export async function compressImage(dataUrl: string, maxWidth = 1200, quality = 
   });
 }
 
-/**
- * REPUTATION SYSTEM V2.0
- */
 export function getReputationInfo(reputation: number = 0) {
   const safeRep = typeof reputation === 'number' ? reputation : 0;
   const level = Math.floor(safeRep / 10) + 1;

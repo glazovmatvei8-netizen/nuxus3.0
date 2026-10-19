@@ -7,11 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, ChevronLeft, X, Paperclip, Mic, StopCircle, 
-<<<<<<< HEAD
-  Smile, Trash2, Loader2, Phone, Video, Camera
-=======
   Smile, Trash2, Loader2, Phone, Video, Camera, Sparkles, Wand2
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
 } from 'lucide-react';
 import { MessageItem } from './message-item';
 import { ChatInfoModal } from './modals/chat-info-modal';
@@ -22,43 +18,27 @@ import { useCollection } from '@/firebase/firestore/use-collection';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { useMemoFirebase } from '@/firebase/firestore/use-memo-firebase';
 import { collection, query, orderBy, doc, addDoc } from 'firebase/firestore';
-<<<<<<< HEAD
-import { formatDisplayName, cn, compressImage, triggerHaptic, isUserPremium } from '@/lib/utils';
-=======
 import { formatDisplayName, cn, compressImage, triggerHaptic, isUserPremium, decryptSignal } from '@/lib/utils';
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
 import type { Message, User as UserType, Chat } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useTranslations } from '@/hooks/use-translations';
 import { useToast } from '@/hooks/use-toast';
 import { signalService } from '@/services/signal-service';
-<<<<<<< HEAD
-
-/**
- * CHAT AREA V141.0 «THIN VIEW»
- * Логика JS удалена и заменена вызовами Kernel API (signalService).
- */
-const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelReply }: any) => {
-=======
 import { aiService } from '@/services/ai-service';
 
 /**
  * CHAT AREA V142.0 «QUANTUM AI INTEGRATED»
- * Встроены инструменты Nuxus Core AI: умный ответ, улучшение черновика и сводка переписки.
+ * UPDATED: Cleaned from merge conflict markers.
  */
 const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelReply, recentMessages }: any) => {
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
   const { localDrafts, setLocalDrafts } = useAppState();
   const { t } = useTranslations();
   const { toast } = useToast();
   
   const [messageInput, setMessageInput] = useState(localDrafts[currentChatId] || '');
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
-<<<<<<< HEAD
-=======
   const [isAiDrafting, setIsAiDrafting] = useState(false);
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
   
   const [recordMode, setRecordMode] = useState<'voice' | 'video'>('voice');
   const [isRecording, setIsRecording] = useState(false);
@@ -86,8 +66,6 @@ const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelRepl
     setLocalDrafts(prev => ({ ...prev, [currentChatId]: '' }));
   };
 
-<<<<<<< HEAD
-=======
   const handleAiSmartDraft = async () => {
     if (isAiDrafting) return;
     triggerHaptic();
@@ -117,7 +95,6 @@ const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelRepl
     }
   };
 
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: recordMode === 'video' });
@@ -138,14 +115,10 @@ const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelRepl
       recorder.start();
       setIsRecording(true);
       timerRef.current = setInterval(() => setRecordingDuration(prev => prev + 1), 1000);
-<<<<<<< HEAD
-    } catch (e) { toast({ title: "Нет доступа", variant: "destructive" }); }
-=======
     } catch (e) {
       console.error("Audio recording error:", e);
       toast({ title: "Нет доступа", variant: "destructive" });
     }
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
   };
 
   const stopRecording = () => {
@@ -199,21 +172,13 @@ const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelRepl
         {!isRecording ? (
           <>
             <Button variant="ghost" size="icon" className="h-12 w-12 shrink-0 rounded-2xl bg-white/[0.03] border border-white/5" onClick={() => fileInputRef.current?.click()}><Paperclip className="w-6 h-6 text-white/40" /></Button>
-<<<<<<< HEAD
-            <div className="flex-1 flex items-end bg-white/[0.04] rounded-[1.8rem] border border-white/10 min-h-[48px] px-5 py-2.5">
-=======
             <div className="flex-1 flex items-end bg-white/[0.04] rounded-[1.8rem] border border-white/10 min-h-[48px] px-5 py-2.5 gap-1">
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
               <Textarea 
                 placeholder={t('chat.placeholder')} 
                 className="bg-transparent border-none focus-visible:ring-0 text-white min-h-[26px] max-h-[160px] py-0 text-[15px] resize-none w-full shadow-none" 
                 value={messageInput} 
                 onChange={e => { setMessageInput(e.target.value); setLocalDrafts(prev => ({ ...prev, [currentChatId]: e.target.value })); }} 
               />
-<<<<<<< HEAD
-              <Popover open={isEmojiPickerOpen} onOpenChange={setIsEmojiPickerOpen}>
-                 <PopoverTrigger asChild><Button variant="ghost" size="icon" className="text-white/20 h-8 w-8"><Smile size={20} /></Button></PopoverTrigger>
-=======
               <Button
                 variant="ghost"
                 size="icon"
@@ -227,7 +192,6 @@ const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelRepl
               </Button>
               <Popover open={isEmojiPickerOpen} onOpenChange={setIsEmojiPickerOpen}>
                  <PopoverTrigger asChild><Button variant="ghost" size="icon" className="text-white/20 h-8 w-8 shrink-0"><Smile size={20} /></Button></PopoverTrigger>
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
                  <PopoverContent side="top" className="p-0 border-none bg-transparent w-[320px] mb-6">
                    <EmojiPicker onEmojiSelect={(e) => setMessageInput(messageInput + e)} onStickerSelect={(url) => { onSendMessage(url, 'sticker'); setIsEmojiPickerOpen(false); }} />
                  </PopoverContent>
@@ -272,11 +236,8 @@ export default function ChatArea() {
   
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
-<<<<<<< HEAD
-=======
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [isSummarizing, setIsSummarizing] = useState(false);
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
 
   const userProfileRef = useMemoFirebase(() => (!db || !firebaseUser) ? null : doc(db, 'users', firebaseUser.uid), [db, firebaseUser?.uid]);
   const { data: userProfile } = useDoc<UserType>(userProfileRef);
@@ -291,13 +252,10 @@ export default function ChatArea() {
   const messagesQuery = useMemoFirebase(() => (!db || !currentChatId) ? null : query(collection(db, 'chats', currentChatId, 'messages'), orderBy('sentAt', 'asc')), [db, currentChatId]);
   const { data: messages } = useCollection<Message>(messagesQuery);
 
-<<<<<<< HEAD
-=======
   useEffect(() => {
     setAiSummary(null);
   }, [currentChatId]);
 
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
   // Kernel Sync: Acknowledge signals via API
   useEffect(() => {
     if (currentChatId && messages && firebaseUser) {
@@ -305,8 +263,6 @@ export default function ChatArea() {
     }
   }, [currentChatId, messages, firebaseUser?.uid]);
 
-<<<<<<< HEAD
-=======
   const handleSummarizeChat = async () => {
     if (!messages || messages.length === 0 || isSummarizing) {
       toast({ title: 'Недостаточно сообщений для анализа' });
@@ -338,7 +294,6 @@ export default function ChatArea() {
     }
   };
 
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
   // View Handler: Send message via Kernel API
   const handleSendMessage = useCallback(async (content: string, type: Message['contentType'] = 'text', meta: any = null) => {
     if (!content || !currentChatId || !firebaseUser) return;
@@ -356,10 +311,7 @@ export default function ChatArea() {
       }
       setReplyTo(null);
     } catch (e) {
-<<<<<<< HEAD
-=======
       console.error("Failed to send message in chat-area:", e);
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
       toast({ title: "Сбой шлюза", variant: "destructive" });
     }
   }, [currentChatId, firebaseUser?.uid, userProfile, replyTo, db, toast]);
@@ -379,11 +331,7 @@ export default function ChatArea() {
         </div>
       )}
 
-<<<<<<< HEAD
-      <header className="h-16 border-b border-white/5 bg-white/[0.02] backdrop-blur-xl flex items-center px-4 shrink-0 z-30 shadow-2xl">
-=======
       <header className="h-16 border-b border-white/5 bg-white/[0.02] backdrop-blur-xl flex items-center justify-between px-4 shrink-0 z-30 shadow-2xl">
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
         <div className="flex items-center gap-4 flex-1 min-w-0">
           <Button variant="ghost" size="icon" className="md:hidden rounded-2xl" onClick={() => { triggerHaptic(); setCurrentChatId(null); }}><ChevronLeft size={24} /></Button>
           <div className="flex items-center gap-4 cursor-pointer min-w-0 flex-1 group" onClick={() => otherId ? setInspectedUserId(otherId) : setIsChatInfoOpen(true)}>
@@ -394,10 +342,6 @@ export default function ChatArea() {
             </div>
           </div>
         </div>
-<<<<<<< HEAD
-      </header>
-
-=======
 
         <Button
           variant="ghost"
@@ -427,7 +371,6 @@ export default function ChatArea() {
         </div>
       )}
 
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
       <div className="flex-1 relative overflow-hidden z-10">
         <ScrollArea className="h-full w-full">
           <div className="flex flex-col gap-1 px-4 py-6">
@@ -446,9 +389,6 @@ export default function ChatArea() {
         </ScrollArea>
       </div>
 
-<<<<<<< HEAD
-      <ChatInputBar onSendMessage={handleSendMessage} currentChatId={currentChatId} replyTo={replyTo} onCancelReply={() => setReplyTo(null)} />
-=======
       <ChatInputBar
         onSendMessage={handleSendMessage}
         currentChatId={currentChatId}
@@ -456,7 +396,6 @@ export default function ChatArea() {
         onCancelReply={() => setReplyTo(null)}
         recentMessages={messages}
       />
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
       {chat && <ChatInfoModal open={isChatInfoOpen} onOpenChange={setIsChatInfoOpen} chat={chat as any} />}
     </div>
   );

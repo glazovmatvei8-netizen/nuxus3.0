@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -21,7 +20,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 /**
  * NUXUS HOME GATE V139.0 «STEALTH ACCESS»
- * UPDATED: Removed repetitive "Access Granted" toasts for better UX.
+ * UPDATED: Cleaned from merge conflict markers.
  */
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -60,7 +59,6 @@ export default function Home() {
   // Проверка верификации почты
   const needsVerification = useMemo(() => {
     if (!user) return false;
-    // Пользователи с эмуляцией номера (+... @nuxus.internal) не нуждаются в верификации почты
     if (user.email?.includes('@nuxus.internal')) return false;
     return !user.emailVerified;
   }, [user]);
@@ -71,7 +69,6 @@ export default function Home() {
     try {
       if (profile.twoFactorEnabled && inputToVerify === profile.twoFactorPin) {
         setIs2FAVerified(true);
-        // SILENT SUCCESS: Toast removed as per V139 requirements
         return;
       }
       const pinLimit = parseInt(profile.twoFactorPinLength || '6');
@@ -81,10 +78,7 @@ export default function Home() {
         setTwoFactorInput('');
       }
     } catch (e) {
-<<<<<<< HEAD
-=======
       console.error("2FA verification error:", e);
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
       toast({ title: "Ошибка модуля защиты", variant: "destructive" });
     }
   }, [profile, twoFactorInput, setIs2FAVerified, toast]);
@@ -95,16 +89,11 @@ export default function Home() {
       const ok = await checkBiometric();
       if (ok) {
         setIs2FAVerified(true);
-        // SILENT SUCCESS: Toast removed as per V139 requirements
       } else {
         toast({ title: "Биометрия не распознана", variant: "destructive" });
       }
     } catch (e) {
-<<<<<<< HEAD
-      console.warn("Nuxus FaceID: Signal Rejected");
-=======
       console.error("Nuxus FaceID: Signal Rejected", e);
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
     } finally {
       setIsAuthenticating(false);
     }
@@ -151,7 +140,6 @@ export default function Home() {
 
   if (!user) return <AuthScreen />;
 
-  // Направляем на экран верификации, если почта не подтверждена
   if (needsVerification) {
     return <AuthScreen initialMode="verify" />;
   }
