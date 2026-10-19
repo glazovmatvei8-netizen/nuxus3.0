@@ -1,12 +1,12 @@
 {
-  "latestVersion": "3.0.0-alpha",
+  "latestVersion": "3.0.0",
   "qesVersion": "28.0",
-  "build": "Nuxus-Genesis-3.0-MultiRepo",
+  "build": "Nuxus-Genesis-3.0-Global",
   "sizeMb": 68,
   "changelog": [
     "Architecture: Multi-repository synchronization engine enabled.",
-    "Engine: Migrating core services to Nuxus 3.0 infrastructure.",
+    "Engine: All services migrated to Nuxus 3.0 infrastructure.",
     "Security: QES 28.0 signal handshake protocol optimized.",
-    "System: Push utility updated for seamless project migration."
+    "System: Universal push utility for seamless project migration."
   ]
 }

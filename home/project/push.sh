@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Nuxus Kernel Sync Utility v14.0
+# Nuxus Kernel Sync Utility v15.0
 # Скрипт для принудительной синхронизации и поддержки нескольких репозиториев.
 
 # 1. Настройки по умолчанию
@@ -8,7 +8,7 @@ DEFAULT_REPO_URL="https://github.com/glazovmatvei8-netizen/nuxus2.0.git"
 USER_EMAIL="eventionhorizon@gmail.com"
 USER_NAME="glazovmatvei8-netizen"
 
-# 2. Проверка аргумента (если передан URL другого репозитория)
+# 2. Динамическое определение целевого узла (из аргумента или по умолчанию)
 REPO_URL=${1:-$DEFAULT_REPO_URL}
 
 echo "🚀 Подготовка к трансляции данных в GitHub..."
@@ -37,7 +37,7 @@ git config pull.rebase false
 git add .
 
 # Формируем сообщение
-COMMIT_MSG="Nuxus Core Sync: $(date '+%Y-%m-%d %H:%M:%S') [System: Multi-Repo Push]"
+COMMIT_MSG="Nuxus 3.0 Genesis Sync: $(date '+%Y-%m-%d %H:%M:%S') [Multi-Repo Migration]"
 
 # Коммит
 git commit -m "$COMMIT_MSG"
