@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect, type ReactNode } from 'react';
+import React, { useState, useEffect, type ReactNode, useRef } from 'react';
 import { AppProvider } from '@/lib/app-state'; 
 import { FirebaseProvider, useUser, useFirestore } from '@/firebase/provider';
 import { Toaster } from '@/components/ui/toaster';
@@ -19,19 +19,30 @@ import { useDoc } from '@/firebase/firestore/use-doc';
 import type { User } from '@/lib/types';
 
 /**
- * SOVEREIGN PROVIDER V148.0 «AUTORENEWAL ENGINE»
- * Внедрен защитный механизм автоматического продления подписки.
+ * SOVEREIGN PROVIDER V149.0 «ANTI-CRASH GUARD»
+ * ОПТИМИЗИРОВАНО: Проверка подписки выполняется строго один раз за сессию для исключения циклов и ошибок SDK.
  */
 function SubscriptionGuard({ children }: { children: ReactNode }) {
   const { user } = useUser();
   const db = useFirestore();
   const userRef = React.useMemo(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user?.uid]);
   const { data: profile } = useDoc<User>(userRef);
+  
+  // Флаг для предотвращения цикличных проверок
+  const hasCheckedRef = useRef(false);
 
   useEffect(() => {
-    if (!db || !user || !profile) return;
+    // Сбрасываем флаг только при смене пользователя
+    if (!user) {
+      hasCheckedRef.current = false;
+      return;
+    }
+
+    if (!db || !user || !profile || hasCheckedRef.current) return;
 
     const checkRenewal = async () => {
+      hasCheckedRef.current = true; // Блокируем повторные проверки в этой сессии
+
       // 1. Проверяем, активна ли подписка сейчас
       const isExpired = profile.premiumUntil && new Date(profile.premiumUntil) < new Date();
       
@@ -117,7 +128,7 @@ export function SovereignProvider({ children }: { children: ReactNode }) {
             )}>
               <div className="flex flex-col items-center gap-6">
                 <NuxusLogo size={80} className="opacity-20 animate-pulse" />
-                <p className="text-[10px] font-black uppercase text-white/20 tracking-[0.6em]">Nuxus Kernel V148.0</p>
+                <p className="text-[10px] font-black uppercase text-white/20 tracking-[0.6em]">Nuxus Kernel V149.0</p>
               </div>
             </div>
 

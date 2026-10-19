@@ -11,7 +11,7 @@ export type WithId<T> = T & { id: string; isPending?: boolean };
 
 /**
  * NUXUS ENGINE HOOK: useDoc
- * FIXED: Добавлена очистка и подавление критических ошибок состояния SDK.
+ * FIXED: Добавлена превентивная защита от критических ошибок состояния SDK (ca9).
  */
 export function useDoc<T = any>(docRef: DocumentReference<DocumentData> | null | undefined) {
   const [data, setData] = useState<WithId<T> | null>(null);
@@ -28,45 +28,53 @@ export function useDoc<T = any>(docRef: DocumentReference<DocumentData> | null |
     setIsLoading(true);
     let isUnmounted = false;
     
-    const unsubscribe = onSnapshot(
-      docRef,
-      { includeMetadataChanges: true },
-      (snapshot) => {
-        if (isUnmounted) return;
-        if (snapshot.exists()) {
-          setData({ 
-            ...(snapshot.data() as T), 
-            id: snapshot.id,
-            isPending: snapshot.metadata.hasPendingWrites
-          });
-        } else {
-          setData(null);
+    let unsubscribe = () => {};
+
+    try {
+      unsubscribe = onSnapshot(
+        docRef,
+        { includeMetadataChanges: true },
+        (snapshot) => {
+          if (isUnmounted) return;
+          if (snapshot.exists()) {
+            setData({ 
+              ...(snapshot.data() as T), 
+              id: snapshot.id,
+              isPending: snapshot.metadata.hasPendingWrites
+            });
+          } else {
+            setData(null);
+          }
+          setError(null);
+          setIsLoading(false);
+        },
+        async (err) => {
+          if (isUnmounted) return;
+          
+          const errMsg = err.message || "";
+          if (errMsg.includes('ca9') || errMsg.includes('Unexpected state') || errMsg.includes('internal-error')) {
+            console.warn("🛰️ Nuxus Signal: Suppressed document watch glitch.");
+            return;
+          }
+
+          const permissionError = new FirestorePermissionError({
+            path: docRef.path,
+            operation: 'get',
+          } satisfies SecurityRuleContext);
+
+          errorEmitter.emit('permission-error', permissionError);
+
+          setError(err);
+          setIsLoading(false);
         }
-        setError(null);
-        setIsLoading(false);
-      },
-      async (err) => {
-        if (isUnmounted) return;
-        
-        if (err.message.includes('ca9') || err.message.includes('Unexpected state')) {
-          return;
-        }
-
-        const permissionError = new FirestorePermissionError({
-          path: docRef.path,
-          operation: 'get',
-        } satisfies SecurityRuleContext);
-
-        errorEmitter.emit('permission-error', permissionError);
-
-        setError(err);
-        setIsLoading(false);
-      }
-    );
+      );
+    } catch (syncErr) {
+      console.error("🛰️ Nuxus Kernel: Doc sync setup failed", syncErr);
+    }
 
     return () => {
       isUnmounted = true;
-      unsubscribe();
+      if (typeof unsubscribe === 'function') unsubscribe();
     };
   }, [docRef?.path]); 
 

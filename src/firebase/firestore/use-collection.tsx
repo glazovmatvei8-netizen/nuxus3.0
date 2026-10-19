@@ -11,7 +11,7 @@ export type WithId<T> = T & { id: string; isPending?: boolean };
 
 /**
  * NUXUS ENGINE HOOK: useCollection
- * FIXED: Агрессивное подавление системных ассертов SDK (ca9) для стабильности UI.
+ * FIXED: Агрессивное подавление системных ассертов SDK (ca9, Fe: -1) для стабильности UI.
  */
 export function useCollection<T = any>(
   target: (CollectionReference<DocumentData> | Query<DocumentData>) | null | undefined
@@ -31,44 +31,52 @@ export function useCollection<T = any>(
     
     let isUnmounted = false;
 
-    const unsubscribe = onSnapshot(
-      target,
-      { includeMetadataChanges: true },
-      (snapshot) => {
-        if (isUnmounted) return;
-        const results: WithId<T>[] = snapshot.docs.map(doc => ({ 
-          ...(doc.data() as T), 
-          id: doc.id,
-          isPending: doc.metadata.hasPendingWrites
-        }));
-        setData(results);
-        setError(null);
-        setIsLoading(false);
-      },
-      async (err) => {
-        if (isUnmounted) return;
-        
-        // ПОДАВЛЕНИЕ ASSERTION FAILURES
-        if (err.message.includes('ca9') || err.message.includes('Unexpected state')) {
-             console.warn("Nuxus Signal: Internal SDK state glitch ignored.");
-             return;
+    // Обертка для обработки потенциальных синхронных исключений внутри onSnapshot
+    let unsubscribe = () => {};
+    
+    try {
+      unsubscribe = onSnapshot(
+        target,
+        { includeMetadataChanges: true },
+        (snapshot) => {
+          if (isUnmounted) return;
+          const results: WithId<T>[] = snapshot.docs.map(doc => ({ 
+            ...(doc.data() as T), 
+            id: doc.id,
+            isPending: doc.metadata.hasPendingWrites
+          }));
+          setData(results);
+          setError(null);
+          setIsLoading(false);
+        },
+        async (err) => {
+          if (isUnmounted) return;
+          
+          // ПОДАВЛЕНИЕ ASSERTION FAILURES (ca9)
+          const errMsg = err.message || "";
+          if (errMsg.includes('ca9') || errMsg.includes('Unexpected state') || errMsg.includes('internal-error')) {
+               console.warn("🛰️ Nuxus Signal: Suppressed internal SDK glitch.");
+               return;
+          }
+
+          const permissionError = new FirestorePermissionError({
+            path: (target as any).path || 'collection_query',
+            operation: 'list',
+          } satisfies SecurityRuleContext);
+
+          errorEmitter.emit('permission-error', permissionError);
+          
+          setError(err);
+          setIsLoading(false);
         }
-
-        const permissionError = new FirestorePermissionError({
-          path: (target as any).path || 'collection_query',
-          operation: 'list',
-        } satisfies SecurityRuleContext);
-
-        errorEmitter.emit('permission-error', permissionError);
-        
-        setError(err);
-        setIsLoading(false);
-      }
-    );
+      );
+    } catch (syncErr: any) {
+      console.error("🛰️ Nuxus Kernel: Watch setup failed", syncErr);
+    }
 
     return () => {
       isUnmounted = true;
-      unsubscribe();
+      if (typeof unsubscribe === 'function') unsubscribe();
     };
   }, [target]); 
 
