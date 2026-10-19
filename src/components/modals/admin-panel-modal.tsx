@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useMemo } from 'react';
@@ -11,15 +12,15 @@ import { Progress } from '@/components/ui/progress';
 import { useFirestore } from '@/firebase/provider'; 
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { useMemoFirebase } from '@/firebase/firestore/use-memo-firebase';
-import { collection, query, doc, limit, writeBatch } from 'firebase/firestore';
+import { collection, query, doc, limit, writeBatch, increment, updateDoc, deleteDoc, orderBy } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   ShieldAlert, Users, Ban, Activity, 
   Search, Crown, Mail, Send, Sparkles,
-  Loader2, Terminal
+  Loader2, Terminal, Coins, Check, X
 } from 'lucide-react';
-import type { User } from '@/lib/types';
-import { formatDisplayName, cn, isUserPremium } from '@/lib/utils';
+import type { User, Transaction, TopUpRequest } from '@/lib/types';
+import { formatDisplayName, cn, isUserPremium, triggerHaptic } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useAppState } from '@/lib/app-state';
 
@@ -35,11 +36,12 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
   const [broadcastBody, setBroadcastBody] = useState('');
   const [isBroadcasting, setIsBroadcasting] = useState(false);
 
-  const usersQuery = useMemoFirebase(() => {
-    if (!db) return null;
-    return query(collection(db, 'users'), limit(500));
-  }, [db]);
+  // Queries
+  const usersQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'users'), limit(500))), [db]);
   const { data: allUsers, isLoading: isUsersLoading } = useCollection<User>(usersQuery);
+
+  const requestsQuery = useMemoFirebase(() => (!db ? null : query(collection(db, 'topUpRequests'), orderBy('createdAt', 'desc'), limit(100))), [db]);
+  const { data: topUpRequests, isLoading: isRequestsLoading } = useCollection<TopUpRequest>(requestsQuery);
 
   const stats = useMemo(() => {
     if (!allUsers) return { total: 0, active: 0, premium: 0, banned: 0, emails: 0 };
@@ -48,6 +50,46 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
     const emails = allUsers.filter(u => u.email && !u.email.includes('@nuxus.chat')).length;
     return { total: allUsers.length, active: allUsers.length - banned, premium, banned, emails };
   }, [allUsers]);
+
+  const handleApproveRequest = async (request: TopUpRequest) => {
+    if (!db) return;
+    triggerHaptic();
+    try {
+      const batch = writeBatch(db);
+      
+      const userRef = doc(db, 'users', request.userId);
+      const txRef = doc(collection(db, 'users', request.userId, 'transactions'));
+      const reqRef = doc(db, 'topUpRequests', request.id);
+
+      batch.update(userRef, { balance: increment(request.amount) });
+      batch.set(txRef, {
+        id: txRef.id,
+        userId: request.userId,
+        amount: request.amount,
+        type: 'deposit',
+        status: 'completed',
+        otherPartyName: 'Admin Approval',
+        createdAt: new Date().toISOString()
+      });
+      batch.delete(reqRef);
+
+      await batch.commit();
+      toast({ title: "Баланс пополнен", description: `Узлу начислено ${request.amount} STK` });
+    } catch (e) {
+      toast({ title: "Ошибка", variant: "destructive" });
+    }
+  };
+
+  const handleRejectRequest = async (requestId: string) => {
+    if (!db) return;
+    triggerHaptic();
+    try {
+      await deleteDoc(doc(db, 'topUpRequests', requestId));
+      toast({ title: "Запрос отклонен" });
+    } catch (e) {
+      toast({ title: "Ошибка" });
+    }
+  };
 
   const handleStartBroadcast = async () => {
     if (!broadcastSubject.trim() || !broadcastBody.trim() || !allUsers || !db) {
@@ -91,7 +133,7 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
               </div>
               <div className="flex flex-col text-left">
                 <DialogTitle className="text-2xl font-black uppercase italic text-white tracking-tighter">AEGIS CONTROL</DialogTitle>
-                <DialogDescription className="text-[8px] font-black uppercase text-primary/60 tracking-[0.4em]">Node Protocol V100.1</DialogDescription>
+                <DialogDescription className="text-[8px] font-black uppercase text-primary/60 tracking-[0.4em]">Node Protocol V146.0</DialogDescription>
               </div>
             </div>
           </div>
@@ -99,11 +141,13 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
           <div className="px-6 md:px-8 py-4 bg-black/20 border-b border-white/5 shrink-0">
-            <TabsList className="flex bg-white/5 p-1 rounded-xl border border-white/5 overflow-x-auto no-scrollbar justify-start md:justify-center">
-              <TabsTrigger value="analytics" className="flex-1 min-w-[100px] text-[9px] font-black uppercase tracking-widest py-2.5 data-[state=active]:bg-primary data-[state=active]:text-white">Статистика</TabsTrigger>
-              <TabsTrigger value="users" className="flex-1 min-w-[100px] text-[9px] font-black uppercase tracking-widest py-2.5 data-[state=active]:bg-primary data-[state=active]:text-white">База узлов</TabsTrigger>
-              <TabsTrigger value="broadcast" className="flex-1 min-w-[100px] text-[9px] font-black uppercase tracking-widest py-2.5 data-[state=active]:bg-primary data-[state=active]:text-white">Рассылка</TabsTrigger>
-              <TabsTrigger value="logs" className="flex-1 min-w-[100px] text-[9px] font-black uppercase tracking-widest py-2.5 data-[state=active]:bg-primary data-[state=active]:text-white">Логи</TabsTrigger>
+            <TabsList className="flex bg-white/5 p-1 rounded-xl border border-white/5 overflow-x-auto no-scrollbar justify-start md:justify-center gap-1">
+              <TabsTrigger value="analytics" className="px-5 text-[9px] font-black uppercase tracking-widest py-2.5 data-[state=active]:bg-primary data-[state=active]:text-white">Статистика</TabsTrigger>
+              <TabsTrigger value="finance" className="px-5 text-[9px] font-black uppercase tracking-widest py-2.5 data-[state=active]:bg-primary data-[state=active]:text-white flex items-center gap-2">
+                 Запросы {topUpRequests && topUpRequests.length > 0 && <span className="bg-red-500 text-white px-1.5 rounded-full text-[7px] animate-pulse">{topUpRequests.length}</span>}
+              </TabsTrigger>
+              <TabsTrigger value="users" className="px-5 text-[9px] font-black uppercase tracking-widest py-2.5 data-[state=active]:bg-primary data-[state=active]:text-white">База узлов</TabsTrigger>
+              <TabsTrigger value="broadcast" className="px-5 text-[9px] font-black uppercase tracking-widest py-2.5 data-[state=active]:bg-primary data-[state=active]:text-white">Рассылка</TabsTrigger>
             </TabsList>
           </div>
 
@@ -130,6 +174,55 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                          </div>
                          <Progress value={14} className="h-2 bg-black/40" />
                       </div>
+                   </div>
+                </TabsContent>
+
+                <TabsContent value="finance" className="m-0 space-y-6 animate-in fade-in duration-500">
+                   <div className="flex items-center gap-3 px-2">
+                      <Coins className="w-5 h-5 text-primary" />
+                      <h3 className="text-sm font-black uppercase italic text-white tracking-widest">Запросы на пополнение (1 STK = 1 RUB)</h3>
+                   </div>
+
+                   <div className="space-y-3">
+                      {isRequestsLoading ? (
+                        <div className="text-center py-10 animate-pulse text-white/20 uppercase font-black text-[10px]">Syncing Ledger...</div>
+                      ) : topUpRequests && topUpRequests.length > 0 ? (
+                        topUpRequests.map(req => (
+                          <div key={req.id} className="flex flex-wrap md:flex-nowrap items-center justify-between p-5 bg-white/[0.02] rounded-[2rem] border border-white/[0.05] gap-4 shadow-xl">
+                             <div className="flex items-center gap-4 min-w-0">
+                                <UserAvatar userId={req.userId} className="h-12 w-12 shrink-0" />
+                                <div className="flex flex-col text-left min-w-0">
+                                   <span className="font-black text-white uppercase italic tracking-tight text-[14px] truncate">{req.userName}</span>
+                                   <div className="flex items-center gap-2 mt-1">
+                                      <span className="text-xl font-black text-primary italic tabular-nums">{req.amount}</span>
+                                      <span className="text-[10px] font-bold text-muted-foreground uppercase">RUB</span>
+                                   </div>
+                                </div>
+                             </div>
+                             <div className="flex items-center gap-2">
+                                <Button 
+                                  variant="ghost" 
+                                  onClick={() => handleApproveRequest(req)} 
+                                  className="h-12 px-6 rounded-xl bg-green-500/10 text-green-500 font-black uppercase text-[10px] tracking-widest hover:bg-green-500 hover:text-white transition-all gap-2"
+                                >
+                                   <Check className="w-4 h-4" /> Принять
+                                </Button>
+                                <Button 
+                                  variant="ghost" 
+                                  onClick={() => handleRejectRequest(req.id)}
+                                  className="h-12 px-6 rounded-xl bg-red-500/10 text-red-500 font-black uppercase text-[10px] tracking-widest hover:bg-red-500 hover:text-white transition-all gap-2"
+                                >
+                                   <X className="w-4 h-4" /> Отклонить
+                                </Button>
+                             </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="flex flex-col items-center justify-center py-20 opacity-10 space-y-4">
+                           <Coins className="w-16 h-16" />
+                           <p className="text-[10px] font-black uppercase tracking-[0.5em]">Очередь пуста</p>
+                        </div>
+                      )}
                    </div>
                 </TabsContent>
 
@@ -175,7 +268,6 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                            </div>
                         </div>
                       ))}
-                      {isUsersLoading && <div className="text-center py-10 animate-pulse text-white/10 uppercase font-black text-[10px]">Syncing Nodes...</div>}
                    </div>
                 </TabsContent>
 
@@ -217,11 +309,6 @@ export function AdminPanelModal({ open, onOpenChange }: { open: boolean, onOpenC
                         {isBroadcasting ? <Loader2 className="animate-spin w-5 h-5" /> : <><Send className="w-5 h-5 mr-3" /> Активировать Передачу</>}
                       </Button>
                    </div>
-                </TabsContent>
-
-                <TabsContent value="logs" className="m-0 text-center py-20 opacity-20">
-                   <Activity className="w-12 h-12 mx-auto mb-4" />
-                   <p className="text-[10px] font-black uppercase tracking-widest">Логирование в режиме ожидания</p>
                 </TabsContent>
 
               </div>

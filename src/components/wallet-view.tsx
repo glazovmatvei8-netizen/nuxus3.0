@@ -6,12 +6,14 @@ import { useUser, useFirestore } from '@/firebase/provider';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { useMemoFirebase } from '@/firebase/firestore/use-memo-firebase';
 import { useCollection } from '@/firebase/firestore/use-collection';
-import { doc, collection, query, orderBy, limit } from 'firebase/firestore';
+import { doc, collection, query, orderBy, limit, addDoc } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { 
   Send, ArrowDown, RefreshCcw, 
-  Wallet, Info, FileText, Loader2
+  Wallet, Info, FileText, Loader2, Coins
 } from 'lucide-react';
 import { cn, triggerHaptic } from '@/lib/utils';
 import type { User, Transaction } from '@/lib/types';
@@ -19,10 +21,6 @@ import { useToast } from '@/hooks/use-toast';
 import { useTranslations } from '@/hooks/use-translations';
 import { useAppState } from '@/lib/app-state';
 
-/**
- * WALLET VIEW V135.0 «TITANIUM HARDENING»
- * FIXED: Исправлен вылет из-за неопределенных переменных и отсутствия проверок данных.
- */
 export default function WalletView() {
   const { user } = useUser();
   const db = useFirestore();
@@ -30,6 +28,10 @@ export default function WalletView() {
   const { t, currentLang } = useTranslations();
   const { setIsLegalOpen } = useAppState();
   const [mounted, setMounted] = useState(false);
+  
+  const [isTopUpOpen, setIsTopUpOpen] = useState(false);
+  const [topUpAmount, setTopUpUpAmount] = useState('');
+  const [isSubmittingRequest, setIsSubmittingRequest] = useState(false);
   
   useEffect(() => {
     setMounted(true);
@@ -43,6 +45,34 @@ export default function WalletView() {
     return query(collection(db, 'users', user.uid, 'transactions'), orderBy('createdAt', 'desc'), limit(15));
   }, [db, user?.uid]);
   const { data: transactions, isLoading: isTxLoading } = useCollection<Transaction>(transactionsQuery);
+
+  const handleTopUpRequest = async () => {
+    const amount = parseFloat(topUpAmount);
+    if (!amount || amount < 10 || !db || !user || !profile) {
+      toast({ title: "Ошибка", description: "Минимальная сумма — 10 RUB", variant: "destructive" });
+      return;
+    }
+
+    setIsSubmittingRequest(true);
+    triggerHaptic();
+    try {
+      await addDoc(collection(db, 'topUpRequests'), {
+        userId: user.uid,
+        userName: profile.name || profile.username,
+        amount: amount,
+        status: 'pending',
+        createdAt: new Date().toISOString()
+      });
+
+      toast({ title: "Запрос отправлен", description: "Ожидайте подтверждения Администратором." });
+      setIsTopUpOpen(false);
+      setTopUpUpAmount('');
+    } catch (e) {
+      toast({ title: "Сбой", variant: "destructive" });
+    } finally {
+      setIsSubmittingRequest(false);
+    }
+  };
 
   if (!mounted) return <div className="flex-1 bg-[#121212]" />;
 
@@ -63,7 +93,12 @@ export default function WalletView() {
                         <span className="text-5xl font-black text-white italic tracking-tighter tabular-nums">{(profile?.balance ?? 0).toFixed(2)}</span>
                         <span className="text-2xl font-black text-primary italic">STK</span>
                       </div>
-                      <p className="text-[11px] font-bold text-[#8E8E93] uppercase tracking-widest">{t('wallet.balance')}</p>
+                      <div className="flex flex-col items-center gap-1 mt-2">
+                         <p className="text-[11px] font-bold text-[#8E8E93] uppercase tracking-widest">{t('wallet.balance')}</p>
+                         <div className="bg-primary/10 px-3 py-1 rounded-lg border border-primary/20">
+                            <span className="text-[10px] font-black text-primary uppercase">1 STK = 1 RUB</span>
+                         </div>
+                      </div>
                     </>
                   )}
                 </div>
@@ -88,7 +123,7 @@ export default function WalletView() {
              <h3 className="text-[11px] font-black uppercase text-[#8E8E93] tracking-[0.2em] px-2 italic">{t('wallet.actions')}</h3>
              <div className="grid grid-cols-3 gap-4">
                 <ActionBtn icon={Send} label="Отправить" onClick={() => toast({ title: "Скоро", description: "Переводы между узлами в разработке" })} />
-                <ActionBtn icon={ArrowDown} label="Получить" onClick={() => toast({ title: "Пополнение", description: "Обратитесь к Администратору Ядра" })} />
+                <ActionBtn icon={ArrowDown} label="Пополнить" onClick={() => setIsTopUpOpen(true)} />
                 <ActionBtn icon={RefreshCcw} label="Обмен" onClick={() => toast({ title: "Скоро", description: "Обмен артефактов в разработке" })} />
              </div>
           </div>
@@ -114,6 +149,45 @@ export default function WalletView() {
           </p>
         </div>
       </ScrollArea>
+
+      <Dialog open={isTopUpOpen} onOpenChange={setIsTopUpOpen}>
+        <DialogContent className="max-w-sm bg-[#0a0a0c] border-white/10 rounded-[2.5rem] p-8 shadow-2xl outline-none">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black uppercase italic text-white flex items-center justify-center gap-3">
+              <Coins className="w-6 h-6 text-primary" /> Пополнение
+            </DialogTitle>
+            <DialogDescription className="text-[10px] font-bold text-white/40 uppercase tracking-widest text-center mt-2">
+              Введите сумму в рублях для конвертации в STK
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-8 space-y-6">
+             <div className="space-y-2">
+                <Label className="text-[8px] font-black uppercase text-primary/60 ml-2 tracking-widest">Сумма пополнения (RUB)</Label>
+                <Input 
+                  type="number" 
+                  placeholder="от 10" 
+                  value={topUpAmount} 
+                  onChange={e => setTopUpUpAmount(e.target.value)}
+                  className="h-14 bg-white/5 border-white/10 rounded-2xl text-center text-2xl font-black italic focus:border-primary/50 transition-all"
+                />
+             </div>
+             <div className="bg-primary/5 p-4 rounded-xl border border-primary/10">
+                <p className="text-[9px] text-primary/60 font-bold uppercase text-center leading-relaxed">
+                  Ваш запрос будет передан на ручную обработку Администратору. После подтверждения STK появятся на балансе.
+                </p>
+             </div>
+          </div>
+          <DialogFooter>
+             <Button 
+               disabled={isSubmittingRequest} 
+               onClick={handleTopUpRequest}
+               className="w-full h-14 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-xl active:scale-95 transition-all"
+             >
+               {isSubmittingRequest ? <Loader2 className="animate-spin w-5 h-5" /> : "Запросить STK"}
+             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

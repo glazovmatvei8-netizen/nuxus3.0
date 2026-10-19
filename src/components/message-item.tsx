@@ -31,6 +31,13 @@ export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, cha
   const db = useFirestore();
   const { toast } = useToast();
   const [mounted, setMounted] = useState(false);
+  
+  // SWIPE TO REPLY LOGIC
+  const [swipeX, setSwipeX] = useState(0);
+  const [isSwiping, setIsSwiping] = useState(false);
+  const startX = useRef(0);
+  const swipeThreshold = 60;
+
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioProgress, setAudioProgress] = useState(0);
@@ -48,6 +55,33 @@ export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, cha
       return format(new Date(message.sentAt), 'HH:mm');
     } catch (e) { return ''; }
   }, [message.sentAt, mounted]);
+
+  // Touch Handlers for Swipe
+  const handleTouchStart = (e: React.TouchEvent) => {
+    startX.current = e.touches[0].clientX;
+    setIsSwiping(true);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isSwiping) return;
+    const diff = e.touches[0].clientX - startX.current;
+    // Swipe left to reply (Telegram style)
+    if (diff < 0) {
+      const offset = Math.max(diff, -100);
+      setSwipeX(offset);
+      if (Math.abs(offset) >= swipeThreshold && Math.abs(swipeX) < swipeThreshold) {
+        triggerHaptic();
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (Math.abs(swipeX) >= swipeThreshold) {
+      onReply(message);
+    }
+    setSwipeX(0);
+    setIsSwiping(false);
+  };
 
   const toggleAudio = () => {
     if (!audioRef.current) return;
@@ -101,7 +135,6 @@ export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, cha
   const textClasses = { small: "text-[13px]", medium: "text-[15px]", large: "text-[18px]" };
   const rep = getReputationInfo(senderProfile?.reputation);
 
-  // DECIPHERED CONTENT
   const displayContent = useMemo(() => {
     if (message.contentType === 'text') {
       return decryptSignal(message.content);
@@ -110,10 +143,28 @@ export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, cha
   }, [message.content, message.contentType]);
 
   return (
-    <div className={cn("w-full flex flex-col mb-3 animate-in fade-in slide-in-from-bottom-2 duration-500", isMe ? "items-end" : "items-start")}>
+    <div 
+      className={cn("w-full flex flex-col mb-3 animate-in fade-in slide-in-from-bottom-2 duration-500 relative", isMe ? "items-end" : "items-start")}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
+      {/* SWIPE REPLY INDICATOR */}
+      <div 
+        className="absolute right-[-40px] top-1/2 -translate-y-1/2 flex items-center justify-center transition-all duration-200"
+        style={{ opacity: Math.abs(swipeX) / swipeThreshold, transform: `scale(${Math.min(Math.abs(swipeX) / swipeThreshold, 1.2)})` }}
+      >
+        <div className={cn("w-10 h-10 rounded-full flex items-center justify-center", Math.abs(swipeX) >= swipeThreshold ? "bg-primary text-white" : "bg-white/10 text-white/40")}>
+           <Reply className="w-5 h-5" />
+        </div>
+      </div>
+
       <ContextMenu>
         <ContextMenuTrigger className="w-full flex flex-col items-inherit">
-          <div className={cn("flex gap-3 max-w-[85%] items-end", isMe ? "flex-row-reverse" : "flex-row")}>
+          <div 
+            className={cn("flex gap-3 max-w-[85%] items-end transition-transform duration-75", isMe ? "flex-row-reverse" : "flex-row")}
+            style={{ transform: `translateX(${swipeX}px)` }}
+          >
             {!isMe && (
               <UserAvatar 
                 userId={message.senderId} 
@@ -122,7 +173,7 @@ export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, cha
               />
             )}
             
-            <div className={cn("flex flex-col min-w-[60px]", isMe ? "items-end" : "items-start")}>
+            <div id={message.id} className={cn("flex flex-col min-w-[60px]", isMe ? "items-end" : "items-start")}>
               {!isMe && (
                 <div className="flex items-center gap-2 ml-2 mb-1">
                    <span className="text-[10px] font-black uppercase tracking-widest italic text-primary/60">

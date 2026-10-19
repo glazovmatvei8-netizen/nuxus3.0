@@ -117,7 +117,7 @@ export const translations = {
       assets: "Мои активы",
       topup: "Пополнение",
       transfer: "Перевод STK",
-      info: "STK (Stellar Credits) — это внутренняя единица Ядра для обмена подарками и артефактами. Не является криптовалютой или финансовым активом.",
+      info: "STK (Stellar Credits) — это внутренняя единица Ядра. Курс: 1 STK = 1 RUB. Используется для обмена подарками и артефактами.",
       disclaimer: "Все операции защищены протоколом QES. © Nuxus Quantum Platforms."
     },
     initializing: "Загрузка системы...",
@@ -226,7 +226,7 @@ export const translations = {
     explore: {
       title: "Explore",
       subtitle: "Discover Nuxus Network Nodes",
-      description: "Explore find public channels, open communities and new nodes. Join the global network.",
+      description: "Explore find public channels, open communities and new nodes. 1 STK = 1 RUB rate active. Join the global network.",
       recommended: "Recommended Nodes",
       categories: "Categories",
       events: "Active Events",
@@ -244,7 +244,7 @@ export const translations = {
       assets: "My Assets",
       topup: "Top Up",
       transfer: "Transfer STK",
-      info: "STK (Stellar Credits) is internal Core unit for artifacts and gifts. Not a financial instrument.",
+      info: "STK (Stellar Credits) is internal Core unit. Rate: 1 STK = 1 RUB. Not a financial instrument.",
       disclaimer: "All rights reserved by Nuxus Quantum Platforms."
     },
     initializing: "Initializing...",
