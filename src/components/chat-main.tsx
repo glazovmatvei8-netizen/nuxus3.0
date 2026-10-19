@@ -28,8 +28,8 @@ import {
 } from 'lucide-react';
 
 /**
- * NUXUS CHAT MAIN V127.0 «PRESENCE HEARTBEAT»
- * Внедрен механизм обновления статуса "В сети" в реальном времени.
+ * NUXUS CHAT MAIN V143.0 «PRIME NAVIGATION»
+ * ОПТИМИЗИРОВАНО: 5 кнопок в нижней панели для идеального баланса на мобильных устройствах.
  */
 export default function ChatMain() {
   const { 
@@ -79,6 +79,7 @@ export default function ChatMain() {
     }
   }, [incomingCalls, activeCallId, setActiveCallId]);
 
+  // ГАРАНТИРОВАННЫЕ 5 КНОПОК ДЛЯ МОБИЛЬНОЙ ВЕРСИИ
   const NAV_ITEMS = [
     { id: 'discovery', icon: Globe, label: 'EXPLORE' },
     { id: 'calls', icon: Phone, label: 'CALLS' },
@@ -154,7 +155,7 @@ export default function ChatMain() {
         </div>
       </div>
 
-      {/* MOBILE BOTTOM NAV */}
+      {/* MOBILE BOTTOM NAV - GUAARANTEED 5 BUTTONS FOR MAX COMFORT */}
       {(!currentChatId || activeView !== 'chats') && (
         <div className="md:hidden nuxus-floating-nav">
           {NAV_ITEMS.map((item) => (
@@ -163,7 +164,7 @@ export default function ChatMain() {
                icon={item.icon} 
                label={item.label}
                active={activeView === item.id} 
-               onClick={() => setActiveView(item.id as any)} 
+               onClick={() => { triggerHaptic(); setActiveView(item.id as any); }} 
                isProfile={item.id === 'profile'}
                userId={user?.uid}
              />
@@ -185,7 +186,7 @@ function NavButton({ icon: Icon, label, active, onClick, isProfile, userId }: an
     <button 
       onClick={onClick} 
       className={cn(
-        "flex flex-col items-center justify-center gap-1.5 transition-all duration-300 relative min-w-[60px]", 
+        "flex flex-col items-center justify-center gap-1 transition-all duration-300 relative flex-1 min-w-0", 
         active ? "text-white" : "text-muted-foreground/60"
       )}
     >
@@ -203,7 +204,7 @@ function NavButton({ icon: Icon, label, active, onClick, isProfile, userId }: an
         )}
       </div>
       <span className={cn(
-        "text-[8px] font-black uppercase tracking-widest italic transition-colors",
+        "text-[7px] font-black uppercase tracking-widest italic transition-colors truncate w-full",
         active ? "text-primary" : "text-muted-foreground/40"
       )}>
         {label}

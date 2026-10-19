@@ -17,11 +17,11 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Settings2, Camera, ShieldCheck, Loader2, Fingerprint, Palette, 
   ChevronRight, Globe, Trash2, Mail, Phone, Lock, Image as ImageIcon,
-  Info, HelpCircle, UserCheck, ShieldAlert, RefreshCw, KeyRound, Crown, FileText, Sun, Moon, Type, LayoutGrid, Zap, Calendar
+  Info, HelpCircle, UserCheck, ShieldAlert, RefreshCw, KeyRound, Crown, FileText, Sun, Moon, Type, LayoutGrid, Zap, Calendar, Star, Sparkles
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, increment, collection, addDoc } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppState } from '@/lib/app-state';
 import { isUserPremium, cn, compressImage, triggerHaptic } from '@/lib/utils';
@@ -58,6 +58,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const { data: profile, isLoading: isProfileLoading } = useDoc<User>(userRef);
 
   const [isSaving, setIsSaving] = useState(false);
+  const [isBuyingPrime, setIsBuyingPrime] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [bgPreview, setBgPreview] = useState<string | null>(null);
   const [iconPreview, setIconPreview] = useState<string | null>(null);
@@ -140,6 +141,38 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     }
   };
 
+  const handleBuyPrime = async (price: number, months: number) => {
+    if (!db || !user || !profile) return;
+    if ((profile.balance || 0) < price) {
+      toast({ title: "Недостаточно STK", description: "Пополните кошелек для активации", variant: "destructive" });
+      return;
+    }
+
+    setIsBuyingPrime(true);
+    triggerHaptic();
+    try {
+      await updateDoc(doc(db, 'users', user.uid), {
+        balance: increment(-price),
+        isPremium: true,
+        reputation: increment(5)
+      });
+      
+      await addDoc(collection(db, 'users', user.uid, 'transactions'), {
+        amount: -price,
+        type: 'prime_activation',
+        status: 'completed',
+        otherPartyName: `Nuxus Prime (${months} мес.)`,
+        createdAt: new Date().toISOString()
+      });
+
+      toast({ title: "Nuxus Prime Активен!", description: "Возможности Ядра расширены." });
+    } catch (e) {
+      toast({ title: "Сбой активации", variant: "destructive" });
+    } finally {
+      setIsBuyingPrime(false);
+    }
+  };
+
   const handleLogout = async () => {
     if (!auth) return;
     const ok = confirm("Выйти из этого узла?");
@@ -184,11 +217,12 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         
         <Tabs value={settingsTab} onValueChange={setSettingsTab} className="flex-1 flex flex-col min-h-0">
           <div className="px-6 mt-4">
-            <TabsList className="grid grid-cols-4 bg-white/5 p-1 rounded-xl border border-white/5 shadow-inner">
-              <TabsTrigger value="profile" className="text-[9px] font-black uppercase tracking-widest h-8">Аккаунт</TabsTrigger>
-              <TabsTrigger value="privacy" className="text-[9px] font-black uppercase tracking-widest h-8">Защита</TabsTrigger>
-              <TabsTrigger value="style" className="text-[9px] font-black uppercase tracking-widest h-8">Стиль</TabsTrigger>
-              <TabsTrigger value="data" className="text-[9px] font-black uppercase tracking-widest h-8">Инфо</TabsTrigger>
+            <TabsList className="grid grid-cols-5 bg-white/5 p-1 rounded-xl border border-white/5 shadow-inner">
+              <TabsTrigger value="profile" className="text-[8px] font-black uppercase tracking-tight h-8">Профиль</TabsTrigger>
+              <TabsTrigger value="privacy" className="text-[8px] font-black uppercase tracking-tight h-8">Защита</TabsTrigger>
+              <TabsTrigger value="style" className="text-[8px] font-black uppercase tracking-tight h-8">Стиль</TabsTrigger>
+              <TabsTrigger value="prime" className="text-[8px] font-black uppercase tracking-tight h-8 text-primary">Prime</TabsTrigger>
+              <TabsTrigger value="data" className="text-[8px] font-black uppercase tracking-tight h-8">Инфо</TabsTrigger>
             </TabsList>
           </div>
 
@@ -231,6 +265,37 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                        </div>
                     </div>
                  </div>
+              </TabsContent>
+
+              <TabsContent value="prime" className="space-y-8 m-0 animate-in fade-in duration-500">
+                <div className="relative p-8 rounded-[3rem] bg-gradient-to-br from-primary/20 via-[#0a0a0c] to-primary/5 border border-primary/20 overflow-hidden shadow-2xl">
+                   <div className="absolute top-[-10%] right-[-10%] w-40 h-40 bg-primary/10 blur-[80px] rounded-full" />
+                   <div className="relative z-10 flex flex-col items-center text-center gap-4">
+                      <div className="h-20 w-20 rounded-[2rem] bg-primary/20 flex items-center justify-center border border-primary/30 shadow-[0_0_50px_rgba(229,142,56,0.3)] animate-pulse">
+                         <Star className="w-10 h-10 text-primary fill-primary" />
+                      </div>
+                      <div className="space-y-1">
+                         <h2 className="text-3xl font-black italic uppercase text-white tracking-tighter">NUXUS PRIME</h2>
+                         <p className="text-[10px] font-bold text-primary uppercase tracking-[0.4em]">{t('prime.subtitle')}</p>
+                      </div>
+                   </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4">
+                   <FeatureCard icon={Zap} title={t('prime.features.hq.title')} desc={t('prime.features.hq.desc')} />
+                   <FeatureCard icon={Crown} title={t('prime.features.badge.title')} desc={t('prime.features.badge.desc')} />
+                   <FeatureCard icon={Globe} title={t('prime.features.ghost.title')} desc={t('prime.features.ghost.desc')} />
+                   <FeatureCard icon={Palette} title={t('prime.features.icons.title')} desc={t('prime.features.icons.desc')} />
+                </div>
+
+                <div className="space-y-4">
+                   <h3 className="text-[11px] font-black uppercase text-primary/60 ml-2 tracking-[0.2em] italic">Выберите период</h3>
+                   <div className="grid grid-cols-1 gap-3">
+                      <PricingBtn label={t('prime.pricing.month')} price={299} onClick={() => handleBuyPrime(299, 1)} loading={isBuyingPrime} />
+                      <PricingBtn label={t('prime.pricing.halfYear')} price={1499} onClick={() => handleBuyPrime(1499, 6)} loading={isBuyingPrime} highlighted />
+                      <PricingBtn label={t('prime.pricing.year')} price={2499} onClick={() => handleBuyPrime(2499, 12)} loading={isBuyingPrime} />
+                   </div>
+                </div>
               </TabsContent>
 
               <TabsContent value="style" className="space-y-8 m-0 animate-in fade-in duration-300">
@@ -432,5 +497,43 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         </Tabs>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function FeatureCard({ icon: Icon, title, desc }: any) {
+  return (
+    <div className="flex items-center gap-5 p-5 bg-white/[0.03] border border-white/5 rounded-[2rem] hover:bg-white/[0.06] transition-all">
+       <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0">
+          <Icon className="w-6 h-6 text-primary" />
+       </div>
+       <div className="flex flex-col text-left">
+          <span className="text-[13px] font-black uppercase text-white italic tracking-tight">{title}</span>
+          <span className="text-[10px] text-white/40 font-bold uppercase tracking-tight leading-tight mt-0.5">{desc}</span>
+       </div>
+    </div>
+  );
+}
+
+function PricingBtn({ label, price, onClick, loading, highlighted }: any) {
+  return (
+    <button 
+      onClick={onClick} 
+      disabled={loading}
+      className={cn(
+        "flex items-center justify-between p-5 rounded-[1.8rem] border transition-all active:scale-[0.98]",
+        highlighted 
+          ? "bg-primary text-white border-primary shadow-xl shadow-primary/20" 
+          : "bg-white/5 text-white/60 border-white/5 hover:bg-white/10"
+      )}
+    >
+       <div className="flex flex-col text-left">
+          <span className="text-[11px] font-black uppercase tracking-[0.2em]">{label}</span>
+          {highlighted && <span className="text-[8px] font-bold text-white/60 uppercase">Рекомендуемо</span>}
+       </div>
+       <div className="flex items-center gap-3">
+          <span className="text-lg font-black italic tracking-tighter">{price} STK</span>
+          <ChevronRight className="w-4 h-4 opacity-40" />
+       </div>
+    </button>
   );
 }

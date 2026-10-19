@@ -41,12 +41,12 @@ export const translations = {
       title: "Настройки Ядра", 
       tabs: { 
         profile: "Аккаунт", 
-        style: "Визуальный код", 
-        privacy: "Безопасность", 
+        style: "Визуальный", 
+        privacy: "Защита", 
         language: "Язык", 
         prime: "Premium", 
         interface: "Интерфейс",
-        data: "Информация"
+        data: "Инфо"
       }, 
       labels: { 
         name: "Ваше имя", 
@@ -64,6 +64,22 @@ export const translations = {
         changeIcon: "Выбрать иконку",
         energySaving: "Энергосбережение"
       } 
+    },
+    prime: {
+      title: "Nuxus Prime",
+      subtitle: "Активируйте максимальный потенциал Ядра",
+      features: {
+        hq: { title: "HQ Сигнал", desc: "Передача медиа в исходном качестве без сжатия." },
+        badge: { title: "Элитный статус", desc: "Золотая звезда и доступ к премиальным цветам имени." },
+        ghost: { title: "Режим Призрака", desc: "Скрытие статуса присутствия и времени входа." },
+        icons: { title: "Кастомные иконки", desc: "Доступ ко всей библиотеке логотипов приложения." }
+      },
+      pricing: {
+        month: "1 Месяц",
+        halfYear: "6 Месяцев",
+        year: "1 Год",
+        buy: "Активировать за"
+      }
     },
     auth: { 
       title: "Вход в аккаунт", 
@@ -154,7 +170,7 @@ export const translations = {
         style: "Style", 
         privacy: "Security", 
         language: "Language", 
-        prime: "Premium", 
+        prime: "Prime", 
         interface: "Interface",
         data: "Info"
       }, 
@@ -174,6 +190,22 @@ export const translations = {
         changeIcon: "Change Icon",
         energySaving: "Power Saving"
       } 
+    },
+    prime: {
+      title: "Nuxus Prime",
+      subtitle: "Activate Core maximum potential",
+      features: {
+        hq: { title: "HQ Signal", desc: "Send media in original quality without compression." },
+        badge: { title: "Elite Status", desc: "Gold star and access to premium name colors." },
+        ghost: { title: "Ghost Mode", desc: "Hide presence status and last seen time." },
+        icons: { title: "Custom Icons", desc: "Access the entire app logo library." }
+      },
+      pricing: {
+        month: "1 Month",
+        halfYear: "6 Months",
+        year: "1 Year",
+        buy: "Activate for"
+      }
     },
     auth: { 
       title: "Sign In", 
