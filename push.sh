@@ -38,7 +38,6 @@ COMMIT_MSG="Nuxus 3.0 Genesis Sync: $(date '+%Y-%m-%d %H:%M:%S') [Forced Migrati
 git commit -m "$COMMIT_MSG" || echo "⚠️ Состояние уже зафиксировано."
 
 # 5. ПРИНУДИТЕЛЬНАЯ ТРАНСЛЯЦИЯ (FORCE PUSH)
-# Мы игнорируем pull, так как нам нужно перезаписать удаленный узел локальным кодом 3.0
 echo "🛰️ Трансляция пакетов в репозиторий (Quantum Force)..."
 git push -u origin main --force
 

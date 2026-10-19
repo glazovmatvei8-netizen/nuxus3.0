@@ -19,8 +19,8 @@ import { checkBiometric } from '@/services/biometric-service';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 /**
- * NUXUS HOME GATE V139.0 «STEALTH ACCESS»
- * UPDATED: Cleaned from merge conflict markers.
+ * NUXUS HOME GATE V156.0 «ABSOLUTE CLEAN»
+ * ОПТИМИЗИРОВАНО: Полная очистка от маркеров конфликта.
  */
 export default function Home() {
   const { user, isUserLoading } = useUser();
