@@ -1,4 +1,3 @@
-
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -11,7 +10,6 @@ service cloud.firestore {
       return isSignedIn() && (
         request.auth.uid == 'GCvLucN8CjNcdaxPO2vmpZ84hNl1' ||
         request.auth.uid == 'vnctow46' || 
-        (request.auth.token.email != null && request.auth.token.email.matches('.*@nuxus\\.chat')) ||
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true
       );
     }
@@ -24,15 +22,14 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && request.auth.uid == userId;
       allow update: if isSignedIn() && (request.auth.uid == userId || isPrimeAdmin());
-      
-      match /receivedGifts/{giftId} {
-        allow read: if isSignedIn();
-        allow write: if isPrimeAdmin() || (isSignedIn() && request.auth.uid == userId);
-      }
+    }
 
-      match /transactions/{txId} {
-        allow read, list: if isSignedIn() && request.auth.uid == userId;
-        allow create: if isSignedIn() && request.auth.uid == userId;
+    match /chats/{chatId} {
+      allow read, update, list: if isSignedIn() && (isPrimeAdmin() || request.auth.uid in resource.data.participantIds);
+      allow create: if isSignedIn();
+
+      match /messages/{messageId} {
+        allow read, write, list: if isSignedIn();
       }
     }
 
@@ -41,48 +38,18 @@ service cloud.firestore {
       allow read, list, write: if isPrimeAdmin();
     }
 
-    match /chats/{chatId} {
-<<<<<<< HEAD
-      allow read, update, list: if isSignedIn() && (isPrimeAdmin() || request.auth.uid in resource.data.participantIds);
-      allow create: if isSignedIn();
-
-      match /messages/{messageId} {
-        allow read, write, list: if isSignedIn() && (
-          isPrimeAdmin() || 
-          request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds
-        );
-      }
-=======
-      allow read, update, list: if isSignedIn() && (isPrimeAdmin() || request.auth.uid == resource.data.userId);
-      allow create: if isSignedIn();
-    }
-
-    match /subscriptions/{subscriptionId} {
-      allow read: if isSignedIn() && (isPrimeAdmin() || request.auth.uid == resource.data.userId);
-      allow create, update: if isPrimeAdmin();
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
-    }
-
-    // CALLS ENGINE V139.0
-    match /calls/{callId} {
-      allow create: if isSignedIn();
-      allow read, update, delete: if isSignedIn() && (
-        isPrimeAdmin() || 
-        request.auth.uid in resource.data.participantIds
-      );
-      
-      match /offerCandidates/{id} {
-        allow read, write: if isSignedIn();
-      }
-      match /answerCandidates/{id} {
-        allow read, write: if isSignedIn();
-      }
-    }
-
     match /stories/{storyId} {
       allow read, list: if isSignedIn();
       allow create: if isSignedIn();
       allow update, delete: if isSignedIn() && (isPrimeAdmin() || request.auth.uid == resource.data.userId);
+    }
+    
+    match /calls/{callId} {
+      allow create: if isSignedIn();
+      allow read, update, delete: if isSignedIn();
+      match /{allSubcollections=**} {
+        allow read, write: if isSignedIn();
+      }
     }
   }
 }

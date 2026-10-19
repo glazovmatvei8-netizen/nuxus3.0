@@ -6,7 +6,7 @@ import { Firestore, persistentLocalCache, initializeFirestore } from 'firebase/f
 import { firebaseConfig } from '@/firebase/config';
 
 /**
- * NUXUS ENGINE V150.0 «TITANIUM SHIELD»
+ * NUXUS ENGINE V154 «ULTIMATE SHIELD»
  * ОПТИМИЗИРОВАНО: Глобальный Singleton-паттерн через window для исключения ошибки 'ca9'.
  */
 
@@ -26,6 +26,7 @@ const ignite = () => {
     const apps = getApps();
     const app = apps.length > 0 ? apps[0] : initializeApp(firebaseConfig);
     
+    // Инициализация Firestore с базовым кэшем для мобильной стабильности
     const db = initializeFirestore(app, {
       localCache: persistentLocalCache({})
     });
@@ -40,13 +41,9 @@ const ignite = () => {
     window.__NUXUS_AUTH__ = auth;
     window.__NUXUS_IGNITED__ = true;
 
-    console.log('%c🛰️ NUXUS KERNEL: TITANIUM SHIELD ACTIVE V150', 'color: #E58E38; font-weight: bold;');
+    console.log('%c🛰️ NUXUS KERNEL: TITANIUM SHIELD ACTIVE V154', 'color: #E58E38; font-weight: bold;');
   } catch (e: any) {
-    if (e.code === 'failed-precondition') {
-      console.warn("Nuxus Kernel: Persistence multi-tab conflict.");
-    } else {
-      console.error("NUXUS KERNEL: IGNITION CRASHED", e);
-    }
+    console.error("NUXUS KERNEL: IGNITION CRASHED", e);
   }
 };
 
