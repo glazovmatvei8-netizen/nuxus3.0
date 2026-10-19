@@ -17,7 +17,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Settings2, Camera, ShieldCheck, Loader2, Fingerprint, Palette, 
   ChevronRight, Globe, Trash2, Mail, Phone, Lock, Image as ImageIcon,
-  Info, HelpCircle, UserCheck, ShieldAlert, RefreshCw, KeyRound, Crown, FileText, Sun, Moon, Type, LayoutGrid, Zap, Calendar, Star, Sparkles
+  Info, HelpCircle, UserCheck, ShieldAlert, RefreshCw, KeyRound, Crown, FileText, Sun, Moon, Type, LayoutGrid, Zap, Calendar, Star, Sparkles, CheckCircle2
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -58,7 +58,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const { data: profile, isLoading: isProfileLoading } = useDoc<User>(userRef);
 
   const [isSaving, setIsSaving] = useState(false);
-  const [isBuyingPrime, setIsBuyingPrime] = useState(false);
+  const [isBuying, setIsBuying] = useState<string | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [bgPreview, setBgPreview] = useState<string | null>(null);
   const [iconPreview, setIconPreview] = useState<string | null>(null);
@@ -141,35 +141,36 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     }
   };
 
-  const handleBuyPrime = async (price: number, months: number) => {
+  const handleBuySubscription = async (tier: 'plus' | 'one', price: number) => {
     if (!db || !user || !profile) return;
     if ((profile.balance || 0) < price) {
       toast({ title: "Недостаточно STK", description: "Пополните кошелек для активации", variant: "destructive" });
       return;
     }
 
-    setIsBuyingPrime(true);
+    setIsBuying(tier);
     triggerHaptic();
     try {
+      const planName = tier === 'plus' ? 'Nuxus Plus' : 'Nuxus One+';
       await updateDoc(doc(db, 'users', user.uid), {
         balance: increment(-price),
         isPremium: true,
-        reputation: increment(5)
+        reputation: increment(tier === 'one' ? 15 : 7)
       });
       
       await addDoc(collection(db, 'users', user.uid, 'transactions'), {
         amount: -price,
-        type: 'prime_activation',
+        type: 'subscription_activation',
         status: 'completed',
-        otherPartyName: `Nuxus Prime (${months} мес.)`,
+        otherPartyName: planName,
         createdAt: new Date().toISOString()
       });
 
-      toast({ title: "Nuxus Prime Активен!", description: "Возможности Ядра расширены." });
+      toast({ title: `${planName} Активен!`, description: "Привилегии применены к вашему узлу." });
     } catch (e) {
       toast({ title: "Сбой активации", variant: "destructive" });
     } finally {
-      setIsBuyingPrime(false);
+      setIsBuying(null);
     }
   };
 
@@ -221,7 +222,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               <TabsTrigger value="profile" className="text-[8px] font-black uppercase tracking-tight h-8">Профиль</TabsTrigger>
               <TabsTrigger value="privacy" className="text-[8px] font-black uppercase tracking-tight h-8">Защита</TabsTrigger>
               <TabsTrigger value="style" className="text-[8px] font-black uppercase tracking-tight h-8">Стиль</TabsTrigger>
-              <TabsTrigger value="prime" className="text-[8px] font-black uppercase tracking-tight h-8 text-primary">Prime</TabsTrigger>
+              <TabsTrigger value="prime" className="text-[8px] font-black uppercase tracking-tight h-8 text-primary">Premium</TabsTrigger>
               <TabsTrigger value="data" className="text-[8px] font-black uppercase tracking-tight h-8">Инфо</TabsTrigger>
             </TabsList>
           </div>
@@ -268,32 +269,82 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
               </TabsContent>
 
               <TabsContent value="prime" className="space-y-8 m-0 animate-in fade-in duration-500">
-                <div className="relative p-8 rounded-[3rem] bg-gradient-to-br from-primary/20 via-[#0a0a0c] to-primary/5 border border-primary/20 overflow-hidden shadow-2xl">
-                   <div className="absolute top-[-10%] right-[-10%] w-40 h-40 bg-primary/10 blur-[80px] rounded-full" />
-                   <div className="relative z-10 flex flex-col items-center text-center gap-4">
-                      <div className="h-20 w-20 rounded-[2rem] bg-primary/20 flex items-center justify-center border border-primary/30 shadow-[0_0_50px_rgba(229,142,56,0.3)] animate-pulse">
-                         <Star className="w-10 h-10 text-primary fill-primary" />
-                      </div>
-                      <div className="space-y-1">
-                         <h2 className="text-3xl font-black italic uppercase text-white tracking-tighter">NUXUS PRIME</h2>
-                         <p className="text-[10px] font-bold text-primary uppercase tracking-[0.4em]">{t('prime.subtitle')}</p>
+                <div className="text-center space-y-2">
+                   <h2 className="text-3xl font-black italic uppercase text-white tracking-tighter">{t('prime.title')}</h2>
+                   <p className="text-[10px] font-bold text-primary uppercase tracking-[0.4em]">{t('prime.subtitle')}</p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-6">
+                   {/* NUXUS PLUS */}
+                   <div className="bg-[#1C1C1E] rounded-[2.5rem] border border-white/5 overflow-hidden flex flex-col shadow-2xl relative group">
+                      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-accent" />
+                      <div className="p-8 space-y-6">
+                         <div className="flex justify-between items-start">
+                            <div className="space-y-1">
+                               <h3 className="text-2xl font-black italic text-white uppercase">{t('prime.plus.title')}</h3>
+                               <p className="text-[9px] font-bold text-white/40 uppercase tracking-widest">{t('prime.plus.desc')}</p>
+                            </div>
+                            <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
+                               <Star className="w-6 h-6 text-primary fill-primary" />
+                            </div>
+                         </div>
+                         
+                         <div className="space-y-3">
+                            {t('prime.plus.features').map((f: string, i: number) => (
+                              <div key={i} className="flex items-center gap-3">
+                                 <CheckCircle2 className="w-4 h-4 text-primary" />
+                                 <span className="text-xs font-bold text-white/80 uppercase tracking-tight">{f}</span>
+                              </div>
+                            ))}
+                         </div>
+
+                         <div className="pt-4 flex items-center justify-between border-t border-white/5">
+                            <span className="text-xl font-black italic text-white">{t('prime.plus.price')}</span>
+                            <Button 
+                              onClick={() => handleBuySubscription('plus', 299)} 
+                              disabled={!!isBuying}
+                              className="h-12 px-8 bg-primary text-white rounded-xl font-black uppercase italic tracking-widest text-[10px] shadow-lg active:scale-95 transition-all"
+                            >
+                               {isBuying === 'plus' ? <Loader2 className="animate-spin" /> : t('prime.buy')}
+                            </Button>
+                         </div>
                       </div>
                    </div>
-                </div>
 
-                <div className="grid grid-cols-1 gap-4">
-                   <FeatureCard icon={Zap} title={t('prime.features.hq.title')} desc={t('prime.features.hq.desc')} />
-                   <FeatureCard icon={Crown} title={t('prime.features.badge.title')} desc={t('prime.features.badge.desc')} />
-                   <FeatureCard icon={Globe} title={t('prime.features.ghost.title')} desc={t('prime.features.ghost.desc')} />
-                   <FeatureCard icon={Palette} title={t('prime.features.icons.title')} desc={t('prime.features.icons.desc')} />
-                </div>
+                   {/* NUXUS ONE+ */}
+                   <div className="bg-primary/5 rounded-[2.5rem] border border-primary/30 overflow-hidden flex flex-col shadow-2xl relative group">
+                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,hsla(var(--primary),0.15),transparent_70%)]" />
+                      <div className="p-8 space-y-6 relative z-10">
+                         <div className="flex justify-between items-start">
+                            <div className="space-y-1">
+                               <h3 className="text-2xl font-black italic text-primary uppercase">{t('prime.one.title')}</h3>
+                               <p className="text-[9px] font-bold text-primary/60 uppercase tracking-widest">{t('prime.one.desc')}</p>
+                            </div>
+                            <div className="h-12 w-12 rounded-xl bg-primary/20 flex items-center justify-center border border-primary/40 shadow-[0_0_20px_rgba(229,142,56,0.4)]">
+                               <Crown className="w-6 h-6 text-primary fill-primary" />
+                            </div>
+                         </div>
+                         
+                         <div className="space-y-3">
+                            {t('prime.one.features').map((f: string, i: number) => (
+                              <div key={i} className="flex items-center gap-3">
+                                 <Zap className="w-4 h-4 text-primary fill-current" />
+                                 <span className="text-xs font-bold text-white uppercase tracking-tight">{f}</span>
+                              </div>
+                            ))}
+                         </div>
 
-                <div className="space-y-4">
-                   <h3 className="text-[11px] font-black uppercase text-primary/60 ml-2 tracking-[0.2em] italic">Выберите период</h3>
-                   <div className="grid grid-cols-1 gap-3">
-                      <PricingBtn label={t('prime.pricing.month')} price={299} onClick={() => handleBuyPrime(299, 1)} loading={isBuyingPrime} />
-                      <PricingBtn label={t('prime.pricing.halfYear')} price={1499} onClick={() => handleBuyPrime(1499, 6)} loading={isBuyingPrime} highlighted />
-                      <PricingBtn label={t('prime.pricing.year')} price={2499} onClick={() => handleBuyPrime(2499, 12)} loading={isBuyingPrime} />
+                         <div className="pt-4 flex items-center justify-between border-t border-white/10">
+                            <span className="text-xl font-black italic text-primary">{t('prime.one.price')}</span>
+                            <Button 
+                              onClick={() => handleBuySubscription('one', 500)} 
+                              disabled={!!isBuying}
+                              className="h-12 px-8 bg-white text-black hover:bg-primary hover:text-white rounded-xl font-black uppercase italic tracking-widest text-[10px] shadow-xl active:scale-95 transition-all"
+                            >
+                               {isBuying === 'one' ? <Loader2 className="animate-spin" /> : t('prime.buy')}
+                            </Button>
+                         </div>
+                      </div>
                    </div>
                 </div>
               </TabsContent>
@@ -497,43 +548,5 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         </Tabs>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function FeatureCard({ icon: Icon, title, desc }: any) {
-  return (
-    <div className="flex items-center gap-5 p-5 bg-white/[0.03] border border-white/5 rounded-[2rem] hover:bg-white/[0.06] transition-all">
-       <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0">
-          <Icon className="w-6 h-6 text-primary" />
-       </div>
-       <div className="flex flex-col text-left">
-          <span className="text-[13px] font-black uppercase text-white italic tracking-tight">{title}</span>
-          <span className="text-[10px] text-white/40 font-bold uppercase tracking-tight leading-tight mt-0.5">{desc}</span>
-       </div>
-    </div>
-  );
-}
-
-function PricingBtn({ label, price, onClick, loading, highlighted }: any) {
-  return (
-    <button 
-      onClick={onClick} 
-      disabled={loading}
-      className={cn(
-        "flex items-center justify-between p-5 rounded-[1.8rem] border transition-all active:scale-[0.98]",
-        highlighted 
-          ? "bg-primary text-white border-primary shadow-xl shadow-primary/20" 
-          : "bg-white/5 text-white/60 border-white/5 hover:bg-white/10"
-      )}
-    >
-       <div className="flex flex-col text-left">
-          <span className="text-[11px] font-black uppercase tracking-[0.2em]">{label}</span>
-          {highlighted && <span className="text-[8px] font-bold text-white/60 uppercase">Рекомендуемо</span>}
-       </div>
-       <div className="flex items-center gap-3">
-          <span className="text-lg font-black italic tracking-tighter">{price} STK</span>
-          <ChevronRight className="w-4 h-4 opacity-40" />
-       </div>
-    </button>
   );
 }

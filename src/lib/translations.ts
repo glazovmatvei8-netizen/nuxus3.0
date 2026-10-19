@@ -66,20 +66,21 @@ export const translations = {
       } 
     },
     prime: {
-      title: "Nuxus Prime",
+      title: "Nuxus Premium",
       subtitle: "Активируйте максимальный потенциал Ядра",
-      features: {
-        hq: { title: "HQ Сигнал", desc: "Передача медиа в исходном качестве без сжатия." },
-        badge: { title: "Элитный статус", desc: "Золотая звезда и доступ к премиальным цветам имени." },
-        ghost: { title: "Режим Призрака", desc: "Скрытие статуса присутствия и времени входа." },
-        icons: { title: "Кастомные иконки", desc: "Доступ ко всей библиотеке логотипов приложения." }
+      plus: {
+        title: "Nuxus Plus",
+        desc: "Стиль и качество",
+        price: "299 STK/мес",
+        features: ["HQ Сигнал (без сжатия)", "Золотая звезда", "Цветные имена"]
       },
-      pricing: {
-        month: "1 Месяц",
-        halfYear: "6 Месяцев",
-        year: "1 Год",
-        buy: "Активировать за"
-      }
+      one: {
+        title: "Nuxus One+",
+        desc: "Абсолютный доступ",
+        price: "500 STK/мес",
+        features: ["Все из Plus", "Режим Призрака", "Кастомные иконки", "Приоритетный узел"]
+      },
+      buy: "Активировать"
     },
     auth: { 
       title: "Вход в аккаунт", 
@@ -170,7 +171,7 @@ export const translations = {
         style: "Style", 
         privacy: "Security", 
         language: "Language", 
-        prime: "Prime", 
+        prime: "Premium", 
         interface: "Interface",
         data: "Info"
       }, 
@@ -192,20 +193,21 @@ export const translations = {
       } 
     },
     prime: {
-      title: "Nuxus Prime",
+      title: "Nuxus Premium",
       subtitle: "Activate Core maximum potential",
-      features: {
-        hq: { title: "HQ Signal", desc: "Send media in original quality without compression." },
-        badge: { title: "Elite Status", desc: "Gold star and access to premium name colors." },
-        ghost: { title: "Ghost Mode", desc: "Hide presence status and last seen time." },
-        icons: { title: "Custom Icons", desc: "Access the entire app logo library." }
+      plus: {
+        title: "Nuxus Plus",
+        desc: "Style & Quality",
+        price: "299 STK/mo",
+        features: ["HQ Signal (No compression)", "Golden Star", "Custom Name Colors"]
       },
-      pricing: {
-        month: "1 Month",
-        halfYear: "6 Months",
-        year: "1 Year",
-        buy: "Activate for"
-      }
+      one: {
+        title: "Nuxus One+",
+        desc: "Absolute Access",
+        price: "500 STK/mo",
+        features: ["All Plus features", "Ghost Mode", "Custom App Icons", "Priority Sync"]
+      },
+      buy: "Activate"
     },
     auth: { 
       title: "Sign In", 
