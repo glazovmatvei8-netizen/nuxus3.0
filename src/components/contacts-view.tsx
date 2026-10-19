@@ -88,6 +88,10 @@ export default function ContactsView() {
       setCurrentChatId(docRef.id);
       setActiveView('chats');
     } catch (e: any) {
+<<<<<<< HEAD
+=======
+      console.error("Failed to create or open contact chat:", e);
+>>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
       toast({ title: "Ошибка", description: e.message, variant: "destructive" });
     }
   };

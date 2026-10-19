@@ -110,6 +110,10 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
         }
       }
     } catch (e: any) {
+<<<<<<< HEAD
+=======
+      console.error("Authentication error:", e);
+>>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
       let msg = e.message;
       if (e.code === 'auth/user-not-found') msg = lang === 'en' ? "Node not found." : "Узел не найден.";
       if (e.code === 'auth/wrong-password') msg = lang === 'en' ? "Incorrect password." : "Неверный пароль.";
@@ -141,6 +145,10 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
       await sendEmailVerification(auth.currentUser);
       toast({ title: lang === 'en' ? "Signal Resent" : "Сигнал отправлен повторно" });
     } catch (e) {
+<<<<<<< HEAD
+=======
+      console.error("Resend verification email error:", e);
+>>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
       toast({ title: lang === 'en' ? "Gateway Failed" : "Сбой шлюза", variant: "destructive" });
     }
     setIsLoading(false);

@@ -38,7 +38,11 @@ export async function checkBiometric(): Promise<boolean> {
 
     return !!result;
   } catch (error: any) {
+<<<<<<< HEAD
     console.warn("Nuxus Biometric Signal Rejected:", error.name);
+=======
+    console.error("Nuxus Biometric Signal Rejected:", error);
+>>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
     return false;
   }
 }

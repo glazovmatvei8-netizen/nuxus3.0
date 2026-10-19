@@ -42,6 +42,7 @@ service cloud.firestore {
     }
 
     match /chats/{chatId} {
+<<<<<<< HEAD
       allow read, update, list: if isSignedIn() && (isPrimeAdmin() || request.auth.uid in resource.data.participantIds);
       allow create: if isSignedIn();
 
@@ -51,6 +52,15 @@ service cloud.firestore {
           request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds
         );
       }
+=======
+      allow read, update, list: if isSignedIn() && (isPrimeAdmin() || request.auth.uid == resource.data.userId);
+      allow create: if isSignedIn();
+    }
+
+    match /subscriptions/{subscriptionId} {
+      allow read: if isSignedIn() && (isPrimeAdmin() || request.auth.uid == resource.data.userId);
+      allow create, update: if isPrimeAdmin();
+>>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
     }
 
     // CALLS ENGINE V139.0

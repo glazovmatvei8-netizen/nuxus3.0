@@ -103,6 +103,10 @@ export function TradeModal({ open, onOpenChange, gift }: { open: boolean, onOpen
       toast({ title: "Передача завершена", description: `${gift.giftName} теперь у ${targetUser.name}` });
       onOpenChange(false);
     } catch (e) {
+<<<<<<< HEAD
+=======
+      console.error("Trade transaction error in trade-modal:", e);
+>>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
       toast({ title: "Критический сбой", variant: "destructive" });
     } finally {
       setIsProcessing(false);

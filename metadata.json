@@ -1,4 +1,12 @@
 {
+<<<<<<< HEAD
   "name": "studio-5946432351",
   "description": "App imported from Firebase Studio"
+=======
+  "name": "Nuxus 2.0",
+  "description": "Суверенное Ядро Связи: безопасный мессенджер с квантовым шифрованием QES, аудио/видеосвязью, кошельком и децентрализованными каналами.",
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+>>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
 }

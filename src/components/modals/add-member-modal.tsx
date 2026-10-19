@@ -86,6 +86,10 @@ export function AddMemberModal({ open, onOpenChange, chatId, currentParticipantI
       });
       onOpenChange(false);
     } catch (error: any) {
+<<<<<<< HEAD
+=======
+      console.error("Add member error:", error);
+>>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
       toast({ title: "Ошибка", description: error.message, variant: "destructive" });
     } finally {
       setIsLoading(false);

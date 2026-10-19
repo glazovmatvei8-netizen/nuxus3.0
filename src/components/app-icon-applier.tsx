@@ -63,7 +63,11 @@ export function AppIconApplier() {
           });
         });
       } catch (e) {
+<<<<<<< HEAD
         // Подавление ошибок манипуляции DOM во время циклов рендеринга
+=======
+        console.error("DOM manipulation error in app-icon-applier:", e);
+>>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
       }
     };
 

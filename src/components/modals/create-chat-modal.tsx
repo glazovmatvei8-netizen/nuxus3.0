@@ -74,6 +74,10 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
       onOpenChange(false);
       toast({ title: "Узел создан" });
     } catch (error: any) {
+<<<<<<< HEAD
+=======
+      console.error("Create chat error in create-chat-modal:", error);
+>>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
       toast({ title: "Ошибка создания", description: error.message, variant: "destructive" });
     } finally {
       setIsLoading(false);

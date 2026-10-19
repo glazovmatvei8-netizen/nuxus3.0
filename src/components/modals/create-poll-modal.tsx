@@ -68,6 +68,10 @@ export function CreatePollModal({ open, onOpenChange, chatId }: { open: boolean,
       setOptions(['', '']);
       toast({ title: "Опрос создан" });
     } catch (e: any) {
+<<<<<<< HEAD
+=======
+      console.error("Create poll error in create-poll-modal:", e);
+>>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
       toast({ title: "Ошибка", description: e.message, variant: "destructive" });
     } finally {
       setIsLoading(false);

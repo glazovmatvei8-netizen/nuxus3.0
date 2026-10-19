@@ -159,12 +159,33 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
 
   const handleSaveTitle = async (title: string) => {
     if (!db || !titleModalUser) return;
+<<<<<<< HEAD
     try { await updateDoc(doc(db, 'chats', chat.id), { [`metadata.${titleModalUser}.customTitle`]: title.trim() || null }); toast({ title: "Должность обновлена" }); setTitleModalUser(null); } catch (e) { toast({ title: "Сбой синхронизации" }); }
+=======
+    try {
+      await updateDoc(doc(db, 'chats', chat.id), { [`metadata.${titleModalUser}.customTitle`]: title.trim() || null });
+      toast({ title: "Должность обновлена" });
+      setTitleModalUser(null);
+    } catch (e) {
+      console.error("Failed to save custom title in chat-info-modal:", e);
+      toast({ title: "Сбой синхронизации" });
+    }
+>>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
   };
 
   const toggleContact = async () => {
     if (!db || !user || !otherId) return;
+<<<<<<< HEAD
     try { await updateDoc(doc(db, 'users', user.uid), { contactIds: isContact ? arrayRemove(otherId) : arrayUnion(otherId) }); toast({ title: isContact ? "Удалено из контактов" : "Узел добавлен в контакты" }); } catch (e) { toast({ title: "Ошибка синхронизации", variant: "destructive" }); }
+=======
+    try {
+      await updateDoc(doc(db, 'users', user.uid), { contactIds: isContact ? arrayRemove(otherId) : arrayUnion(otherId) });
+      toast({ title: isContact ? "Удалено из контактов" : "Узел добавлен в контакты" });
+    } catch (e) {
+      console.error("Failed to toggle contact in chat-info-modal:", e);
+      toast({ title: "Ошибка синхронизации", variant: "destructive" });
+    }
+>>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
   };
 
   const currentDisplayName = useMemo(() => {

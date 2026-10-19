@@ -80,7 +80,12 @@ export function ForwardModal() {
         setForwardingMessage(null);
         setCurrentChatId(targetChat.id);
       })
+<<<<<<< HEAD
       .catch(() => {
+=======
+      .catch((err) => {
+        console.error("Signal forwarding error in forward-modal:", err);
+>>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
         toast({ title: "Сбой передачи сигнала", variant: "destructive" });
       })
       .finally(() => {

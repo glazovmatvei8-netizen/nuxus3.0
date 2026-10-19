@@ -2,9 +2,18 @@ name: Build Android APK (Release)
 
 on:
   push:
+<<<<<<< HEAD
     branches: [ main ]
   workflow_dispatch:
 
+=======
+    branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+>>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
 jobs:
   build:
     name: Build Android App
@@ -21,6 +30,7 @@ jobs:
           cache: 'npm'
 
       - name: Install Dependencies
+<<<<<<< HEAD
         run: npm install
 
       - name: Build Web Project (Static)
@@ -31,6 +41,30 @@ jobs:
           npx cap sync android
 
       - name: Setup Java
+=======
+        run: npm install --legacy-peer-deps
+
+      - name: Build Web Project (Static Export to /out)
+        env:
+          STATIC_EXPORT: 'true'
+        run: |
+          rm -rf src/app/api/ai
+          npm run export
+          if [ ! -d "out" ]; then
+            echo "Error: Directory 'out' was not generated."
+            exit 1
+          fi
+
+      - name: Capacitor Add & Sync Android
+        run: |
+          if [ ! -d "android" ]; then
+            npx cap add android
+          fi
+          npx cap sync android
+          npx cap copy android
+
+      - name: Setup Java 17
+>>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
@@ -41,9 +75,30 @@ jobs:
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug
+<<<<<<< HEAD
+=======
+          cp app/build/outputs/apk/debug/app-debug.apk ../Nuxus-v2.0.apk
+>>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
+<<<<<<< HEAD
           name: Nuxus-Unsigned-Debug-APK
           path: android/app/build/outputs/apk/debug/app-debug.apk
+=======
+          name: Nuxus-Android-APK
+          path: Nuxus-v2.0.apk
+
+      - name: Create or Update GitHub Release with APK
+        uses: softprops/action-gh-release@v2
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        with:
+          tag_name: v2.0-latest
+          name: "Nuxus 2.0 Android APK (Auto-Build)"
+          body: "Автоматическая сборка Android-клиента Nuxus 2.0 (протокол QES). Скачайте `Nuxus-v2.0.apk` ниже для установки на смартфон."
+          files: Nuxus-v2.0.apk
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+>>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0

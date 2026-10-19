@@ -52,6 +52,10 @@ export function StoryArchiveModal({ open, onOpenChange }: { open: boolean, onOpe
       });
       toast({ title: "Момент восстановлен", description: "Он снова в сети на 24 часа." });
     } catch (e) { 
+<<<<<<< HEAD
+=======
+      console.error("Story resonate error in story-archive-modal:", e);
+>>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
       toast({ title: "Сбой резонанса", variant: "destructive" }); 
     }
   };

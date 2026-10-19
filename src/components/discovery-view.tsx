@@ -55,6 +55,10 @@ export default function DiscoveryView() {
         toast({ title: t('explore.devMode'), description: t('explore.nodeNotFound') });
       }
     } catch (e) {
+<<<<<<< HEAD
+=======
+      console.error("Discovery node join error:", e);
+>>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
       toast({ title: "Ошибка шлюза", variant: "destructive" });
     } finally {
       setIsJoining(null);

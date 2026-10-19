@@ -61,7 +61,14 @@ export function encryptSignal(text: string): string {
   try {
     const encoded = btoa(encodeURIComponent(text.trim()));
     return `NX_${encoded}`;
+<<<<<<< HEAD
   } catch (e) { return text; }
+=======
+  } catch (e) {
+    console.error("encryptSignal error:", e);
+    return text;
+  }
+>>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
 }
 
 export function decryptSignal(content: string | undefined | null): string {
@@ -74,6 +81,10 @@ export function decryptSignal(content: string | undefined | null): string {
     if (!/^[A-Za-z0-9+/=]+$/.test(raw)) return content;
     return decodeURIComponent(atob(raw));
   } catch (e) { 
+<<<<<<< HEAD
+=======
+    console.error("decryptSignal error:", e);
+>>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
     return "Сигнал зашифрован"; 
   }
 }
@@ -120,6 +131,10 @@ export function formatLastSeen(
     
     return `был(а) ${format(lastSeenDate, 'd MMM в HH:mm', { locale: ru })}`;
   } catch (e) { 
+<<<<<<< HEAD
+=======
+    console.error("formatLastSeen error:", e);
+>>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
     return 'был(а) недавно'; 
   }
 }

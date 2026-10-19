@@ -92,6 +92,10 @@ export function CreateStoryModal({ open, onOpenChange }: { open: boolean, onOpen
       setCaption('');
       onOpenChange(false);
     } catch (e: any) {
+<<<<<<< HEAD
+=======
+      console.error("Create story error in create-story-modal:", e);
+>>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
       toast({ title: "Ошибка Ядра", description: "Попробуйте снова", variant: "destructive" });
     } finally {
       setIsPublishing(false);

@@ -85,8 +85,16 @@ export function CallOverlay() {
     if (!ringtoneRef.current) {
       ringtoneRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
       ringtoneRef.current.loop = true;
+<<<<<<< HEAD
       ringtoneRef.current.play().catch(() => {
         window.addEventListener('click', () => ringtoneRef.current?.play(), { once: true });
+=======
+      ringtoneRef.current.play().catch((err) => {
+        console.error("Ringtone play error:", err);
+        window.addEventListener('click', () => {
+          ringtoneRef.current?.play().catch((e) => console.error("Ringtone click play error:", e));
+        }, { once: true });
+>>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
       });
     }
   };

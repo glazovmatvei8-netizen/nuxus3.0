@@ -110,6 +110,10 @@ export function GiftModal({ open, onOpenChange, targetUser, chatId }: { open: bo
       toast({ title: "Подарок отправлен!", description: `${gift.name} теперь в коллекции ${targetUser.name}` });
       onOpenChange(false);
     } catch (e: any) {
+<<<<<<< HEAD
+=======
+      console.error("Failed to send gift in gift-modal:", e);
+>>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
       toast({ title: "Ошибка отправки", description: e.message, variant: "destructive" });
     } finally {
       setIsSending(false);

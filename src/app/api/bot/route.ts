@@ -21,6 +21,10 @@ export async function POST(request: Request) {
       timestamp: new Date().toISOString()
     });
   } catch (e) {
+<<<<<<< HEAD
+=======
+    console.error("Signal processing error in bot route:", e);
+>>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
     return NextResponse.json({ error: "Signal processing error" }, { status: 500 });
   }
 }

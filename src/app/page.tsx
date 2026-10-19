@@ -81,6 +81,10 @@ export default function Home() {
         setTwoFactorInput('');
       }
     } catch (e) {
+<<<<<<< HEAD
+=======
+      console.error("2FA verification error:", e);
+>>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
       toast({ title: "Ошибка модуля защиты", variant: "destructive" });
     }
   }, [profile, twoFactorInput, setIs2FAVerified, toast]);
@@ -96,7 +100,11 @@ export default function Home() {
         toast({ title: "Биометрия не распознана", variant: "destructive" });
       }
     } catch (e) {
+<<<<<<< HEAD
       console.warn("Nuxus FaceID: Signal Rejected");
+=======
+      console.error("Nuxus FaceID: Signal Rejected", e);
+>>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
     } finally {
       setIsAuthenticating(false);
     }

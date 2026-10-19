@@ -1,3 +1,7 @@
+<<<<<<< HEAD
+=======
+
+>>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
 "use client"
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -5,6 +9,7 @@ import { useUser, useFirestore } from '@/firebase/provider';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { useMemoFirebase } from '@/firebase/firestore/use-memo-firebase';
 import { useCollection } from '@/firebase/firestore/use-collection';
+<<<<<<< HEAD
 import { doc, collection, query, orderBy, limit, addDoc } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
@@ -14,6 +19,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { 
   Send, ArrowDown, RefreshCcw, 
   Wallet, Info, FileText, Loader2, Coins
+=======
+import { doc, collection, query, orderBy, limit } from 'firebase/firestore';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from '@/components/ui/button';
+import { 
+  Send, ArrowDown, RefreshCcw, 
+  Wallet, Info, FileText, Loader2
+>>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
 } from 'lucide-react';
 import { cn, triggerHaptic } from '@/lib/utils';
 import type { User, Transaction } from '@/lib/types';
@@ -22,8 +35,13 @@ import { useTranslations } from '@/hooks/use-translations';
 import { useAppState } from '@/lib/app-state';
 
 /**
+<<<<<<< HEAD
  * WALLET VIEW V147.0 «INTEGRITY FIX»
  * FIXED: ReferenceError: Label is not defined.
+=======
+ * WALLET VIEW V135.0 «TITANIUM HARDENING»
+ * FIXED: Исправлен вылет из-за неопределенных переменных и отсутствия проверок данных.
+>>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
  */
 export default function WalletView() {
   const { user } = useUser();
@@ -33,10 +51,13 @@ export default function WalletView() {
   const { setIsLegalOpen } = useAppState();
   const [mounted, setMounted] = useState(false);
   
+<<<<<<< HEAD
   const [isTopUpOpen, setIsTopUpOpen] = useState(false);
   const [topUpAmount, setTopUpUpAmount] = useState('');
   const [isSubmittingRequest, setIsSubmittingRequest] = useState(false);
   
+=======
+>>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -50,6 +71,7 @@ export default function WalletView() {
   }, [db, user?.uid]);
   const { data: transactions, isLoading: isTxLoading } = useCollection<Transaction>(transactionsQuery);
 
+<<<<<<< HEAD
   const handleTopUpRequest = async () => {
     const amount = parseFloat(topUpAmount);
     if (!amount || amount < 10 || !db || !user || !profile) {
@@ -78,6 +100,8 @@ export default function WalletView() {
     }
   };
 
+=======
+>>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
   if (!mounted) return <div className="flex-1 bg-[#121212]" />;
 
   return (
@@ -97,12 +121,16 @@ export default function WalletView() {
                         <span className="text-5xl font-black text-white italic tracking-tighter tabular-nums">{(profile?.balance ?? 0).toFixed(2)}</span>
                         <span className="text-2xl font-black text-primary italic">STK</span>
                       </div>
+<<<<<<< HEAD
                       <div className="flex flex-col items-center gap-1 mt-2">
                          <p className="text-[11px] font-bold text-[#8E8E93] uppercase tracking-widest">{t('wallet.balance')}</p>
                          <div className="bg-primary/10 px-3 py-1 rounded-lg border border-primary/20">
                             <span className="text-[10px] font-black text-primary uppercase">1 STK = 1 RUB</span>
                          </div>
                       </div>
+=======
+                      <p className="text-[11px] font-bold text-[#8E8E93] uppercase tracking-widest">{t('wallet.balance')}</p>
+>>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
                     </>
                   )}
                 </div>
@@ -112,9 +140,13 @@ export default function WalletView() {
 
           <section className="bg-white/5 border border-white/10 p-6 rounded-[2.2rem] space-y-4">
              <div className="flex items-center gap-3 text-primary">
+<<<<<<< HEAD
                 <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
                   <Info className="w-5 h-5 text-primary" />
                 </div>
+=======
+                <Info className="w-5 h-5" />
+>>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
                 <span className="text-[11px] font-black uppercase tracking-widest">О Системе STK</span>
              </div>
              <p className="text-[10px] font-bold text-white/50 uppercase leading-relaxed tracking-tight italic">
@@ -129,7 +161,11 @@ export default function WalletView() {
              <h3 className="text-[11px] font-black uppercase text-[#8E8E93] tracking-[0.2em] px-2 italic">{t('wallet.actions')}</h3>
              <div className="grid grid-cols-3 gap-4">
                 <ActionBtn icon={Send} label="Отправить" onClick={() => toast({ title: "Скоро", description: "Переводы между узлами в разработке" })} />
+<<<<<<< HEAD
                 <ActionBtn icon={ArrowDown} label="Пополнить" onClick={() => setIsTopUpOpen(true)} />
+=======
+                <ActionBtn icon={ArrowDown} label="Получить" onClick={() => toast({ title: "Пополнение", description: "Обратитесь к Администратору Ядра" })} />
+>>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
                 <ActionBtn icon={RefreshCcw} label="Обмен" onClick={() => toast({ title: "Скоро", description: "Обмен артефактов в разработке" })} />
              </div>
           </div>
@@ -155,6 +191,7 @@ export default function WalletView() {
           </p>
         </div>
       </ScrollArea>
+<<<<<<< HEAD
 
       <Dialog open={isTopUpOpen} onOpenChange={setIsTopUpOpen}>
         <DialogContent className="max-w-sm bg-[#0a0a0c] border-white/10 rounded-[2.5rem] p-8 shadow-2xl outline-none">
@@ -194,6 +231,8 @@ export default function WalletView() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+=======
+>>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
     </div>
   );
 }

@@ -42,7 +42,12 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.mode === 'navigate') {
     event.respondWith(
+<<<<<<< HEAD
       fetch(event.request).catch(() => {
+=======
+      fetch(event.request).catch((err) => {
+        console.error("Service Worker fetch failed for navigation, falling back to cache/offline:", err);
+>>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
         return caches.match(event.request).then((response) => {
           return response || caches.match(OFFLINE_URL);
         });

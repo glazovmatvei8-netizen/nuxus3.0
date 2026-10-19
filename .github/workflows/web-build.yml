@@ -2,7 +2,11 @@ name: Build Web (Folder OUT)
 
 on:
   push:
+<<<<<<< HEAD
     branches: [ main ]
+=======
+    branches: [ main, master ]
+>>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
   workflow_dispatch:
 
 jobs:
@@ -21,10 +25,21 @@ jobs:
           cache: 'npm'
 
       - name: Install Dependencies
+<<<<<<< HEAD
         run: npm install
 
       - name: Build Project (Export)
         run: npm run build
+=======
+        run: npm install --legacy-peer-deps
+
+      - name: Build Project (Export)
+        env:
+          STATIC_EXPORT: 'true'
+        run: |
+          rm -rf src/app/api/ai
+          npm run export
+>>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
 
       - name: Prepare Staging for Archive
         run: |

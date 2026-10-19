@@ -55,6 +55,10 @@ export const signalService = {
 
       return msgRef.id;
     } catch (e) {
+<<<<<<< HEAD
+=======
+      console.error("Kernel API Error: Signal Delivery Failed", e);
+>>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
       throw new Error("Kernel API Error: Signal Delivery Failed");
     }
   },
@@ -75,7 +79,11 @@ export const signalService = {
       });
       await batch.commit();
     } catch (e) {
+<<<<<<< HEAD
       // Тихий сбой, повторная попытка при следующем тике
+=======
+      console.error("Kernel API Error: Failed to acknowledge signals", e);
+>>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
     }
   },
 
@@ -120,6 +128,10 @@ export const signalService = {
       const docRef = await addDoc(collection(nuxus.db, 'chats'), newChatData);
       return docRef.id;
     } catch (e) {
+<<<<<<< HEAD
+=======
+      console.error("Kernel API Error: Node Initialization Failed", e);
+>>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
       throw new Error("Kernel API Error: Node Initialization Failed");
     }
   },
@@ -138,6 +150,10 @@ export const signalService = {
         isDeleted: true 
       });
     } catch (e) {
+<<<<<<< HEAD
+=======
+      console.error("Kernel API Error: Signal Annihilation Failed", e);
+>>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
       throw e;
     }
   }
