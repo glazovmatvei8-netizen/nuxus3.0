@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, memo, useMemo, useEffect } from 'react';
@@ -38,14 +37,10 @@ export const UserAvatar = memo(({ userId, className, fallbackName, manualAvatarU
     if (!mounted || !profile?.lastSeen || profile?.settings?.privacy?.isGhostMode) return false;
     try {
       return differenceInMinutes(new Date(), parseISO(profile.lastSeen)) < 2;
-<<<<<<< HEAD
-    } catch (e) { return false; }
-=======
     } catch (e) {
       console.error("Error parsing lastSeen in user avatar:", e);
       return false;
     }
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
   }, [profile, mounted]);
 
   const initials = useMemo(() => {

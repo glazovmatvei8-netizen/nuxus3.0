@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { memo, useMemo, useState, useEffect, useRef } from 'react';
@@ -15,7 +14,7 @@ import { useUser, useFirestore } from '@/firebase/provider';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { doc, updateDoc, arrayUnion, arrayRemove, deleteDoc } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
+import { FirestorePermissionError } from '@/firebase/errors';
 import type { User, Message } from '@/lib/types';
 import {
   ContextMenu,
@@ -31,7 +30,6 @@ export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, cha
   const db = useFirestore();
   const { toast } = useToast();
   const [mounted, setMounted] = useState(false);
-<<<<<<< HEAD
   
   // SWIPE TO REPLY LOGIC
   const [swipeX, setSwipeX] = useState(0);
@@ -39,8 +37,6 @@ export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, cha
   const startX = useRef(0);
   const swipeThreshold = 60;
 
-=======
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioProgress, setAudioProgress] = useState(0);
@@ -56,7 +52,6 @@ export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, cha
     if (!mounted || !message.sentAt) return '';
     try {
       return format(new Date(message.sentAt), 'HH:mm');
-<<<<<<< HEAD
     } catch (e) { return ''; }
   }, [message.sentAt, mounted]);
 
@@ -87,14 +82,6 @@ export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, cha
     setIsSwiping(false);
   };
 
-=======
-    } catch (e) {
-      console.error("Error formatting message sentAt time:", e);
-      return '';
-    }
-  }, [message.sentAt, mounted]);
-
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
   const toggleAudio = () => {
     if (!audioRef.current) return;
     if (isPlaying) {
@@ -115,12 +102,8 @@ export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, cha
     if (!db || !chatId) return;
     if (confirm("Аннигилировать этот сигнал для всех?")) {
       const msgRef = doc(db, 'chats', chatId, 'messages', message.id);
-<<<<<<< HEAD
-      deleteDoc(msgRef).catch(async () => {
-=======
       deleteDoc(msgRef).catch(async (error) => {
         console.error("Error deleting message:", error);
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
         errorEmitter.emit('permission-error', new FirestorePermissionError({ path: msgRef.path, operation: 'delete' }));
       });
       toast({ title: "Сигнал удален" });
@@ -134,12 +117,8 @@ export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, cha
     const updateData = hasReacted 
       ? { [`reactions.${emoji}`]: arrayRemove(user.uid) }
       : { [`reactions.${emoji}`]: arrayUnion(user.uid) };
-<<<<<<< HEAD
-    updateDoc(msgRef, updateData).catch(async () => {
-=======
     updateDoc(msgRef, updateData).catch(async (error) => {
       console.error("Error updating message reactions:", error);
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
       errorEmitter.emit('permission-error', new FirestorePermissionError({ path: msgRef.path, operation: 'update', requestResourceData: updateData }));
     });
   };
@@ -157,10 +136,6 @@ export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, cha
   const textClasses = { small: "text-[13px]", medium: "text-[15px]", large: "text-[18px]" };
   const rep = getReputationInfo(senderProfile?.reputation);
 
-<<<<<<< HEAD
-=======
-  // DECIPHERED CONTENT
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
   const displayContent = useMemo(() => {
     if (message.contentType === 'text') {
       return decryptSignal(message.content);
@@ -169,14 +144,12 @@ export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, cha
   }, [message.content, message.contentType]);
 
   return (
-<<<<<<< HEAD
     <div 
       className={cn("w-full flex flex-col mb-3 animate-in fade-in slide-in-from-bottom-2 duration-500 relative", isMe ? "items-end" : "items-start")}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      {/* SWIPE REPLY INDICATOR */}
       <div 
         className="absolute right-[-40px] top-1/2 -translate-y-1/2 flex items-center justify-center transition-all duration-200"
         style={{ opacity: Math.abs(swipeX) / swipeThreshold, transform: `scale(${Math.min(Math.abs(swipeX) / swipeThreshold, 1.2)})` }}
@@ -192,12 +165,6 @@ export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, cha
             className={cn("flex gap-3 max-w-[85%] items-end transition-transform duration-75", isMe ? "flex-row-reverse" : "flex-row")}
             style={{ transform: `translateX(${swipeX}px)` }}
           >
-=======
-    <div className={cn("w-full flex flex-col mb-3 animate-in fade-in slide-in-from-bottom-2 duration-500", isMe ? "items-end" : "items-start")}>
-      <ContextMenu>
-        <ContextMenuTrigger className="w-full flex flex-col items-inherit">
-          <div className={cn("flex gap-3 max-w-[85%] items-end", isMe ? "flex-row-reverse" : "flex-row")}>
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
             {!isMe && (
               <UserAvatar 
                 userId={message.senderId} 
@@ -206,11 +173,7 @@ export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, cha
               />
             )}
             
-<<<<<<< HEAD
             <div id={message.id} className={cn("flex flex-col min-w-[60px]", isMe ? "items-end" : "items-start")}>
-=======
-            <div className={cn("flex flex-col min-w-[60px]", isMe ? "items-end" : "items-start")}>
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
               {!isMe && (
                 <div className="flex items-center gap-2 ml-2 mb-1">
                    <span className="text-[10px] font-black uppercase tracking-widest italic text-primary/60">

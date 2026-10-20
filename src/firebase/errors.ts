@@ -1,4 +1,3 @@
-
 'use client';
 import { type User } from 'firebase/auth';
 import { nuxus } from '@/lib/nuxus-engine';
@@ -60,14 +59,10 @@ function buildAuthObject(currentUser: User | null): FirebaseAuthObject | null {
       uid: currentUser.uid,
       token: token,
     };
-<<<<<<< HEAD
-  } catch (e) { return null; }
-=======
   } catch (e) {
     console.error("Error building auth object for security rules:", e);
     return null;
   }
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
 }
 
 function buildRequestObject(context: SecurityRuleContext): SecurityRuleRequest {
@@ -77,13 +72,9 @@ function buildRequestObject(context: SecurityRuleContext): SecurityRuleRequest {
     if (currentUser) {
       authObject = buildAuthObject(currentUser);
     }
-<<<<<<< HEAD
-  } catch (e) {}
-=======
   } catch (e) {
     console.error("Error retrieving currentUser for security rule request:", e);
   }
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
 
   return {
     auth: authObject,

@@ -1,4 +1,3 @@
-
 /**
  * NUXUS BIOMETRIC SERVICE V81.0 (Pulse Protocol)
  * ОПТИМИЗИРОВАНО: Полная поддержка Face ID/Touch ID на iOS и Fingerprint/Face Unlock на Android.
@@ -11,12 +10,8 @@ export async function checkBiometric(): Promise<boolean> {
   }
 
   try {
-    const isNative = !!(window as any).Capacitor;
     const challenge = crypto.getRandomValues(new Uint8Array(32));
     
-    // В нативном приложении (Capacitor) это вызывает нативный диалог системы
-    // На Android: вызовет Fingerprint/Face Unlock диалог Google.
-    // На iOS: вызовет Face ID / Touch ID.
     const result = await navigator.credentials.create({
       publicKey: {
         challenge,
@@ -38,11 +33,7 @@ export async function checkBiometric(): Promise<boolean> {
 
     return !!result;
   } catch (error: any) {
-<<<<<<< HEAD
-    console.warn("Nuxus Biometric Signal Rejected:", error.name);
-=======
     console.error("Nuxus Biometric Signal Rejected:", error);
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
     return false;
   }
 }

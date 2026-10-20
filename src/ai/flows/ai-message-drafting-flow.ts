@@ -1,12 +1,3 @@
-<<<<<<< HEAD
-
-'use server';
-/**
- * @fileOverview AI Drafting Stub (DEACTIVATED)
- */
-export async function suggestMessageDraft(input: any): Promise<{ draftMessage: string }> {
-  return { draftMessage: "" };
-=======
 import { aiService } from '@/services/ai-service';
 
 export async function suggestMessageDraft(input: {
@@ -25,5 +16,4 @@ export async function suggestMessageDraft(input: {
     console.error('suggestMessageDraft error:', e);
     throw e;
   }
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
 }

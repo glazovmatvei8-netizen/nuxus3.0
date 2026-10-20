@@ -158,10 +158,7 @@ function CallItem({ call, currentUserId }: { call: Call, currentUserId?: string 
     try {
       return format(new Date(call.createdAt), 'dd MMM HH:mm');
     } catch (e) {
-<<<<<<< HEAD
-=======
       console.error("Error formatting call date in calls-view:", e);
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
       return 'Недавно';
     }
   }, [call.createdAt, mounted]);
