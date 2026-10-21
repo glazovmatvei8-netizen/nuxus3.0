@@ -34,30 +34,43 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             location.href = location.href.replace('http:', 'https:');
           }
 
-          // 2. ЗАЩИТА BLACK BOX (ANTI-F12 & DOM INTEGRITY)
+          // 2. ЗАЩИТА BLACK BOX (ANTI-F12 & DEBUGGER TRAP)
           if (typeof window !== 'undefined') {
+            // Блокировка контекстного меню и горячих клавиш
             document.addEventListener('contextmenu', e => e.preventDefault());
             document.addEventListener('keydown', e => {
-              if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) || (e.ctrlKey && e.key === 'U')) {
+              if (
+                e.key === 'F12' || 
+                (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) || 
+                (e.ctrlKey && e.key === 'U') ||
+                (e.metaKey && e.optionKey && e.key === 'i') // Mac support
+              ) {
                 e.preventDefault();
+                return false;
               }
             });
 
-            // Ловушка для дебаггера
+            // Циклическая ловушка отладчика (Debugger Trap)
+            // Это "вешает" консоль при попытке открытия
             setInterval(() => {
               (function() {
-                const start = new Date();
+                const start = Date.now();
                 debugger;
-                const end = new Date();
+                const end = Date.now();
                 if (end - start > 100) {
+                   // Если отладчик сработал (пауза > 100мс), перенаправляем на пустую страницу
                    window.location.href = 'about:blank';
                 }
               })();
-            }, 1000);
+            }, 500);
 
             // Защита от изменения DOM (Tamper Detection)
-            const observer = new MutationObserver(() => {
-              console.log('%cDOM TAMPERING DETECTED', 'color: red; font-weight: bold;');
+            const observer = new MutationObserver((mutations) => {
+              mutations.forEach((mutation) => {
+                if (mutation.type === 'childList' || mutation.type === 'attributes') {
+                   console.log('%cDOM TAMPERING DETECTED', 'color: red; font-weight: bold;');
+                }
+              });
             });
             observer.observe(document.documentElement, { attributes: true, childList: true, subtree: true });
           }

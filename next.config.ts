@@ -1,13 +1,13 @@
 import type { NextConfig } from 'next';
 
 /**
- * NUXUS PRODUCTION CONFIG V173.0 «ABSOLUTE STATIC»
- * ОПТИМИЗИРОВАНО: Принудительный экспорт для хостинга (Beget/Timeweb).
+ * NUXUS PRODUCTION CONFIG V174.0 «HARDENED SHELL»
+ * ОПТИМИЗИРОВАНО: Тотальная обфускация и защита от дебаггера.
  */
 const nextConfig: NextConfig = {
   output: 'export', 
   trailingSlash: true, 
-  productionBrowserSourceMaps: false, 
+  productionBrowserSourceMaps: false, // ГАРАНТИРОВАННОЕ СКРЫТИЕ ПАПКИ SRC
   images: {
     unoptimized: true, 
   },
@@ -24,11 +24,14 @@ const nextConfig: NextConfig = {
       if (config.optimization.minimizer) {
         config.optimization.minimizer.forEach((m: any) => {
           if (m.options && m.options.terserOptions) {
+            // Удаляем все комментарии и максимально сжимаем имена
             m.options.terserOptions.format = { comments: false };
             m.options.terserOptions.compress = {
               drop_console: true,
               pure_funcs: ['console.info', 'console.debug', 'console.warn'],
+              passes: 3, // Тройной проход для запутывания кода
             };
+            m.options.terserOptions.mangle = true; // Принудительное изменение имен функций
           }
         });
       }
