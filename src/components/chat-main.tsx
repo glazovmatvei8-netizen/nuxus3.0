@@ -8,7 +8,8 @@ import CallsView from './calls-view';
 import ProfileView from './profile-view';
 import WalletView from './wallet-view';
 import DiscoveryView from './discovery-view';
-import { UserAvatar } from './user-avatar';
+import NuxusAiView from './nuxus-ai-view';
+import { UserAvatar } from './user-avatar'; // ГАРАНТИРОВАННЫЙ ИМПОРТ
 import { useAppState } from '@/lib/app-state';
 import { cn, triggerHaptic } from '@/lib/utils';
 import { useUser, useFirestore, useAuth } from '@/firebase/provider';
@@ -23,12 +24,12 @@ import { UserProfileModal } from './modals/user-profile-modal';
 import type { Call } from '@/lib/types';
 import { 
   MessageSquare, Phone, Wallet, 
-  Globe, LayoutGrid
+  Globe, LayoutGrid, Sparkles
 } from 'lucide-react';
 
 /**
- * NUXUS CHAT MAIN V171.0 «ABSOLUTE BLACK BOX»
- * FIXED: UserAvatar ReferenceError eliminated. 
+ * NUXUS CHAT MAIN V172.0 «ABSOLUTE BLACK BOX»
+ * FIXED: UserAvatar ReferenceError fully eliminated.
  */
 export default function ChatMain() {
   const { 
@@ -38,7 +39,6 @@ export default function ChatMain() {
   } = useAppState();
   const { user } = useUser();
   const db = useFirestore();
-  const auth = useAuth();
 
   useEffect(() => {
     if (!db || !user) return;
@@ -56,7 +56,6 @@ export default function ChatMain() {
 
     updatePresence();
     const interval = setInterval(updatePresence, 30000);
-
     return () => clearInterval(interval);
   }, [db, user?.uid]);
 
@@ -82,6 +81,7 @@ export default function ChatMain() {
     { id: 'discovery', icon: Globe, label: 'EXPLORE' },
     { id: 'calls', icon: Phone, label: 'CALLS' },
     { id: 'chats', icon: MessageSquare, label: 'CHATS' },
+    { id: 'ai', icon: Sparkles, label: 'NUXUS AI' },
     { id: 'wallet', icon: Wallet, label: 'WALLET' },
     { id: 'profile', icon: LayoutGrid, label: 'NODES' },
   ];
@@ -91,12 +91,10 @@ export default function ChatMain() {
       <NotificationListener />
       
       <div className="flex-1 flex overflow-hidden w-full relative h-full z-10">
-        
         <nav className="hidden md:flex flex-col items-center py-8 w-20 bg-[#0a0a0c] border-r border-white/5 shrink-0 z-[100] gap-8">
            <div className="p-2.5 rounded-2xl bg-primary/10 border border-primary/20 mb-4 shadow-sm">
               <LayoutGrid className="w-6 h-6 text-primary" />
            </div>
-           
            <div className="flex flex-col gap-6 flex-1 items-center">
               {NAV_ITEMS.map((item) => (
                 <button 
@@ -128,12 +126,13 @@ export default function ChatMain() {
               {activeView === 'profile' && <ProfileView />}
               {activeView === 'wallet' && <WalletView />}
               {activeView === 'discovery' && <DiscoveryView />}
+              {activeView === 'ai' && <NuxusAiView />}
             </div>
           </div>
           
           <div className={cn(
             "flex-1 h-full flex flex-col min-w-0 bg-[#0a0a0c]/50 relative z-20 overflow-hidden", 
-            (!currentChatId || ['profile', 'wallet', 'discovery', 'calls'].includes(activeView)) ? "hidden md:flex" : "flex"
+            (!currentChatId || ['profile', 'wallet', 'discovery', 'calls', 'ai'].includes(activeView)) ? "hidden md:flex" : "flex"
           )}>
             <div className="h-full w-full overflow-hidden flex flex-col bg-transparent">
               {currentChatId ? <ChatArea /> : (

@@ -2,10 +2,6 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { SovereignProvider } from '@/components/sovereign-provider';
 
-/**
- * NUXUS LAYOUT V171.0 «ABSOLUTE SECURITY SHELL»
- * UPDATED: Added HTTPS enforcement and Anti-F12 protection scripts.
- */
 const ICON_URL = 'https://i.postimg.cc/T2xvz0mn/IMG-2541.jpg?v=170';
 
 export const metadata: Metadata = {
@@ -32,33 +28,48 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="ru">
       <head>
-        {/* HTTPS Enforcement & Anti-F12 Protection Script */}
         <script dangerouslySetInnerHTML={{ __html: `
-          // 1. Enforce HTTPS
+          // 1. ПРИНУДИТЕЛЬНЫЙ HTTPS
           if (location.protocol === 'http:' && location.hostname !== 'localhost') {
             location.href = location.href.replace('http:', 'https:');
           }
 
-          // 2. Anti-F12 / Black Box Protection
+          // 2. ЗАЩИТА BLACK BOX (ANTI-F12)
           if (typeof window !== 'undefined') {
+            // Блокировка контекстного меню
             document.addEventListener('contextmenu', e => e.preventDefault());
+
+            // Блокировка горячих клавиш
             document.addEventListener('keydown', e => {
               if (
                 e.key === 'F12' ||
                 (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) ||
-                (e.ctrlKey && e.key === 'U')
+                (e.ctrlKey && e.key === 'U') ||
+                (e.metaKey && e.altKey && e.key === 'I') // для Mac
               ) {
                 e.preventDefault();
-                console.warn('%cNUXUS AEGIS: ACCESS DENIED', 'color: red; font-size: 20px; font-weight: bold;');
+                alert('NUXUS AEGIS: ДОСТУП К КОДУ ЗАБЛОКИРОВАН');
               }
             });
 
-            // Kill Console spam
+            // Debugger Trap: Замедляет и мешает работе в консоли
+            setInterval(() => {
+              (function() {
+                const start = new Date();
+                debugger;
+                const end = new Date();
+                if (end - start > 100) {
+                   console.clear();
+                   console.log('%cSIGNAL INTERCEPTED', 'color: red; font-size: 30px; font-weight: bold;');
+                }
+              })();
+            }, 1000);
+
+            // Очистка консоли
             setInterval(() => {
               console.clear();
-              console.log('%c🛰️ NUXUS KERNEL V171.0 ACTIVE', 'color: #E58E38; font-weight: bold; font-size: 14px;');
-              console.log('%cBLACK BOX PROTECTION ENABLED', 'color: #666; font-size: 10px;');
-            }, 5000);
+              console.log('%c🛰️ NUXUS KERNEL V172.0 ACTIVE', 'color: #E58E38; font-weight: bold; font-size: 14px;');
+            }, 2000);
           }
         ` }} />
       </head>
