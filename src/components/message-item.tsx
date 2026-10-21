@@ -110,6 +110,13 @@ export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, cha
     }
   };
 
+  const handlePin = async () => {
+    if (!db || !chatId) return;
+    triggerHaptic();
+    await updateDoc(doc(db, 'chats', chatId), { pinnedMessageId: message.id });
+    toast({ title: "Сигнал закреплен" });
+  };
+
   const handleReaction = (emoji: string) => {
     if (!db || !user || !chatId) return;
     const msgRef = doc(db, 'chats', chatId, 'messages', message.id);
@@ -265,6 +272,7 @@ export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, cha
           {isMe && message.contentType === 'text' && (
             <ContextMenuItem onClick={() => onEdit(message)} className="gap-3 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest text-white"><Edit2 className="w-3.5 h-3.5 text-primary" /> Изменить</ContextMenuItem>
           )}
+          <ContextMenuItem onClick={handlePin} className="gap-3 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest text-white"><Pin className="w-3.5 h-3.5 text-primary" /> Закрепить</ContextMenuItem>
           <ContextMenuItem onClick={handleCopy} className="gap-3 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest text-white"><Copy className="w-3.5 h-3.5 text-primary" /> Копировать</ContextMenuItem>
           <ContextMenuItem onClick={() => setForwardingMessage(message)} className="gap-3 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest text-white"><Share2 className="w-3.5 h-3.5 text-primary" /> Переслать</ContextMenuItem>
           <ContextMenuItem onClick={handleDelete} className="gap-3 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest text-red-500"><Trash2 className="w-3.5 h-3.5" /> Удалить для всех</ContextMenuItem>

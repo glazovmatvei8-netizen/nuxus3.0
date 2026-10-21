@@ -8,7 +8,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, ChevronLeft, X, Paperclip, Mic, StopCircle, 
-  Smile, Trash2, Loader2, Phone, Video, Camera, ShieldCheck, Edit2, Check
+  Smile, Trash2, Loader2, Phone, Video, Camera, ShieldCheck, Edit2, Check,
+  Pin, ArrowDown, Search
 } from 'lucide-react';
 import { MessageItem } from './message-item';
 import { ChatInfoModal } from './modals/chat-info-modal';
@@ -18,7 +19,7 @@ import { useUser, useFirestore } from '@/firebase/provider';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { useMemoFirebase } from '@/firebase/firestore/use-memo-firebase';
-import { collection, query, orderBy, doc, addDoc } from 'firebase/firestore';
+import { collection, query, orderBy, doc, addDoc, updateDoc } from 'firebase/firestore';
 import { formatDisplayName, cn, compressImage, triggerHaptic, isUserPremium, decryptSignal } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -27,10 +28,6 @@ import { useTranslations } from '@/hooks/use-translations';
 import { useToast } from '@/hooks/use-toast';
 import { signalService } from '@/services/signal-service';
 
-/**
- * CHAT AREA V184.0 «SIGNAL EDIT MASTER»
- * UPDATED: Message editing integration added.
- */
 const ChatInputBar = memo(({ onSendMessage, onUpdateMessage, currentChatId, replyTo, onCancelReply, editingMessage, onCancelEdit }: any) => {
   const { localDrafts, setLocalDrafts } = useAppState();
   const { t } = useTranslations();
@@ -53,7 +50,6 @@ const ChatInputBar = memo(({ onSendMessage, onUpdateMessage, currentChatId, repl
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Sync input with drafts or editing message
   useEffect(() => {
     if (editingMessage) {
       setMessageInput(decryptSignal(editingMessage.content));
@@ -144,7 +140,7 @@ const ChatInputBar = memo(({ onSendMessage, onUpdateMessage, currentChatId, repl
             <div className="w-1 h-8 bg-primary rounded-full shrink-0" />
             <div className="flex flex-col min-w-0">
               <span className="text-[10px] font-black text-primary uppercase tracking-widest">{replyTo.senderName}</span>
-              <span className="text-[12px] text-white/60 truncate italic">[Цитирование]</span>
+              <span className="text-[12px] text-white/60 truncate italic">{decryptSignal(replyTo.content)}</span>
             </div>
           </div>
           <button className="text-white/20 hover:text-white" onClick={onCancelReply}><X size={16} /></button>
@@ -230,6 +226,8 @@ export default function ChatArea() {
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
+  const [showScrollBottom, setShowScrollBottom] = useState(false);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const userProfileRef = useMemoFirebase(() => (!db || !firebaseUser) ? null : doc(db, 'users', firebaseUser.uid), [db, firebaseUser?.uid]);
   const { data: userProfile } = useDoc<UserType>(userProfileRef);
@@ -240,6 +238,9 @@ export default function ChatArea() {
   const otherId = useMemo(() => chat?.type === 'private' ? chat.participantIds.find(id => id !== firebaseUser?.uid) : null, [chat, firebaseUser?.uid]);
   const otherProfileRef = useMemoFirebase(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
   const { data: otherProfile } = useDoc<UserType>(otherProfileRef);
+
+  const pinnedMsgRef = useMemoFirebase(() => (!db || !currentChatId || !chat?.pinnedMessageId) ? null : doc(db, 'chats', currentChatId, 'messages', chat.pinnedMessageId), [db, currentChatId, chat?.pinnedMessageId]);
+  const { data: pinnedMessage } = useDoc<Message>(pinnedMsgRef);
 
   const messagesQuery = useMemoFirebase(() => (!db || !currentChatId) ? null : query(collection(db, 'chats', currentChatId, 'messages'), orderBy('sentAt', 'asc')), [db, currentChatId]);
   const { data: messages } = useCollection<Message>(messagesQuery);
@@ -281,6 +282,23 @@ export default function ChatArea() {
     }
   }, [currentChatId, toast]);
 
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    setShowScrollBottom(scrollHeight - scrollTop - clientHeight > 300);
+  };
+
+  const scrollToBottom = () => {
+    const viewport = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]');
+    if (viewport) viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' });
+  };
+
+  const unpinSignal = async () => {
+    if (!db || !currentChatId) return;
+    triggerHaptic();
+    await updateDoc(doc(db, 'chats', currentChatId), { pinnedMessageId: null });
+    toast({ title: "Сигнал откреплен" });
+  };
+
   const currentDisplayName = useMemo(() => {
     if (!chat) return '...';
     if (chat.type === 'saved') return 'Архив Данных';
@@ -308,14 +326,29 @@ export default function ChatArea() {
           </div>
         </div>
 
-        <div className="bg-white/5 px-3 py-1 rounded-full border border-white/5 flex items-center gap-2">
-           <ShieldCheck className="w-3.5 h-3.5 text-primary" />
-           <span className="text-[8px] font-black uppercase text-white/40 tracking-widest">QES 28.1</span>
+        <div className="flex items-center gap-2">
+           <div className="bg-white/5 px-3 py-1 rounded-full border border-white/5 flex items-center gap-2">
+              <ShieldCheck className="w-3.5 h-3.5 text-primary" />
+              <span className="text-[8px] font-black uppercase text-white/40 tracking-widest">QES 28.1</span>
+           </div>
         </div>
       </header>
 
+      {pinnedMessage && (
+        <div className="bg-primary/10 border-b border-primary/20 px-4 py-2 flex items-center justify-between gap-4 animate-in slide-in-from-top-2 duration-300 z-20 backdrop-blur-md">
+           <div className="flex items-center gap-3 min-w-0 cursor-pointer flex-1" onClick={() => document.getElementById(pinnedMessage.id)?.scrollIntoView({ behavior: 'smooth' })}>
+              <Pin className="w-3.5 h-3.5 text-primary shrink-0" />
+              <div className="flex flex-col min-w-0">
+                 <span className="text-[10px] font-black text-primary uppercase tracking-widest leading-none">Закреплено</span>
+                 <span className="text-[12px] text-white/80 truncate italic">{decryptSignal(pinnedMessage.content)}</span>
+              </div>
+           </div>
+           <button onClick={unpinSignal} className="text-white/20 hover:text-white transition-colors p-1"><X size={14} /></button>
+        </div>
+      )}
+
       <div className="flex-1 relative overflow-hidden z-10">
-        <ScrollArea className="h-full w-full">
+        <ScrollArea ref={scrollAreaRef} className="h-full w-full" onScrollCapture={handleScroll}>
           <div className="flex flex-col gap-1 px-4 py-6">
             {messages?.map(msg => (
               <MessageItem 
@@ -331,6 +364,15 @@ export default function ChatArea() {
             ))}
           </div>
         </ScrollArea>
+
+        {showScrollBottom && (
+          <button 
+            onClick={scrollToBottom}
+            className="absolute bottom-6 right-6 h-12 w-12 rounded-full bg-primary/20 backdrop-blur-xl border border-primary/40 text-primary flex items-center justify-center shadow-2xl hover:bg-primary hover:text-white transition-all animate-in zoom-in duration-300"
+          >
+             <ArrowDown className="w-6 h-6" />
+          </button>
+        )}
       </div>
 
       <ChatInputBar

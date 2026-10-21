@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   Plus, Search, Star, MessageSquare, Loader2, 
-  Trash2, Archive, LogOut, ShieldCheck, Edit3
+  Trash2, Archive, LogOut, ShieldCheck, Edit3,
+  CheckCircle2, BellOff
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CreateChatModal } from './modals/create-chat-modal';
@@ -17,7 +18,7 @@ import { useFirestore, useUser, useAuth } from '@/firebase/provider';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { useMemoFirebase } from '@/firebase/firestore/use-memo-firebase';
-import { collection, query, where, doc, limit, orderBy } from 'firebase/firestore';
+import { collection, query, where, doc, limit, orderBy, updateDoc, deleteDoc } from 'firebase/firestore';
 import { formatDisplayName, cn, decryptSignal, isUserPremium, triggerHaptic } from '@/lib/utils';
 import { format } from 'date-fns';
 import { signOut } from 'firebase/auth';
@@ -35,11 +36,13 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { useToast } from '@/hooks/use-toast';
 
 const ChatListItem = memo(({ 
   chat, isActive, otherId, onClick, currentUserId
 }: any) => {
   const db = useFirestore();
+  const { toast } = useToast();
   const [mounted, setMounted] = useState(false);
   
   useEffect(() => {
@@ -80,6 +83,29 @@ const ChatListItem = memo(({
     if (chat.type === 'private') return formatDisplayName(otherProfile?.name, otherProfile?.username);
     return formatDisplayName(chat.name, chat.username);
   }, [chat, otherProfile, mounted]);
+
+  const handleToggleUnread = async () => {
+    if (!db) return;
+    triggerHaptic();
+    await updateDoc(doc(db, 'chats', chat.id), { isManualUnread: !chat.isManualUnread });
+    toast({ title: chat.isManualUnread ? "Прочитано" : "Помечено как непрочитанное" });
+  };
+
+  const handleArchive = async () => {
+    if (!db) return;
+    triggerHaptic();
+    await updateDoc(doc(db, 'chats', chat.id), { isArchived: true });
+    toast({ title: "Чат отправлен в архив" });
+  };
+
+  const handleDelete = async () => {
+    if (!db) return;
+    if (confirm("Выйти из этого чата навсегда?")) {
+      triggerHaptic();
+      await deleteDoc(doc(db, 'chats', chat.id));
+      toast({ title: "Чат удален" });
+    }
+  };
 
   return (
     <div className="px-4 py-0.5">
@@ -123,10 +149,16 @@ const ChatListItem = memo(({
           </div>
         </ContextMenuTrigger>
         <ContextMenuContent className="w-56 bg-[#121212]/95 backdrop-blur-xl border-white/10 rounded-2xl p-2 shadow-2xl">
-          <ContextMenuItem className="gap-3 py-3 rounded-xl font-bold text-[11px] uppercase tracking-widest text-white">
+          <ContextMenuItem onClick={handleToggleUnread} className="gap-3 py-3 rounded-xl font-bold text-[11px] uppercase tracking-widest text-white">
+            <CheckCircle2 className="w-4 h-4 text-primary" /> Пометить как {chat.isManualUnread ? 'прочитанное' : 'непрочитанное'}
+          </ContextMenuItem>
+          <ContextMenuItem onClick={handleArchive} className="gap-3 py-3 rounded-xl font-bold text-[11px] uppercase tracking-widest text-white">
             <Archive className="w-4 h-4 text-primary" /> В архив
           </ContextMenuItem>
-          <ContextMenuItem className="gap-3 py-3 rounded-xl font-bold text-[11px] uppercase tracking-widest text-red-500">
+          <ContextMenuItem className="gap-3 py-3 rounded-xl font-bold text-[11px] uppercase tracking-widest text-white">
+            <BellOff className="w-4 h-4 text-primary" /> Без звука
+          </ContextMenuItem>
+          <ContextMenuItem onClick={handleDelete} className="gap-3 py-3 rounded-xl font-bold text-[11px] uppercase tracking-widest text-red-500">
             <Trash2 className="w-4 h-4" /> Удалить
           </ContextMenuItem>
         </ContextMenuContent>
@@ -156,7 +188,7 @@ export default function ChatSidebar() {
 
   const chatsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
-    return query(collection(db, 'chats'), where('participantIds', 'array-contains', user.uid));
+    return query(collection(db, 'chats'), where('participantIds', 'array-contains', user.uid), where('isArchived', '==', false));
   }, [db, user?.uid]);
   
   const { data: chats, isLoading: isChatsLoading } = useCollection<Chat>(chatsQuery);
@@ -214,7 +246,7 @@ export default function ChatSidebar() {
                   <h1 className="text-4xl font-black text-primary italic tracking-tighter uppercase leading-none">ЧАТЫ</h1>
                   <div className="bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full flex items-center gap-2">
                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                     <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest italic">V183.0</span>
+                     <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest italic">V185.0</span>
                   </div>
                </div>
                <div className="flex gap-2">
