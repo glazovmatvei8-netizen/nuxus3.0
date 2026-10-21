@@ -34,42 +34,32 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             location.href = location.href.replace('http:', 'https:');
           }
 
-          // 2. ЗАЩИТА BLACK BOX (ANTI-F12)
+          // 2. ЗАЩИТА BLACK BOX (ANTI-F12 & DOM INTEGRITY)
           if (typeof window !== 'undefined') {
-            // Блокировка контекстного меню
             document.addEventListener('contextmenu', e => e.preventDefault());
-
-            // Блокировка горячих клавиш
             document.addEventListener('keydown', e => {
-              if (
-                e.key === 'F12' ||
-                (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) ||
-                (e.ctrlKey && e.key === 'U') ||
-                (e.metaKey && e.altKey && e.key === 'I') // для Mac
-              ) {
+              if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) || (e.ctrlKey && e.key === 'U')) {
                 e.preventDefault();
-                alert('NUXUS AEGIS: ДОСТУП К КОДУ ЗАБЛОКИРОВАН');
               }
             });
 
-            // Debugger Trap: Замедляет и мешает работе в консоли
+            // Ловушка для дебаггера
             setInterval(() => {
               (function() {
                 const start = new Date();
                 debugger;
                 const end = new Date();
                 if (end - start > 100) {
-                   console.clear();
-                   console.log('%cSIGNAL INTERCEPTED', 'color: red; font-size: 30px; font-weight: bold;');
+                   window.location.href = 'about:blank';
                 }
               })();
             }, 1000);
 
-            // Очистка консоли
-            setInterval(() => {
-              console.clear();
-              console.log('%c🛰️ NUXUS KERNEL V172.0 ACTIVE', 'color: #E58E38; font-weight: bold; font-size: 14px;');
-            }, 2000);
+            // Защита от изменения DOM (Tamper Detection)
+            const observer = new MutationObserver(() => {
+              console.log('%cDOM TAMPERING DETECTED', 'color: red; font-weight: bold;');
+            });
+            observer.observe(document.documentElement, { attributes: true, childList: true, subtree: true });
           }
         ` }} />
       </head>

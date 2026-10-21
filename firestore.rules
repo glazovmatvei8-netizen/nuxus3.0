@@ -2,9 +2,14 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- БАЗОВЫЕ ПРОВЕРКИ ---
+    // --- СИСТЕМНЫЕ ФУНКЦИИ ЗАЩИТЫ ---
     function isSignedIn() {
       return request.auth != null;
+    }
+
+    // Проверка на Брутфорс (Cooldown 2 секунды между сигналами)
+    function isNotSpamming() {
+      return request.time > (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.lastActionTime + duration.value(2, 's'));
     }
 
     // Проверка прав Главного Архитектора (Admin)
@@ -16,7 +21,6 @@ service cloud.firestore {
       );
     }
 
-    // Проверка владения документом
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
@@ -31,65 +35,33 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && request.auth.uid == userId;
       
-      // Пользователь может менять только настройки и био, но не баланс или статус админа
+      // ПОЛНЫЙ ЗАПРЕТ на изменение критических полей со стороны клиента
       allow update: if (isOwner(userId) && 
-        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['isAdmin', 'balance', 'reputation', 'isBanned', 'premiumUntil', 'premiumTier']))
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['isAdmin', 'balance', 'reputation', 'isBanned', 'premiumUntil', 'premiumTier', 'lastActionTime']))
         || isPrimeAdmin();
         
-      // ЗАПРЕТ НА УДАЛЕНИЕ БАЗЫ ПОЛЬЗОВАТЕЛЕЙ
-      allow delete: if isPrimeAdmin();
+      allow delete: if false; // Удаление базы пользователей ЗАПРЕЩЕНО всем, кроме консоли управления
 
       match /transactions/{txId} {
         allow read: if isOwner(userId) || isPrimeAdmin();
-        allow write: if isPrimeAdmin(); // Только система может писать транзакции
-      }
-      
-      match /receivedGifts/{giftId} {
-        allow read: if isSignedIn();
-        allow create: if isSignedIn(); 
-        allow update, delete: if isOwner(userId) || isPrimeAdmin();
+        allow write: if false; // Только серверные функции могут писать транзакции
       }
     }
 
-    // --- ЗАЩИТА КЛАСТЕРОВ (CHATS) ---
-    match /chats/{chatId} {
-      allow read: if isSignedIn() && (isPrimeAdmin() || request.auth.uid in resource.data.participantIds);
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && (isPrimeAdmin() || request.auth.uid in resource.data.participantIds);
-      allow delete: if isPrimeAdmin() || (isSignedIn() && request.auth.uid == resource.data.ownerId);
-
-      match /messages/{messageId} {
-        allow read: if isSignedIn() && (isPrimeAdmin() || request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds);
-        allow create: if isSignedIn() && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds;
-        allow update: if isSignedIn() && request.auth.uid == resource.data.senderId;
-        allow delete: if isPrimeAdmin() || (isSignedIn() && request.auth.uid == resource.data.senderId);
-      }
+    // --- ЗАЩИТА СООБЩЕНИЙ (ANTI-BRUTEFORCE) ---
+    match /chats/{chatId}/messages/{messageId} {
+      allow create: if isSignedIn() && 
+                   request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds &&
+                   isNotSpamming(); // Не дает спамить сообщениями
+      allow read: if isSignedIn() && (isPrimeAdmin() || request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds);
+      allow delete: if isPrimeAdmin() || (isSignedIn() && request.auth.uid == resource.data.senderId);
     }
 
     // --- ФИНАНСОВЫЙ ШЛЮЗ ---
     match /topUpRequests/{requestId} {
-      allow create: if isSignedIn();
-      allow read, list: if isPrimeAdmin() || (isSignedIn() && request.auth.uid == resource.data.userId);
+      allow create: if isSignedIn() && isNotSpamming(); 
+      allow read: if isPrimeAdmin() || (isSignedIn() && request.auth.uid == resource.data.userId);
       allow write: if isPrimeAdmin();
-    }
-
-    // --- МОМЕНТЫ (STORIES) ---
-    match /stories/{storyId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && (isPrimeAdmin() || request.auth.uid == resource.data.userId);
-      allow delete: if isPrimeAdmin() || (isSignedIn() && request.auth.uid == resource.data.userId);
-    }
-    
-    // --- ВЫЗОВЫ ---
-    match /calls/{callId} {
-      allow create: if isSignedIn();
-      allow read, update: if isSignedIn() && (request.auth.uid in resource.data.participantIds || isPrimeAdmin());
-      allow delete: if isPrimeAdmin() || (isSignedIn() && request.auth.uid == resource.data.callerId);
-      
-      match /{allSubcollections=**} {
-        allow read, write: if isSignedIn();
-      }
     }
   }
 }
