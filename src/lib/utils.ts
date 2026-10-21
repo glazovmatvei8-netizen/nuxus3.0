@@ -39,9 +39,17 @@ export function formatDisplayName(name: string | undefined | null, username?: st
   return 'Узел Сети';
 }
 
+/**
+ * Проверка на аномалии безопасности узла.
+ * Блокирует узлы с подозрительно короткими ID или отсутствующими метаданными.
+ */
 export function isUserAnomaly(user: User | null | undefined): boolean {
   if (!user) return false;
   const username = (user.username || '').trim().replace('@', '');
+  // Защита от системных инъекций в ID
+  if (username.includes('admin') || username.includes('kernel') || username.includes('system')) {
+    if (!isGlobalAdmin(user)) return true;
+  }
   const isMissingUsername = username === '' || username.length < 2;
   return isMissingUsername;
 }
@@ -49,6 +57,7 @@ export function isUserAnomaly(user: User | null | undefined): boolean {
 export function encryptSignal(text: string): string {
   if (!text) return '';
   try {
+    // Quantum-like wrapping (Base64 + Prefix)
     const encoded = btoa(encodeURIComponent(text.trim()));
     return `NX_${encoded}`;
   } catch (e) { 
@@ -61,6 +70,10 @@ export function decryptSignal(content: string | undefined | null): string {
   if (!content || typeof content !== 'string') return content || '';
   const isEncoded = content.startsWith('NX_SECURE_') || content.startsWith('NX_');
   if (!isEncoded) return content;
+  
+  // Защита от переполнения/атак на дешифратор
+  if (content.length > 50000) return "Signal limit exceeded";
+
   try {
     const prefix = content.startsWith('NX_SECURE_') ? 'NX_SECURE_' : 'NX_';
     const raw = content.replace(prefix, '');

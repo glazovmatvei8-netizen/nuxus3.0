@@ -2,10 +2,12 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // --- БАЗОВЫЕ ПРОВЕРКИ ---
     function isSignedIn() {
       return request.auth != null;
     }
 
+    // Проверка прав Главного Архитектора (Admin)
     function isPrimeAdmin() {
       return isSignedIn() && (
         request.auth.uid == 'GCvLucN8CjNcdaxPO2vmpZ84hNl1' ||
@@ -14,39 +16,77 @@ service cloud.firestore {
       );
     }
 
-    match /{document=**} {
-      allow read, write, list: if isPrimeAdmin();
+    // Проверка владения документом
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
     }
 
+    // --- ГЛОБАЛЬНЫЙ ДОСТУП ---
+    match /{document=**} {
+      allow read, write: if isPrimeAdmin();
+    }
+
+    // --- ЗАЩИТА УЗЛОВ (USERS) ---
     match /users/{userId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && request.auth.uid == userId;
-      allow update: if isSignedIn() && (request.auth.uid == userId || isPrimeAdmin());
-    }
+      
+      // Пользователь может менять только настройки и био, но не баланс или статус админа
+      allow update: if (isOwner(userId) && 
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['isAdmin', 'balance', 'reputation', 'isBanned', 'premiumUntil', 'premiumTier']))
+        || isPrimeAdmin();
+        
+      // ЗАПРЕТ НА УДАЛЕНИЕ БАЗЫ ПОЛЬЗОВАТЕЛЕЙ
+      allow delete: if isPrimeAdmin();
 
-    match /chats/{chatId} {
-      allow read, update, list: if isSignedIn() && (isPrimeAdmin() || request.auth.uid in resource.data.participantIds);
-      allow create: if isSignedIn();
-
-      match /messages/{messageId} {
-        allow read, write, list: if isSignedIn();
+      match /transactions/{txId} {
+        allow read: if isOwner(userId) || isPrimeAdmin();
+        allow write: if isPrimeAdmin(); // Только система может писать транзакции
+      }
+      
+      match /receivedGifts/{giftId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn(); 
+        allow update, delete: if isOwner(userId) || isPrimeAdmin();
       }
     }
 
-    match /topUpRequests/{requestId} {
+    // --- ЗАЩИТА КЛАСТЕРОВ (CHATS) ---
+    match /chats/{chatId} {
+      allow read: if isSignedIn() && (isPrimeAdmin() || request.auth.uid in resource.data.participantIds);
       allow create: if isSignedIn();
-      allow read, list, write: if isPrimeAdmin();
+      allow update: if isSignedIn() && (isPrimeAdmin() || request.auth.uid in resource.data.participantIds);
+      allow delete: if isPrimeAdmin() || (isSignedIn() && request.auth.uid == resource.data.ownerId);
+
+      match /messages/{messageId} {
+        allow read: if isSignedIn() && (isPrimeAdmin() || request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds);
+        allow create: if isSignedIn() && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds;
+        allow update: if isSignedIn() && request.auth.uid == resource.data.senderId;
+        allow delete: if isPrimeAdmin() || (isSignedIn() && request.auth.uid == resource.data.senderId);
+      }
     }
 
-    match /stories/{storyId} {
-      allow read, list: if isSignedIn();
+    // --- ФИНАНСОВЫЙ ШЛЮЗ ---
+    match /topUpRequests/{requestId} {
       allow create: if isSignedIn();
-      allow update, delete: if isSignedIn() && (isPrimeAdmin() || request.auth.uid == resource.data.userId);
+      allow read, list: if isPrimeAdmin() || (isSignedIn() && request.auth.uid == resource.data.userId);
+      allow write: if isPrimeAdmin();
+    }
+
+    // --- МОМЕНТЫ (STORIES) ---
+    match /stories/{storyId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && (isPrimeAdmin() || request.auth.uid == resource.data.userId);
+      allow delete: if isPrimeAdmin() || (isSignedIn() && request.auth.uid == resource.data.userId);
     }
     
+    // --- ВЫЗОВЫ ---
     match /calls/{callId} {
       allow create: if isSignedIn();
-      allow read, update, delete: if isSignedIn();
+      allow read, update: if isSignedIn() && (request.auth.uid in resource.data.participantIds || isPrimeAdmin());
+      allow delete: if isPrimeAdmin() || (isSignedIn() && request.auth.uid == resource.data.callerId);
+      
       match /{allSubcollections=**} {
         allow read, write: if isSignedIn();
       }
