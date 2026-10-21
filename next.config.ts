@@ -1,8 +1,8 @@
 import type { NextConfig } from 'next';
 
 /**
- * NUXUS PRODUCTION CONFIG V176.0 «HARDENED SHELL»
- * ОПТИМИЗИРОВАНО: Тотальная обфускация и защита от дебаггера.
+ * NUXUS PRODUCTION CONFIG V177.0 «NUCLEAR HARDENING»
+ * ОПТИМИЗИРОВАНО: Максимальная обфускация и защита доменов.
  */
 const nextConfig: NextConfig = {
   output: 'export', 
@@ -24,13 +24,15 @@ const nextConfig: NextConfig = {
       if (config.optimization.minimizer) {
         config.optimization.minimizer.forEach((m: any) => {
           if (m.options && m.options.terserOptions) {
+            // Удаление комментариев и лишней информации
             m.options.terserOptions.format = { comments: false };
             m.options.terserOptions.compress = {
               drop_console: true,
+              drop_debugger: false, // Оставляем debugger для ловушек в layout
               pure_funcs: ['console.info', 'console.debug', 'console.warn'],
-              passes: 3, 
+              passes: 3, // Тройная обфускация
             };
-            m.options.terserOptions.mangle = true; 
+            m.options.terserOptions.mangle = true; // Замена имен функций на a, b, c...
           }
         });
       }

@@ -30,35 +30,46 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <script dangerouslySetInnerHTML={{ __html: `
           (function() {
-            // 1. ANTI-CLONE & DOMAIN LOCK
-            const allowedDomains = ['nuxus.fun', 'localhost', '127.0.0.1', 'web.app', 'firebaseapp.com', 'swtest.ru'];
+            // 1. ANTI-CLONE & DOMAIN LOCK (NUXUS OFFICIAL NODES)
+            const allowedDomains = [
+              'nuxus.fun', 
+              'chat.nuxus.fun', 
+              'www.nuxus.fun', 
+              'localhost', 
+              '127.0.0.1', 
+              'web.app', 
+              'firebaseapp.com', 
+              'swtest.ru',
+              'beget.tech'
+            ];
+            
             if (typeof window !== 'undefined') {
-              const isDomainAllowed = allowedDomains.some(d => location.hostname.includes(d));
+              const isDomainAllowed = allowedDomains.some(d => location.hostname.endsWith(d));
               if (!isDomainAllowed) {
-                document.documentElement.innerHTML = '<body style="background:#000;color:red;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;text-transform:uppercase;text-align:center;"><h1>Access Denied</h1><p>Illegal Nuxus Kernel Clone Detected.</p></body>';
+                document.documentElement.innerHTML = '<body style="background:#000;color:red;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;text-transform:uppercase;text-align:center;padding:20px;"><div><h1>Access Denied</h1><p>Illegal Nuxus Kernel Clone Detected.</p><p style="font-size:10px;color:#333;">Node Identity Conflict at ' + location.hostname + '</p></div></body>';
                 return;
               }
 
-              // 2. ANTI-IFRAME
+              // 2. ANTI-IFRAME (FRAME BUSTER)
               if (window.self !== window.top) {
                 window.top.location.href = window.self.location.href;
               }
 
-              // 3. NUCLEAR DEBUGGER TRAP (Recursive)
+              // 3. NUCLEAR DEBUGGER TRAP (Recursive Time-Delta)
               const trap = function() {
                 const start = Date.now();
                 debugger;
                 const end = Date.now();
+                // Если разница больше 50мс - значит консоль открыта и сработал брейкпоинт
                 if (end - start > 50) {
                   window.location.href = 'about:blank';
                 }
                 setTimeout(trap, 100);
               };
               
-              // Запуск ловушки с небольшой задержкой
               setTimeout(trap, 500);
 
-              // 4. BLOCK INPUTS
+              // 4. BLOCK SYSTEM INPUTS
               document.addEventListener('contextmenu', e => e.preventDefault());
               document.addEventListener('keydown', e => {
                 if (
@@ -72,10 +83,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 }
               });
 
-              // 5. TAMPER DETECTION (Observer)
-              const observer = new MutationObserver(() => {
-                // Если кто-то пытается удалить защитные элементы или менять структуру
-                console.clear();
+              // 5. DOM TAMPER DETECTION
+              const observer = new MutationObserver((mutations) => {
+                // Если кто-то пытается удалить защитные скрипты или инжектить код
+                for (const mutation of mutations) {
+                  if (mutation.type === 'childList' && mutation.removedNodes.length > 0) {
+                     // Можно добавить логику самоуничтожения сессии
+                     console.clear();
+                  }
+                }
               });
               observer.observe(document.documentElement, { attributes: true, childList: true, subtree: true });
             }

@@ -12,7 +12,7 @@ import NuxusAiView from './nuxus-ai-view';
 import { UserAvatar } from './user-avatar'; 
 import { useAppState } from '@/lib/app-state';
 import { cn, triggerHaptic } from '@/lib/utils';
-import { useUser, useFirestore, useAuth } from '@/firebase/provider';
+import { useUser, useFirestore } from '@/firebase/provider';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, query, where, limit, doc, updateDoc } from 'firebase/firestore';
 import { CallOverlay } from './modals/call-overlay';
@@ -28,8 +28,8 @@ import {
 } from 'lucide-react';
 
 /**
- * NUXUS CHAT MAIN V176.0 «NUCLEAR INTEGRITY»
- * FIXED: Guaranteed UserAvatar definition.
+ * NUXUS CHAT MAIN V177.0 «NUCLEAR INTEGRITY»
+ * FIXED: Absolute UserAvatar integration.
  */
 export default function ChatMain() {
   const { 
