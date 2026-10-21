@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState } from 'react';
@@ -12,11 +13,6 @@ import { useToast } from '@/hooks/use-toast';
 import type { User } from '@/lib/types';
 import { cn, triggerHaptic } from '@/lib/utils';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-
-/**
- * GIFT MODAL V5.2.2 «TITANIUM SYNC»
- * UPDATED: Cleaned from merge conflict markers.
- */
 
 const PREDEFINED_GIFTS = [
   { id: 'silver_star', name: 'Серебряная звезда', price: 40, icon: '⭐' },

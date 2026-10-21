@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase/provider';
+import { useUser, useFirestore } from '@/firebase/provider';
 import { doc, collection, writeBatch, query, where, getDocs, limit } from 'firebase/firestore';
 import { ArrowRightLeft, Search, Loader2, Zap, User as UserIcon, ShieldCheck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -13,10 +13,6 @@ import type { User, ReceivedGift } from '@/lib/types';
 import { UserAvatar } from '@/components/user-avatar';
 import { formatDisplayName } from '@/lib/utils';
 
-/**
- * TRADE MODAL V5.2.0
- * ИСПРАВЛЕНО: Пути импорта хуков.
- */
 export function TradeModal({ open, onOpenChange, gift }: { open: boolean, onOpenChange: (o: boolean) => void, gift: ReceivedGift | null }) {
   const { user } = useUser();
   const db = useFirestore();
@@ -57,17 +53,14 @@ export function TradeModal({ open, onOpenChange, gift }: { open: boolean, onOpen
     try {
       const batch = writeBatch(db);
       
-      // Ссылки на документы
       const senderGiftRef = doc(db, 'users', user.uid, 'receivedGifts', gift.id);
       const receiverGiftRef = doc(collection(db, 'users', targetUser.id, 'receivedGifts'));
       
       const senderTxRef = doc(collection(db, 'users', user.uid, 'transactions'));
       const receiverTxRef = doc(collection(db, 'users', targetUser.id, 'transactions'));
 
-      // 1. Удаляем у отправителя
       batch.delete(senderGiftRef);
 
-      // 2. Создаем у получателя
       batch.set(receiverGiftRef, {
         ...gift,
         id: receiverGiftRef.id,
@@ -76,7 +69,6 @@ export function TradeModal({ open, onOpenChange, gift }: { open: boolean, onOpen
         receivedAt: new Date().toISOString()
       });
 
-      // 3. Логируем транзакции
       batch.set(senderTxRef, {
         id: senderTxRef.id,
         userId: user.uid,
@@ -103,10 +95,7 @@ export function TradeModal({ open, onOpenChange, gift }: { open: boolean, onOpen
       toast({ title: "Передача завершена", description: `${gift.giftName} теперь у ${targetUser.name}` });
       onOpenChange(false);
     } catch (e) {
-<<<<<<< HEAD
-=======
       console.error("Trade transaction error in trade-modal:", e);
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
       toast({ title: "Критический сбой", variant: "destructive" });
     } finally {
       setIsProcessing(false);

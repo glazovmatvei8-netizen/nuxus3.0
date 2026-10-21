@@ -18,11 +18,6 @@ import { formatDisplayName } from '@/lib/utils';
 import type { Chat } from '@/lib/types';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
-/**
- * FORWARD MODAL V76.0 «STABILITY MAXIMUS»
- * FIXED: Hydration error and Fiber crash by adding mounting guard and direct imports.
- * REFACTORED: Action converted to non-blocking as per guidelines.
- */
 export function ForwardModal() {
   const { user } = useUser();
   const db = useFirestore();
@@ -73,19 +68,14 @@ export function ForwardModal() {
       isRead: false
     };
 
-    // Using the non-blocking pattern for maximum reliability
     addDocumentNonBlocking(collection(db, 'chats', targetChat.id, 'messages'), msgData)
       .then(() => {
         toast({ title: "Переслано в " + formatDisplayName(targetChat.name) });
         setForwardingMessage(null);
         setCurrentChatId(targetChat.id);
       })
-<<<<<<< HEAD
-      .catch(() => {
-=======
       .catch((err) => {
         console.error("Signal forwarding error in forward-modal:", err);
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
         toast({ title: "Сбой передачи сигнала", variant: "destructive" });
       })
       .finally(() => {
@@ -93,7 +83,6 @@ export function ForwardModal() {
       });
   };
 
-  // Prevent rendering anything until mounted to avoid hydration mismatches
   if (!mounted) return null;
 
   return (

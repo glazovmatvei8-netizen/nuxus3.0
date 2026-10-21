@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useMemo, useState, useEffect } from 'react';
@@ -14,10 +15,6 @@ import { useAppState } from '@/lib/app-state';
 import { useToast } from '@/hooks/use-toast';
 import { addHours } from 'date-fns';
 
-/**
- * STORY ARCHIVE MODAL V72.1 «STABILITY PATCH»
- * ИСПРАВЛЕНО: Прямые импорты хуков для устранения ошибки 'is not a function'.
- */
 export function StoryArchiveModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const { user } = useUser();
   const db = useFirestore();
@@ -31,7 +28,6 @@ export function StoryArchiveModal({ open, onOpenChange }: { open: boolean, onOpe
 
   const archiveQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
-    // Используем фиксированную дату для запроса архива (все что истекло)
     const now = new Date().toISOString();
     return query(
       collection(db, 'stories'),
@@ -52,10 +48,7 @@ export function StoryArchiveModal({ open, onOpenChange }: { open: boolean, onOpe
       });
       toast({ title: "Момент восстановлен", description: "Он снова в сети на 24 часа." });
     } catch (e) { 
-<<<<<<< HEAD
-=======
       console.error("Story resonate error in story-archive-modal:", e);
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
       toast({ title: "Сбой резонанса", variant: "destructive" }); 
     }
   };

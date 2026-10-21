@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useMemo } from 'react';
@@ -17,10 +18,6 @@ import type { User } from '@/lib/types';
 import { formatDisplayName, isUserPremium } from '@/lib/utils';
 import { UserAvatar } from '../user-avatar';
 
-/**
- * ADD MEMBER MODAL V5.2.4 «ABSOLUTE STABILITY»
- * FIXED: Устранена ошибка ca9 за счет использования useMemoFirebase для всех запросов.
- */
 export function AddMemberModal({ open, onOpenChange, chatId, currentParticipantIds, isCallContext }: any) {
   const db = useFirestore();
   const { user } = useUser();
@@ -48,7 +45,6 @@ export function AddMemberModal({ open, onOpenChange, chatId, currentParticipantI
   const handleAddUser = async (targetUser: User) => {
     if (!db || !chatId || !user) return;
     
-    // Проверка приватности
     const privacy = targetUser.settings?.privacy?.allowGroupsFrom || 'everybody';
     let canAdd = true;
     let errorMsg = "";
@@ -86,10 +82,7 @@ export function AddMemberModal({ open, onOpenChange, chatId, currentParticipantI
       });
       onOpenChange(false);
     } catch (error: any) {
-<<<<<<< HEAD
-=======
       console.error("Add member error:", error);
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
       toast({ title: "Ошибка", description: error.message, variant: "destructive" });
     } finally {
       setIsLoading(false);

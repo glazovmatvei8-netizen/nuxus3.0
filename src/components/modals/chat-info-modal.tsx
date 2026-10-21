@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useMemo, memo } from 'react';
@@ -159,9 +160,6 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
 
   const handleSaveTitle = async (title: string) => {
     if (!db || !titleModalUser) return;
-<<<<<<< HEAD
-    try { await updateDoc(doc(db, 'chats', chat.id), { [`metadata.${titleModalUser}.customTitle`]: title.trim() || null }); toast({ title: "Должность обновлена" }); setTitleModalUser(null); } catch (e) { toast({ title: "Сбой синхронизации" }); }
-=======
     try {
       await updateDoc(doc(db, 'chats', chat.id), { [`metadata.${titleModalUser}.customTitle`]: title.trim() || null });
       toast({ title: "Должность обновлена" });
@@ -170,14 +168,10 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
       console.error("Failed to save custom title in chat-info-modal:", e);
       toast({ title: "Сбой синхронизации" });
     }
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
   };
 
   const toggleContact = async () => {
     if (!db || !user || !otherId) return;
-<<<<<<< HEAD
-    try { await updateDoc(doc(db, 'users', user.uid), { contactIds: isContact ? arrayRemove(otherId) : arrayUnion(otherId) }); toast({ title: isContact ? "Удалено из контактов" : "Узел добавлен в контакты" }); } catch (e) { toast({ title: "Ошибка синхронизации", variant: "destructive" }); }
-=======
     try {
       await updateDoc(doc(db, 'users', user.uid), { contactIds: isContact ? arrayRemove(otherId) : arrayUnion(otherId) });
       toast({ title: isContact ? "Удалено из контактов" : "Узел добавлен в контакты" });
@@ -185,7 +179,6 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
       console.error("Failed to toggle contact in chat-info-modal:", e);
       toast({ title: "Ошибка синхронизации", variant: "destructive" });
     }
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
   };
 
   const currentDisplayName = useMemo(() => {
@@ -235,7 +228,7 @@ export function ChatInfoModal({ open, onOpenChange, chat }: { open: boolean, onO
             
             <div className="space-y-4">
               <div className="flex items-center justify-between px-1">
-                <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40 italic">Участники: {chat.participantIds?.length}</h3>
+                <h3 className="text-[10px] font-black uppercase tracking-0.3em text-white/40 italic">Участники: {chat.participantIds?.length}</h3>
               </div>
               <div className="space-y-2">{chat.participantIds?.map((pid: string) => (<ParticipantItem key={pid} userId={pid} onClick={() => { onOpenChange(false); setInspectedUserId(pid); }} canManage={amIAdmin && pid !== user?.uid} isAdmin={chat.adminIds?.includes(pid)} isOwner={chat.ownerId === pid} customTitle={chat.metadata?.[pid]?.customTitle} onPromote={handlePromote} onDemote={handleDemote} onKick={handleKick} onSetTitle={(uid: any) => setTitleModalUser(uid)} />))}</div>
             </div>

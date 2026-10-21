@@ -20,10 +20,6 @@ import { cn, triggerHaptic } from '@/lib/utils';
 import type { Call, User as UserType } from '@/lib/types';
 import { AddMemberModal } from './add-member-modal';
 
-/**
- * NUXUS CALL ENGINE V122.0 «VOICE REAL-TIME»
- * Внедрена поддержка WebRTC для реальной передачи голоса и видео.
- */
 const servers = {
   iceServers: [
     { urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'] },
@@ -51,7 +47,6 @@ export function CallOverlay() {
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   const ringtoneRef = useRef<HTMLAudioElement | null>(null);
 
-  // 1. Мониторинг состояния звонка в Firestore
   useEffect(() => {
     if (!db || !activeCallId || !user) return;
 
@@ -85,16 +80,11 @@ export function CallOverlay() {
     if (!ringtoneRef.current) {
       ringtoneRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
       ringtoneRef.current.loop = true;
-<<<<<<< HEAD
-      ringtoneRef.current.play().catch(() => {
-        window.addEventListener('click', () => ringtoneRef.current?.play(), { once: true });
-=======
       ringtoneRef.current.play().catch((err) => {
         console.error("Ringtone play error:", err);
         window.addEventListener('click', () => {
           ringtoneRef.current?.play().catch((e) => console.error("Ringtone click play error:", e));
         }, { once: true });
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
       });
     }
   };
@@ -106,7 +96,6 @@ export function CallOverlay() {
     }
   };
 
-  // 2. Инициализация WebRTC при переходе в статус 'active'
   useEffect(() => {
     if (callData?.status === 'active' && !pc.current) {
       startWebRTC();
@@ -121,18 +110,15 @@ export function CallOverlay() {
       pc.current = new RTCPeerConnection(servers);
       remoteStream.current = new MediaStream();
 
-      // Получаем локальные медиа
       localStream.current = await navigator.mediaDevices.getUserMedia({
         audio: true,
         video: callData.type === 'video'
       });
 
-      // Добавляем треки в соединение
       localStream.current.getTracks().forEach((track) => {
         pc.current?.addTrack(track, localStream.current!);
       });
 
-      // Принимаем удаленные треки
       pc.current.ontrack = (event) => {
         event.streams[0].getTracks().forEach((track) => {
           remoteStream.current?.addTrack(track);
@@ -150,7 +136,6 @@ export function CallOverlay() {
       const offerCandidates = collection(callDoc, 'offerCandidates');
       const answerCandidates = collection(callDoc, 'answerCandidates');
 
-      // Обмен ICE кандидатами
       pc.current.onicecandidate = (event) => {
         if (event.candidate) {
           const col = user.uid === callData.callerId ? offerCandidates : answerCandidates;
@@ -158,7 +143,6 @@ export function CallOverlay() {
         }
       };
 
-      // Логика Оффера (вызывающий)
       if (user.uid === callData.callerId) {
         const offerDescription = await pc.current.createOffer();
         await pc.current.setLocalDescription(offerDescription);
@@ -170,7 +154,6 @@ export function CallOverlay() {
           },
         });
 
-        // Слушаем ответ
         onSnapshot(callDoc, (snapshot) => {
           const data = snapshot.data();
           if (!pc.current?.currentRemoteDescription && data?.answer) {
@@ -187,9 +170,7 @@ export function CallOverlay() {
             }
           });
         });
-      } 
-      // Логика Ответа (принимающий)
-      else {
+      } else {
         const data = (await getDoc(callDoc)).data();
         const offerDescription = data?.offer;
         await pc.current.setRemoteDescription(new RTCSessionDescription(offerDescription));
