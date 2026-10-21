@@ -3,8 +3,8 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 /**
- * NUXUS TITANIUM AEGIS v7.0 «SOVEREIGN SHIELD»
- * Эшелонированная защита Ядра: Anti-Clone, Anti-Iframe, Anti-Scrape, Anti-DDoS.
+ * NUXUS TITANIUM AEGIS v8.0 «ULTRA SHIELD»
+ * Эшелонированная защита Ядра: Anti-Clone, Anti-BruteForce, Anti-DDoS.
  */
 
 const ipRegistry = new Map<string, { count: number, lastReset: number, isBanned: boolean, score: number }>();
@@ -30,34 +30,40 @@ export function middleware(request: NextRequest) {
     return new NextResponse('ACCESS_DENIED: Connection terminated by Aegis Protocol.', { status: 403 });
   }
 
-  // 3. DDOS MITIGATION
+  // 3. BRUTE-FORCE MITIGATION (Aegis 8.0)
   const state = ipRegistry.get(ip) || { count: 0, lastReset: now, isBanned: false, score: 0 };
   
   if (state.isBanned) {
-    return new NextResponse('SIGNAL BLOCKED: Aegis Protocol Active. Node Restricted.', { status: 403 });
+    return new NextResponse('SIGNAL BLOCKED: Critical Integrity Violation. IP Blacklisted.', { status: 403 });
   }
 
-  if (now - state.lastReset > 5000) { 
+  // Сброс счетчика каждые 10 секунд
+  if (now - state.lastReset > 10000) { 
     state.count = 0;
     state.lastReset = now;
   }
   state.count++;
 
-  if (state.count > 20) { 
+  // Если более 10 запросов за 10 секунд — увеличиваем подозрительность
+  if (state.count > 10) { 
     state.score += 1;
-    if (state.score > 5) state.isBanned = true;
+    if (state.score > 10) {
+      state.isBanned = true;
+      ipRegistry.set(ip, state);
+      return new NextResponse('AEGIS: Excessive Load Detected. Node Isolated.', { status: 429 });
+    }
     ipRegistry.set(ip, state);
     return new NextResponse('Protocol Error: High Signal Density', { status: 429 });
   }
   ipRegistry.set(ip, state);
 
-  // 4. INJECTION FILTERING
+  // 4. INJECTION FILTERING (WAF)
   const url = request.nextUrl.toString().toLowerCase();
-  const suspiciousPatterns = ['union', 'select', 'insert', 'drop', 'delete', 'update', 'script', '<script>', '--', 'waitfor', 'delay'];
+  const suspiciousPatterns = ['union', 'select', 'insert', 'drop', 'delete', 'update', 'script', '<script>', '--', 'waitfor', 'delay', 'sleep', '@@version'];
   if (suspiciousPatterns.some(p => url.includes(p))) {
-    state.isBanned = true;
+    state.isBanned = true; // Мгновенный бан за инъекцию
     ipRegistry.set(ip, state);
-    return new NextResponse('AEGIS: Malicious Signal Detected', { status: 400 });
+    return new NextResponse('AEGIS: Malicious Signal Detected. Node Banned.', { status: 400 });
   }
 
   // 5. SECURITY HEADERS
@@ -66,7 +72,7 @@ export function middleware(request: NextRequest) {
   response.headers.set('X-Content-Type-Options', 'nosniff');
   response.headers.set('X-XSS-Protection', '1; mode=block');
   response.headers.set('Content-Security-Policy', "default-src 'self' https: data: 'unsafe-inline' 'unsafe-eval'; frame-ancestors 'none';");
-  response.headers.set('X-Nuxus-Shield', 'Active-v7.0');
+  response.headers.set('X-Nuxus-Shield', 'Active-v8.0-Ultra');
   response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
 
   return response;

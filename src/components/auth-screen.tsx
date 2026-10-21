@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect } from 'react';
@@ -23,8 +24,8 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { useRouter } from 'next/navigation';
 
 /**
- * AUTH SCREEN V154 «AUTO-BYPASS»
- * ОПТИМИЗИРОВАНО: Если сессия активна, вход выполняется автоматически без показа экрана.
+ * AUTH SCREEN V179.0 «AEGIS ANTI-BRUTE»
+ * UPDATED: Added a cooldown period on login attempts to prevent automated brute-force.
  */
 export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'login' | 'register' | 'verify' }) {
   const auth = useAuth();
@@ -37,6 +38,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
   const [mode, setMode] = useState<'login' | 'register' | 'verify'>(initialMode);
   const [authType, setActiveAuthType] = useState<'email' | 'phone'>('email');
   const [isLoading, setIsLoading] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
   const [showPass, setShowPass] = useState(false);
 
   // Form State
@@ -53,15 +55,22 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
       if (!user.emailVerified && !user.email?.includes('@nuxus.internal')) {
         setMode('verify');
       } else {
-        // Мы уже вошли, AuthScreen не нужен
         router.push('/');
       }
     }
   }, [user, isUserLoading, router]);
 
+  // Cooldown timer
+  useEffect(() => {
+    if (cooldown > 0) {
+      const timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [cooldown]);
+
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!db || !auth) return;
+    if (!db || !auth || cooldown > 0) return;
     
     setIsLoading(true);
     triggerHaptic();
@@ -104,6 +113,7 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
       }
     } catch (e: any) {
       toast({ title: "Ошибка", description: e.message, variant: "destructive" });
+      setCooldown(3); // Защитная пауза 3 сек после ошибки
     } finally {
       setIsLoading(false);
     }
@@ -185,9 +195,12 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
                   <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20">{showPass ? <EyeOff size={16} /> : <Eye size={16} />}</button>
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20"><Lock size={16} /></div>
                 </div>
-                <Button type="submit" disabled={isLoading} className="w-full h-14 bg-primary text-white font-black uppercase italic tracking-widest rounded-2xl shadow-xl mt-4">
-                  {isLoading ? <Loader2 className="animate-spin" /> : (mode === 'login' ? t.login : t.register)}
+                <Button type="submit" disabled={isLoading || cooldown > 0} className="w-full h-14 bg-primary text-white font-black uppercase italic tracking-widest rounded-2xl shadow-xl mt-4">
+                  {isLoading ? <Loader2 className="animate-spin" /> : cooldown > 0 ? `Wait ${cooldown}s` : (mode === 'login' ? t.login : t.register)}
                 </Button>
+                {cooldown > 0 && (
+                  <p className="text-[9px] text-center text-red-400 uppercase font-black tracking-widest animate-pulse mt-2">Aegis Cooldown Active</p>
+                )}
               </form>
             </CardContent>
           </Card>

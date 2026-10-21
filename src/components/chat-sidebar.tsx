@@ -1,10 +1,14 @@
+
 "use client"
 
 import React, { useState, useMemo, memo, useEffect } from 'react';
 import { useAppState } from '@/lib/app-state';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
-import { Plus, Search, Star, MessageSquare, Loader2, Trash2, Archive } from 'lucide-react';
+import { 
+  Plus, Search, Star, MessageSquare, Loader2, 
+  Trash2, Archive, LogOut, ShieldCheck 
+} from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CreateChatModal } from './modals/create-chat-modal';
 import { StoriesBar } from './stories-bar';
@@ -24,10 +28,6 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 
-/**
- * CHAT LIST ITEM V141.0 «THIN VIEW»
- * UPDATED: Cleaned from merge conflict markers.
- */
 const ChatListItem = memo(({ 
   chat, isActive, otherId, onClick, currentUserId
 }: any) => {
@@ -63,10 +63,7 @@ const ChatListItem = memo(({
     if (!mounted || !chat.lastMessageAt) return '';
     try {
       return format(new Date(chat.lastMessageAt), 'HH:mm');
-    } catch (e) { 
-      console.error("Error formatting chat displayTime:", e);
-      return ''; 
-    }
+    } catch (e) { return ''; }
   }, [chat.lastMessageAt, mounted]);
 
   const displayName = useMemo(() => {
@@ -183,6 +180,15 @@ export default function ChatSidebar() {
     }
   };
 
+  const handleLogout = async () => {
+    if (!auth) return;
+    if (confirm("Отключить текущий узел от Ядра?")) {
+      triggerHaptic();
+      setIs2FAVerified(false);
+      await signOut(auth);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full bg-[#121212] overflow-hidden">
       <ScrollArea className="flex-1 no-scrollbar">
@@ -191,15 +197,19 @@ export default function ChatSidebar() {
             <div className="flex items-center justify-between">
                <div className="flex items-center gap-3">
                   <h1 className="text-4xl font-black text-primary italic tracking-tighter uppercase leading-none">ЧАТЫ</h1>
-                  {!isOnline && (
-                    <div className="bg-red-500/10 border border-red-500/20 px-2.5 py-0.5 rounded-full">
-                       <span className="text-[8px] font-black text-red-500 uppercase tracking-widest animate-pulse">Offline</span>
-                    </div>
-                  )}
+                  <div className="bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full flex items-center gap-2">
+                     <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                     <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest italic">V179.0</span>
+                  </div>
                </div>
-               <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl bg-white/[0.03] border border-white/5 text-white" onClick={() => setIsCreateModalOpen(true)}>
-                 <Plus className="w-5 h-5" strokeWidth={3} />
-               </Button>
+               <div className="flex gap-2">
+                  <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-lg" onClick={handleLogout}>
+                    <LogOut className="w-5 h-5" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl bg-white/[0.03] border border-white/5 text-white shadow-lg" onClick={() => setIsCreateModalOpen(true)}>
+                    <Plus className="w-5 h-5" strokeWidth={3} />
+                  </Button>
+               </div>
             </div>
 
             <div className="relative group" onClick={() => setIsSearchOpen(true)}>

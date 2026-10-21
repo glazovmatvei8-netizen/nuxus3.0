@@ -28,8 +28,8 @@ import { useToast } from '@/hooks/use-toast';
 import { signalService } from '@/services/signal-service';
 
 /**
- * CHAT AREA V178.0 «PURE SIGNAL»
- * AI FUNCTIONS ANNIHILATED. Focused on pure messaging and extreme security.
+ * CHAT AREA V179.0 «PURE SOVEREIGN»
+ * AI FUNCTIONS ANNIHILATED. Absolute focus on security and privacy.
  */
 const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelReply }: any) => {
   const { localDrafts, setLocalDrafts } = useAppState();
