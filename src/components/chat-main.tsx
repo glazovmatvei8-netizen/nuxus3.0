@@ -8,9 +8,10 @@ import CallsView from './calls-view';
 import ProfileView from './profile-view';
 import WalletView from './wallet-view';
 import DiscoveryView from './discovery-view';
+import { UserAvatar } from './user-avatar';
 import { useAppState } from '@/lib/app-state';
 import { cn, triggerHaptic } from '@/lib/utils';
-import { useUser, useFirestore } from '@/firebase/provider';
+import { useUser, useFirestore, useAuth } from '@/firebase/provider';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, query, where, limit, doc, updateDoc } from 'firebase/firestore';
 import { CallOverlay } from './modals/call-overlay';
@@ -26,8 +27,8 @@ import {
 } from 'lucide-react';
 
 /**
- * NUXUS CHAT MAIN V143.0 «PRIME NAVIGATION»
- * ОПТИМИЗИРОВАНО: Cleaned from merge conflict markers.
+ * NUXUS CHAT MAIN V169.0 «BLACK BOX EDITION»
+ * FIXED: UserAvatar import added.
  */
 export default function ChatMain() {
   const { 
@@ -37,6 +38,7 @@ export default function ChatMain() {
   } = useAppState();
   const { user } = useUser();
   const db = useFirestore();
+  const auth = useAuth();
 
   // 1. PRESENCE HEARTBEAT
   useEffect(() => {
