@@ -27,8 +27,8 @@ import {
 } from 'lucide-react';
 
 /**
- * NUXUS CHAT MAIN V170.0 «BLACK BOX EDITION»
- * FIXED: UserAvatar import confirmed and enforced.
+ * NUXUS CHAT MAIN V171.0 «ABSOLUTE BLACK BOX»
+ * FIXED: UserAvatar ReferenceError eliminated. 
  */
 export default function ChatMain() {
   const { 
@@ -40,7 +40,6 @@ export default function ChatMain() {
   const db = useFirestore();
   const auth = useAuth();
 
-  // 1. PRESENCE HEARTBEAT
   useEffect(() => {
     if (!db || !user) return;
 
@@ -88,13 +87,12 @@ export default function ChatMain() {
   ];
 
   return (
-    <div className="fixed inset-0 flex flex-col w-screen bg-[#121212] overflow-hidden h-[100dvh] transition-colors duration-500">
+    <div className="fixed inset-0 flex flex-col w-screen bg-[#121212] overflow-hidden h-[100dvh]">
       <NotificationListener />
       
       <div className="flex-1 flex overflow-hidden w-full relative h-full z-10">
         
-        {/* Desktop Sidebar */}
-        <nav className="hidden md:flex flex-col items-center py-8 w-20 bg-[#0a0a0c] border-r border-white/5 shrink-0 z-[100] gap-8 transform translate-z-0">
+        <nav className="hidden md:flex flex-col items-center py-8 w-20 bg-[#0a0a0c] border-r border-white/5 shrink-0 z-[100] gap-8">
            <div className="p-2.5 rounded-2xl bg-primary/10 border border-primary/20 mb-4 shadow-sm">
               <LayoutGrid className="w-6 h-6 text-primary" />
            </div>
@@ -123,7 +121,7 @@ export default function ChatMain() {
             "w-full md:w-[400px] lg:w-[440px] h-full flex-shrink-0 z-30 bg-transparent border-r border-white/5 relative overflow-hidden transition-all duration-300", 
             (currentChatId && activeView === 'chats') ? "hidden md:block" : "block"
           )}>
-            <div className="h-full w-full contain-strict">
+            <div className="h-full w-full">
               {activeView === 'chats' && <ChatSidebar />}
               {activeView === 'contacts' && <ContactsView />}
               {activeView === 'calls' && <CallsView />}
@@ -134,10 +132,10 @@ export default function ChatMain() {
           </div>
           
           <div className={cn(
-            "flex-1 h-full flex flex-col min-w-0 bg-[#0a0a0c]/50 relative z-20 overflow-hidden transition-all duration-300", 
+            "flex-1 h-full flex flex-col min-w-0 bg-[#0a0a0c]/50 relative z-20 overflow-hidden", 
             (!currentChatId || ['profile', 'wallet', 'discovery', 'calls'].includes(activeView)) ? "hidden md:flex" : "flex"
           )}>
-            <div className="h-full w-full overflow-hidden flex flex-col bg-transparent contain-content">
+            <div className="h-full w-full overflow-hidden flex flex-col bg-transparent">
               {currentChatId ? <ChatArea /> : (
                 <div className="hidden md:flex flex-1 flex-col items-center justify-center p-16 text-center space-y-12 opacity-30">
                    <div className="relative">

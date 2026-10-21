@@ -3,7 +3,7 @@ import './globals.css';
 import { SovereignProvider } from '@/components/sovereign-provider';
 
 /**
- * NUXUS LAYOUT V170.0 «ABSOLUTE SECURITY SHELL»
+ * NUXUS LAYOUT V171.0 «ABSOLUTE SECURITY SHELL»
  * UPDATED: Added HTTPS enforcement and Anti-F12 protection scripts.
  */
 const ICON_URL = 'https://i.postimg.cc/T2xvz0mn/IMG-2541.jpg?v=170';
@@ -56,7 +56,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             // Kill Console spam
             setInterval(() => {
               console.clear();
-              console.log('%c🛰️ NUXUS KERNEL V170.0 ACTIVE', 'color: #E58E38; font-weight: bold; font-size: 14px;');
+              console.log('%c🛰️ NUXUS KERNEL V171.0 ACTIVE', 'color: #E58E38; font-weight: bold; font-size: 14px;');
               console.log('%cBLACK BOX PROTECTION ENABLED', 'color: #666; font-size: 10px;');
             }, 5000);
           }

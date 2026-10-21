@@ -1,7 +1,7 @@
 import type { NextConfig } from 'next';
 
 /**
- * NUXUS PRODUCTION CONFIG V170.0 «ABSOLUTE BLACK BOX»
+ * NUXUS PRODUCTION CONFIG V171.0 «ABSOLUTE BLACK BOX»
  * ОПТИМИЗИРОВАНО ДЛЯ ПОЛНОЙ СКРЫТНОСТИ И ЗАЩИТЫ ОТ F12
  */
 const nextConfig: NextConfig = {
