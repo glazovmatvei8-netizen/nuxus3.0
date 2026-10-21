@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useMemo } from 'react';
@@ -17,7 +16,7 @@ import type { User } from '@/lib/types';
 
 /**
  * CREATE STORY MODAL V5.2.2 «TITANIUM DIRECT»
- * ИСПРАВЛЕНО: Прямые импорты Firebase.
+ * ОПТИМИЗИРОВАНО: Полная очистка от мусора Git.
  */
 export function CreateStoryModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const { user } = useUser();
@@ -92,10 +91,7 @@ export function CreateStoryModal({ open, onOpenChange }: { open: boolean, onOpen
       setCaption('');
       onOpenChange(false);
     } catch (e: any) {
-<<<<<<< HEAD
-=======
       console.error("Create story error in create-story-modal:", e);
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
       toast({ title: "Ошибка Ядра", description: "Попробуйте снова", variant: "destructive" });
     } finally {
       setIsPublishing(false);

@@ -16,6 +16,10 @@ import type { Call, User } from '@/lib/types';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 
+/**
+ * CALLS VIEW V166.0 «CLEAN INTEGRITY»
+ * ОПТИМИЗИРОВАНО: Полная очистка от мусора Git.
+ */
 export default function CallsView() {
   const { user } = useUser();
   const db = useFirestore();

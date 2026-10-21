@@ -20,7 +20,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 /**
  * HOME PAGE V166.0 «CLEAN INTEGRITY»
- * FIXED: Removed all merge conflict markers in 2FA and Biometric blocks.
+ * ОПТИМИЗИРОВАНО: Полная очистка от мусора Git.
  */
 export default function Home() {
   const { user, isUserLoading } = useUser();

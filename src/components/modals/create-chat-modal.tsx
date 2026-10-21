@@ -20,7 +20,7 @@ interface CreateChatModalProps {
 
 /**
  * CREATE CHAT MODAL V166.0 «CLEAN SLATE»
- * FIXED: Removed all merge conflict markers.
+ * ОПТИМИЗИРОВАНО: Полная очистка от мусора Git.
  */
 export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
   const { user } = useUser();
