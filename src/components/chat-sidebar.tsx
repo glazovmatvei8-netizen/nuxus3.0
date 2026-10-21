@@ -186,20 +186,27 @@ export default function ChatSidebar() {
   const userProfileRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user?.uid]);
   const { data: profile } = useDoc<UserType>(userProfileRef);
 
+  // ВНИМАНИЕ: Удален фильтр isArchived из запроса Firestore, чтобы найти все чаты, 
+  // в которых состоит пользователь, даже если поле isArchived отсутствует.
   const chatsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
-    return query(collection(db, 'chats'), where('participantIds', 'array-contains', user.uid), where('isArchived', '==', false));
+    return query(
+      collection(db, 'chats'), 
+      where('participantIds', 'array-contains', user.uid)
+    );
   }, [db, user?.uid]);
   
   const { data: chats, isLoading: isChatsLoading } = useCollection<Chat>(chatsQuery);
 
   const filteredChats = useMemo(() => {
     if (!chats) return [];
-    return [...chats].sort((a, b) => {
-      const aTime = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : new Date(a.createdAt).getTime();
-      const bTime = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : new Date(b.createdAt).getTime();
-      return bTime - aTime;
-    });
+    return [...chats]
+      .filter(chat => chat.isArchived !== true) // Фильтрация архива на стороне клиента
+      .sort((a, b) => {
+        const aTime = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : new Date(a.createdAt).getTime();
+        const bTime = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : new Date(b.createdAt).getTime();
+        return bTime - aTime;
+      });
   }, [chats]);
 
   const handleSlotSwitch = async (idx: number) => {
@@ -246,7 +253,7 @@ export default function ChatSidebar() {
                   <h1 className="text-4xl font-black text-primary italic tracking-tighter uppercase leading-none">ЧАТЫ</h1>
                   <div className="bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full flex items-center gap-2">
                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                     <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest italic">V185.0</span>
+                     <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest italic">V186.0</span>
                   </div>
                </div>
                <div className="flex gap-2">
