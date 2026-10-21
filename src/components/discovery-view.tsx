@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { 
   Search, Orbit, CircleDollarSign, TowerControl, 
   Satellite, Microscope, Atom, ChevronRight,
-  Sparkles, Layers, Zap, Loader2, Info
+  Zap, Loader2, Info
 } from 'lucide-react';
 import { useAppState } from '@/lib/app-state';
 import { useUser, useFirestore } from '@/firebase/provider';
@@ -17,10 +17,6 @@ import { cn, triggerHaptic } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslations } from '@/hooks/use-translations';
 
-/**
- * NAVIGATOR EXPLORE V129.0 «FINAL AUDIT»
- * FIXED: Compact header, better search, horizontal scroll, full localization.
- */
 export default function DiscoveryView() {
   const { user } = useUser();
   const db = useFirestore();
@@ -55,10 +51,7 @@ export default function DiscoveryView() {
         toast({ title: t('explore.devMode'), description: t('explore.nodeNotFound') });
       }
     } catch (e) {
-<<<<<<< HEAD
-=======
       console.error("Discovery node join error:", e);
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
       toast({ title: "Ошибка шлюза", variant: "destructive" });
     } finally {
       setIsJoining(null);
@@ -83,7 +76,6 @@ export default function DiscoveryView() {
     <div className="flex flex-col h-full bg-[#121212] overflow-hidden relative">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(229,142,56,0.03)_0%,transparent_70%)] pointer-events-none" />
 
-      {/* COMPACT HEADER */}
       <div className="px-6 pt-12 pb-4 shrink-0 text-center relative z-10">
         <h1 className="text-2xl font-black text-primary italic tracking-tighter uppercase leading-none">
           {t('explore.title')}
@@ -105,8 +97,6 @@ export default function DiscoveryView() {
 
       <ScrollArea className="flex-1 relative z-10">
         <div className="px-6 pb-40 space-y-10">
-          
-          {/* DESCRIPTION BOX */}
           <section className="bg-primary/5 border border-primary/10 p-5 rounded-3xl flex gap-4 items-start">
              <Info className="w-5 h-5 text-primary shrink-0 mt-0.5" />
              <p className="text-[10px] font-bold text-white/60 leading-relaxed uppercase tracking-tight">
@@ -114,7 +104,6 @@ export default function DiscoveryView() {
              </p>
           </section>
 
-          {/* RECOMMENDED NODES - HORIZONTAL SCROLL FIXED */}
           <section className="space-y-4">
             <h3 className="text-[10px] font-black uppercase text-[#8E8E93] tracking-[0.3em] px-2 italic">
               {t('explore.recommended')}
@@ -135,44 +124,6 @@ export default function DiscoveryView() {
               <ScrollBar orientation="horizontal" className="bg-white/5" />
             </ScrollArea>
           </section>
-
-          {/* CATEGORIES */}
-          <section className="space-y-4">
-            <h3 className="text-[10px] font-black uppercase text-[#8E8E93] tracking-[0.3em] px-2 italic">
-              {t('explore.categories')}
-            </h3>
-            <div className="grid grid-cols-1 gap-3">
-              <CategoryItem icon={Satellite} label="Связь и Коммуникации" onClick={() => toast({ title: t('explore.devMode') })} />
-              <CategoryItem icon={Layers} label="Торговля и Ресурсы" onClick={() => toast({ title: t('explore.devMode') })} />
-              <CategoryItem icon={Microscope} label="Наука и Исследования" onClick={() => toast({ title: t('explore.devMode') })} />
-            </div>
-          </section>
-
-          {/* ACTIVE EVENTS */}
-          <section className="space-y-4">
-            <h3 className="text-[10px] font-black uppercase text-[#8E8E93] tracking-[0.3em] px-2 italic">
-              {t('explore.events')}
-            </h3>
-            <div 
-              onClick={() => toast({ title: t('explore.devMode'), description: "Симпозиум начнется через 48 часов." })}
-              className="nuxus-event-card p-6 flex items-center gap-6 group cursor-pointer hover:bg-[#1C1C1E]/90 transition-all shadow-2xl relative overflow-hidden"
-            >
-               <div className="w-14 h-14 rounded-2xl bg-primary/20 border border-primary/30 flex items-center justify-center relative z-10">
-                  <Atom className="w-8 h-8 text-primary animate-[spin_10s_linear_infinite]" />
-               </div>
-               <div className="flex flex-col text-left relative z-10">
-                  <span className="text-[16px] font-black text-white italic tracking-tighter uppercase group-hover:text-primary transition-colors">
-                    Квантовый Симпозиум
-                  </span>
-                  <div className="flex items-center gap-2 mt-1.5">
-                     <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                     <span className="text-[9px] font-bold text-green-500 uppercase tracking-widest">ОЖИДАНИЕ</span>
-                  </div>
-               </div>
-               <Zap className="absolute right-6 top-1/2 -translate-y-1/2 w-10 h-10 text-primary/5 group-hover:text-primary/20 transition-all" />
-            </div>
-          </section>
-
         </div>
       </ScrollArea>
     </div>
@@ -199,25 +150,6 @@ function RecommendCard({ icon, title, username, onClick, loading }: any) {
             {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : t('explore.join')}
           </Button>
        </div>
-    </div>
-  );
-}
-
-function CategoryItem({ icon: Icon, label, onClick }: any) {
-  return (
-    <div 
-      onClick={onClick}
-      className="flex items-center justify-between p-5 bg-[#1C1C1E]/70 rounded-[2rem] border border-white/[0.05] hover:bg-[#1C1C1E] transition-all cursor-pointer group shadow-xl"
-    >
-       <div className="flex items-center gap-5">
-          <div className="w-10 h-10 rounded-xl bg-black/40 border border-white/5 flex items-center justify-center text-muted-foreground group-hover:text-primary transition-all">
-             <Icon className="w-5 h-5" />
-          </div>
-          <span className="text-[13px] font-black text-white italic uppercase tracking-tighter">
-            {label}
-          </span>
-       </div>
-       <ChevronRight className="w-4 h-4 text-white/10 group-hover:text-primary group-hover:translate-x-1 transition-all" />
     </div>
   );
 }

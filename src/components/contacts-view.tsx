@@ -84,17 +84,15 @@ export default function ContactsView() {
         }
       };
 
-      const docRef = await addDoc(collection(db, 'chats'), newChatData);
-      setCurrentChatId(docRef.id);
-      setActiveView('chats');
-    } catch (e: any) {
-<<<<<<< HEAD
-=======
-      console.error("Failed to create or open contact chat:", e);
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
-      toast({ title: "Ошибка", description: e.message, variant: "destructive" });
-    }
-  };
+        const docRef = await addDoc(collection(db, 'chats'), newChatData);
+        setCurrentChatId(docRef.id);
+        setActiveView('chats');
+      } catch (e: any) {
+        console.error("Failed to create or open contact chat:", e);
+        toast({ title: "Ошибка", description: e.message, variant: "destructive" });
+      }
+    };
+  
 
   return (
     <div className="flex flex-col h-full bg-[#121212] overflow-hidden">
