@@ -31,7 +31,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <script dangerouslySetInnerHTML={{ __html: `
           (function() {
-            // 1. ANTI-CLONE & DOMAIN LOCK (OFFICIAL NODES ONLY)
+            // 1. ANTI-CLONE & DOMAIN LOCK (MOBILE-AWARE)
             const allowedDomains = [
               'nuxus.fun', 
               'chat.nuxus.fun', 
@@ -41,38 +41,42 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               'web.app', 
               'firebaseapp.com', 
               'swtest.ru',
-              'beget.tech'
+              'beget.tech',
+              'beget.com',
+              'firebase-preview.web.app' // Разрешаем превью Firebase
             ];
             
             if (typeof window !== 'undefined') {
               const hostname = window.location.hostname;
-              const isDomainAllowed = allowedDomains.some(d => hostname.endsWith(d));
+              const isNative = !!(window.Capacitor || window.webkit || window.android);
+              const isDomainAllowed = allowedDomains.some(d => hostname.endsWith(d)) || isNative;
               
               if (!isDomainAllowed) {
                 document.documentElement.innerHTML = '<body style="background:#000;color:red;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;text-transform:uppercase;text-align:center;padding:20px;"><div><h1 style="font-size:40px;">Access Denied</h1><p style="font-size:18px;color:#fff;margin-top:20px;">Illegal Nuxus Kernel Clone Detected.</p><p style="font-size:10px;color:#333;margin-top:40px;">Node Identity Conflict at ' + hostname + '</p></div></body>';
                 return;
               }
 
-              // 2. ANTI-IFRAME (FRAME BUSTER)
-              if (window.self !== window.top) {
+              // 2. ANTI-IFRAME (EXCEPT OFFICIAL PREVIEWS)
+              const isIframe = window.self !== window.top;
+              const isPreview = hostname.includes('firebase-preview') || hostname.includes('localhost');
+              if (isIframe && !isPreview && !isNative) {
                 window.top.location.href = window.self.location.href;
               }
 
-              // 3. NUCLEAR DEBUGGER TRAP (Recursive Time-Delta Detection)
+              // 3. NUCLEAR DEBUGGER TRAP
               const trap = function() {
                 const start = Date.now();
                 debugger;
                 const end = Date.now();
-                // If execution delta > 50ms, someone is pausing the code (F12 active)
-                if (end - start > 50) {
+                if (end - start > 50 && !isNative) {
                   window.location.href = 'about:blank';
                 }
-                setTimeout(trap, 200);
+                setTimeout(trap, 250);
               };
               
-              setTimeout(trap, 1000);
+              if (!isNative) setTimeout(trap, 2000);
 
-              // 4. BLOCK SYSTEM INPUTS (F12, Ctrl+U, Right Click)
+              // 4. BLOCK SYSTEM INPUTS
               document.addEventListener('contextmenu', e => e.preventDefault());
               document.addEventListener('keydown', e => {
                 if (
@@ -90,15 +94,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               const observer = new MutationObserver((mutations) => {
                 for (const mutation of mutations) {
                   if (mutation.type === 'childList' && mutation.removedNodes.length > 0) {
-                     // Auto-clear logs on any DOM modification
                      console.clear();
                   }
                 }
               });
               observer.observe(document.documentElement, { attributes: true, childList: true, subtree: true });
 
-              // 6. FORCE HTTPS
-              if (window.location.protocol === 'http:' && !hostname.includes('localhost')) {
+              // 6. FORCE HTTPS (EXCEPT MOBILE LOCALHOST)
+              if (window.location.protocol === 'http:' && !hostname.includes('localhost') && !isNative) {
                 window.location.href = 'https:' + window.location.href.substring(5);
               }
             }

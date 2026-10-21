@@ -6,15 +6,19 @@
   "bundledWebRuntime": false,
   "server": {
     "androidScheme": "https",
+    "hostname": "nuxus.fun",
     "allowNavigation": [
-      "studio-5946432351-bbd5e.firebaseapp.com",
-      "studio-5946432351-bbd5e.web.app",
+      "nuxus.fun",
+      "chat.nuxus.fun",
+      "www.nuxus.fun",
+      "*.firebaseapp.com",
+      "*.web.app",
       "*.googleapis.com",
       "*.gstatic.com"
     ]
   },
   "android": {
-    "allowMixedContent": false,
+    "allowMixedContent": true,
     "captureInput": true,
     "buildOptions": {
       "releaseType": "APK"
