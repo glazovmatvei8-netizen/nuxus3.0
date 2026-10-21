@@ -1,3 +1,4 @@
+
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { format, isToday, parseISO, differenceInSeconds } from 'date-fns';
@@ -39,18 +40,6 @@ export function formatDisplayName(name: string | undefined | null, username?: st
   return 'Узел Сети';
 }
 
-/**
- * Проверка на аномалии безопасности узла.
- */
-export function isUserAnomaly(user: User | null | undefined): boolean {
-  if (!user) return false;
-  const username = (user.username || '').trim().replace('@', '');
-  // Защита от системных инъекций в ID (Проверка происходит на сервере, здесь только для UI)
-  const forbiddenPatterns = ['admin', 'kernel', 'system', 'root'];
-  const isSuspicious = forbiddenPatterns.some(p => username.includes(p)) && !user.isAdmin;
-  return isSuspicious || username.length < 2;
-}
-
 export function encryptSignal(text: string): string {
   if (!text) return '';
   try {
@@ -66,8 +55,6 @@ export function decryptSignal(content: string | undefined | null): string {
   const isEncoded = content.startsWith('NX_SECURE_') || content.startsWith('NX_');
   if (!isEncoded) return content;
   
-  if (content.length > 50000) return "Signal limit exceeded";
-
   try {
     const prefix = content.startsWith('NX_SECURE_') ? 'NX_SECURE_' : 'NX_';
     const raw = content.replace(prefix, '');
@@ -79,9 +66,9 @@ export function decryptSignal(content: string | undefined | null): string {
 }
 
 /**
- * АВТОРИТЕТНАЯ ПРОВЕРКА ПРАВ (КЛИЕНТ)
- * Теперь здесь НЕТ хардкода ID. Мы верим флагу isAdmin из профиля, 
- * который защищен на стороне Firestore Rules.
+ * АВТОРИТЕТНАЯ ПРОВЕРКА ПРАВ
+ * ВНИМАНИЕ: Здесь больше НЕТ хардкода ID.
+ * Права админа (isAdmin) назначаются и проверяются ИСКЛЮЧИТЕЛЬНО на сервере Firestore.
  */
 export function isGlobalAdmin(user: User | null | undefined): boolean {
   return !!user?.isAdmin;
@@ -97,6 +84,13 @@ export function isUserActuallyBanned(user: User | null | undefined): boolean {
   return !!user.isBanned;
 }
 
+export function isUserAnomaly(user: User | null | undefined): boolean {
+  if (!user) return false;
+  const username = (user.username || '').toLowerCase();
+  // Просто UI индикация, реальная блокировка — на сервере.
+  return username.includes('admin') || username.includes('kernel') || username.includes('system');
+}
+
 export function formatLastSeen(
   lastSeenIso: string | undefined | null, 
   visibility: PrivacyOption = 'everybody',
@@ -109,11 +103,7 @@ export function formatLastSeen(
     const diffSeconds = Math.max(0, differenceInSeconds(now, lastSeenDate));
     
     if (diffSeconds < 60) return onlineString;
-
-    if (isToday(lastSeenDate)) {
-      return `был(а) сегодня в ${format(lastSeenDate, 'HH:mm')}`;
-    }
-    
+    if (isToday(lastSeenDate)) return `был(а) сегодня в ${format(lastSeenDate, 'HH:mm')}`;
     return `был(а) ${format(lastSeenDate, 'd MMM в HH:mm', { locale: ru })}`;
   } catch (e) { 
     return 'был(а) недавно'; 
@@ -142,12 +132,12 @@ export function getReputationInfo(reputation: number = 0) {
   const level = Math.floor(safeRep / 10) + 1;
   const currentExp = Math.floor((safeRep % 10) * 10); 
 
-  if (safeRep >= 100) return { level, name: 'Core Architect', color: 'text-red-500', icon: '💎', shadow: 'shadow-red-500/30', progress: 100 };
-  if (safeRep >= 70) return { level, name: 'Legendary Node', color: 'text-orange-500', icon: '👑', shadow: 'shadow-orange-500/20', progress: currentExp };
-  if (safeRep >= 45) return { level, name: 'Elite Node', color: 'text-yellow-500', icon: '🌟', shadow: 'shadow-yellow-500/20', progress: currentExp };
-  if (safeRep >= 25) return { level, name: 'Trusted Node', color: 'text-purple-500', icon: '🛡️', shadow: 'shadow-purple-500/20', progress: currentExp };
-  if (safeRep >= 10) return { level, name: 'Active Node', color: 'text-green-500', icon: '⚡', shadow: 'shadow-green-500/20', progress: currentExp };
-  return { level, name: 'New Node', color: 'text-white/40', icon: '🛰️', shadow: 'shadow-white/5', progress: currentExp };
+  if (safeRep >= 100) return { level, name: 'Core Architect', color: 'text-red-500', icon: '💎', progress: 100 };
+  if (safeRep >= 70) return { level, name: 'Legendary Node', color: 'text-orange-500', icon: '👑', progress: currentExp };
+  if (safeRep >= 45) return { level, name: 'Elite Node', color: 'text-yellow-500', icon: '🌟', progress: currentExp };
+  if (safeRep >= 25) return { level, name: 'Trusted Node', color: 'text-purple-500', icon: '🛡️', progress: currentExp };
+  if (safeRep >= 10) return { level, name: 'Active Node', color: 'text-green-500', icon: '⚡', progress: currentExp };
+  return { level, name: 'New Node', color: 'text-white/40', icon: '🛰️', progress: currentExp };
 }
 
 export function triggerHaptic() {

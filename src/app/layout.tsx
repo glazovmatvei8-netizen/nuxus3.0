@@ -31,77 +31,40 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <script dangerouslySetInnerHTML={{ __html: `
           (function() {
-            // 1. ANTI-CLONE & DOMAIN LOCK (MOBILE-AWARE)
-            const allowedDomains = [
-              'nuxus.fun', 
-              'chat.nuxus.fun', 
-              'www.nuxus.fun', 
-              'localhost', 
-              '127.0.0.1', 
-              'web.app', 
-              'firebaseapp.com', 
-              'swtest.ru',
-              'beget.tech',
-              'beget.com',
-              'firebase-preview.web.app' // Разрешаем превью Firebase
-            ];
-            
+            // 1. DOMAIN LOCK & ANTI-CLONE
+            const allowed = ['nuxus.fun', 'chat.nuxus.fun', 'www.nuxus.fun', 'localhost', 'swtest.ru', 'firebaseapp.com', 'web.app'];
             if (typeof window !== 'undefined') {
-              const hostname = window.location.hostname;
+              const h = window.location.hostname;
               const isNative = !!(window.Capacitor || window.webkit || window.android);
-              const isDomainAllowed = allowedDomains.some(d => hostname.endsWith(d)) || isNative;
-              
-              if (!isDomainAllowed) {
-                document.documentElement.innerHTML = '<body style="background:#000;color:red;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;text-transform:uppercase;text-align:center;padding:20px;"><div><h1 style="font-size:40px;">Access Denied</h1><p style="font-size:18px;color:#fff;margin-top:20px;">Illegal Nuxus Kernel Clone Detected.</p><p style="font-size:10px;color:#333;margin-top:40px;">Node Identity Conflict at ' + hostname + '</p></div></body>';
+              if (!allowed.some(d => h.endsWith(d)) && !isNative) {
+                document.documentElement.innerHTML = '<body style="background:#000;color:red;display:flex;text-align:center;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;"><h1>ACCESS DENIED: ILLEGAL NODE CLONE</h1></body>';
                 return;
               }
 
-              // 2. ANTI-IFRAME (EXCEPT OFFICIAL PREVIEWS)
-              const isIframe = window.self !== window.top;
-              const isPreview = hostname.includes('firebase-preview') || hostname.includes('localhost');
-              if (isIframe && !isPreview && !isNative) {
-                window.top.location.href = window.self.location.href;
-              }
-
-              // 3. NUCLEAR DEBUGGER TRAP
+              // 2. NUCLEAR DEBUGGER TRAP (IMPROVED)
               const trap = function() {
-                const start = Date.now();
+                const s = Date.now();
                 debugger;
-                const end = Date.now();
-                if (end - start > 50 && !isNative) {
+                if (Date.now() - s > 100 && !isNative) {
+                  // Если отладчик открыт - забиваем консоль мусором и выходим
+                  for(let i=0; i<1000; i++) console.log(new Array(1000).fill("AEGIS_TRAP"));
                   window.location.href = 'about:blank';
                 }
-                setTimeout(trap, 250);
+                setTimeout(trap, 200);
               };
-              
               if (!isNative) setTimeout(trap, 2000);
 
-              // 4. BLOCK SYSTEM INPUTS
+              // 3. BLOCK INSPECTION
               document.addEventListener('contextmenu', e => e.preventDefault());
               document.addEventListener('keydown', e => {
-                if (
-                  e.key === 'F12' || 
-                  (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) || 
-                  (e.ctrlKey && (e.key === 'U' || e.key === 'S')) ||
-                  (e.metaKey && e.optionKey && e.key === 'i')
-                ) {
+                if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && ['I','J','C'].includes(e.key)) || (e.ctrlKey && e.key === 'U')) {
                   e.preventDefault();
                   return false;
                 }
               });
 
-              // 5. DOM TAMPER DETECTION
-              const observer = new MutationObserver((mutations) => {
-                for (const mutation of mutations) {
-                  if (mutation.type === 'childList' && mutation.removedNodes.length > 0) {
-                     console.clear();
-                  }
-                }
-              });
-              observer.observe(document.documentElement, { attributes: true, childList: true, subtree: true });
-
-              // 6. FORCE HTTPS (EXCEPT MOBILE LOCALHOST)
-              if (window.location.protocol === 'http:' && !hostname.includes('localhost') && !isNative) {
+              // 4. FORCE HTTPS
+              if (window.location.protocol === 'http:' && !h.includes('localhost') && !isNative) {
                 window.location.href = 'https:' + window.location.href.substring(5);
               }
             }
