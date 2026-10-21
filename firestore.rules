@@ -2,17 +2,18 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- СИСТЕМНЫЕ ФУНКЦИИ ЗАЩИТЫ ---
+    // --- СИСТЕМНЫЕ ФУНКЦИИ ЗАЩИТЫ (SERVER-SIDE) ---
     function isSignedIn() {
       return request.auth != null;
     }
 
-    // Проверка на Брутфорс (Cooldown 2 секунды между сигналами)
+    // Проверка на Брутфорс (Cooldown 2 секунды)
     function isNotSpamming() {
-      return request.time > (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.lastActionTime + duration.value(2, 's'));
+      let lastAction = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.lastActionTime;
+      return lastAction == null || request.time > (lastAction + duration.value(2, 's'));
     }
 
-    // Проверка прав Главного Архитектора (Admin)
+    // АВТОРИТЕТНАЯ ПРОВЕРКА ПРАВ АДМИНА (ТОЛЬКО НА СЕРВЕРЕ)
     function isPrimeAdmin() {
       return isSignedIn() && (
         request.auth.uid == 'GCvLucN8CjNcdaxPO2vmpZ84hNl1' ||
@@ -35,26 +36,27 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && request.auth.uid == userId;
       
-      // ПОЛНЫЙ ЗАПРЕТ на изменение критических полей со стороны клиента
+      // ПОЛНЫЙ ЗАПРЕТ на изменение критических полей со стороны любого пользователя
       allow update: if (isOwner(userId) && 
         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['isAdmin', 'balance', 'reputation', 'isBanned', 'premiumUntil', 'premiumTier', 'lastActionTime']))
         || isPrimeAdmin();
         
-      allow delete: if false; // Удаление базы пользователей ЗАПРЕЩЕНО всем, кроме консоли управления
+      allow delete: if isPrimeAdmin(); // Рядовой пользователь никогда не может удалить профиль
 
       match /transactions/{txId} {
         allow read: if isOwner(userId) || isPrimeAdmin();
-        allow write: if false; // Только серверные функции могут писать транзакции
+        allow write: if isPrimeAdmin();
       }
     }
 
-    // --- ЗАЩИТА СООБЩЕНИЙ (ANTI-BRUTEFORCE) ---
+    // --- ЗАЩИТА СООБЩЕНИЙ ---
     match /chats/{chatId}/messages/{messageId} {
       allow create: if isSignedIn() && 
                    request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds &&
-                   isNotSpamming(); // Не дает спамить сообщениями
+                   isNotSpamming();
       allow read: if isSignedIn() && (isPrimeAdmin() || request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds);
       allow delete: if isPrimeAdmin() || (isSignedIn() && request.auth.uid == resource.data.senderId);
+      allow update: if false; // Сообщения нельзя редактировать после отправки (для защиты от подмены)
     }
 
     // --- ФИНАНСОВЫЙ ШЛЮЗ ---

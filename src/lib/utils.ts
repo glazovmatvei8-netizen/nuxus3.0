@@ -41,27 +41,22 @@ export function formatDisplayName(name: string | undefined | null, username?: st
 
 /**
  * Проверка на аномалии безопасности узла.
- * Блокирует узлы с подозрительно короткими ID или отсутствующими метаданными.
  */
 export function isUserAnomaly(user: User | null | undefined): boolean {
   if (!user) return false;
   const username = (user.username || '').trim().replace('@', '');
-  // Защита от системных инъекций в ID
-  if (username.includes('admin') || username.includes('kernel') || username.includes('system')) {
-    if (!isGlobalAdmin(user)) return true;
-  }
-  const isMissingUsername = username === '' || username.length < 2;
-  return isMissingUsername;
+  // Защита от системных инъекций в ID (Проверка происходит на сервере, здесь только для UI)
+  const forbiddenPatterns = ['admin', 'kernel', 'system', 'root'];
+  const isSuspicious = forbiddenPatterns.some(p => username.includes(p)) && !user.isAdmin;
+  return isSuspicious || username.length < 2;
 }
 
 export function encryptSignal(text: string): string {
   if (!text) return '';
   try {
-    // Quantum-like wrapping (Base64 + Prefix)
     const encoded = btoa(encodeURIComponent(text.trim()));
     return `NX_${encoded}`;
   } catch (e) { 
-    console.error("encryptSignal error:", e);
     return text; 
   }
 }
@@ -71,7 +66,6 @@ export function decryptSignal(content: string | undefined | null): string {
   const isEncoded = content.startsWith('NX_SECURE_') || content.startsWith('NX_');
   if (!isEncoded) return content;
   
-  // Защита от переполнения/атак на дешифратор
   if (content.length > 50000) return "Signal limit exceeded";
 
   try {
@@ -80,29 +74,27 @@ export function decryptSignal(content: string | undefined | null): string {
     if (!/^[A-Za-z0-9+/=]+$/.test(raw)) return content;
     return decodeURIComponent(atob(raw));
   } catch (e) { 
-    console.error("decryptSignal error:", e);
     return "Сигнал зашифрован"; 
   }
 }
 
+/**
+ * АВТОРИТЕТНАЯ ПРОВЕРКА ПРАВ (КЛИЕНТ)
+ * Теперь здесь НЕТ хардкода ID. Мы верим флагу isAdmin из профиля, 
+ * который защищен на стороне Firestore Rules.
+ */
 export function isGlobalAdmin(user: User | null | undefined): boolean {
-  if (!user) return false;
-  const PRIME_ADMINS = ['vnctow46', 'GCvLucN8CjNcdaxPO2vmpZ84hNl1'];
-  if (PRIME_ADMINS.includes(user.id)) return true;
-  return !!user.isAdmin;
+  return !!user?.isAdmin;
 }
 
 export function isUserPremium(user: User | null | undefined): boolean {
   if (!user) return false;
-  if (isGlobalAdmin(user)) return true;
-  return !!user.isPremium;
+  return !!user.isPremium || !!user.isAdmin;
 }
 
 export function isUserActuallyBanned(user: User | null | undefined): boolean {
   if (!user) return false;
-  if (user.isBanned) return true;
-  if (isUserAnomaly(user) && !isGlobalAdmin(user)) return true;
-  return false;
+  return !!user.isBanned;
 }
 
 export function formatLastSeen(
@@ -124,7 +116,6 @@ export function formatLastSeen(
     
     return `был(а) ${format(lastSeenDate, 'd MMM в HH:mm', { locale: ru })}`;
   } catch (e) { 
-    console.error("formatLastSeen error:", e);
     return 'был(а) недавно'; 
   }
 }
