@@ -27,8 +27,8 @@ import {
 } from 'lucide-react';
 
 /**
- * NUXUS CHAT MAIN V169.0 «BLACK BOX EDITION»
- * FIXED: UserAvatar import added.
+ * NUXUS CHAT MAIN V170.0 «BLACK BOX EDITION»
+ * FIXED: UserAvatar import confirmed and enforced.
  */
 export default function ChatMain() {
   const { 

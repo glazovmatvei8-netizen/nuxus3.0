@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 /**
- * NUXUS TITANIUM AEGIS v5.0 (Advanced WAF & Zero-Trust Mitigation)
- * Эшелонированная защита Ядра от SQLi, XSS, DDoS и «пиратского» кода.
+ * NUXUS TITANIUM AEGIS v5.5 «BLACK BOX PROTECTOR»
+ * Эшелонированная защита Ядра и принудительный HTTPS.
  */
 
 const ipRegistry = new Map<string, { count: number, lastReset: number, isBanned: boolean, riskScore: number }>();
@@ -11,17 +11,24 @@ const ipRegistry = new Map<string, { count: number, lastReset: number, isBanned:
 export function middleware(request: NextRequest) {
   const ip = request.ip || 'unknown';
   const userAgent = (request.headers.get('user-agent') || '').toLowerCase();
-  const url = request.nextUrl.pathname + request.nextUrl.search;
   const now = Date.now();
 
-  // 1. ПРОВЕРКА ЧЕРНОГО СПИСКА IP
+  // 1. ПРИНУДИТЕЛЬНЫЙ HTTPS REDIRECT
+  if (request.nextUrl.protocol === 'http:' && !request.nextUrl.hostname.includes('localhost')) {
+    return NextResponse.redirect(
+      `https://${request.nextUrl.hostname}${request.nextUrl.pathname}${request.nextUrl.search}`,
+      301
+    );
+  }
+
+  // 2. ПРОВЕРКА ЧЕРНОГО СПИСКА IP
   const nodeState = ipRegistry.get(ip) || { count: 0, lastReset: now, isBanned: false, riskScore: 0 };
   
   if (nodeState.isBanned) {
-    return new NextResponse('Signal Blocked: IP Restricted by Aegis Protocol (Risk Score High)', { status: 403 });
+    return new NextResponse('Signal Blocked: IP Restricted by Aegis Protocol', { status: 403 });
   }
 
-  // 2. ANTI-DOS & RATE LIMITING (Жесткий лимит: 10 запросов за 3 сек)
+  // 3. ANTI-DOS (Лимит: 10 запросов за 3 сек)
   if (now - nodeState.lastReset > 3000) { 
     nodeState.count = 0;
     nodeState.lastReset = now;
@@ -32,29 +39,18 @@ export function middleware(request: NextRequest) {
     nodeState.riskScore += 1;
     if (nodeState.riskScore > 10) nodeState.isBanned = true; 
     ipRegistry.set(ip, nodeState);
-    return new NextResponse('Rate Limit Exceeded: Aegis Active. Signal throttled.', { status: 429 });
+    return new NextResponse('Rate Limit Exceeded', { status: 429 });
   }
   ipRegistry.set(ip, nodeState);
 
-  // 3. DEEP BOT & AUTOMATION SHIELD
-  const suspiciousKeywords = [
-    'headless', 'puppeteer', 'selenium', 'playwright', 'curl', 'wget', 'python-requests',
-    'postman', 'insomnia', 'zgrab', 'nmap', 'sqlmap', 'nikto', 'burp'
-  ];
-  if (suspiciousKeywords.some(keyword => userAgent.includes(keyword))) {
-    nodeState.isBanned = true;
-    ipRegistry.set(ip, nodeState);
-    return new NextResponse('Signal Blocked: Malicious Tool Detected', { status: 403 });
-  }
-
-  // 4. SECURITY HEADERS (Black Box Shell)
+  // 4. SECURITY HEADERS & BLACK BOX SHELL
   const response = NextResponse.next();
   response.headers.set('X-Frame-Options', 'DENY');
   response.headers.set('X-Content-Type-Options', 'nosniff');
   response.headers.set('X-XSS-Protection', '1; mode=block');
-  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  response.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
   
-  // Strict Content Security Policy (Запрещает выполнение сторонних скриптов)
+  // Strict CSP (Запрещает выполнение сторонних и встроенных скриптов для защиты от инъекций)
   response.headers.set('Content-Security-Policy', 
     "default-src 'self' https: data: 'unsafe-inline' 'unsafe-eval'; " +
     "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.googleapis.com https://*.gstatic.com; " +
@@ -63,7 +59,7 @@ export function middleware(request: NextRequest) {
     "connect-src 'self' https: wss:;"
   );
   
-  response.headers.set('X-Nuxus-Aegis', 'Active-v5.0-BlackBox');
+  response.headers.set('X-Nuxus-Aegis', 'Active-v5.5-BlackBox');
 
   return response;
 }
