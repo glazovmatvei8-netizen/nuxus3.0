@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useUser, useFirestore } from '@/firebase/provider';
@@ -10,11 +9,7 @@ import type { User } from '@/lib/types';
 
 /**
  * TITANIUM SYNC HOOK: useTranslations
-<<<<<<< HEAD
- * ОПТИМИЗИРОВАНО: Добавлена поддержка возврата массивов и защита от вылетов.
-=======
  * ОПТИМИЗИРОВАНО: Добавлены защитные механизмы против вылета приложения при отсутствии ключей.
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
  */
 export function useTranslations() {
   const { user } = useUser();
@@ -31,15 +26,9 @@ export function useTranslations() {
   const dictionary = translations[langCode] || translations.ru;
 
   /**
-<<<<<<< HEAD
-   * Функция перевода. Поддерживает строки и массивы.
-   */
-  const t = (key: string): any => {
-=======
    * Функция перевода. Поддерживает вложенные ключи, например 'app.chats'.
    */
-  const t = (key: string): string => {
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
+  const t = (key: string): any => {
     try {
       if (profile?.settings?.interfaceOverrides?.[key]) {
         return profile.settings.interfaceOverrides[key];
@@ -49,34 +38,19 @@ export function useTranslations() {
       let value: any = dictionary;
       
       for (const k of keys) {
-<<<<<<< HEAD
         if (value && typeof value === 'object' && value[k] !== undefined) {
-          value = value[k];
-        } else {
-          const fallbackValue = (dictionary as any)[key];
-          if (fallbackValue !== undefined) return fallbackValue;
-=======
-        if (value && typeof value === 'object' && value[k]) {
           value = value[k];
         } else {
           // Резервный поиск по всему словарю
           const fallbackValue = (dictionary as any)[key];
-          if (typeof fallbackValue === 'string') return fallbackValue;
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
+          if (fallbackValue !== undefined) return fallbackValue;
           return key;
         }
       }
       
-<<<<<<< HEAD
-      // Возвращаем значение, если это строка или массив
       return (typeof value === 'string' || Array.isArray(value)) ? value : key;
     } catch (e) {
-      console.warn("Translation Error for key:", key, e);
-=======
-      return typeof value === 'string' ? value : key;
-    } catch (e) {
       console.error("Translation Error for key:", key, e);
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
       return key;
     }
   };

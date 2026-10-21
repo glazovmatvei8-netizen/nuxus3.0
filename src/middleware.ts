@@ -1,4 +1,3 @@
-
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
@@ -22,17 +21,17 @@ export function middleware(request: NextRequest) {
     return new NextResponse('Signal Blocked: IP Restricted by Aegis Protocol', { status: 403 });
   }
 
-  // 2. ANTI-DOS & Rate Limiting
+  // 2. ANTI-DOS & Rate Limiting (Усиленный режим: 20 запросов за 5 сек)
   if (now - nodeState.lastReset > 5000) { 
     nodeState.count = 0;
     nodeState.lastReset = now;
   }
   nodeState.count++;
   
-  if (nodeState.count > 25) { 
+  if (nodeState.count > 20) { 
     if (nodeState.count > 100) nodeState.isBanned = true; 
     ipRegistry.set(ip, nodeState);
-    return new NextResponse('Rate Limit Exceeded: Protection Active', { status: 429 });
+    return new NextResponse('Rate Limit Exceeded: Aegis Protection Active', { status: 429 });
   }
   ipRegistry.set(ip, nodeState);
 

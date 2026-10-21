@@ -1,16 +1,14 @@
-
 "use client"
 
 import React, { useRef, useEffect, useState } from 'react';
 import { useAppState } from '@/lib/app-state';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, SkipBack, SkipForward, Volume2, X, Maximize2, Music, Loader2 } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, Volume2, X, Music, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Slider } from '@/components/ui/slider';
 
 /**
  * MUSIC PLAYER V5.9.0
- * ИСПРАВЛЕНО: Путь импорта useAppState.
  */
 export function MusicPlayer() {
   const { currentTrack, setCurrentTrack, isPlayingMusic, setIsPlayingMusic } = useAppState();
@@ -44,20 +42,13 @@ export function MusicPlayer() {
             playPromise.then(() => {
               setIsBuffering(false);
             }).catch(e => {
-<<<<<<< HEAD
-              console.warn("Nuxus Audio: Play blocked", e);
-=======
               console.error("Nuxus Audio: Play blocked", e);
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
               setIsPlayingMusic(false);
             });
           }
         }
       } catch (e) {
-<<<<<<< HEAD
-=======
         console.error("Audio track loading error:", e);
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
         setHasError(true);
         setIsPlayingMusic(false);
       }
@@ -70,14 +61,10 @@ export function MusicPlayer() {
     if (!audioRef.current || !currentTrack) return;
     
     if (isPlayingMusic) {
-<<<<<<< HEAD
-      audioRef.current.play().catch(() => setIsPlayingMusic(false));
-=======
       audioRef.current.play().catch((err) => {
         console.error("Audio play error in music-player:", err);
         setIsPlayingMusic(false);
       });
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
     } else {
       audioRef.current.pause();
     }

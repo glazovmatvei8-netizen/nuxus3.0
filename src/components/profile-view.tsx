@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -57,14 +56,10 @@ export default function ProfileView() {
     if (!profile?.birthday) return null;
     try {
       return format(parseISO(profile.birthday), 'd MMMM', { locale: ru });
-<<<<<<< HEAD
-    } catch (e) { return null; }
-=======
     } catch (e) {
       console.error("Error formatting birthday:", e);
       return null;
     }
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
   }, [profile?.birthday]);
 
   const handleRefresh = () => {
