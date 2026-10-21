@@ -9,7 +9,7 @@ import ProfileView from './profile-view';
 import WalletView from './wallet-view';
 import DiscoveryView from './discovery-view';
 import NuxusAiView from './nuxus-ai-view';
-import { UserAvatar } from './user-avatar'; // ГАРАНТИРОВАННЫЙ ИМПОРТ
+import { UserAvatar } from './user-avatar'; 
 import { useAppState } from '@/lib/app-state';
 import { cn, triggerHaptic } from '@/lib/utils';
 import { useUser, useFirestore, useAuth } from '@/firebase/provider';
@@ -28,8 +28,8 @@ import {
 } from 'lucide-react';
 
 /**
- * NUXUS CHAT MAIN V172.0 «ABSOLUTE BLACK BOX»
- * FIXED: UserAvatar ReferenceError fully eliminated.
+ * NUXUS CHAT MAIN V176.0 «NUCLEAR INTEGRITY»
+ * FIXED: Guaranteed UserAvatar definition.
  */
 export default function ChatMain() {
   const { 

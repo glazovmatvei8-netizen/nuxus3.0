@@ -29,63 +29,57 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="ru">
       <head>
         <script dangerouslySetInnerHTML={{ __html: `
-          // 1. ПРИНУДИТЕЛЬНЫЙ HTTPS И ANTI-FRAME (ЗАЩИТА ОТ ВСТРАИВАНИЯ)
-          if (location.protocol === 'http:' && location.hostname !== 'localhost') {
-            location.href = location.href.replace('http:', 'https:');
-          }
-          
-          if (typeof window !== 'undefined') {
-            // Мгновенный выход из фрейма (Anti-Iframe)
-            if (window.self !== window.top) {
-              window.top.location.href = window.self.location.href;
-            }
-
-            // 2. DOMAIN LOCK (ЗАЩИТА ОТ КЛОНИРОВАНИЯ)
-            // Список разрешенных доменов. Добавьте свои домены Beget/Timeweb сюда.
+          (function() {
+            // 1. ANTI-CLONE & DOMAIN LOCK
             const allowedDomains = ['nuxus.fun', 'localhost', '127.0.0.1', 'web.app', 'firebaseapp.com', 'swtest.ru'];
-            const isDomainAllowed = allowedDomains.some(d => location.hostname.includes(d));
-            
-            if (!isDomainAllowed) {
-               document.documentElement.innerHTML = '<body style="background:#000;color:red;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;text-transform:uppercase;font-weight:bold;text-align:center;"><h1>Access Denied</h1><p>Illegal Nuxus Kernel Clone Detected.<br>Signal Terminated.</p></body>';
-               throw new Error("Illegal Clone Detected");
-            }
-
-            // 3. ЗАЩИТА BLACK BOX (ANTI-F12 & DEBUGGER TRAP)
-            document.addEventListener('contextmenu', e => e.preventDefault());
-            document.addEventListener('keydown', e => {
-              if (
-                e.key === 'F12' || 
-                (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) || 
-                (e.ctrlKey && e.key === 'U') ||
-                (e.metaKey && e.optionKey && e.key === 'i')
-              ) {
-                e.preventDefault();
-                return false;
+            if (typeof window !== 'undefined') {
+              const isDomainAllowed = allowedDomains.some(d => location.hostname.includes(d));
+              if (!isDomainAllowed) {
+                document.documentElement.innerHTML = '<body style="background:#000;color:red;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;text-transform:uppercase;text-align:center;"><h1>Access Denied</h1><p>Illegal Nuxus Kernel Clone Detected.</p></body>';
+                return;
               }
-            });
 
-            // Циклическая ловушка отладчика (Debugger Trap)
-            setInterval(() => {
-              (function() {
+              // 2. ANTI-IFRAME
+              if (window.self !== window.top) {
+                window.top.location.href = window.self.location.href;
+              }
+
+              // 3. NUCLEAR DEBUGGER TRAP (Recursive)
+              const trap = function() {
                 const start = Date.now();
                 debugger;
                 const end = Date.now();
-                if (end - start > 100) {
-                   window.location.href = 'about:blank';
+                if (end - start > 50) {
+                  window.location.href = 'about:blank';
                 }
-              })();
-            }, 500);
+                setTimeout(trap, 100);
+              };
+              
+              // Запуск ловушки с небольшой задержкой
+              setTimeout(trap, 500);
 
-            // Защита от изменения DOM (Tamper Detection)
-            const observer = new MutationObserver((mutations) => {
-              mutations.forEach((mutation) => {
-                if (mutation.type === 'childList' || mutation.type === 'attributes') {
-                   console.log('%cDOM TAMPERING DETECTED', 'color: red; font-weight: bold;');
+              // 4. BLOCK INPUTS
+              document.addEventListener('contextmenu', e => e.preventDefault());
+              document.addEventListener('keydown', e => {
+                if (
+                  e.key === 'F12' || 
+                  (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) || 
+                  (e.ctrlKey && (e.key === 'U' || e.key === 'S')) ||
+                  (e.metaKey && e.optionKey && e.key === 'i')
+                ) {
+                  e.preventDefault();
+                  return false;
                 }
               });
-            });
-            observer.observe(document.documentElement, { attributes: true, childList: true, subtree: true });
-          }
+
+              // 5. TAMPER DETECTION (Observer)
+              const observer = new MutationObserver(() => {
+                // Если кто-то пытается удалить защитные элементы или менять структуру
+                console.clear();
+              });
+              observer.observe(document.documentElement, { attributes: true, childList: true, subtree: true });
+            }
+          })();
         ` }} />
       </head>
       <body className="bg-[#010103] text-white antialiased overflow-hidden select-none">
