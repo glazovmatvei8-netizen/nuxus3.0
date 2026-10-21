@@ -1,3 +1,4 @@
+
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
@@ -13,12 +14,12 @@ export function middleware(request: NextRequest) {
   const now = Date.now();
   const userAgent = request.headers.get('user-agent')?.toLowerCase() || '';
 
-  // 1. ПРИНУДИТЕЛЬНЫЙ HTTPS
+  // 1. FORCE HTTPS
   if (request.nextUrl.protocol === 'http:' && !request.nextUrl.hostname.includes('localhost')) {
     return NextResponse.redirect(`https://${request.nextUrl.hostname}${request.nextUrl.pathname}${request.nextUrl.search}`, 301);
   }
 
-  // 2. ANTI-SCRAPE & BOT SHIELD (Блокировка парсеров и копировщиков)
+  // 2. ANTI-SCRAPE & BOT SHIELD
   const forbiddenBots = [
     'wget', 'curl', 'python', 'libwww', 'httpclient', 'php', 'headless', 
     'puppeteer', 'selenium', 'playwright', 'scrap', 'bot', 'spider', 'crawler',
@@ -26,14 +27,14 @@ export function middleware(request: NextRequest) {
   ];
   
   if (forbiddenBots.some(bot => userAgent.includes(bot)) && !userAgent.includes('googlebot')) {
-    return new NextResponse('ACCESS_DENIED: Your node identifies as an automated scraper. Connection terminated.', { status: 403 });
+    return new NextResponse('ACCESS_DENIED: Connection terminated by Aegis Protocol.', { status: 403 });
   }
 
-  // 3. АНАЛИЗ ПОВЕДЕНИЯ IP (DDoS Mitigation)
+  // 3. DDOS MITIGATION
   const state = ipRegistry.get(ip) || { count: 0, lastReset: now, isBanned: false, score: 0 };
   
   if (state.isBanned) {
-    return new NextResponse('SIGNAL BLOCKED: Aegis Protocol Active. Your Node is restricted.', { status: 403 });
+    return new NextResponse('SIGNAL BLOCKED: Aegis Protocol Active. Node Restricted.', { status: 403 });
   }
 
   if (now - state.lastReset > 5000) { 
@@ -46,11 +47,11 @@ export function middleware(request: NextRequest) {
     state.score += 1;
     if (state.score > 5) state.isBanned = true;
     ipRegistry.set(ip, state);
-    return new NextResponse('Protocol Error: Too many signals', { status: 429 });
+    return new NextResponse('Protocol Error: High Signal Density', { status: 429 });
   }
   ipRegistry.set(ip, state);
 
-  // 4. ФИЛЬТРАЦИЯ ИНЪЕКЦИЙ (SQLi, XSS)
+  // 4. INJECTION FILTERING
   const url = request.nextUrl.toString().toLowerCase();
   const suspiciousPatterns = ['union', 'select', 'insert', 'drop', 'delete', 'update', 'script', '<script>', '--', 'waitfor', 'delay'];
   if (suspiciousPatterns.some(p => url.includes(p))) {
@@ -59,7 +60,7 @@ export function middleware(request: NextRequest) {
     return new NextResponse('AEGIS: Malicious Signal Detected', { status: 400 });
   }
 
-  // 5. SECURITY HEADERS (Anti-Iframe & Data Integrity)
+  // 5. SECURITY HEADERS
   const response = NextResponse.next();
   response.headers.set('X-Frame-Options', 'DENY');
   response.headers.set('X-Content-Type-Options', 'nosniff');

@@ -1,3 +1,4 @@
+
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { SovereignProvider } from '@/components/sovereign-provider';
@@ -30,7 +31,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <script dangerouslySetInnerHTML={{ __html: `
           (function() {
-            // 1. ANTI-CLONE & DOMAIN LOCK (NUXUS OFFICIAL NODES)
+            // 1. ANTI-CLONE & DOMAIN LOCK (OFFICIAL NODES ONLY)
             const allowedDomains = [
               'nuxus.fun', 
               'chat.nuxus.fun', 
@@ -44,9 +45,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             ];
             
             if (typeof window !== 'undefined') {
-              const isDomainAllowed = allowedDomains.some(d => location.hostname.endsWith(d));
+              const hostname = window.location.hostname;
+              const isDomainAllowed = allowedDomains.some(d => hostname.endsWith(d));
+              
               if (!isDomainAllowed) {
-                document.documentElement.innerHTML = '<body style="background:#000;color:red;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;text-transform:uppercase;text-align:center;padding:20px;"><div><h1>Access Denied</h1><p>Illegal Nuxus Kernel Clone Detected.</p><p style="font-size:10px;color:#333;">Node Identity Conflict at ' + location.hostname + '</p></div></body>';
+                document.documentElement.innerHTML = '<body style="background:#000;color:red;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;text-transform:uppercase;text-align:center;padding:20px;"><div><h1 style="font-size:40px;">Access Denied</h1><p style="font-size:18px;color:#fff;margin-top:20px;">Illegal Nuxus Kernel Clone Detected.</p><p style="font-size:10px;color:#333;margin-top:40px;">Node Identity Conflict at ' + hostname + '</p></div></body>';
                 return;
               }
 
@@ -55,21 +58,21 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 window.top.location.href = window.self.location.href;
               }
 
-              // 3. NUCLEAR DEBUGGER TRAP (Recursive Time-Delta)
+              // 3. NUCLEAR DEBUGGER TRAP (Recursive Time-Delta Detection)
               const trap = function() {
                 const start = Date.now();
                 debugger;
                 const end = Date.now();
-                // Если разница больше 50мс - значит консоль открыта и сработал брейкпоинт
+                // If execution delta > 50ms, someone is pausing the code (F12 active)
                 if (end - start > 50) {
                   window.location.href = 'about:blank';
                 }
-                setTimeout(trap, 100);
+                setTimeout(trap, 200);
               };
               
-              setTimeout(trap, 500);
+              setTimeout(trap, 1000);
 
-              // 4. BLOCK SYSTEM INPUTS
+              // 4. BLOCK SYSTEM INPUTS (F12, Ctrl+U, Right Click)
               document.addEventListener('contextmenu', e => e.preventDefault());
               document.addEventListener('keydown', e => {
                 if (
@@ -85,15 +88,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
               // 5. DOM TAMPER DETECTION
               const observer = new MutationObserver((mutations) => {
-                // Если кто-то пытается удалить защитные скрипты или инжектить код
                 for (const mutation of mutations) {
                   if (mutation.type === 'childList' && mutation.removedNodes.length > 0) {
-                     // Можно добавить логику самоуничтожения сессии
+                     // Auto-clear logs on any DOM modification
                      console.clear();
                   }
                 }
               });
               observer.observe(document.documentElement, { attributes: true, childList: true, subtree: true });
+
+              // 6. FORCE HTTPS
+              if (window.location.protocol === 'http:' && !hostname.includes('localhost')) {
+                window.location.href = 'https:' + window.location.href.substring(5);
+              }
             }
           })();
         ` }} />

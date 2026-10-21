@@ -1,7 +1,8 @@
+
 import type { NextConfig } from 'next';
 
 /**
- * NUXUS PRODUCTION CONFIG V177.0 «NUCLEAR HARDENING»
+ * NUXUS PRODUCTION CONFIG V178.0 «TITANIUM HARDENING»
  * ОПТИМИЗИРОВАНО: Максимальная обфускация и защита доменов.
  */
 const nextConfig: NextConfig = {
@@ -28,11 +29,11 @@ const nextConfig: NextConfig = {
             m.options.terserOptions.format = { comments: false };
             m.options.terserOptions.compress = {
               drop_console: true,
-              drop_debugger: false, // Оставляем debugger для ловушек в layout
+              drop_debugger: false, 
               pure_funcs: ['console.info', 'console.debug', 'console.warn'],
-              passes: 3, // Тройная обфускация
+              passes: 3, 
             };
-            m.options.terserOptions.mangle = true; // Замена имен функций на a, b, c...
+            m.options.terserOptions.mangle = true; 
           }
         });
       }

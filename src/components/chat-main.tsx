@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useEffect, useMemo } from 'react';
@@ -8,7 +9,7 @@ import CallsView from './calls-view';
 import ProfileView from './profile-view';
 import WalletView from './wallet-view';
 import DiscoveryView from './discovery-view';
-import KernelShieldView from './kernel-shield-view'; // Новый компонент вместо AI
+import KernelShieldView from './kernel-shield-view';
 import { UserAvatar } from './user-avatar'; 
 import { useAppState } from '@/lib/app-state';
 import { cn, triggerHaptic } from '@/lib/utils';
@@ -29,7 +30,7 @@ import {
 
 /**
  * NUXUS CHAT MAIN V178.0 «SHIELD PULSE»
- * UPDATED: AI replaced with Kernel Shield Hub for testers.
+ * UPDATED: AI replaced with Kernel Shield Hub for testers. Importer stability verified.
  */
 export default function ChatMain() {
   const { 
@@ -81,7 +82,7 @@ export default function ChatMain() {
     { id: 'discovery', icon: Globe, label: 'EXPLORE' },
     { id: 'calls', icon: Phone, label: 'CALLS' },
     { id: 'chats', icon: MessageSquare, label: 'CHATS' },
-    { id: 'ai', icon: ShieldCheck, label: 'SHIELD' }, // Визуально заменяем AI на Shield
+    { id: 'ai', icon: ShieldCheck, label: 'SHIELD' },
     { id: 'wallet', icon: Wallet, label: 'WALLET' },
     { id: 'profile', icon: LayoutGrid, label: 'NODES' },
   ];

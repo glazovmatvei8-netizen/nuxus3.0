@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
@@ -18,7 +19,7 @@ import { useCollection } from '@/firebase/firestore/use-collection';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { useMemoFirebase } from '@/firebase/firestore/use-memo-firebase';
 import { collection, query, orderBy, doc, addDoc } from 'firebase/firestore';
-import { formatDisplayName, cn, compressImage, triggerHaptic, isUserPremium, decryptSignal } from '@/lib/utils';
+import { formatDisplayName, cn, compressImage, triggerHaptic, isUserPremium } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -28,7 +29,7 @@ import { signalService } from '@/services/signal-service';
 
 /**
  * CHAT AREA V178.0 «PURE SIGNAL»
- * AI FUNCTIONS ANNIHILATED. Focused on pure messaging and security.
+ * AI FUNCTIONS ANNIHILATED. Focused on pure messaging and extreme security.
  */
 const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelReply }: any) => {
   const { localDrafts, setLocalDrafts } = useAppState();
@@ -178,7 +179,7 @@ const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelRepl
       </div>
       <input type="file" ref={fileInputRef} hidden multiple accept="image/*,video/*" onChange={handleFileChange} />
     </footer>
-    <ImagePreviewModal open={isPreviewOpen} onOpenChange={setIsPreviewOpen} files={pendingFiles.map(p => ({ url: p.url, type: p.type }))} onRemove={(idx) => setPendingFiles(prev => prev.filter((_, i) => i !== idx))} onSend={handleSendFiles} isSending={isUploading} />
+    <ImagePreviewModal open={isPreviewOpen} onOpenChange={setIsPreviewOpen} files={pendingFiles.map(p => ({ url: p.url, type: p.type }))} onRemove={(idx) => setPendingFiles(prev => prev.filter((_, i) => i !== idx))} onSend={handleSendFiles} isUploading={isUploading} />
     </>
   );
 });
@@ -208,14 +209,12 @@ export default function ChatArea() {
   const messagesQuery = useMemoFirebase(() => (!db || !currentChatId) ? null : query(collection(db, 'chats', currentChatId, 'messages'), orderBy('sentAt', 'asc')), [db, currentChatId]);
   const { data: messages } = useCollection<Message>(messagesQuery);
 
-  // Kernel Sync: Acknowledge signals via API
   useEffect(() => {
     if (currentChatId && messages && firebaseUser) {
       signalService.acknowledgeSignals(currentChatId, messages, firebaseUser.uid);
     }
   }, [currentChatId, messages, firebaseUser?.uid]);
 
-  // View Handler: Send message via Kernel API
   const handleSendMessage = useCallback(async (content: string, type: Message['contentType'] = 'text', meta: any = null) => {
     if (!content || !currentChatId || !firebaseUser) return;
     
