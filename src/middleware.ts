@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 /**
- * NUXUS TITANIUM AEGIS v3.1 (Advanced WAF & DoS Mitigation)
+ * NUXUS TITANIUM AEGIS v3.5 (Advanced WAF & DoS Mitigation)
  * Централизованная система защиты Ядра.
  */
 
@@ -21,14 +21,14 @@ export function middleware(request: NextRequest) {
     return new NextResponse('Signal Blocked: IP Restricted by Aegis Protocol', { status: 403 });
   }
 
-  // 2. ANTI-DOS & Rate Limiting (Усиленный режим: 20 запросов за 5 сек)
+  // 2. ANTI-DOS & Rate Limiting (20 запросов за 5 сек)
   if (now - nodeState.lastReset > 5000) { 
     nodeState.count = 0;
     nodeState.lastReset = now;
   }
   nodeState.count++;
   
-  if (nodeState.count > 20) { 
+  if (nodeState.count > 25) { 
     if (nodeState.count > 100) nodeState.isBanned = true; 
     ipRegistry.set(ip, nodeState);
     return new NextResponse('Rate Limit Exceeded: Aegis Protection Active', { status: 429 });
@@ -62,7 +62,7 @@ export function middleware(request: NextRequest) {
   response.headers.set('X-XSS-Protection', '1; mode=block');
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   response.headers.set('Content-Security-Policy', "default-src 'self' https: data: 'unsafe-inline' 'unsafe-eval'; img-src 'self' https: data: blob:; media-src 'self' https: data: blob:;");
-  response.headers.set('X-Nuxus-Aegis', 'Active-v3.1');
+  response.headers.set('X-Nuxus-Aegis', 'Active-v3.5');
 
   return response;
 }

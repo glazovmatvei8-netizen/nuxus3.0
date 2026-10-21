@@ -80,7 +80,7 @@ export function CallOverlay() {
       ringtoneRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
       ringtoneRef.current.loop = true;
       ringtoneRef.current.play().catch((err) => {
-        console.error("Ringtone play error:", err);
+        console.warn("Ringtone play blocked:", err);
       });
     }
   };
