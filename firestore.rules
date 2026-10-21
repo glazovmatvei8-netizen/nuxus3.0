@@ -15,7 +15,6 @@ service cloud.firestore {
     }
 
     // АВТОРИТЕТНАЯ ПРОВЕРКА ПРАВ (БЕЗ ХАРДКОДА ID)
-    // Права проверяются только по полю в БД, которое защищено от записи рядовыми пользователями.
     function isPrimeAdmin() {
       return isSignedIn() && (
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true
@@ -36,7 +35,6 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && request.auth.uid == userId;
       
-      // ПОЛНЫЙ ЗАПРЕТ на изменение критических полей со стороны любого пользователя
       allow update: if (isOwner(userId) && 
         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['isAdmin', 'balance', 'reputation', 'isBanned', 'premiumUntil', 'premiumTier', 'lastActionTime']))
         || isPrimeAdmin();
@@ -56,7 +54,10 @@ service cloud.firestore {
                    isNotSpamming();
       allow read: if isSignedIn() && (isPrimeAdmin() || request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds);
       allow delete: if isPrimeAdmin() || (isSignedIn() && request.auth.uid == resource.data.senderId);
-      allow update: if false; 
+      
+      // Разрешаем обновление только автору и только определенных полей
+      allow update: if isSignedIn() && request.auth.uid == resource.data.senderId &&
+                    !request.resource.data.diff(resource.data).affectedKeys().hasAny(['senderId', 'chatId', 'sentAt', 'contentType']);
     }
 
     // --- ФИНАНСОВЫЙ ШЛЮЗ ---

@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, ChevronLeft, X, Paperclip, Mic, StopCircle, 
-  Smile, Trash2, Loader2, Phone, Video, Camera, ShieldCheck
+  Smile, Trash2, Loader2, Phone, Video, Camera, ShieldCheck, Edit2, Check
 } from 'lucide-react';
 import { MessageItem } from './message-item';
 import { ChatInfoModal } from './modals/chat-info-modal';
@@ -19,7 +19,7 @@ import { useCollection } from '@/firebase/firestore/use-collection';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { useMemoFirebase } from '@/firebase/firestore/use-memo-firebase';
 import { collection, query, orderBy, doc, addDoc } from 'firebase/firestore';
-import { formatDisplayName, cn, compressImage, triggerHaptic, isUserPremium } from '@/lib/utils';
+import { formatDisplayName, cn, compressImage, triggerHaptic, isUserPremium, decryptSignal } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -28,15 +28,15 @@ import { useToast } from '@/hooks/use-toast';
 import { signalService } from '@/services/signal-service';
 
 /**
- * CHAT AREA V179.0 «PURE SOVEREIGN»
- * AI FUNCTIONS ANNIHILATED. Absolute focus on security and privacy.
+ * CHAT AREA V184.0 «SIGNAL EDIT MASTER»
+ * UPDATED: Message editing integration added.
  */
-const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelReply }: any) => {
+const ChatInputBar = memo(({ onSendMessage, onUpdateMessage, currentChatId, replyTo, onCancelReply, editingMessage, onCancelEdit }: any) => {
   const { localDrafts, setLocalDrafts } = useAppState();
   const { t } = useTranslations();
   const { toast } = useToast();
   
-  const [messageInput, setMessageInput] = useState(localDrafts[currentChatId] || '');
+  const [messageInput, setMessageInput] = useState('');
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   
   const [recordMode, setRecordMode] = useState<'voice' | 'video'>('voice');
@@ -53,16 +53,29 @@ const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelRepl
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Sync input with drafts or editing message
   useEffect(() => {
-    setMessageInput(localDrafts[currentChatId] || '');
-  }, [currentChatId, localDrafts]);
+    if (editingMessage) {
+      setMessageInput(decryptSignal(editingMessage.content));
+    } else {
+      setMessageInput(localDrafts[currentChatId] || '');
+    }
+  }, [currentChatId, localDrafts, editingMessage]);
 
-  const handleSend = () => {
+  const handleAction = () => {
     if (!messageInput.trim()) return;
     triggerHaptic();
-    onSendMessage(messageInput, 'text');
+    
+    if (editingMessage) {
+      onUpdateMessage(editingMessage.id, messageInput);
+    } else {
+      onSendMessage(messageInput, 'text');
+    }
+    
     setMessageInput('');
-    setLocalDrafts(prev => ({ ...prev, [currentChatId]: '' }));
+    if (!editingMessage) {
+      setLocalDrafts(prev => ({ ...prev, [currentChatId]: '' }));
+    }
   };
 
   const startRecording = async () => {
@@ -125,7 +138,7 @@ const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelRepl
   return (
     <>
     <footer className="p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] bg-[#030306]/95 backdrop-blur-[40px] border-t border-white/5 shrink-0 z-40 relative">
-      {replyTo && (
+      {replyTo && !editingMessage && (
         <div className="bg-white/5 p-3 rounded-2xl flex items-center justify-between border border-white/5 mb-2 animate-in slide-in-from-bottom-2 mx-auto w-full max-w-5xl">
           <div className="flex items-center gap-4 min-w-0">
             <div className="w-1 h-8 bg-primary rounded-full shrink-0" />
@@ -138,16 +151,33 @@ const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelRepl
         </div>
       )}
 
+      {editingMessage && (
+        <div className="bg-primary/5 p-3 rounded-2xl flex items-center justify-between border border-primary/20 mb-2 animate-in slide-in-from-bottom-2 mx-auto w-full max-w-5xl">
+          <div className="flex items-center gap-4 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-primary/20 flex items-center justify-center shrink-0">
+               <Edit2 className="w-4 h-4 text-primary" />
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="text-[10px] font-black text-primary uppercase tracking-widest">Редактирование</span>
+              <span className="text-[12px] text-white/60 truncate italic">{decryptSignal(editingMessage.content)}</span>
+            </div>
+          </div>
+          <button className="text-white/20 hover:text-white" onClick={onCancelEdit}><X size={16} /></button>
+        </div>
+      )}
+
       <div className="flex gap-3 items-end w-full max-w-5xl mx-auto">
         {!isRecording ? (
           <>
-            <Button variant="ghost" size="icon" className="h-12 w-12 shrink-0 rounded-2xl bg-white/[0.03] border border-white/5" onClick={() => fileInputRef.current?.click()}><Paperclip className="w-6 h-6 text-white/40" /></Button>
+            {!editingMessage && (
+              <Button variant="ghost" size="icon" className="h-12 w-12 shrink-0 rounded-2xl bg-white/[0.03] border border-white/5" onClick={() => fileInputRef.current?.click()}><Paperclip className="w-6 h-6 text-white/40" /></Button>
+            )}
             <div className="flex-1 flex items-end bg-white/[0.04] rounded-[1.8rem] border border-white/10 min-h-[48px] px-5 py-2.5 gap-1">
               <Textarea 
-                placeholder={t('chat.placeholder')} 
+                placeholder={editingMessage ? "Измените сообщение..." : t('chat.placeholder')} 
                 className="bg-transparent border-none focus-visible:ring-0 text-white min-h-[26px] max-h-[160px] py-0 text-[15px] resize-none w-full shadow-none" 
                 value={messageInput} 
-                onChange={e => { setMessageInput(e.target.value); setLocalDrafts(prev => ({ ...prev, [currentChatId]: e.target.value })); }} 
+                onChange={e => { setMessageInput(e.target.value); if(!editingMessage) setLocalDrafts(prev => ({ ...prev, [currentChatId]: e.target.value })); }} 
               />
               <Popover open={isEmojiPickerOpen} onOpenChange={setIsEmojiPickerOpen}>
                  <PopoverTrigger asChild><Button variant="ghost" size="icon" className="text-white/20 h-8 w-8 shrink-0"><Smile size={20} /></Button></PopoverTrigger>
@@ -157,11 +187,15 @@ const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelRepl
               </Popover>
             </div>
             {messageInput.trim() ? (
-              <Button size="icon" className="h-12 w-12 rounded-2xl bg-primary text-white shadow-xl" onClick={handleSend}><Send size={20} /></Button>
+              <Button size="icon" className="h-12 w-12 rounded-2xl bg-primary text-white shadow-xl" onClick={handleAction}>
+                {editingMessage ? <Check size={20} /> : <Send size={20} />}
+              </Button>
             ) : (
-              <button onMouseDown={startRecording} onMouseUp={stopRecording} className="h-12 w-12 rounded-2xl flex items-center justify-center bg-white/[0.04] text-white/30 hover:text-primary transition-all">
-                {recordMode === 'voice' ? <Mic size={24} /> : <Camera size={24} />}
-              </button>
+              !editingMessage && (
+                <button onMouseDown={startRecording} onMouseUp={stopRecording} className="h-12 w-12 rounded-2xl flex items-center justify-center bg-white/[0.04] text-white/30 hover:text-primary transition-all">
+                  {recordMode === 'voice' ? <Mic size={24} /> : <Camera size={24} />}
+                </button>
+              )
             )}
           </>
         ) : (
@@ -195,6 +229,7 @@ export default function ChatArea() {
   
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
+  const [editingMessage, setEditingMessage] = useState<Message | null>(null);
 
   const userProfileRef = useMemoFirebase(() => (!db || !firebaseUser) ? null : doc(db, 'users', firebaseUser.uid), [db, firebaseUser?.uid]);
   const { data: userProfile } = useDoc<UserType>(userProfileRef);
@@ -234,6 +269,17 @@ export default function ChatArea() {
       toast({ title: "Сбой шлюза", variant: "destructive" });
     }
   }, [currentChatId, firebaseUser?.uid, userProfile, replyTo, db, toast]);
+
+  const handleUpdateMessage = useCallback(async (messageId: string, newContent: string) => {
+    if (!currentChatId || !newContent.trim()) return;
+    try {
+      await signalService.updateSignal(currentChatId, messageId, newContent);
+      setEditingMessage(null);
+      toast({ title: "Сообщение изменено" });
+    } catch (e) {
+      toast({ title: "Ошибка обновления", variant: "destructive" });
+    }
+  }, [currentChatId, toast]);
 
   const currentDisplayName = useMemo(() => {
     if (!chat) return '...';
@@ -278,6 +324,7 @@ export default function ChatArea() {
                 isMe={msg.senderId === firebaseUser?.uid} 
                 chatId={currentChatId} 
                 onReply={setReplyTo} 
+                onEdit={setEditingMessage}
                 amIPremium={isUserPremium(userProfile)} 
                 viewerProfile={userProfile} 
               />
@@ -288,9 +335,12 @@ export default function ChatArea() {
 
       <ChatInputBar
         onSendMessage={handleSendMessage}
+        onUpdateMessage={handleUpdateMessage}
         currentChatId={currentChatId}
         replyTo={replyTo}
         onCancelReply={() => setReplyTo(null)}
+        editingMessage={editingMessage}
+        onCancelEdit={() => setEditingMessage(null)}
       />
       {chat && <ChatInfoModal open={isChatInfoOpen} onOpenChange={setIsChatInfoOpen} chat={chat as any} />}
     </div>

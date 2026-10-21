@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { memo, useMemo, useState, useEffect, useRef } from 'react';
@@ -6,7 +7,7 @@ import { format } from 'date-fns';
 import { 
   Check, CheckCheck, Play, Pause, MoreHorizontal, 
   Copy, Share2, Pin, Trash2, Heart, Smile,
-  Reply, ReplyAll, Mic
+  Reply, ReplyAll, Mic, Edit2
 } from 'lucide-react';
 import { cn, getReputationInfo, triggerHaptic, decryptSignal, isUserPremium } from '@/lib/utils';
 import { useAppState } from '@/lib/app-state';
@@ -24,7 +25,7 @@ import {
 } from "@/components/ui/context-menu";
 import { useToast } from '@/hooks/use-toast';
 
-export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, chatId, onReply }: any) => {
+export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, chatId, onReply, onEdit }: any) => {
   const { setInspectedUserId, setForwardingMessage } = useAppState();
   const { user } = useUser();
   const db = useFirestore();
@@ -64,7 +65,6 @@ export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, cha
   const handleTouchMove = (e: React.TouchEvent) => {
     if (!isSwiping) return;
     const diff = e.touches[0].clientX - startX.current;
-    // Swipe left to reply (Telegram style)
     if (diff < 0) {
       const offset = Math.max(diff, -100);
       setSwipeX(offset);
@@ -235,6 +235,7 @@ export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, cha
                   )}
 
                   <div className={cn("absolute bottom-1 right-2.5 flex items-center gap-1 opacity-40", (message.contentType === 'sticker' || message.contentType === 'video_note') && "bg-black/40 rounded-full px-2 py-0.5")}>
+                     {message.editedAt && <span className="text-[7px] font-black uppercase text-primary mr-1 italic">изм.</span>}
                      <span className="text-[8px] font-black tabular-nums">{formattedTime}</span>
                      {isMe && (message.isRead ? <CheckCheck className="w-3 h-3 text-blue-400" /> : <Check className="w-3 h-3" />)}
                   </div>
@@ -261,6 +262,9 @@ export const MessageItem = memo(({ message, isMe, amIPremium, viewerProfile, cha
             {['❤️', '🔥', '👍', '😂', '😮', '😢'].map(e => (<button key={e} onClick={() => handleReaction(e)} className="text-base hover:scale-125 transition-transform active:scale-90">{e}</button>))}
           </div>
           <ContextMenuItem onClick={() => onReply(message)} className="gap-3 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest text-white"><Reply className="w-3.5 h-3.5 text-primary" /> Ответить</ContextMenuItem>
+          {isMe && message.contentType === 'text' && (
+            <ContextMenuItem onClick={() => onEdit(message)} className="gap-3 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest text-white"><Edit2 className="w-3.5 h-3.5 text-primary" /> Изменить</ContextMenuItem>
+          )}
           <ContextMenuItem onClick={handleCopy} className="gap-3 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest text-white"><Copy className="w-3.5 h-3.5 text-primary" /> Копировать</ContextMenuItem>
           <ContextMenuItem onClick={() => setForwardingMessage(message)} className="gap-3 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest text-white"><Share2 className="w-3.5 h-3.5 text-primary" /> Переслать</ContextMenuItem>
           <ContextMenuItem onClick={handleDelete} className="gap-3 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest text-red-500"><Trash2 className="w-3.5 h-3.5" /> Удалить для всех</ContextMenuItem>

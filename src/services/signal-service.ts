@@ -1,8 +1,8 @@
+
 'use client';
 
 /**
- * NUXUS KERNEL API SERVICE V141.0 «BLACK BOX EDITION»
- * Централизованный шлюз для управления сигналами и данными Ядра.
+ * NUXUS KERNEL API SERVICE V142.0 «SIGNAL EDIT PROTOCOL»
  */
 import { 
   collection, doc, addDoc, updateDoc, writeBatch, 
@@ -53,6 +53,27 @@ export const signalService = {
     } catch (e) {
       console.error("Signal broadcast error:", e);
       throw new Error("Kernel API Error: Signal Delivery Failed");
+    }
+  },
+
+  /**
+   * Обновление существующего сигнала (Редактирование)
+   */
+  async updateSignal(chatId: string, messageId: string, newText: string) {
+    if (!nuxus.db || !newText.trim()) return;
+
+    const encrypted = encryptSignal(newText);
+    
+    try {
+      const msgRef = doc(nuxus.db, 'chats', chatId, 'messages', messageId);
+      await updateDoc(msgRef, {
+        content: encrypted,
+        editedAt: new Date().toISOString()
+      });
+      return true;
+    } catch (e) {
+      console.error("Signal update error:", e);
+      throw new Error("Kernel API Error: Signal Update Rejected");
     }
   },
 
