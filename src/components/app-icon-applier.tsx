@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
@@ -8,7 +9,6 @@ import type { User } from '@/lib/types';
 
 /**
  * ОБНОВЛЯТОР ИКОНОК V128.0 «SAFE OVERRIDE»
- * ИСПРАВЛЕНО: Устранение TitleWarning и ошибок React при обновлении мета-тегов.
  */
 export function AppIconApplier() {
   const { user } = useUser();
@@ -67,8 +67,6 @@ export function AppIconApplier() {
     };
 
     updateIcons();
-    
-    // Снижаем частоту обновлений для стабильности
     const interval = setInterval(updateIcons, 5000);
     return () => clearInterval(interval);
   }, [profile?.settings?.customAppIconUrl, TARGET_ICON, mounted]);

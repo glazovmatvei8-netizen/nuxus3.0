@@ -7,8 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { 
   Search, Orbit, CircleDollarSign, TowerControl, 
-  Satellite, Microscope, Atom, ChevronRight,
-  Zap, Loader2, Info
+  Loader2, Info, ChevronRight
 } from 'lucide-react';
 import { useAppState } from '@/lib/app-state';
 import { useUser, useFirestore } from '@/firebase/provider';
@@ -70,7 +69,7 @@ export default function DiscoveryView() {
       n.title.toLowerCase().includes(search.toLowerCase()) || 
       n.username.toLowerCase().includes(search.toLowerCase())
     );
-  }, [search]);
+  }, [search, RECOMMEND_NODES]);
 
   return (
     <div className="flex flex-col h-full bg-[#121212] overflow-hidden relative">

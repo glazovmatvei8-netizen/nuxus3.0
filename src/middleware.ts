@@ -1,10 +1,10 @@
 
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
 /**
- * NUXUS TITANIUM AEGIS v3.0 (WAF & DDoS Mitigation)
- * Самая мощная система защиты Ядра на уровне Edge.
+ * NUXUS TITANIUM AEGIS v3.1 (Advanced WAF & DoS Mitigation)
+ * Централизованная система защиты Ядра.
  */
 
 // База для интеллектуального Rate Limiting
@@ -12,47 +12,48 @@ const ipRegistry = new Map<string, { count: number, lastReset: number, isBanned:
 
 export function middleware(request: NextRequest) {
   const ip = request.ip || 'unknown';
-  const userAgent = request.headers.get('user-agent') || '';
+  const userAgent = (request.headers.get('user-agent') || '').toLowerCase();
   const url = request.nextUrl.pathname + request.nextUrl.search;
   const now = Date.now();
 
   // 1. ПРОВЕРКА ЧЕРНОГО СПИСКА IP
   const nodeState = ipRegistry.get(ip) || { count: 0, lastReset: now, isBanned: false };
   if (nodeState.isBanned) {
-    return new NextResponse('Signal Blocked: IP Permanently Restricted by Aegis', { status: 403 });
+    return new NextResponse('Signal Blocked: IP Restricted by Aegis Protocol', { status: 403 });
   }
 
-  // 2. ANTI-DOS & DDOS (Rate Limiting)
-  if (now - nodeState.lastReset > 5000) { // Сброс каждые 5 сек
+  // 2. ANTI-DOS & Rate Limiting
+  if (now - nodeState.lastReset > 5000) { 
     nodeState.count = 0;
     nodeState.lastReset = now;
   }
   nodeState.count++;
   
-  if (nodeState.count > 20) { // Лимит: 4 запроса в секунду
-    console.warn(`[AEGIS] Rate limit exceeded for IP: ${ip}`);
-    if (nodeState.count > 100) nodeState.isBanned = true; // Авто-бан при явной атаке
+  if (nodeState.count > 25) { 
+    if (nodeState.count > 100) nodeState.isBanned = true; 
     ipRegistry.set(ip, nodeState);
-    return new NextResponse('Rate Limit Exceeded: Cooldown Active', { status: 429 });
+    return new NextResponse('Rate Limit Exceeded: Protection Active', { status: 429 });
   }
   ipRegistry.set(ip, nodeState);
 
-  // 3. DEEP BOT SHIELD
-  const suspiciousAgents = [
-    'python-requests', 'curl', 'wget', 'headless', 'postman', 'insomnia',
-    'selenium', 'playwright', 'puppeteer', 'zgrab', 'masscan', 'nmap'
+  // 3. DEEP BOT & HEADLESS SHIELD
+  const suspiciousKeywords = [
+    'headless', 'puppeteer', 'selenium', 'playwright', 'curl', 'wget', 'python-requests',
+    'postman', 'insomnia', 'zgrab', 'nmap', 'masscan'
   ];
-  if (!userAgent || userAgent.length < 15 || suspiciousAgents.some(a => userAgent.toLowerCase().includes(a))) {
-    return new NextResponse('Signal Blocked: Suspicious Node Activity Detected', { status: 403 });
+  if (suspiciousKeywords.some(keyword => userAgent.includes(keyword))) {
+    return new NextResponse('Signal Blocked: Non-Human Node Detected', { status: 403 });
   }
 
-  // 4. ANTI-INJECTION (SQLi & XSS Patterns)
-  const injectionPatterns = [
-    'select', 'union', 'insert', 'drop', 'delete', 'truncate', '--', '/*', '*/',
-    'javascript:', '<script', 'alert(', 'onerror=', 'onclick=', 'eval('
+  // 4. ANTI-INJECTION (SQLi, NoSQLi & XSS Patterns)
+  const maliciousPatterns = [
+    'select ', 'union ', 'insert ', 'drop ', 'delete ', 'truncate', '--', '/*', '*/',
+    'javascript:', '<script', 'alert(', 'onerror=', 'onclick=', 'eval(', '$where', '{"$',
+    '..%2f', '../'
   ];
-  if (injectionPatterns.some(p => url.toLowerCase().includes(p))) {
-    return new NextResponse('Signal Blocked: Malicious Payload Detected', { status: 400 });
+  const lowerUrl = url.toLowerCase();
+  if (maliciousPatterns.some(pattern => lowerUrl.includes(pattern))) {
+    return new NextResponse('Signal Blocked: Malicious Payload Rejected', { status: 400 });
   }
 
   // 5. SECURITY HEADERS (Titanium Shell)
@@ -62,7 +63,7 @@ export function middleware(request: NextRequest) {
   response.headers.set('X-XSS-Protection', '1; mode=block');
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   response.headers.set('Content-Security-Policy', "default-src 'self' https: data: 'unsafe-inline' 'unsafe-eval'; img-src 'self' https: data: blob:; media-src 'self' https: data: blob:;");
-  response.headers.set('X-Nuxus-Aegis', 'Active-v3.0');
+  response.headers.set('X-Nuxus-Aegis', 'Active-v3.1');
 
   return response;
 }

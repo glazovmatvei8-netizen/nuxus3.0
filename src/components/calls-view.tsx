@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { useAppState } from '@/lib/app-state';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
-import { Phone, Link as LinkIcon, Loader2, PhoneOff } from 'lucide-react';
+import { Phone, Link as LinkIcon, PhoneOff } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useFirestore, useUser } from '@/firebase/provider';
 import { useCollection } from '@/firebase/firestore/use-collection';

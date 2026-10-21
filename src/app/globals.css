@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -25,14 +26,14 @@
   }
 
   [data-theme='event-horizon'] {
-    --background: 0 0% 7%; /* #121212 */
+    --background: 0 0% 7%;
     --foreground: 0 0% 100%;
-    --card: 240 2% 11%; /* #1C1C1E */
+    --card: 240 2% 11%;
     --card-foreground: 0 0% 100%;
-    --primary: 30 77% 56%; /* #E58E38 */
+    --primary: 30 77% 56%;
     --primary-foreground: 0 0% 100%;
-    --accent: 38 90% 51%; /* #F39C12 */
-    --muted-foreground: 240 2% 57%; /* #8E8E93 */
+    --accent: 38 90% 51%;
+    --muted-foreground: 240 2% 57%;
     --border: 240 2% 15%;
   }
 }
@@ -69,12 +70,6 @@
   transition: transform 0.3s ease, opacity 0.3s ease;
   transform: translateZ(0);
   contain: layout paint;
-}
-
-.nuxus-event-card::after {
-  content: '';
-  @apply absolute inset-0 opacity-30 pointer-events-none;
-  background: radial-gradient(circle at 50% 50%, hsla(var(--primary), 0.3) 0%, transparent 80%);
 }
 
 .nuxus-floating-nav {
@@ -150,23 +145,9 @@
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-/* ENERGY SAVING MODE */
 .energy-saving * {
   animation: none !important;
   transition: none !important;
   backdrop-filter: none !important;
   box-shadow: none !important;
-}
-
-.energy-saving .nuxus-event-card, 
-.energy-saving .nuxus-floating-nav,
-.energy-saving .obsidian-glass {
-  background: #1c1c1e !important;
-  border-color: #333 !important;
-}
-
-.energy-saving .animate-pulse,
-.energy-saving .animate-bounce,
-.energy-saving .animate-spin {
-  animation: none !important;
 }

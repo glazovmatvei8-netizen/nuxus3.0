@@ -3,10 +3,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useUser, useFirestore } from '@/firebase/provider';
-import { useDoc } from '@/firebase/firestore/use-doc';
-import { useMemoFirebase } from '@/firebase/firestore/use-memo-firebase';
 import { 
-  doc, onSnapshot, collection, addDoc, setDoc, getDoc, updateDoc, deleteDoc 
+  doc, onSnapshot, collection, addDoc, getDoc, updateDoc
 } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useAppState } from '@/lib/app-state';
@@ -14,11 +12,13 @@ import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   PhoneOff, Mic, MicOff, 
-  Phone, UserPlus, Video, VideoOff, Volume2, Loader2
+  Phone, UserPlus, Video, VideoOff, Loader2, ShieldCheck
 } from 'lucide-react';
 import { cn, triggerHaptic } from '@/lib/utils';
 import type { Call, User as UserType } from '@/lib/types';
 import { AddMemberModal } from './add-member-modal';
+import { useMemoFirebase } from '@/firebase/firestore/use-memo-firebase';
+import { useDoc } from '@/firebase/firestore/use-doc';
 
 const servers = {
   iceServers: [
@@ -82,9 +82,6 @@ export function CallOverlay() {
       ringtoneRef.current.loop = true;
       ringtoneRef.current.play().catch((err) => {
         console.error("Ringtone play error:", err);
-        window.addEventListener('click', () => {
-          ringtoneRef.current?.play().catch((e) => console.error("Ringtone click play error:", e));
-        }, { once: true });
       });
     }
   };
