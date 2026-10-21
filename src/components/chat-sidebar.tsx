@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   Plus, Search, Star, MessageSquare, Loader2, 
-  Trash2, Archive, LogOut, ShieldCheck 
+  Trash2, Archive, LogOut, ShieldCheck, Edit3
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CreateChatModal } from './modals/create-chat-modal';
@@ -27,6 +27,14 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 
 const ChatListItem = memo(({ 
   chat, isActive, otherId, onClick, currentUserId
@@ -133,22 +141,15 @@ export default function ChatSidebar() {
   const { user } = useUser();
   const db = useFirestore();
   const auth = useAuth();
-  const { currentChatId, setCurrentChatId, setIsSearchOpen, activeAccountIndex, setActiveAccountIndex, setIs2FAVerified } = useAppState();
+  const { 
+    currentChatId, setCurrentChatId, setIsSearchOpen, 
+    activeAccountIndex, setActiveAccountIndex, setIs2FAVerified,
+    slotNames, setSlotName 
+  } = useAppState();
   
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isOnline, setIsOnline] = useState(true);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const hO = () => setIsOnline(true);
-    const hF = () => setIsOnline(false);
-    window.addEventListener('online', hO);
-    window.addEventListener('offline', hF);
-    return () => {
-      window.removeEventListener('online', hO);
-      window.removeEventListener('offline', hF);
-    };
-  }, []);
+  const [editSlotIndex, setEditSlotIndex] = useState<number | null>(null);
+  const [tempSlotName, setTempSlotName] = useState('');
 
   const userProfileRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user?.uid]);
   const { data: profile } = useDoc<UserType>(userProfileRef);
@@ -180,6 +181,20 @@ export default function ChatSidebar() {
     }
   };
 
+  const handleEditSlot = (idx: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    triggerHaptic();
+    setEditSlotIndex(idx);
+    setTempSlotName(slotNames[idx]);
+  };
+
+  const saveSlotName = () => {
+    if (editSlotIndex !== null) {
+      setSlotName(editSlotIndex, tempSlotName.trim() || `Слот ${editSlotIndex + 1}`);
+      setEditSlotIndex(null);
+    }
+  };
+
   const handleLogout = async () => {
     if (!auth) return;
     if (confirm("Отключить текущий узел от Ядра?")) {
@@ -199,7 +214,7 @@ export default function ChatSidebar() {
                   <h1 className="text-4xl font-black text-primary italic tracking-tighter uppercase leading-none">ЧАТЫ</h1>
                   <div className="bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full flex items-center gap-2">
                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                     <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest italic">V179.0</span>
+                     <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest italic">V183.0</span>
                   </div>
                </div>
                <div className="flex gap-2">
@@ -231,16 +246,27 @@ export default function ChatSidebar() {
                       )}>
                         {(activeAccountIndex === i && user) && <div className="nuxus-orbit-dot" />}
                         {(activeAccountIndex === i && user) ? (
-                          <div className="p-0.5 rounded-full bg-[#121212] h-[calc(100%-4px)] w-[calc(100%-4px)] flex items-center justify-center">
+                          <div className="p-0.5 rounded-full bg-[#121212] h-[calc(100%-4px)] w-[calc(100%-4px)] flex items-center justify-center relative">
                             <UserAvatar userId={user?.uid} className="h-full w-full border-none shadow-inner" manualAvatarUrl={profile?.avatarUrl} />
+                            <button onClick={(e) => handleEditSlot(i, e)} className="absolute -bottom-1 -right-1 h-5 w-5 bg-[#1C1C1E] border border-white/10 rounded-full flex items-center justify-center text-white/40 hover:text-primary transition-colors opacity-0 group-hover:opacity-100">
+                               <Edit3 className="w-3 h-3" />
+                            </button>
                           </div>
                         ) : (
-                          <div className="flex flex-col items-center justify-center gap-0.5">
+                          <div className="flex flex-col items-center justify-center gap-0.5 relative">
                              <Plus className="w-6 h-6 text-muted-foreground/40 group-hover:text-primary" />
-                             <span className="text-[6px] font-black text-white/20 uppercase">SLOT {i+1}</span>
+                             <button onClick={(e) => handleEditSlot(i, e)} className="absolute -bottom-1 -right-1 h-5 w-5 bg-[#1C1C1E] border border-white/10 rounded-full flex items-center justify-center text-white/40 hover:text-primary transition-colors opacity-0 group-hover:opacity-100">
+                               <Edit3 className="w-3 h-3" />
+                            </button>
                           </div>
                         )}
                       </div>
+                      <span className={cn(
+                        "text-[8px] font-black uppercase tracking-widest truncate w-16 text-center",
+                        activeAccountIndex === i && user ? "text-primary" : "text-white/20"
+                      )}>
+                        {slotNames[i]}
+                      </span>
                     </div>
                   ))}
                </div>
@@ -275,6 +301,26 @@ export default function ChatSidebar() {
         </div>
       </ScrollArea>
       <CreateChatModal open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen} />
+      
+      <Dialog open={editSlotIndex !== null} onOpenChange={(o) => !o && setEditSlotIndex(null)}>
+         <DialogContent className="max-w-xs bg-[#0a0a0c] border-white/10 rounded-[2rem] p-6 text-center shadow-2xl">
+            <DialogHeader>
+               <DialogTitle className="text-lg font-black uppercase italic text-white text-center">Имя узла</DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+               <Input 
+                 value={tempSlotName} 
+                 onChange={e => setTempSlotName(e.target.value)} 
+                 maxLength={12}
+                 className="bg-white/5 border-white/10 h-12 rounded-xl text-center font-black uppercase tracking-widest"
+                 autoFocus
+               />
+            </div>
+            <DialogFooter className="flex flex-col gap-2">
+               <Button onClick={saveSlotName} className="w-full h-12 rounded-xl bg-primary text-white font-black uppercase italic tracking-widest">Сохранить</Button>
+            </DialogFooter>
+         </DialogContent>
+      </Dialog>
     </div>
   );
 }

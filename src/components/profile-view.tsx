@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -8,7 +9,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   ChevronRight, Star, Fingerprint, Palette, ShieldCheck, 
-  Share2, LayoutGrid, Info, Menu, RefreshCw, Sparkles, Trophy, Zap, HelpCircle, Calendar, Loader2
+  Share2, LayoutGrid, Info, Menu, RefreshCw, Sparkles, Trophy, Zap, HelpCircle, Calendar, Loader2, MessageCircle
 } from 'lucide-react';
 import { useAppState } from '@/lib/app-state';
 import { formatDisplayName, cn, isGlobalAdmin, getReputationInfo, triggerHaptic, formatLastSeen } from '@/lib/utils';
@@ -24,8 +25,8 @@ import { format, parseISO } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 /**
- * PROFILE VIEW V135.0 «TITANIUM HARDENING»
- * FIXED: Добавлены защитные механизмы от вылета при загрузке данных.
+ * PROFILE VIEW V183.0 «ASCENSION»
+ * ОПТИМИЗИРОВАНО: Добавлен кастомный статус и улучшенная визуализация репутации.
  */
 export default function ProfileView() {
   const { user } = useUser();
@@ -93,7 +94,7 @@ export default function ProfileView() {
       <ScrollArea className="flex-1 relative z-20">
         <div className="px-6 pt-10 pb-40 space-y-8 animate-in fade-in duration-1000">
           
-          <div className="nuxus-event-card w-full py-12 px-6 flex flex-col items-center justify-center relative overflow-hidden group min-h-[300px]">
+          <div className="nuxus-event-card w-full py-12 px-6 flex flex-col items-center justify-center relative overflow-hidden group min-h-[350px]">
              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,hsla(var(--primary),0.15),transparent_75%)] pointer-events-none" />
              
              <div className="absolute top-6 right-6 opacity-30">
@@ -121,6 +122,13 @@ export default function ProfileView() {
                    </h2>
                    {profile?.isPremium && <Star className="w-5 h-5 text-primary fill-primary animate-pulse" />}
                 </div>
+
+                {profile?.settings?.statusText && (
+                   <div className="bg-primary/10 border border-primary/20 px-5 py-2 rounded-2xl max-w-[85%] animate-in zoom-in-95 duration-500 flex items-center gap-3 shadow-lg">
+                      <MessageCircle className="w-3.5 h-3.5 text-primary shrink-0" />
+                      <span className="text-[11px] font-black text-white italic uppercase tracking-tight line-clamp-1">{profile.settings.statusText}</span>
+                   </div>
+                )}
                 
                 <div className="bg-black/60 backdrop-blur-xl border border-white/5 px-6 py-1.5 rounded-full shadow-inner flex flex-col items-center gap-1">
                    <span className="text-[10px] font-bold uppercase text-primary/60 tracking-[0.2em] italic">

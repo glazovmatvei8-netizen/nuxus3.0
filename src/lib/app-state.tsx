@@ -1,11 +1,12 @@
+
 "use client"
 
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import type { Message, Story, Track } from './types';
 
 /**
- * APP STATE ENGINE V5.9.0
- * Централизованное хранилище состояния, изолированное от Firebase.
+ * APP STATE ENGINE V183.0 «ASCENSION»
+ * ОПТИМИЗИРОВАНО: Добавлена поддержка именования слотов и расширенного состояния.
  */
 
 export type MainView = 'chats' | 'contacts' | 'calls' | 'profile' | 'archive' | 'music' | 'wallet' | 'games' | 'discovery' | 'ai';
@@ -62,14 +63,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isLegalOpen, setIsLegalOpen] = useState(false);
   const [inspectedUserId, setInspectedUserId] = useState<string | null>(null);
   const [activeAccountIndex, setActiveAccountIndex] = useState(0);
-  const [slotNames, setSlotNames] = useState<string[]>(['', '', '', '', '']);
+  const [slotNames, setSlotNames] = useState<string[]>(['Слот 1', 'Слот 2', 'Слот 3', 'Слот 4', 'Слот 5']);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedIndex = localStorage.getItem('nuxus_active_account_v59');
       if (savedIndex) setActiveAccountIndex(parseInt(savedIndex));
       
-      const savedNames = localStorage.getItem('nuxus_slot_names');
+      const savedNames = localStorage.getItem('nuxus_slot_names_v183');
       if (savedNames) {
         try {
           setSlotNames(JSON.parse(savedNames));
@@ -84,7 +85,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setSlotNames(prev => {
       const newNames = [...prev];
       newNames[index] = name;
-      localStorage.setItem('nuxus_slot_names', JSON.stringify(newNames));
+      localStorage.setItem('nuxus_slot_names_v183', JSON.stringify(newNames));
       return newNames;
     });
   };

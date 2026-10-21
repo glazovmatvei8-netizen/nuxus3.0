@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -16,7 +17,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Settings2, Camera, ShieldCheck, Loader2, Fingerprint, Palette, 
   ChevronRight, Globe, Trash2, Mail, Phone, Lock, Image as ImageIcon,
-  Info, HelpCircle, UserCheck, ShieldAlert, RefreshCw, KeyRound, Crown, FileText, Sun, Moon, Type, LayoutGrid, Zap, Calendar, Star, Sparkles, CheckCircle2
+  Info, HelpCircle, UserCheck, ShieldAlert, RefreshCw, KeyRound, Crown, FileText, Sun, Moon, Type, LayoutGrid, Zap, Calendar, Star, Sparkles, CheckCircle2, MessageCircle
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -64,7 +65,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const [iconPreview, setIconPreview] = useState<string | null>(null);
   
   const [form, setForm] = useState({
-    name: '', username: '', bio: '', phone: '', email: '', birthday: '',
+    name: '', username: '', bio: '', phone: '', email: '', birthday: '', statusText: '',
     appearance: 'dark' as 'light' | 'dark', theme: 'default',
     nameColor: 'text-orange-500', borderRadius: 24,
     bubbleStyle: 'default' as any, fontFamily: 'jakarta' as any,
@@ -82,6 +83,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         birthday: profile.birthday || '',
         phone: profile.phone || '',
         email: profile.email || '',
+        statusText: profile.settings?.statusText || '',
         appearance: profile.settings?.appearance || 'dark',
         theme: profile.settings?.theme || 'default',
         nameColor: profile.settings?.nameColor || 'text-orange-500',
@@ -121,6 +123,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         twoFactorPin: form.twoFactorPin,
         twoFactorPinLength: form.twoFactorPinLength,
         autoRenew: form.autoRenew,
+        'settings.statusText': form.statusText.trim(),
         'settings.appearance': form.appearance,
         'settings.theme': form.theme,
         'settings.bubbleStyle': form.bubbleStyle,
@@ -270,6 +273,13 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                           <div className="space-y-1.5">
                              <Label className="text-[9px] font-black uppercase text-primary/60 ml-2 tracking-widest">{t('settings.labels.name')}</Label>
                              <Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="h-12 bg-black/40 border-white/10 rounded-xl font-bold" />
+                          </div>
+                          <div className="space-y-1.5">
+                             <Label className="text-[9px] font-black uppercase text-primary/60 ml-2 tracking-widest">Статус Сигнал</Label>
+                             <div className="relative">
+                               <Input value={form.statusText} onChange={e => setForm({...form, statusText: e.target.value})} placeholder="Что у вас на уме?" className="h-12 bg-black/40 border-white/10 rounded-xl font-bold pl-12" maxLength={40} />
+                               <MessageCircle className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/40" />
+                             </div>
                           </div>
                           <div className="space-y-1.5">
                              <Label className="text-[9px] font-black uppercase text-primary/60 ml-2 tracking-widest">{t('settings.labels.username')}</Label>
