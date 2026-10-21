@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, ChevronLeft, X, Paperclip, Mic, StopCircle, 
-  Smile, Trash2, Loader2, Phone, Video, Camera, Sparkles, Wand2
+  Smile, Trash2, Loader2, Phone, Video, Camera, ShieldCheck
 } from 'lucide-react';
 import { MessageItem } from './message-item';
 import { ChatInfoModal } from './modals/chat-info-modal';
@@ -25,20 +25,18 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useTranslations } from '@/hooks/use-translations';
 import { useToast } from '@/hooks/use-toast';
 import { signalService } from '@/services/signal-service';
-import { aiService } from '@/services/ai-service';
 
 /**
- * CHAT AREA V142.0 «QUANTUM AI INTEGRATED»
- * UPDATED: Cleaned from merge conflict markers.
+ * CHAT AREA V178.0 «PURE SIGNAL»
+ * AI FUNCTIONS ANNIHILATED. Focused on pure messaging and security.
  */
-const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelReply, recentMessages }: any) => {
+const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelReply }: any) => {
   const { localDrafts, setLocalDrafts } = useAppState();
   const { t } = useTranslations();
   const { toast } = useToast();
   
   const [messageInput, setMessageInput] = useState(localDrafts[currentChatId] || '');
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
-  const [isAiDrafting, setIsAiDrafting] = useState(false);
   
   const [recordMode, setRecordMode] = useState<'voice' | 'video'>('voice');
   const [isRecording, setIsRecording] = useState(false);
@@ -64,35 +62,6 @@ const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelRepl
     onSendMessage(messageInput, 'text');
     setMessageInput('');
     setLocalDrafts(prev => ({ ...prev, [currentChatId]: '' }));
-  };
-
-  const handleAiSmartDraft = async () => {
-    if (isAiDrafting) return;
-    triggerHaptic();
-    setIsAiDrafting(true);
-    try {
-      const formattedContext = (recentMessages || [])
-        .filter((m: Message) => m.contentType === 'text')
-        .slice(-10)
-        .map((m: Message) => ({
-          senderName: m.senderName || 'Узел',
-          content: decryptSignal(m.content),
-        }));
-
-      const promptText = messageInput.trim()
-        ? `Улучши и дополни мой черновик сообщения: "${messageInput.trim()}"`
-        : 'Предложи уместный и естественный ответ на последние сообщения в чате';
-
-      const suggestion = await aiService.draftMessage(promptText, formattedContext);
-      setMessageInput(suggestion);
-      setLocalDrafts(prev => ({ ...prev, [currentChatId]: suggestion }));
-      toast({ title: 'ИИ подготовил вариант сообщения' });
-    } catch (e) {
-      console.error("AI smart draft error:", e);
-      toast({ title: "Ошибка ИИ-помощника", variant: "destructive" });
-    } finally {
-      setIsAiDrafting(false);
-    }
   };
 
   const startRecording = async () => {
@@ -179,17 +148,6 @@ const ChatInputBar = memo(({ onSendMessage, currentChatId, replyTo, onCancelRepl
                 value={messageInput} 
                 onChange={e => { setMessageInput(e.target.value); setLocalDrafts(prev => ({ ...prev, [currentChatId]: e.target.value })); }} 
               />
-              <Button
-                variant="ghost"
-                size="icon"
-                type="button"
-                onClick={handleAiSmartDraft}
-                disabled={isAiDrafting}
-                title={messageInput.trim() ? "Улучшить текст с ИИ" : "Предложить ИИ-ответ"}
-                className="text-primary/70 hover:text-primary h-8 w-8 shrink-0"
-              >
-                {isAiDrafting ? <Loader2 size={18} className="animate-spin" /> : <Wand2 size={18} />}
-              </Button>
               <Popover open={isEmojiPickerOpen} onOpenChange={setIsEmojiPickerOpen}>
                  <PopoverTrigger asChild><Button variant="ghost" size="icon" className="text-white/20 h-8 w-8 shrink-0"><Smile size={20} /></Button></PopoverTrigger>
                  <PopoverContent side="top" className="p-0 border-none bg-transparent w-[320px] mb-6">
@@ -236,8 +194,6 @@ export default function ChatArea() {
   
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
-  const [aiSummary, setAiSummary] = useState<string | null>(null);
-  const [isSummarizing, setIsSummarizing] = useState(false);
 
   const userProfileRef = useMemoFirebase(() => (!db || !firebaseUser) ? null : doc(db, 'users', firebaseUser.uid), [db, firebaseUser?.uid]);
   const { data: userProfile } = useDoc<UserType>(userProfileRef);
@@ -252,47 +208,12 @@ export default function ChatArea() {
   const messagesQuery = useMemoFirebase(() => (!db || !currentChatId) ? null : query(collection(db, 'chats', currentChatId, 'messages'), orderBy('sentAt', 'asc')), [db, currentChatId]);
   const { data: messages } = useCollection<Message>(messagesQuery);
 
-  useEffect(() => {
-    setAiSummary(null);
-  }, [currentChatId]);
-
   // Kernel Sync: Acknowledge signals via API
   useEffect(() => {
     if (currentChatId && messages && firebaseUser) {
       signalService.acknowledgeSignals(currentChatId, messages, firebaseUser.uid);
     }
   }, [currentChatId, messages, firebaseUser?.uid]);
-
-  const handleSummarizeChat = async () => {
-    if (!messages || messages.length === 0 || isSummarizing) {
-      toast({ title: 'Недостаточно сообщений для анализа' });
-      return;
-    }
-    triggerHaptic();
-    setIsSummarizing(true);
-    try {
-      const textMessages = messages
-        .filter((m) => m.contentType === 'text')
-        .slice(-30)
-        .map((m) => ({
-          senderName: m.senderName || 'Узел',
-          content: decryptSignal(m.content),
-        }));
-
-      if (textMessages.length === 0) {
-        toast({ title: 'В чате пока нет текстовых сообщений' });
-        return;
-      }
-
-      const summary = await aiService.summarizeChat(textMessages);
-      setAiSummary(summary);
-    } catch (e) {
-      console.error("Failed to summarize chat:", e);
-      toast({ title: "Не удалось создать ИИ-сводку", variant: "destructive" });
-    } finally {
-      setIsSummarizing(false);
-    }
-  };
 
   // View Handler: Send message via Kernel API
   const handleSendMessage = useCallback(async (content: string, type: Message['contentType'] = 'text', meta: any = null) => {
@@ -302,7 +223,6 @@ export default function ChatArea() {
       if (type === 'text') {
         await signalService.broadcastSignal(currentChatId, firebaseUser.uid, userProfile?.name || 'User', content, replyTo);
       } else {
-        // Media Signal Processing (Placeholder for full API integration)
         const msgData = { 
           chatId: currentChatId, senderId: firebaseUser.uid, senderName: userProfile?.name || 'User', 
           content, contentType: type, sentAt: new Date().toISOString(), isRead: false, metadata: meta
@@ -343,33 +263,11 @@ export default function ChatArea() {
           </div>
         </div>
 
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleSummarizeChat}
-          disabled={isSummarizing}
-          className="h-9 px-3 rounded-xl bg-primary/10 hover:bg-primary/20 border border-primary/25 text-primary text-[10px] font-black uppercase tracking-wider gap-1.5 shrink-0"
-        >
-          {isSummarizing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-          <span className="hidden sm:inline">ИИ-Сводка</span>
-        </Button>
-      </header>
-
-      {aiSummary && (
-        <div className="mx-4 mt-3 p-4 rounded-2xl bg-[#16161c]/95 border border-primary/30 shadow-xl z-20 relative">
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5" /> Nuxus AI: Краткая сводка переписки
-            </span>
-            <button onClick={() => setAiSummary(null)} className="text-white/40 hover:text-white">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-          <p className="text-xs text-white/90 whitespace-pre-wrap leading-relaxed max-h-40 overflow-y-auto">
-            {aiSummary}
-          </p>
+        <div className="bg-white/5 px-3 py-1 rounded-full border border-white/5 flex items-center gap-2">
+           <ShieldCheck className="w-3.5 h-3.5 text-primary" />
+           <span className="text-[8px] font-black uppercase text-white/40 tracking-widest">QES 28.1</span>
         </div>
-      )}
+      </header>
 
       <div className="flex-1 relative overflow-hidden z-10">
         <ScrollArea className="h-full w-full">
@@ -394,7 +292,6 @@ export default function ChatArea() {
         currentChatId={currentChatId}
         replyTo={replyTo}
         onCancelReply={() => setReplyTo(null)}
-        recentMessages={messages}
       />
       {chat && <ChatInfoModal open={isChatInfoOpen} onOpenChange={setIsChatInfoOpen} chat={chat as any} />}
     </div>
