@@ -1,13 +1,13 @@
 import type { NextConfig } from 'next';
 
 /**
- * NUXUS PRODUCTION CONFIG V172.0 «ABSOLUTE BLACK BOX»
- * ОПТИМИЗИРОВАНО: Полное скрытие исходного кода и защита от декомпиляции.
+ * NUXUS PRODUCTION CONFIG V173.0 «ABSOLUTE STATIC»
+ * ОПТИМИЗИРОВАНО: Принудительный экспорт для хостинга (Beget/Timeweb).
  */
 const nextConfig: NextConfig = {
   output: 'export', 
   trailingSlash: true, 
-  productionBrowserSourceMaps: false, // ГАРАНТИРОВАННОЕ СКРЫТИЕ ПАПКИ SRC В F12
+  productionBrowserSourceMaps: false, 
   images: {
     unoptimized: true, 
   },
@@ -19,7 +19,6 @@ const nextConfig: NextConfig = {
   },
   distDir: '.next',
   webpack: (config, { dev, isServer }) => {
-    // Агрессивная минификация в продакшене
     if (!dev && !isServer) {
       config.optimization.minimize = true;
       if (config.optimization.minimizer) {
@@ -27,7 +26,7 @@ const nextConfig: NextConfig = {
           if (m.options && m.options.terserOptions) {
             m.options.terserOptions.format = { comments: false };
             m.options.terserOptions.compress = {
-              drop_console: true, // Удаляет все console.log для чистоты
+              drop_console: true,
               pure_funcs: ['console.info', 'console.debug', 'console.warn'],
             };
           }

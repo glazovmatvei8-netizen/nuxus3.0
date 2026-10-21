@@ -2,11 +2,7 @@ name: Build Web (Folder OUT)
 
 on:
   push:
-<<<<<<< HEAD
-    branches: [ main ]
-=======
     branches: [ main, master ]
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
   workflow_dispatch:
 
 jobs:
@@ -25,21 +21,17 @@ jobs:
           cache: 'npm'
 
       - name: Install Dependencies
-<<<<<<< HEAD
-        run: npm install
-
-      - name: Build Project (Export)
-        run: npm run build
-=======
         run: npm install --legacy-peer-deps
 
-      - name: Build Project (Export)
+      - name: Build Project (Static Export)
         env:
           STATIC_EXPORT: 'true'
         run: |
-          rm -rf src/app/api/ai
-          npm run export
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
+          npm run build
+          if [ ! -d "out" ]; then
+            echo "Error: Directory 'out' was not generated."
+            exit 1
+          fi
 
       - name: Prepare Staging for Archive
         run: |
@@ -50,5 +42,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: nuxus-web-dist
-          path: staging/
+          path: staging/out
           retention-days: 5
