@@ -23,18 +23,6 @@
     --ring: 30 77% 56%;
     --radius: 3.5rem;
   }
-
-  [data-theme='event-horizon'] {
-    --background: 0 0% 7%;
-    --foreground: 0 0% 100%;
-    --card: 240 2% 11%;
-    --card-foreground: 0 0% 100%;
-    --primary: 30 77% 56%;
-    --primary-foreground: 0 0% 100%;
-    --accent: 38 90% 51%;
-    --muted-foreground: 240 2% 57%;
-    --border: 240 2% 15%;
-  }
 }
 
 @layer base {
@@ -59,16 +47,6 @@
     overflow: hidden !important;
     position: fixed;
   }
-}
-
-.nuxus-event-card {
-  @apply relative rounded-[3.5rem] border-2 border-white/[0.05] overflow-hidden;
-  background: hsla(var(--primary), 0.12);
-  backdrop-filter: blur(16px);
-  box-shadow: 0 20px 40px rgba(0,0,0,0.4), inset 0 0 20px hsla(var(--primary), 0.05);
-  transition: transform 0.3s ease, opacity 0.3s ease;
-  transform: translateZ(0);
-  contain: layout paint;
 }
 
 .nuxus-floating-nav {
@@ -111,38 +89,6 @@
 
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-
-.animate-shimmer {
-  animation: shimmer 2s infinite linear;
-}
-
-@keyframes shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
-}
-
-.nuxus-orbit-active {
-  padding: 2px;
-  background: hsla(var(--primary), 1); 
-  border-radius: 50%;
-}
-
-.nuxus-orbit-dot {
-  position: absolute;
-  top: 5px;
-  right: 15px;
-  width: 7px;
-  height: 7px;
-  background: hsla(var(--primary), 1);
-  border-radius: 50%;
-  box-shadow: 0 0 10px hsla(var(--primary), 1);
-}
-
-.obsidian-glass {
-  background: rgba(28, 28, 30, 0.7);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-}
 
 .energy-saving * {
   animation: none !important;

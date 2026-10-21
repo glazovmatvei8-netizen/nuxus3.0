@@ -3,10 +3,9 @@ import type { NextRequest } from 'next/server';
 
 /**
  * NUXUS TITANIUM AEGIS v3.5 (Advanced WAF & DoS Mitigation)
- * Централизованная система защиты Ядра.
+ * Централизованная система защиты Ядра от SQLi, XSS и DDoS.
  */
 
-// База для интеллектуального Rate Limiting
 const ipRegistry = new Map<string, { count: number, lastReset: number, isBanned: boolean }>();
 
 export function middleware(request: NextRequest) {
@@ -21,7 +20,7 @@ export function middleware(request: NextRequest) {
     return new NextResponse('Signal Blocked: IP Restricted by Aegis Protocol', { status: 403 });
   }
 
-  // 2. ANTI-DOS & Rate Limiting (20 запросов за 5 сек)
+  // 2. ANTI-DOS & Rate Limiting (25 запросов за 5 сек)
   if (now - nodeState.lastReset > 5000) { 
     nodeState.count = 0;
     nodeState.lastReset = now;

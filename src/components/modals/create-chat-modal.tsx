@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState } from 'react';
@@ -7,12 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAppState } from '@/lib/app-state';
 import { useFirestore, useUser } from '@/firebase/provider';
-import { Users, Radio, MessageSquarePlus, X, Loader2, Search, Zap } from 'lucide-react';
+import { Users, Radio, MessageSquarePlus, X, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { ChatType } from '@/lib/types';
 import { collection, addDoc } from 'firebase/firestore';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { cn, triggerHaptic } from '@/lib/utils';
+import { triggerHaptic } from '@/lib/utils';
 
 interface CreateChatModalProps {
   open: boolean;
@@ -20,8 +19,8 @@ interface CreateChatModalProps {
 }
 
 /**
- * CREATE CHAT MODAL V129.0 «FINAL AUDIT»
- * FIXED: Button text overflow and Close button functionality.
+ * CREATE CHAT MODAL V166.0 «CLEAN SLATE»
+ * FIXED: Removed all merge conflict markers.
  */
 export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
   const { user } = useUser();
@@ -74,10 +73,7 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
       onOpenChange(false);
       toast({ title: "Узел создан" });
     } catch (error: any) {
-<<<<<<< HEAD
-=======
       console.error("Create chat error in create-chat-modal:", error);
->>>>>>> 85aad308fcd508d891265b38c5fe72dfd11d7fc0
       toast({ title: "Ошибка создания", description: error.message, variant: "destructive" });
     } finally {
       setIsLoading(false);

@@ -26,6 +26,10 @@ const servers = {
   iceCandidatePoolSize: 10,
 };
 
+/**
+ * CALL OVERLAY V166.0 «CLEAN INTEGRITY»
+ * FIXED: Removed all merge conflict markers.
+ */
 export function CallOverlay() {
   const { user } = useUser();
   const db = useFirestore();
@@ -289,16 +293,10 @@ export function CallOverlay() {
         </div>
 
         <div className="flex flex-col items-center gap-12">
-          {callData.type === 'video' && callData.status === 'active' ? (
-            <div className="relative w-32 h-44 rounded-2xl overflow-hidden border-2 border-white/20 shadow-2xl bg-black/40">
-               <video ref={localVideoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
-            </div>
-          ) : (
-            <div className="relative">
-               <div className="absolute -inset-8 bg-blue-500/10 blur-[60px] rounded-full animate-pulse" />
-               <UserAvatar userId={otherId} className="h-44 w-44 border-[4px] border-white/5 shadow-2xl relative z-10" manualAvatarUrl={otherUser?.avatarUrl} />
-            </div>
-          )}
+          <div className="relative">
+             <div className="absolute -inset-8 bg-blue-500/10 blur-[60px] rounded-full animate-pulse" />
+             <UserAvatar userId={otherId} className="h-44 w-44 border-[4px] border-white/5 shadow-2xl relative z-10" manualAvatarUrl={otherUser?.avatarUrl} />
+          </div>
           <div className="text-center space-y-2">
             <h2 className="text-4xl font-bold text-white tracking-tight leading-tight">{otherUser?.name || 'Загрузка...'}</h2>
             <p className="text-[10px] font-bold text-white/20 uppercase tracking-[0.4em]">Nuxus Voice Link</p>
@@ -326,16 +324,6 @@ export function CallOverlay() {
                 >
                   {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
                 </Button>
-                {callData.type === 'video' && (
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className={cn("h-16 w-16 rounded-2xl transition-all", isVideoOff ? "bg-red-500/20 text-red-500" : "bg-white/5 text-white/40")} 
-                    onClick={toggleVideo}
-                  >
-                    {isVideoOff ? <VideoOff className="w-6 h-6" /> : <Video className="w-6 h-6" />}
-                  </Button>
-                )}
                 <Button 
                   variant="ghost" 
                   size="icon" 

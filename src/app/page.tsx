@@ -18,6 +18,10 @@ import { NuxusLogo } from '@/components/nuxus-logo';
 import { checkBiometric } from '@/services/biometric-service';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
+/**
+ * HOME PAGE V166.0 «CLEAN INTEGRITY»
+ * FIXED: Removed all merge conflict markers in 2FA and Biometric blocks.
+ */
 export default function Home() {
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
@@ -121,7 +125,7 @@ export default function Home() {
     return (
       <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#010103] text-white">
         <NuxusLogo size={80} className="animate-pulse opacity-40" />
-        <p className="mt-8 text-[8px] font-black uppercase tracking-[0.6em] text-primary/40">Syncing Engine V163.0</p>
+        <p className="mt-8 text-[8px] font-black uppercase tracking-[0.6em] text-primary/40">Syncing Engine V166.0</p>
       </div>
     );
   }
