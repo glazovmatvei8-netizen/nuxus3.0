@@ -1,7 +1,8 @@
+
 'use client';
 
 import React, { createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
-import { onAuthStateChanged, User } from 'firebase/auth';
+import { onAuthStateChanged, User, setPersistence, indexedDBLocalPersistence } from 'firebase/auth';
 import { nuxus } from '@/lib/nuxus-engine';
 
 export interface FirebaseContextState {
@@ -15,8 +16,8 @@ export const FirebaseContext = createContext<FirebaseContextState>({
 });
 
 /**
- * NUXUS FIREBASE PROVIDER V154
- * ОПТИМИЗИРОВАНО: Форсированное запоминание сессии для быстрого входа.
+ * NUXUS FIREBASE PROVIDER V187
+ * ОПТИМИЗИРОВАНО: Форсированное сохранение сессии для мобильных устройств.
  */
 export const FirebaseProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -29,6 +30,9 @@ export const FirebaseProvider: React.FC<{ children: ReactNode }> = ({ children }
       return;
     }
 
+    // Принудительная установка персистентности для мобилок
+    setPersistence(auth, indexedDBLocalPersistence).catch(console.error);
+
     // Слушатель состояния
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser);
@@ -38,10 +42,10 @@ export const FirebaseProvider: React.FC<{ children: ReactNode }> = ({ children }
       setIsUserLoading(false);
     });
 
-    // Резервный сброс сокращен до 1.5 сек для моментального старта
+    // Резервный сброс сокращен до 1 сек для моментального старта
     const fallback = setTimeout(() => {
       setIsUserLoading(false);
-    }, 1500);
+    }, 1000);
 
     return () => {
       unsubscribe();

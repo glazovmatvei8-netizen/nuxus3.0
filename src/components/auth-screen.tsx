@@ -10,7 +10,7 @@ import { useAuth, useFirestore, useUser } from '@/firebase/provider';
 import { 
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  browserLocalPersistence,
+  indexedDBLocalPersistence,
   setPersistence,
   updateProfile,
   sendEmailVerification
@@ -24,8 +24,8 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { useRouter } from 'next/navigation';
 
 /**
- * AUTH SCREEN V179.0 «AEGIS ANTI-BRUTE»
- * UPDATED: Added a cooldown period on login attempts to prevent automated brute-force.
+ * AUTH SCREEN V187.0 «MOBILE NEXUS»
+ * UPDATED: Optimized for reliable mobile login via indexedDB persistence.
  */
 export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'login' | 'register' | 'verify' }) {
   const auth = useAuth();
@@ -75,7 +75,8 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
     setIsLoading(true);
     triggerHaptic();
     try {
-      await setPersistence(auth, browserLocalPersistence);
+      // КРИТИЧЕСКИЙ ФИКС ДЛЯ МОБИЛОК: indexedDB
+      await setPersistence(auth, indexedDBLocalPersistence);
       
       let finalId = identifier.trim().toLowerCase();
       if (authType === 'phone') {
@@ -106,14 +107,25 @@ export default function AuthScreen({ initialMode = 'login' }: { initialMode?: 'l
           createdAt: new Date().toISOString(),
           balance: 100,
           reputation: 0,
-          settings: { language: lang || 'ru', appearance: 'dark', theme: 'default' }
+          settings: { 
+            language: lang || 'ru', 
+            appearance: 'dark', 
+            theme: 'default',
+            messageRadius: 24,
+            bubbleStyle: 'default'
+          }
         });
       } else {
         await signInWithEmailAndPassword(auth, finalId, password);
       }
     } catch (e: any) {
-      toast({ title: "Ошибка", description: e.message, variant: "destructive" });
-      setCooldown(3); // Защитная пауза 3 сек после ошибки
+      console.error("Auth error details:", e.code, e.message);
+      let errorMsg = e.message;
+      if (e.code === 'auth/user-not-found') errorMsg = "Узел не зарегистрирован в Ядре";
+      if (e.code === 'auth/wrong-password') errorMsg = "Неверный ключ доступа";
+      
+      toast({ title: "Сбой шлюза", description: errorMsg, variant: "destructive" });
+      setCooldown(3); 
     } finally {
       setIsLoading(false);
     }

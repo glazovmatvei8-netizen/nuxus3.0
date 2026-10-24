@@ -31,28 +31,32 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <script dangerouslySetInnerHTML={{ __html: `
           (function() {
-            // 1. DOMAIN LOCK & ANTI-CLONE
+            // 1. DOMAIN LOCK & ANTI-CLONE (V187 - Mobile Optimized)
             const allowed = ['nuxus.fun', 'chat.nuxus.fun', 'www.nuxus.fun', 'localhost', 'swtest.ru', 'firebaseapp.com', 'web.app'];
             if (typeof window !== 'undefined') {
               const h = window.location.hostname;
               const isNative = !!(window.Capacitor || window.webkit || window.android);
-              if (!allowed.some(d => h.endsWith(d)) && !isNative) {
-                document.documentElement.innerHTML = '<body style="background:#000;color:red;display:flex;text-align:center;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;"><h1>ACCESS DENIED: ILLEGAL NODE CLONE</h1></body>';
+              const isMobileBrowser = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+              if (!allowed.some(d => h.endsWith(d)) && !isNative && !isMobileBrowser) {
+                document.documentElement.innerHTML = '<body style="background:#000;color:red;display:flex;text-align:center;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;padding:20px;"><div><h1>ACCESS DENIED</h1><p>ILLEGAL NODE CLONE DETECTED</p></div></body>';
                 return;
               }
 
-              // 2. NUCLEAR DEBUGGER TRAP (IMPROVED)
+              // 2. NUCLEAR DEBUGGER TRAP (V187 - Stealth Mode)
               const trap = function() {
                 const s = Date.now();
-                debugger;
-                if (Date.now() - s > 100 && !isNative) {
-                  // Если отладчик открыт - забиваем консоль мусором и выходим
-                  for(let i=0; i<1000; i++) console.log(new Array(1000).fill("AEGIS_TRAP"));
-                  window.location.href = 'about:blank';
+                // Ловушка активна только в десктопных браузерах для стабильности мобилок
+                if (!isMobileBrowser && !isNative) {
+                  debugger;
+                  if (Date.now() - s > 100) {
+                    for(let i=0; i<500; i++) console.log("%cAEGIS_TRAP", "color:red; font-size:20px");
+                    window.location.href = 'about:blank';
+                  }
                 }
-                setTimeout(trap, 200);
+                setTimeout(trap, 500);
               };
-              if (!isNative) setTimeout(trap, 2000);
+              if (!isNative && !isMobileBrowser) setTimeout(trap, 2000);
 
               // 3. BLOCK INSPECTION
               document.addEventListener('contextmenu', e => e.preventDefault());
