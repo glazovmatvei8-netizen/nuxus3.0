@@ -7,11 +7,11 @@ import Link from 'next/link';
 import Image from 'next/image';
 
 /**
- * Native-like iOS App Store Installation Screen V197.0
- * ОБНОВЛЕНО: Используется новая официальная иконка MIG.
+ * Native-like iOS App Store Installation Screen V207.0
+ * ОБНОВЛЕНО: Используется локальная иконка /icon.png.
  */
 export function IosInstaller({ onDismiss }: { onDismiss: () => void }) {
-  const NEW_ICON_URL = 'https://storage.googleapis.com/fetch-studio-images/ed639417-646c-4867-b5cc-74431f0e2ec3.png';
+  const LOCAL_ICON_URL = '/icon.png';
 
   return (
     <div className="fixed inset-0 z-[2000] bg-[#0a0a0c] flex flex-col items-center overflow-y-auto pb-20 scrollbar-hide">
@@ -23,7 +23,7 @@ export function IosInstaller({ onDismiss }: { onDismiss: () => void }) {
       <div className="w-full max-w-md px-6 pt-10 relative z-10 flex flex-col items-center">
         <div className="w-full flex gap-6 mb-8 text-left">
           <div className="w-32 h-32 rounded-[2.5rem] bg-card border border-white/10 shadow-2xl flex items-center justify-center shrink-0 overflow-hidden relative">
-             <Image src={NEW_ICON_URL} alt="MIG Logo" fill className="object-cover" unoptimized />
+             <Image src={LOCAL_ICON_URL} alt="MIG Logo" fill className="object-cover" unoptimized />
           </div>
           <div className="flex flex-col justify-center flex-1">
             <h1 className="text-2xl font-black text-white leading-tight">MIG 2.0</h1>
@@ -43,7 +43,7 @@ export function IosInstaller({ onDismiss }: { onDismiss: () => void }) {
 
         <div className="w-full grid grid-cols-3 gap-0.5 border-y border-white/5 py-4 mb-8">
           <div className="flex flex-col items-center">
-            <span className="text-white font-black text-sm">V35.4</span>
+            <span className="text-white font-black text-sm">V3.1</span>
             <span className="text-[8px] font-bold text-muted-foreground uppercase">Версия</span>
           </div>
           <div className="w-px h-8 bg-white/5 self-center" />
@@ -115,7 +115,7 @@ export function IosInstaller({ onDismiss }: { onDismiss: () => void }) {
                 <h3 className="text-[10px] font-black uppercase tracking-widest">Совет Оператора</h3>
             </div>
             <p className="text-[9px] text-muted-foreground leading-relaxed uppercase font-bold">
-                Использование новой иконки V197 гарантирует визуальную подлинность узла MIG в глобальной сети.
+                Использование локальной иконки V207 гарантирует визуальную подлинность узла MIG в любых условиях сети.
             </p>
         </div>
       </div>

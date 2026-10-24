@@ -10,10 +10,12 @@ interface MigLogoProps {
 }
 
 /**
- * MIG LOGO V2.0 «CYBER M»
+ * MIG LOGO V207.0 «LOCAL ASSET»
+ * ОПТИМИЗИРОВАНО: Использует локальный файл /icon.png из папки public.
  */
 export function NuxusLogo({ className, size = 120 }: MigLogoProps) {
-  const LOGO_URL = 'https://storage.googleapis.com/fetch-studio-images/ed639417-646c-4867-b5cc-74431f0e2ec3.png';
+  // Путь к локальному файлу в папке public
+  const LOGO_URL = '/icon.png';
 
   return (
     <div 
@@ -29,7 +31,7 @@ export function NuxusLogo({ className, size = 120 }: MigLogoProps) {
           fill 
           className="object-cover"
           unoptimized
-          data-ai-hint="cyberpunk high-tech logo"
+          priority
         />
       </div>
       

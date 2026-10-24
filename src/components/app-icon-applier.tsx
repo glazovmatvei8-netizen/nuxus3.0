@@ -7,7 +7,7 @@ import { doc } from 'firebase/firestore';
 import type { User } from '@/lib/types';
 
 /**
- * ОБНОВЛЯТОР ИКОНОК V197.0 «CYBER M»
+ * ОБНОВЛЯТОР ИКОНОК V207.0 «LOCAL SYNC»
  */
 export function AppIconApplier() {
   const { user } = useUser();
@@ -25,7 +25,8 @@ export function AppIconApplier() {
 
   const { data: profile } = useDoc<User>(userRef);
 
-  const TARGET_ICON = 'https://storage.googleapis.com/fetch-studio-images/ed639417-646c-4867-b5cc-74431f0e2ec3.png';
+  // Локальный путь к иконке
+  const TARGET_ICON = '/icon.png';
 
   useEffect(() => {
     if (!mounted || typeof document === 'undefined') return;
@@ -34,7 +35,7 @@ export function AppIconApplier() {
       try {
         const customIcon = profile?.settings?.customAppIconUrl;
         const finalIcon = customIcon 
-          ? (customIcon.includes('?') ? `${customIcon}&v=197` : `${customIcon}?v=197`)
+          ? (customIcon.includes('?') ? `${customIcon}&v=207` : `${customIcon}?v=207`)
           : TARGET_ICON;
 
         const selectors = [
@@ -68,7 +69,7 @@ export function AppIconApplier() {
     updateIcons();
     const interval = setInterval(updateIcons, 5000);
     return () => clearInterval(interval);
-  }, [profile?.settings?.customAppIconUrl, TARGET_ICON, mounted]);
+  }, [profile?.settings?.customAppIconUrl, mounted]);
 
   return null;
 }

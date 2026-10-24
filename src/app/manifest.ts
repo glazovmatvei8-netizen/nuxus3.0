@@ -3,7 +3,8 @@ import { MetadataRoute } from 'next'
 export const dynamic = 'force-static'
 
 export default function manifest(): MetadataRoute.Manifest {
-  const APP_ICON_URL = 'https://storage.googleapis.com/fetch-studio-images/ed639417-646c-4867-b5cc-74431f0e2ec3.png';
+  // Локальный путь к иконке в папке public
+  const APP_ICON_URL = '/icon.png';
   
   return {
     id: 'chat.mig.app',

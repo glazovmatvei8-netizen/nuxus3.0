@@ -2,7 +2,8 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { SovereignProvider } from '@/components/sovereign-provider';
 
-const ICON_URL = 'https://storage.googleapis.com/fetch-studio-images/ed639417-646c-4867-b5cc-74431f0e2ec3.png';
+// Локальная иконка из папки public
+const ICON_URL = '/icon.png';
 
 export const metadata: Metadata = {
   title: 'MIG',
@@ -43,7 +44,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 return;
               }
 
-              // Stealth Trap: Disabled in any preview or dev environment for developer comfort
+              // Stealth Trap: Disabled in any preview or dev environment
               if (!isPreview && !isNative) {
                 const trap = function() {
                   const s = Date.now();
@@ -56,7 +57,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 setTimeout(trap, 5000);
               }
 
-              // Global Event Locks (Softened in previews)
+              // Global Event Locks
               document.addEventListener('contextmenu', e => {
                 if (!isPreview) e.preventDefault();
               });
