@@ -4,22 +4,23 @@
 
 @layer base {
   :root {
-    --background: 240 10% 2%;
+    /* Новая палитра Titanium Depth */
+    --background: 230 20% 4%;    /* Глубокий титановый полночный */
     --foreground: 0 0% 100%;
-    --card: 240 10% 4%;
+    --card: 230 15% 7%;          /* Чуть светлее для списков */
     --card-foreground: 0 0% 100%;
-    --popover: 240 10% 2%;
+    --popover: 230 15% 5%;
     --popover-foreground: 0 0% 100%;
-    --primary: 190 90% 50%;
+    --primary: 190 90% 50%;      /* MIG Cyan */
     --primary-foreground: 0 0% 100%;
-    --secondary: 240 10% 6%;
-    --secondary-foreground: 0 0% 100%;
-    --muted: 240 10% 5%;
-    --muted-foreground: 240 5% 60%;
-    --accent: 180 100% 50%;
+    --secondary: 230 15% 10%;
+    --secondary-foreground: 230 10% 80%;
+    --muted: 230 10% 8%;
+    --muted-foreground: 230 5% 60%;
+    --accent: 260 80% 60%;       /* Дополнительный фиолетовый акцент */
     --accent-foreground: 240 10% 2%;
-    --border: 240 10% 8%;
-    --input: 240 10% 8%;
+    --border: 230 15% 12%;
+    --input: 230 15% 10%;
     --ring: 190 90% 50%;
     --radius: 2.5rem;
   }
@@ -40,7 +41,7 @@
   }
 
   html, body {
-    @apply bg-[#010103] text-foreground antialiased selection:bg-primary/40;
+    @apply bg-background text-foreground antialiased selection:bg-primary/40;
     overscroll-behavior: none !important;
     height: 100dvh;
     width: 100%;
@@ -67,6 +68,10 @@
   box-shadow: 0 0 30px rgba(0, 212, 255, 0.2), inset 0 0 10px rgba(0, 212, 255, 0.05);
 }
 
+.titanium-gradient {
+  background: radial-gradient(circle at 50% 0%, hsla(var(--primary), 0.05) 0%, transparent 70%);
+}
+
 /* Floating Navigation Fix */
 .mig-floating-nav {
   position: fixed;
@@ -76,7 +81,7 @@
   width: 90%;
   max-width: 420px;
   height: 76px;
-  background: rgba(15, 15, 18, 0.8);
+  background: rgba(10, 10, 15, 0.85);
   backdrop-filter: blur(30px);
   border-radius: 3rem;
   border: 1px solid rgba(255,255,255,0.08);

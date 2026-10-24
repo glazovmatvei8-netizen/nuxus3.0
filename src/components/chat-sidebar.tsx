@@ -75,7 +75,7 @@ const ChatListItem = memo(({
             onClick={onClick}
             className={cn(
               "relative flex items-center gap-4 p-4 rounded-[2rem] transition-all duration-300 cursor-pointer group",
-              isActive ? "bg-primary/10 sonic-glow" : "hover:bg-white/[0.03]"
+              isActive ? "bg-primary/10 border border-primary/20 sonic-glow" : "hover:bg-white/[0.04]"
             )}
           >
             <div className="relative shrink-0">
@@ -149,7 +149,7 @@ export default function ChatSidebar() {
               <h1 className="text-5xl font-black text-white italic tracking-tighter uppercase leading-none">MIG</h1>
               <div className="bg-primary/10 border border-primary/20 px-3 py-1 rounded-full flex items-center gap-2">
                  <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                 <span className="text-[10px] font-black text-primary uppercase tracking-widest italic">V199</span>
+                 <span className="text-[10px] font-black text-primary uppercase tracking-widest italic">V204</span>
               </div>
            </div>
            <Button variant="ghost" size="icon" className="h-12 w-12 rounded-[1.2rem] bg-white/[0.03] border border-white/5 text-white hover:bg-primary/20" onClick={() => setIsCreateModalOpen(true)}>
@@ -159,7 +159,7 @@ export default function ChatSidebar() {
 
         <div className="relative group cursor-pointer" onClick={() => setIsSearchOpen(true)}>
           <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20 group-hover:text-primary transition-colors" />
-          <div className="w-full h-14 bg-white/[0.03] rounded-[1.5rem] border border-white/5 pl-16 flex items-center text-sm font-black uppercase text-white/20 tracking-widest italic shadow-inner">
+          <div className="w-full h-14 bg-white/[0.04] rounded-[1.5rem] border border-white/10 pl-16 flex items-center text-sm font-black uppercase text-white/20 tracking-widest italic shadow-inner">
             Search Network...
           </div>
         </div>

@@ -81,7 +81,7 @@ const ChatInputBar = memo(({ onSendMessage, onUpdateMessage, currentChatId, repl
   };
 
   return (
-    <footer className="p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-[#010103]/60 backdrop-blur-[50px] border-t border-white/5 shrink-0 z-40 relative">
+    <footer className="p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-background/80 backdrop-blur-[50px] border-t border-white/5 shrink-0 z-40 relative">
       <div className="flex gap-3 items-end w-full max-w-5xl mx-auto relative">
         
         <input type="file" ref={fileInputRef} hidden accept="image/*" onChange={handleFileSelect} />
@@ -101,7 +101,7 @@ const ChatInputBar = memo(({ onSendMessage, onUpdateMessage, currentChatId, repl
           </div>
         )}
 
-        <Button variant="ghost" size="icon" className="h-14 w-14 shrink-0 rounded-2xl bg-white/[0.03] border border-white/5" onClick={() => fileInputRef.current?.click()}>
+        <Button variant="ghost" size="icon" className="h-14 w-14 shrink-0 rounded-2xl bg-white/[0.04] border border-white/5" onClick={() => fileInputRef.current?.click()}>
           <Plus className="w-7 h-7 text-white/20" />
         </Button>
 
@@ -126,7 +126,7 @@ const ChatInputBar = memo(({ onSendMessage, onUpdateMessage, currentChatId, repl
           size="icon" 
           className={cn(
             "h-14 w-14 rounded-2xl transition-all shadow-2xl",
-            messageInput.trim() ? "bg-primary text-white sonic-glow" : "bg-white/[0.03] text-white/20"
+            messageInput.trim() ? "bg-primary text-white sonic-glow" : "bg-white/[0.04] text-white/20"
           )}
           onClick={handleAction}
           disabled={!messageInput.trim()}
@@ -247,8 +247,8 @@ export default function ChatArea() {
   const chatBackground = myProfile?.settings?.chatBackground;
 
   return (
-    <div className="flex-1 flex-col h-full bg-[#010103] relative overflow-hidden z-20 flex">
-      <header className="h-20 border-b border-white/5 bg-black/40 backdrop-blur-3xl flex items-center justify-between px-6 shrink-0 z-30 shadow-2xl">
+    <div className="flex-1 flex-col h-full bg-background relative overflow-hidden z-20 flex">
+      <header className="h-20 border-b border-white/5 bg-background/40 backdrop-blur-3xl flex items-center justify-between px-6 shrink-0 z-30 shadow-2xl">
         <div className="flex items-center gap-4 flex-1 min-w-0">
           <Button variant="ghost" size="icon" className="md:hidden rounded-2xl" onClick={() => setCurrentChatId(null)}><ChevronLeft size={28} /></Button>
           <div className="flex items-center gap-4 cursor-pointer min-w-0 flex-1 group" onClick={() => otherId ? setInspectedUserId(otherId) : setIsChatInfoOpen(true)}>
@@ -273,10 +273,10 @@ export default function ChatArea() {
         {chatBackground ? (
           <div className="absolute inset-0 z-0">
              <img src={chatBackground} className="w-full h-full object-cover opacity-80" alt="Chat BG" />
-             <div className="absolute inset-0 bg-black/20" />
+             <div className="absolute inset-0 bg-black/30" />
           </div>
         ) : (
-          <div className="absolute inset-0 z-0 bg-[radial-gradient(circle_at_50%_0%,rgba(0,212,255,0.03)_0%,transparent_70%)]" />
+          <div className="absolute inset-0 z-0 bg-[radial-gradient(circle_at_50%_0%,rgba(0,212,255,0.03)_0%,transparent_70%)] opacity-20" />
         )}
         
         <ScrollArea ref={scrollAreaRef} className="h-full w-full relative z-10" onScrollCapture={handleScroll}>

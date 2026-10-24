@@ -28,8 +28,8 @@ import {
 import { useTranslations } from '@/hooks/use-translations';
 
 /**
- * MIG MAIN UI V194.0 «AERO-FLUID»
- * ОПТИМИЗИРОВАНО: Премиальный стеклянный интерфейс и плавная навигация.
+ * MIG MAIN UI V204.0 «TITANIUM DEPTH»
+ * ОПТИМИЗИРОВАНО: Новая палитра с разделением слоев.
  */
 export default function ChatMain() {
   const { t } = useTranslations();
@@ -80,12 +80,12 @@ export default function ChatMain() {
   ];
 
   return (
-    <div className="fixed inset-0 flex flex-col w-screen bg-[#010103] overflow-hidden h-[100dvh]">
+    <div className="fixed inset-0 flex flex-col w-screen bg-background overflow-hidden h-[100dvh]">
       <NotificationListener />
       
       <div className="flex-1 flex overflow-hidden w-full relative h-full">
-        {/* Desktop Rail Navigation */}
-        <nav className="hidden md:flex flex-col items-center py-10 w-24 bg-black/40 border-r border-white/5 shrink-0 z-[100] gap-10 backdrop-blur-3xl">
+        {/* Desktop Rail Navigation - Самый темный слой */}
+        <nav className="hidden md:flex flex-col items-center py-10 w-24 bg-black/60 border-r border-white/5 shrink-0 z-[100] gap-10 backdrop-blur-3xl">
            <div className="p-3 rounded-2xl bg-primary/10 border border-primary/20 sonic-glow animate-pulse">
               <Zap className="w-6 h-6 text-primary fill-current" />
            </div>
@@ -109,12 +109,12 @@ export default function ChatMain() {
         </nav>
 
         <div className="flex-1 flex overflow-hidden h-full relative">
-          {/* Main Sidebar (List) */}
+          {/* Main Sidebar (List) - Средний слой */}
           <div className={cn(
-            "w-full md:w-[420px] h-full flex-shrink-0 z-30 bg-transparent border-r border-white/5 relative overflow-hidden transition-all duration-500", 
+            "w-full md:w-[420px] h-full flex-shrink-0 z-30 bg-card/30 border-r border-white/5 relative overflow-hidden transition-all duration-500", 
             (currentChatId && activeView === 'chats') ? "hidden md:block" : "block"
           )}>
-            <div className="h-full w-full">
+            <div className="h-full w-full titanium-gradient">
               {activeView === 'chats' && <ChatSidebar />}
               {activeView === 'discovery' && <DiscoveryView />}
               {activeView === 'ai' && <KernelShieldView />}
@@ -124,9 +124,9 @@ export default function ChatMain() {
             </div>
           </div>
           
-          {/* Chat Content View */}
+          {/* Chat Content View - Светлый слой */}
           <div className={cn(
-            "flex-1 h-full flex flex-col min-w-0 bg-black/20 relative z-20 overflow-hidden", 
+            "flex-1 h-full flex flex-col min-w-0 bg-background/50 relative z-20 overflow-hidden", 
             (!currentChatId || ['profile', 'wallet', 'discovery', 'ai'].includes(activeView)) ? "hidden md:flex" : "flex"
           )}>
             {currentChatId ? <ChatArea /> : (
