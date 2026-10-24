@@ -22,8 +22,8 @@ import { ru } from 'date-fns/locale';
 import { GiftModal } from './gift-modal';
 
 /**
- * USER PROFILE MODAL V121.0 «DIRECT CALLS»
- * ADDED: Real-time dialing button.
+ * USER PROFILE MODAL V202.0 «NATURAL IDENTITY»
+ * ОПТИМИЗИРОВАНО: Убран uppercase у юзернейма.
  */
 export function UserProfileModal() {
   const db = useFirestore();
@@ -158,7 +158,7 @@ export function UserProfileModal() {
                    {formatDisplayName(targetUser?.name, targetUser?.username)}
                    {isUserPremium(targetUser) && <Star className="w-6 h-6 text-primary fill-primary animate-pulse" />}
                  </h2>
-                 <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/40 mt-2 italic">{targetUser?.username || '@ID_UNKNOWN'}</p>
+                 <p className="text-[10px] font-black text-primary/40 mt-2 italic">{targetUser?.username || '@id_unknown'}</p>
                  
                  {birthdayText && (
                    <div className="mt-4 flex items-center gap-2 bg-white/5 px-4 py-1.5 rounded-xl border border-white/5 shadow-inner">

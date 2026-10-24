@@ -206,7 +206,7 @@ export default function ChatArea() {
   const chatBackground = myProfile?.settings?.chatBackground;
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#010103] relative overflow-hidden z-20">
+    <div className="flex-1 flex-col h-full bg-[#010103] relative overflow-hidden z-20 flex">
       <header className="h-20 border-b border-white/5 bg-black/40 backdrop-blur-3xl flex items-center justify-between px-6 shrink-0 z-30 shadow-2xl">
         <div className="flex items-center gap-4 flex-1 min-w-0">
           <Button variant="ghost" size="icon" className="md:hidden rounded-2xl" onClick={() => setCurrentChatId(null)}><ChevronLeft size={28} /></Button>
@@ -214,7 +214,7 @@ export default function ChatArea() {
             <UserAvatar userId={otherId || (chat?.type === 'saved' ? firebaseUser?.uid : null)} className="h-12 w-12 rounded-[1.2rem] border border-white/10" manualAvatarUrl={chat?.type !== 'private' && chat?.type !== 'saved' ? chat?.avatarUrl : otherProfile?.avatarUrl} fallbackName={displayName} showOnlineStatus={chat?.type === 'private'} />
             <div className="flex flex-col min-w-0">
               <span className="font-black text-lg truncate text-white italic tracking-tighter leading-none">{displayName}</span>
-              <span className="text-[10px] font-black text-primary/60 tracking-widest uppercase italic mt-1">{chat?.type === 'private' ? 'SIGNAL ACTIVE' : chat?.username || 'CLUSTER'}</span>
+              <span className="text-[10px] font-black text-primary/60 tracking-widest italic mt-1">{chat?.type === 'private' ? 'SIGNAL ACTIVE' : chat?.username || 'CLUSTER'}</span>
             </div>
           </div>
         </div>
@@ -231,8 +231,8 @@ export default function ChatArea() {
       <div className="flex-1 relative overflow-hidden z-10">
         {chatBackground ? (
           <div className="absolute inset-0 z-0">
-             <img src={chatBackground} className="w-full h-full object-cover opacity-30" alt="Chat BG" />
-             <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" />
+             <img src={chatBackground} className="w-full h-full object-cover opacity-80" alt="Chat BG" />
+             <div className="absolute inset-0 bg-black/20" />
           </div>
         ) : (
           <div className="absolute inset-0 z-0 bg-[radial-gradient(circle_at_50%_0%,rgba(0,212,255,0.03)_0%,transparent_70%)]" />

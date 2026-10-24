@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useCallback } from 'react';
@@ -16,8 +15,8 @@ import { cn } from '@/lib/utils';
 type SearchFilter = 'all' | 'users' | 'groups';
 
 /**
- * ГЛОБАЛЬНЫЙ ПОИСК V130.0 «SEARCH STABILITY»
- * FIXED: Reliable user discovery by using multiple query vectors.
+ * ГЛОБАЛЬНЫЙ ПОИСК V202.0 «NATURAL SEARCH»
+ * ОПТИМИЗИРОВАНО: Убран uppercase у юзернейма.
  */
 export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
   const { user } = useUser();
@@ -145,7 +144,7 @@ export function GlobalSearchModal({ open, onOpenChange }: { open: boolean, onOpe
                       <UserAvatar userId={res.type === 'user' ? res.data.id : null} manualAvatarUrl={res.data.avatarUrl} className="h-12 w-12 shrink-0 border border-white/10 shadow-lg" fallbackName={res.data.name} />
                       <div className="flex flex-col text-left min-w-0">
                          <span className="font-bold text-white truncate italic">{res.data.name || 'Анонимный узел'}</span>
-                         <span className="text-[10px] text-primary/60 uppercase font-black truncate tracking-widest">
+                         <span className="text-[10px] text-primary/60 font-black truncate tracking-widest">
                            {res.data.username} {res.type === 'chat' && `• ${res.data.type}`}
                          </span>
                       </div>

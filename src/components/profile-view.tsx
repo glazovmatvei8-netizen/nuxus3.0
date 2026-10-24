@@ -24,8 +24,8 @@ import { format, parseISO } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 /**
- * PROFILE VIEW V201.0 «DEEP SPACE»
- * ОПТИМИЗИРОВАНО: Фон унифицирован до глубокого черного.
+ * PROFILE VIEW V202.0 «DEEP SPACE»
+ * ОПТИМИЗИРОВАНО: Убран uppercase для юзернейма.
  */
 export default function ProfileView() {
   const { user } = useUser();
@@ -130,8 +130,8 @@ export default function ProfileView() {
                 )}
                 
                 <div className="bg-black/60 backdrop-blur-xl border border-white/5 px-6 py-1.5 rounded-full shadow-inner flex flex-col items-center gap-1">
-                   <span className="text-[10px] font-bold uppercase text-primary/60 tracking-[0.2em] italic">
-                     {profile?.username || '@USERNAME'}
+                   <span className="text-[10px] font-bold text-primary/60 tracking-[0.2em] italic">
+                     {profile?.username || '@username'}
                    </span>
                    <span className={cn(
                      "text-[8px] font-black uppercase tracking-widest",
