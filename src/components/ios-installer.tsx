@@ -1,4 +1,3 @@
-
 "use client"
 
 import React from 'react';
@@ -8,11 +7,11 @@ import Link from 'next/link';
 import Image from 'next/image';
 
 /**
- * Native-like iOS App Store Installation Screen V113.1
- * ОБНОВЛЕНО: Используется новая аватарка IMG-2541.jpg.
+ * Native-like iOS App Store Installation Screen V197.0
+ * ОБНОВЛЕНО: Используется новая официальная иконка MIG.
  */
 export function IosInstaller({ onDismiss }: { onDismiss: () => void }) {
-  const NEW_ICON_URL = 'https://i.postimg.cc/T2xvz0mn/IMG-2541.jpg';
+  const NEW_ICON_URL = 'https://storage.googleapis.com/fetch-studio-images/ed639417-646c-4867-b5cc-74431f0e2ec3.png';
 
   return (
     <div className="fixed inset-0 z-[2000] bg-[#0a0a0c] flex flex-col items-center overflow-y-auto pb-20 scrollbar-hide">
@@ -24,10 +23,10 @@ export function IosInstaller({ onDismiss }: { onDismiss: () => void }) {
       <div className="w-full max-w-md px-6 pt-10 relative z-10 flex flex-col items-center">
         <div className="w-full flex gap-6 mb-8 text-left">
           <div className="w-32 h-32 rounded-[2.5rem] bg-card border border-white/10 shadow-2xl flex items-center justify-center shrink-0 overflow-hidden relative">
-             <Image src={NEW_ICON_URL} alt="Nuxus Logo" fill className="object-cover" unoptimized />
+             <Image src={NEW_ICON_URL} alt="MIG Logo" fill className="object-cover" unoptimized />
           </div>
           <div className="flex flex-col justify-center flex-1">
-            <h1 className="text-2xl font-black text-white leading-tight">Nuxus 2.0</h1>
+            <h1 className="text-2xl font-black text-white leading-tight">MIG 2.0</h1>
             <p className="text-primary text-xs font-bold uppercase tracking-widest mt-1">Full Native Client</p>
             <div className="mt-4 flex gap-2">
               <Button className="bg-[#007AFF] hover:bg-[#007AFF]/90 text-white rounded-full h-8 px-6 font-black uppercase text-[10px] tracking-widest shadow-lg shadow-[#007AFF]/30">
@@ -44,7 +43,7 @@ export function IosInstaller({ onDismiss }: { onDismiss: () => void }) {
 
         <div className="w-full grid grid-cols-3 gap-0.5 border-y border-white/5 py-4 mb-8">
           <div className="flex flex-col items-center">
-            <span className="text-white font-black text-sm">V33.2</span>
+            <span className="text-white font-black text-sm">V35.4</span>
             <span className="text-[8px] font-bold text-muted-foreground uppercase">Версия</span>
           </div>
           <div className="w-px h-8 bg-white/5 self-center" />
@@ -73,7 +72,7 @@ export function IosInstaller({ onDismiss }: { onDismiss: () => void }) {
               </div>
             </div>
             <p className="text-[10px] text-white/60 leading-relaxed">
-              Зайдите в GitHub Actions вашего проекта, скачайте файл <b>Nuxus.ipa</b> и установите его через AltStore или Scarlet. Это даст 100% стабильность.
+              Зайдите в GitHub Actions вашего проекта, скачайте файл <b>MIG.ipa</b> и установите его через AltStore или Scarlet. Это даст 100% стабильность.
             </p>
           </div>
 
@@ -116,7 +115,7 @@ export function IosInstaller({ onDismiss }: { onDismiss: () => void }) {
                 <h3 className="text-[10px] font-black uppercase tracking-widest">Совет Оператора</h3>
             </div>
             <p className="text-[9px] text-muted-foreground leading-relaxed uppercase font-bold">
-                Native-версия позволяет использовать Face ID без ограничений Safari и обеспечивает мгновенные уведомления.
+                Использование новой иконки V197 гарантирует визуальную подлинность узла MIG в глобальной сети.
             </p>
         </div>
       </div>

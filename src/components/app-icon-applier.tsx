@@ -7,7 +7,7 @@ import { doc } from 'firebase/firestore';
 import type { User } from '@/lib/types';
 
 /**
- * ОБНОВЛЯТОР ИКОНОК V128.0 «SAFE OVERRIDE»
+ * ОБНОВЛЯТОР ИКОНОК V197.0 «CYBER M»
  */
 export function AppIconApplier() {
   const { user } = useUser();
@@ -25,7 +25,7 @@ export function AppIconApplier() {
 
   const { data: profile } = useDoc<User>(userRef);
 
-  const TARGET_ICON = 'https://i.postimg.cc/T2xvz0mn/IMG-2541.jpg?v=118';
+  const TARGET_ICON = 'https://storage.googleapis.com/fetch-studio-images/ed639417-646c-4867-b5cc-74431f0e2ec3.png';
 
   useEffect(() => {
     if (!mounted || typeof document === 'undefined') return;
@@ -34,7 +34,7 @@ export function AppIconApplier() {
       try {
         const customIcon = profile?.settings?.customAppIconUrl;
         const finalIcon = customIcon 
-          ? (customIcon.includes('?') ? `${customIcon}&v=118` : `${customIcon}?v=118`)
+          ? (customIcon.includes('?') ? `${customIcon}&v=197` : `${customIcon}?v=197`)
           : TARGET_ICON;
 
         const selectors = [
