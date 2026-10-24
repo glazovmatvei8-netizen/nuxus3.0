@@ -150,6 +150,8 @@ export default function ChatArea() {
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
   const [showScrollDown, setShowScrollDown] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const lastChatIdRef = useRef<string | null>(null);
+  const initialScrollDone = useRef(false);
 
   const chatRef = useMemoFirebase(() => (!db || !currentChatId) ? null : doc(db, 'chats', currentChatId), [db, currentChatId]);
   const { data: chat } = useDoc<Chat>(chatRef);
@@ -162,7 +164,7 @@ export default function ChatArea() {
   const { data: otherProfile } = useDoc<UserType>(otherProfileRef);
 
   const messagesQuery = useMemoFirebase(() => (!db || !currentChatId) ? null : query(collection(db, 'chats', currentChatId, 'messages'), orderBy('sentAt', 'asc')), [db, currentChatId]);
-  const { data: messages } = useCollection<Message>(messagesQuery);
+  const { data: messages, isLoading: isMessagesLoading } = useCollection<Message>(messagesQuery);
 
   const groupedMessages = useMemo(() => {
     if (!messages) return [];
@@ -209,26 +211,42 @@ export default function ChatArea() {
     return formatDisplayName(chat.name, chat.username);
   }, [chat, otherProfile]);
 
-  const scrollToBottom = () => {
+  const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
     if (scrollAreaRef.current) {
       const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
       if (scrollContainer) {
-        scrollContainer.scrollTo({ top: scrollContainer.scrollHeight, behavior: 'smooth' });
+        scrollContainer.scrollTo({ top: scrollContainer.scrollHeight, behavior });
       }
     }
   };
 
+  // Reset flag when chat changes
   useEffect(() => {
+    if (currentChatId !== lastChatIdRef.current) {
+      initialScrollDone.current = false;
+      lastChatIdRef.current = currentChatId;
+    }
+  }, [currentChatId]);
+
+  useEffect(() => {
+    if (!messages || messages.length === 0) return;
+
     if (scrollAreaRef.current) {
       const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
       if (scrollContainer) {
-        const isAtBottom = scrollContainer.scrollHeight - scrollContainer.scrollTop - scrollContainer.clientHeight < 100;
-        if (isAtBottom) {
-          scrollContainer.scrollTop = scrollContainer.scrollHeight;
+        const isAtBottom = scrollContainer.scrollHeight - scrollContainer.scrollTop - scrollContainer.clientHeight < 150;
+        
+        // Force scroll on first load of chat or if already at bottom
+        if (!initialScrollDone.current || isAtBottom) {
+          // Use a small timeout to ensure DOM is updated
+          setTimeout(() => {
+            scrollToBottom(!initialScrollDone.current ? 'auto' : 'smooth');
+            initialScrollDone.current = true;
+          }, 50);
         }
       }
     }
-  }, [messages?.length]);
+  }, [messages?.length, currentChatId]);
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const target = e.currentTarget;
@@ -306,7 +324,7 @@ export default function ChatArea() {
         {showScrollDown && (
           <Button 
             size="icon" 
-            onClick={scrollToBottom}
+            onClick={() => scrollToBottom()}
             className="absolute bottom-6 right-6 h-12 w-12 rounded-full bg-primary/80 backdrop-blur-xl text-white shadow-2xl z-30 animate-in fade-in zoom-in duration-300 border border-white/10"
           >
             <ArrowDown className="w-6 h-6" />
