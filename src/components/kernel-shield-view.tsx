@@ -4,23 +4,22 @@
 import React, { useState, useEffect } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
-  ShieldCheck, Activity, Gauge, Database, Lock, ShieldAlert, RefreshCcw, Cpu, Server
+  ShieldCheck, Activity, Gauge, Database, Lock, ShieldAlert, Cpu, Server
 } from 'lucide-react';
 import { cn, triggerHaptic } from '@/lib/utils';
-import { Button } from './ui/button';
 import { useTranslations } from '@/hooks/use-translations';
 import { useToast } from '@/hooks/use-toast';
 
 /**
- * KERNEL SHIELD V221.0 «INFINITE AEGIS»
- * UPDATED: Header is now part of the scroll flow. Fixed clipping issues.
+ * KERNEL SHIELD V222.0 «PASSIVE AEGIS»
+ * UPDATED: Removed manual TEST button. Diagnostics are now autonomous.
+ * FIXED: RefreshCw reference error eliminated.
  */
 export default function KernelShieldView() {
   const { t } = useTranslations();
   const { toast } = useToast();
   const [logs, setLogs] = useState<{t: string, m: string, type: 'sys' | 'sec' | 'net'}[]>([]);
-  const [ping, setPing] = useState<number | null>(null);
-  const [isTesting, setIsTesting] = useState(false);
+  const [ping, setPing] = useState<number>(24);
   const [threatsReflected, setThreatsReflected] = useState(142);
   const [cpuLoad, setCpuLoad] = useState(12);
 
@@ -36,7 +35,9 @@ export default function KernelShieldView() {
       const timestamp = new Date().toLocaleTimeString();
       const randomEvent = Math.random();
       
+      // Имитация нагрузки и пинга
       setCpuLoad(prev => Math.min(45, Math.max(8, prev + (Math.random() * 4 - 2))));
+      setPing(prev => Math.min(60, Math.max(12, prev + Math.floor(Math.random() * 6 - 3))));
 
       if (randomEvent > 0.85) {
         setLogs(prev => [...prev.slice(-40), { 
@@ -64,19 +65,6 @@ export default function KernelShieldView() {
     return () => clearInterval(interval);
   }, []);
 
-  const runDiagnostic = async () => {
-    setIsTesting(true);
-    triggerHaptic();
-    setPing(null);
-    const start = Date.now();
-    await new Promise(r => setTimeout(r, 2000));
-    const end = Date.now();
-    const result = Math.floor((end - start) / 15); 
-    setPing(result);
-    setIsTesting(false);
-    toast({ title: "Диагностика завершена", description: "Все узлы работают в штатном режиме." });
-  };
-
   const HARDWARE_STATS = [
     { name: t('shield.enc_core'), value: 'AES-256', icon: Lock, color: 'text-primary' },
     { name: 'Нагрузка', value: `${cpuLoad.toFixed(1)}%`, icon: Cpu, color: 'text-orange-400' },
@@ -89,7 +77,6 @@ export default function KernelShieldView() {
 
       <ScrollArea className="flex-1 relative z-10 no-scrollbar">
         <div className="flex flex-col">
-          {/* HEADER IS NOW INSIDE SCROLLAREA */}
           <header className="px-8 pt-16 pb-6 shrink-0 z-10 border-b border-white/5 bg-transparent">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
@@ -108,7 +95,7 @@ export default function KernelShieldView() {
           </header>
 
           <div className="px-8 space-y-10 py-8 pb-40">
-            {/* Main Diagnostic Gauge */}
+            {/* Autonomous Diagnostic Panel */}
             <div className="bg-[#0e111a] p-8 rounded-[3rem] border border-white/10 shadow-2xl relative overflow-hidden group">
               <div className="absolute top-0 right-0 p-4 opacity-5 rotate-12">
                   <Server className="w-32 h-32 text-primary" />
@@ -120,19 +107,21 @@ export default function KernelShieldView() {
                     </div>
                     <div className="flex flex-col text-left">
                         <span className="text-lg font-black uppercase italic text-white tracking-widest">{t('shield.diagnostic')}</span>
-                        <span className="text-[10px] text-white/40 font-bold uppercase mt-1">Анализ шлюзов QES</span>
+                        <span className="text-[10px] text-white/40 font-bold uppercase mt-1">Автоматический мониторинг шлюзов</span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-8">
-                    {ping !== null && (
-                      <div className="flex flex-col items-end">
-                          <span className="text-3xl font-black italic text-primary tabular-nums leading-none">{ping}<span className="text-[12px] ml-1">ms</span></span>
-                          <span className="text-[7px] font-black text-white/20 uppercase tracking-widest">Network Latency</span>
-                      </div>
-                    )}
-                    <Button onClick={runDiagnostic} disabled={isTesting} className="h-14 px-8 rounded-2xl bg-primary text-white font-black uppercase text-[11px] tracking-widest shadow-2xl shadow-primary/20 border border-white/10 active:scale-95 transition-all">
-                      {isTesting ? <RefreshCw className="w-5 h-5 animate-spin" /> : "Активировать"}
-                    </Button>
+                  <div className="flex items-center gap-8 pr-4">
+                    <div className="flex flex-col items-end">
+                        <span className="text-4xl font-black italic text-primary tabular-nums leading-none animate-in fade-in duration-500" key={ping}>
+                          {ping}<span className="text-[12px] ml-1">ms</span>
+                        </span>
+                        <span className="text-[7px] font-black text-white/20 uppercase tracking-widest mt-1">Network Latency</span>
+                    </div>
+                    <div className="w-px h-10 bg-white/5 mx-2" />
+                    <div className="flex flex-col items-start">
+                        <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Stable</span>
+                        <span className="text-[7px] font-bold text-white/20 uppercase">Signal Flow</span>
+                    </div>
                   </div>
               </div>
             </div>
