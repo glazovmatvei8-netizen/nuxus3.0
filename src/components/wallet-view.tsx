@@ -22,8 +22,8 @@ import { useTranslations } from '@/hooks/use-translations';
 import { useAppState } from '@/lib/app-state';
 
 /**
- * WALLET VIEW V191.0 «Full Russian»
- * FIXED: All English labels replaced with translations.
+ * WALLET VIEW V201.0 «DEEP SPACE»
+ * ОПТИМИЗИРОВАНО: Фон унифицирован до глубокого черного.
  */
 export default function WalletView() {
   const { user } = useUser();
@@ -78,16 +78,16 @@ export default function WalletView() {
     }
   };
 
-  if (!mounted) return <div className="flex-1 bg-[#121212]" />;
+  if (!mounted) return <div className="flex-1 bg-[#010103]" />;
 
   return (
-    <div className="flex flex-col h-full bg-[#121212] overflow-hidden relative">
+    <div className="flex flex-col h-full bg-[#010103] overflow-hidden relative">
       <ScrollArea className="flex-1">
         <div className="px-6 pt-16 pb-40 space-y-10">
           <h1 className="text-3xl font-black text-primary italic tracking-tighter uppercase text-center w-full">{t('wallet.title')}</h1>
 
           <div className="relative h-48 w-full rounded-[3rem] p-[1.5px] bg-gradient-to-r from-primary/40 via-primary/80 to-primary/40 shadow-[0_20px_60px_rgba(229,142,56,0.3)]">
-             <div className="h-full w-full bg-[#121212] rounded-[3rem] flex flex-col items-center justify-center relative overflow-hidden">
+             <div className="h-full w-full bg-[#010103] rounded-[3rem] flex flex-col items-center justify-center relative overflow-hidden">
                 <div className="relative z-10 text-center space-y-1">
                   {isProfileLoading ? (
                     <Loader2 className="w-8 h-8 text-primary animate-spin mx-auto" />

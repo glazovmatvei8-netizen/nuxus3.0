@@ -24,8 +24,8 @@ import { format, parseISO } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 /**
- * PROFILE VIEW V199.0 «NATURAL CASE»
- * ОПТИМИЗИРОВАНО: Удален принудительный uppercase для имени пользователя.
+ * PROFILE VIEW V201.0 «DEEP SPACE»
+ * ОПТИМИЗИРОВАНО: Фон унифицирован до глубокого черного.
  */
 export default function ProfileView() {
   const { user } = useUser();
@@ -67,11 +67,11 @@ export default function ProfileView() {
     toast({ title: "Синхронизация..." });
   };
 
-  if (!mounted) return <div className="flex-1 bg-[#121212]" />;
+  if (!mounted) return <div className="flex-1 bg-[#010103]" />;
 
   if (isLoading && !profile) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center bg-[#121212] gap-6">
+      <div className="flex-1 flex flex-col items-center justify-center bg-[#010103] gap-6">
         <Loader2 className="w-10 h-10 text-primary animate-spin" />
         <p className="text-[10px] font-black uppercase text-white/20 tracking-[0.4em]">Синхронизация узла...</p>
       </div>
@@ -79,7 +79,7 @@ export default function ProfileView() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-[#121212] overflow-hidden relative">
+    <div className="flex flex-col h-full bg-[#010103] overflow-hidden relative">
       <header className="h-14 flex items-center justify-between px-6 shrink-0 z-[100] border-b border-white/[0.05] bg-card/40 backdrop-blur-md">
         <div className="w-5" />
         <div className="bg-white/5 px-4 py-1 rounded-full border border-white/5 shadow-inner">

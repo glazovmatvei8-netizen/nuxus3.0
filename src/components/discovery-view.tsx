@@ -15,6 +15,10 @@ import { cn, triggerHaptic } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslations } from '@/hooks/use-translations';
 
+/**
+ * DISCOVERY VIEW V201.0 «DEEP SPACE»
+ * ОПТИМИЗИРОВАНО: Фон унифицирован до глубокого черного.
+ */
 export default function DiscoveryView() {
   const { user } = useUser();
   const db = useFirestore();
@@ -78,8 +82,8 @@ export default function DiscoveryView() {
   }, [search, RECOMMEND_NODES]);
 
   return (
-    <div className="flex flex-col h-full bg-[#121212] overflow-hidden relative">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(229,142,56,0.03)_0%,transparent_70%)] pointer-events-none" />
+    <div className="flex flex-col h-full bg-[#010103] overflow-hidden relative">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(0,212,255,0.03)_0%,transparent_70%)] pointer-events-none" />
 
       <div className="px-6 pt-12 pb-4 shrink-0 text-center relative z-10">
         <h1 className="text-3xl font-black text-white italic tracking-tighter uppercase leading-none">

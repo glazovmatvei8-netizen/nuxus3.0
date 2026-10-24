@@ -232,7 +232,7 @@ export default function ChatArea() {
         {chatBackground ? (
           <div className="absolute inset-0 z-0">
              <img src={chatBackground} className="w-full h-full object-cover opacity-30" alt="Chat BG" />
-             <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" />
+             <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" />
           </div>
         ) : (
           <div className="absolute inset-0 z-0 bg-[radial-gradient(circle_at_50%_0%,rgba(0,212,255,0.03)_0%,transparent_70%)]" />
