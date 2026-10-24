@@ -1,3 +1,4 @@
+
 'use client';
 
 /**
@@ -12,6 +13,13 @@ import { encryptSignal } from '@/lib/utils';
 import type { Message, User } from '@/lib/types';
 
 export const signalService = {
+  /**
+   * Генерация короткого 7-значного ID узла
+   */
+  generateShortId() {
+    return Math.floor(1000000 + Math.random() * 9000000).toString();
+  },
+
   /**
    * Трансляция текстового сигнала (Отправка сообщения)
    */
@@ -131,6 +139,7 @@ export const signalService = {
         name: otherUser.name,
         username: otherUser.username,
         avatarUrl: otherUser.avatarUrl || null,
+        shortId: this.generateShortId(),
         metadata: {
           [currentUser.id]: { name: currentUser.name, username: currentUser.username, avatarUrl: currentUser.avatarUrl },
           [otherUser.id]: { name: otherUser.name, username: otherUser.username, avatarUrl: otherUser.avatarUrl }

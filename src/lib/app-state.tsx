@@ -4,12 +4,7 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import type { Message, Story, Track } from './types';
 
-/**
- * APP STATE ENGINE V183.0 «ASCENSION»
- * ОПТИМИЗИРОВАНО: Добавлена поддержка именования слотов и расширенного состояния.
- */
-
-export type MainView = 'chats' | 'contacts' | 'calls' | 'profile' | 'archive' | 'music' | 'wallet' | 'games' | 'discovery' | 'ai';
+export type MainView = 'shield' | 'chats' | 'contacts' | 'calls' | 'profile' | 'archive' | 'music' | 'wallet' | 'games' | 'discovery' | 'ai';
 
 interface AppState {
   currentChatId: string | null;
@@ -64,6 +59,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [inspectedUserId, setInspectedUserId] = useState<string | null>(null);
   const [activeAccountIndex, setActiveAccountIndex] = useState(0);
   const [slotNames, setSlotNames] = useState<string[]>(['Слот 1', 'Слот 2', 'Слот 3', 'Слот 4', 'Слот 5']);
+
+  // HYPER-ROUTING SYNC
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    const path = activeView === 'chats' && currentChatId ? `/im${currentChatId.slice(0, 7)}` : `/${activeView}`;
+    window.history.pushState({ view: activeView, chat: currentChatId }, '', path);
+  }, [activeView, currentChatId]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {

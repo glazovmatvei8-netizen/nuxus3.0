@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState } from 'react';
@@ -13,6 +14,7 @@ import { collection, addDoc } from 'firebase/firestore';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { triggerHaptic } from '@/lib/utils';
 import { NuxusLogo } from '../nuxus-logo';
+import { signalService } from '@/services/signal-service';
 
 interface CreateChatModalProps {
   open: boolean;
@@ -20,8 +22,8 @@ interface CreateChatModalProps {
 }
 
 /**
- * CREATE CHAT MODAL V211.0 «TITANIUM RESTORATION»
- * ОПТИМИЗИРОВАНО: Убрана фиолетовая плашка, возвращен лаконичный стиль MIG.
+ * CREATE CHAT MODAL V218.0 «TITANIUM SHORT ID»
+ * ОПТИМИЗИРОВАНО: Добавлена генерация 7-значных shortId для новых чатов.
  */
 export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
   const { user } = useUser();
@@ -55,6 +57,7 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
         ownerId: user.uid,
         createdAt: new Date().toISOString(),
         isPublic: true,
+        shortId: signalService.generateShortId(),
         metadata: {} 
       };
 

@@ -1,14 +1,13 @@
+
 "use client"
 
 import React, { useEffect, useMemo } from 'react';
 import ChatSidebar from './chat-sidebar';
 import ChatArea from './chat-area';
-import ContactsView from './contacts-view';
-import CallsView from './calls-view';
-import ProfileView from './profile-view';
-import WalletView from './wallet-view';
 import DiscoveryView from './discovery-view';
 import KernelShieldView from './kernel-shield-view';
+import WalletView from './wallet-view';
+import ProfileView from './profile-view';
 import { useAppState } from '@/lib/app-state';
 import { cn, triggerHaptic } from '@/lib/utils';
 import { useUser, useFirestore } from '@/firebase/provider';
@@ -65,10 +64,11 @@ export default function ChatMain() {
     }
   }, [incomingCalls, activeCallId, setActiveCallId]);
 
+  // SWAPPED: Shield first, then Chats
   const NAV_ITEMS = [
+    { id: 'shield', icon: ShieldCheck, label: t('app.shield') },
     { id: 'chats', icon: MessageSquare, label: t('app.chats') },
     { id: 'discovery', icon: Globe, label: t('app.explore') },
-    { id: 'ai', icon: ShieldCheck, label: t('app.shield') },
     { id: 'wallet', icon: Wallet, label: t('app.wallet') },
     { id: 'profile', icon: LayoutGrid, label: t('app.profile') },
   ];
@@ -115,25 +115,34 @@ export default function ChatMain() {
         </nav>
 
         <div className="flex-1 flex overflow-hidden h-full relative">
-          {/* Unified Explorer Layer */}
+          {/* Unified Explorer Layer (KEEP ALIVE SWITCHING) */}
           <div className={cn(
             "w-full lg:w-[480px] h-full flex-shrink-0 z-30 bg-black/20 border-r border-white/5 relative overflow-hidden transition-all duration-700", 
             (currentChatId && activeView === 'chats') ? "hidden lg:block" : "block"
           )}>
-            <div className="h-full w-full titanium-gradient">
-              {activeView === 'chats' && <ChatSidebar />}
-              {activeView === 'discovery' && <DiscoveryView />}
-              {activeView === 'ai' && <KernelShieldView />}
-              {activeView === 'wallet' && <WalletView />}
-              {activeView === 'profile' && <ProfileView />}
-              {activeView === 'calls' && <CallsView />}
+            <div className="h-full w-full titanium-gradient relative">
+               <div className={cn("absolute inset-0 transition-opacity duration-300", activeView === 'shield' ? "opacity-100 z-10" : "opacity-0 z-0 pointer-events-none")}>
+                 <KernelShieldView />
+               </div>
+               <div className={cn("absolute inset-0 transition-opacity duration-300", activeView === 'chats' ? "opacity-100 z-10" : "opacity-0 z-0 pointer-events-none")}>
+                 <ChatSidebar />
+               </div>
+               <div className={cn("absolute inset-0 transition-opacity duration-300", activeView === 'discovery' ? "opacity-100 z-10" : "opacity-0 z-0 pointer-events-none")}>
+                 <DiscoveryView />
+               </div>
+               <div className={cn("absolute inset-0 transition-opacity duration-300", activeView === 'wallet' ? "opacity-100 z-10" : "opacity-0 z-0 pointer-events-none")}>
+                 <WalletView />
+               </div>
+               <div className={cn("absolute inset-0 transition-opacity duration-300", activeView === 'profile' ? "opacity-100 z-10" : "opacity-0 z-0 pointer-events-none")}>
+                 <ProfileView />
+               </div>
             </div>
           </div>
           
           {/* Signal Stream Layer */}
           <div className={cn(
             "flex-1 h-full flex flex-col min-w-0 bg-[#050508]/40 relative z-20 overflow-hidden", 
-            (!currentChatId || ['profile', 'wallet', 'discovery', 'ai'].includes(activeView)) ? "hidden lg:flex" : "flex"
+            (!currentChatId || ['profile', 'wallet', 'discovery', 'shield'].includes(activeView)) ? "hidden lg:flex" : "flex"
           )}>
             {currentChatId ? <ChatArea /> : (
               <div className="hidden lg:flex flex-1 flex-col items-center justify-center p-20 text-center space-y-10">
