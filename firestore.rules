@@ -45,6 +45,11 @@ service cloud.firestore {
         allow read: if isOwner(userId) || isPrimeAdmin();
         allow write: if isPrimeAdmin();
       }
+
+      match /receivedGifts/{giftId} {
+        allow read: if isSignedIn();
+        allow write: if isPrimeAdmin();
+      }
     }
 
     // --- ЗАЩИТА СООБЩЕНИЙ ---
@@ -55,9 +60,12 @@ service cloud.firestore {
       allow read: if isSignedIn() && (isPrimeAdmin() || request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds);
       allow delete: if isPrimeAdmin() || (isSignedIn() && request.auth.uid == resource.data.senderId);
       
-      // Разрешаем обновление только автору и только определенных полей
-      allow update: if isSignedIn() && request.auth.uid == resource.data.senderId &&
-                    !request.resource.data.diff(resource.data).affectedKeys().hasAny(['senderId', 'chatId', 'sentAt', 'contentType']);
+      // РАЗРЕШЕНО: 1. Автор меняет текст. 2. Любой участник меняет ТОЛЬКО реакции.
+      allow update: if isSignedIn() && (
+        (request.auth.uid == resource.data.senderId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['senderId', 'chatId', 'sentAt', 'contentType']))
+        ||
+        (request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions']))
+      );
     }
 
     // --- ФИНАНСОВЫЙ ШЛЮЗ ---

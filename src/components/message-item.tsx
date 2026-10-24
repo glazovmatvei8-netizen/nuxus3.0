@@ -1,19 +1,17 @@
 
 "use client"
 
-import React, { memo, useMemo, useState, useEffect, useRef } from 'react';
+import React, { memo, useMemo, useState, useEffect } from 'react';
 import { UserAvatar } from '@/components/user-avatar';
 import { format } from 'date-fns';
 import { 
-  Check, CheckCheck, Play, Pause, MoreHorizontal, 
-  Copy, Share2, Pin, Trash2, Heart, Smile,
-  Reply, Edit2, Flame, Zap, ImageIcon
+  Check, CheckCheck, Trash2, Reply, Edit2, Share2, ImageIcon, Smile
 } from 'lucide-react';
-import { cn, triggerHaptic, decryptSignal, getReputationInfo } from '@/lib/utils';
+import { cn, triggerHaptic, decryptSignal } from '@/lib/utils';
 import { useAppState } from '@/lib/app-state';
 import { useUser, useFirestore } from '@/firebase/provider';
 import { useDoc } from '@/firebase/firestore/use-doc';
-import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { doc, updateDoc, arrayUnion, arrayRemove, deleteDoc } from 'firebase/firestore';
 import type { User, Message } from '@/lib/types';
 import {
   ContextMenu,
@@ -23,10 +21,8 @@ import {
 } from "@/components/ui/context-menu";
 import { useToast } from '@/hooks/use-toast';
 
-/**
- * MIG MESSAGE ITEM V196.0 «VISUAL SIGNAL»
- * ОПТИМИЗИРОВАНО: Корректное отображение HD фото-пакетов.
- */
+const REACTIONS_POOL = ['❤️', '🔥', '👍', '⚡', '🛸', '😂', '😮'];
+
 export const MessageItem = memo(({ message, isMe, onReply, onEdit, chatId }: any) => {
   const { setInspectedUserId, setForwardingMessage } = useAppState();
   const { user } = useUser();
@@ -48,6 +44,29 @@ export const MessageItem = memo(({ message, isMe, onReply, onEdit, chatId }: any
     if (message.contentType === 'text') return decryptSignal(message.content);
     return message.content;
   }, [message.content, message.contentType]);
+
+  const handleToggleReaction = async (emoji: string) => {
+    if (!db || !user || !chatId) return;
+    triggerHaptic();
+    const msgRef = doc(db, 'chats', chatId, 'messages', message.id);
+    const hasMyReaction = message.reactions?.[emoji]?.includes(user.uid);
+
+    try {
+      if (hasMyReaction) {
+        await updateDoc(msgRef, { [`reactions.${emoji}`]: arrayRemove(user.uid) });
+      } else {
+        await updateDoc(msgRef, { [`reactions.${emoji}`]: arrayUnion(user.uid) });
+      }
+    } catch (e) {
+      console.error("Reaction sync failed:", e);
+      toast({ title: "Сбой реакций", variant: "destructive" });
+    }
+  };
+
+  const activeReactions = useMemo(() => {
+    if (!message.reactions) return [];
+    return Object.entries(message.reactions).filter(([, uids]: any) => uids.length > 0);
+  }, [message.reactions]);
 
   return (
     <div className={cn("w-full flex flex-col mb-1.5 transition-all", isMe ? "items-end" : "items-start")}>
@@ -84,18 +103,45 @@ export const MessageItem = memo(({ message, isMe, onReply, onEdit, chatId }: any
               )}
 
               <div className="flex items-center justify-end gap-1.5 mt-1.5 opacity-30">
-                {message.editedAt && <span className="text-[7px] font-black italic">EDIT</span>}
+                {message.editedAt && <span className="text-[7px] font-black italic">изм.</span>}
                 <span className="text-[8px] font-black tabular-nums">{time}</span>
                 {isMe && (message.isRead ? <CheckCheck size={10} className="text-blue-400" /> : <Check size={10} />)}
               </div>
+
+              {activeReactions.length > 0 && (
+                <div className={cn(
+                  "absolute -bottom-4 flex gap-1 bg-black/40 backdrop-blur-3xl border border-white/10 p-1 rounded-full shadow-2xl",
+                  isMe ? "right-0" : "left-0"
+                )}>
+                  {activeReactions.map(([emoji, uids]: any) => (
+                    <button 
+                      key={emoji}
+                      onClick={() => handleToggleReaction(emoji)}
+                      className={cn(
+                        "flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black transition-all",
+                        uids.includes(user?.uid) ? "bg-primary/20 text-primary border border-primary/20" : "text-white/40"
+                      )}
+                    >
+                      <span>{emoji}</span>
+                      <span>{uids.length}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </ContextMenuTrigger>
 
         <ContextMenuContent className="w-52 mig-glass-heavy rounded-2xl p-2">
-          <div className="flex justify-around p-2 mb-2 bg-white/5 rounded-xl">
-            {['❤️', '🔥', '👍', '⚡', '🛸'].map(e => (
-              <button key={e} className="text-lg hover:scale-125 transition-transform">{e}</button>
+          <div className="flex justify-around p-2 mb-2 bg-white/5 rounded-xl border border-white/5">
+            {REACTIONS_POOL.map(e => (
+              <button 
+                key={e} 
+                onClick={() => handleToggleReaction(e)}
+                className="text-lg hover:scale-125 transition-transform active:scale-90"
+              >
+                {e}
+              </button>
             ))}
           </div>
           <ContextMenuItem onClick={() => onReply(message)} className="gap-3 py-2.5 rounded-xl font-black text-[10px] uppercase text-white"><Reply size={14} className="text-primary" /> Ответить</ContextMenuItem>

@@ -39,7 +39,6 @@ const ChatInputBar = memo(({ onSendMessage, onUpdateMessage, currentChatId, repl
   
   const [messageInput, setMessageInput] = useState('');
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
-  
   const [ttl, setTtl] = useState<number | null>(null);
 
   useEffect(() => {
@@ -54,12 +53,11 @@ const ChatInputBar = memo(({ onSendMessage, onUpdateMessage, currentChatId, repl
     if (!messageInput.trim()) return;
     triggerHaptic();
     
-    let selfDestructAt = null;
-    if (ttl) selfDestructAt = addMinutes(new Date(), ttl).toISOString();
-
     if (editingMessage) {
       onUpdateMessage(editingMessage.id, messageInput);
     } else {
+      let selfDestructAt = null;
+      if (ttl) selfDestructAt = addMinutes(new Date(), ttl).toISOString();
       onSendMessage(messageInput, 'text', { selfDestructAt });
     }
     
@@ -81,7 +79,6 @@ const ChatInputBar = memo(({ onSendMessage, onUpdateMessage, currentChatId, repl
       toast({ title: "Медиа пакет отправлен" });
     };
     reader.readAsDataURL(file);
-    // Сброс инпута для повторного выбора того же файла
     e.target.value = '';
   };
 
@@ -91,14 +88,13 @@ const ChatInputBar = memo(({ onSendMessage, onUpdateMessage, currentChatId, repl
         
         <input type="file" ref={fileInputRef} hidden accept="image/*" onChange={handleFileSelect} />
 
-        {/* Reply/Edit Indicator */}
         {(replyTo || editingMessage) && (
-          <div className="absolute bottom-full left-0 right-0 mb-3 p-4 mig-glass rounded-3xl animate-in slide-in-from-bottom-4">
+          <div className="absolute bottom-full left-0 right-0 mb-3 p-4 mig-glass rounded-3xl animate-in slide-in-from-bottom-4 shadow-2xl">
              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3 min-w-0">
-                   <div className="w-1.5 h-10 bg-primary rounded-full" />
+                   <div className="w-1 h-10 bg-primary rounded-full" />
                    <div className="flex flex-col min-w-0">
-                      <span className="text-[10px] font-black text-primary uppercase tracking-widest">{editingMessage ? 'EDITING SIGNAL' : 'REPLYING TO'}</span>
+                      <span className="text-[10px] font-black text-primary uppercase tracking-widest">{editingMessage ? 'Редактирование' : 'Ответ'}</span>
                       <span className="text-sm text-white/60 truncate italic">{decryptSignal(editingMessage?.content || replyTo?.content)}</span>
                    </div>
                 </div>
@@ -113,10 +109,12 @@ const ChatInputBar = memo(({ onSendMessage, onUpdateMessage, currentChatId, repl
 
         <div className="flex-1 flex items-end mig-glass rounded-[1.8rem] min-h-[56px] px-5 py-3.5 gap-2 group/input">
            <Textarea 
-             placeholder={t('chat.placeholder')} 
+             placeholder={editingMessage ? "Править сигнал..." : t('chat.placeholder')} 
              className="bg-transparent border-none focus-visible:ring-0 text-white min-h-[24px] max-h-[200px] py-0 text-[16px] font-bold resize-none w-full shadow-none" 
              value={messageInput} 
+             autoFocus={!!editingMessage}
              onChange={e => { setMessageInput(e.target.value); if(!editingMessage) setLocalDrafts(prev => ({ ...prev, [currentChatId]: e.target.value })); }} 
+             onKeyDown={e => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAction(); } }}
            />
            <Popover open={isEmojiPickerOpen} onOpenChange={setIsEmojiPickerOpen}>
               <PopoverTrigger asChild><Button variant="ghost" size="icon" className="text-white/20 h-8 w-8 shrink-0 hover:text-primary transition-colors"><Smile size={24} /></Button></PopoverTrigger>
@@ -157,6 +155,9 @@ export default function ChatArea() {
   const chatRef = useMemoFirebase(() => (!db || !currentChatId) ? null : doc(db, 'chats', currentChatId), [db, currentChatId]);
   const { data: chat } = useDoc<Chat>(chatRef);
 
+  const userProfileRef = useMemoFirebase(() => (!db || !firebaseUser) ? null : doc(db, 'users', firebaseUser.uid), [db, firebaseUser?.uid]);
+  const { data: myProfile } = useDoc<UserType>(userProfileRef);
+
   const otherId = useMemo(() => chat?.type === 'private' ? chat.participantIds.find(id => id !== firebaseUser?.uid) : null, [chat, firebaseUser?.uid]);
   const otherProfileRef = useMemoFirebase(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
   const { data: otherProfile } = useDoc<UserType>(otherProfileRef);
@@ -184,7 +185,7 @@ export default function ChatArea() {
     try {
       await signalService.updateSignal(currentChatId, messageId, newContent);
       setEditingMessage(null);
-    } catch (e) { toast({ title: "Update Rejected", variant: "destructive" }); }
+    } catch (e) { toast({ title: "Ошибка обновления", variant: "destructive" }); }
   }, [currentChatId, toast]);
 
   const displayName = useMemo(() => {
@@ -194,7 +195,6 @@ export default function ChatArea() {
     return formatDisplayName(chat.name, chat.username);
   }, [chat, otherProfile]);
 
-  // Auto-scroll to bottom
   useEffect(() => {
     if (scrollAreaRef.current) {
       const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
@@ -203,6 +203,8 @@ export default function ChatArea() {
       }
     }
   }, [messages?.length]);
+
+  const chatBackground = myProfile?.settings?.chatBackground;
 
   return (
     <div className="flex-1 flex flex-col h-full bg-[#010103] relative overflow-hidden z-20">
@@ -227,8 +229,17 @@ export default function ChatArea() {
         </div>
       </header>
 
-      <div className="flex-1 relative overflow-hidden z-10 bg-[radial-gradient(circle_at_50%_0%,rgba(0,212,255,0.03)_0%,transparent_70%)]">
-        <ScrollArea ref={scrollAreaRef} className="h-full w-full">
+      <div className="flex-1 relative overflow-hidden z-10">
+        {chatBackground ? (
+          <div className="absolute inset-0 z-0">
+             <img src={chatBackground} className="w-full h-full object-cover opacity-30" alt="Chat BG" />
+             <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" />
+          </div>
+        ) : (
+          <div className="absolute inset-0 z-0 bg-[radial-gradient(circle_at_50%_0%,rgba(0,212,255,0.03)_0%,transparent_70%)]" />
+        )}
+        
+        <ScrollArea ref={scrollAreaRef} className="h-full w-full relative z-10">
           <div className="flex flex-col gap-2 px-6 py-8">
             {messages?.map(msg => (
               <MessageItem 

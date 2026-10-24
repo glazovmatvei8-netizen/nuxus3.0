@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, type ReactNode, useRef } from 'react';
@@ -17,10 +18,6 @@ import { addDays } from 'date-fns';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import type { User } from '@/lib/types';
 
-/**
- * SOVEREIGN PROVIDER V149.0 «ANTI-CRASH GUARD»
- * ОПТИМИЗИРОВАНО: Cleaned from merge conflict markers.
- */
 function SubscriptionGuard({ children }: { children: ReactNode }) {
   const { user } = useUser();
   const db = useFirestore();
@@ -63,9 +60,9 @@ function SubscriptionGuard({ children }: { children: ReactNode }) {
               createdAt: new Date().toISOString()
             });
 
-            console.log(`🛰️ Nuxus Kernel: Subscription ${planName} auto-renewed until ${nextExpiry}`);
+            console.log(`🛰️ MIG Kernel: Subscription ${planName} auto-renewed until ${nextExpiry}`);
           } catch (e) {
-            console.error("Nuxus Kernel: Auto-renewal failed", e);
+            console.error("MIG Kernel: Auto-renewal failed", e);
           }
         } else {
           await updateDoc(doc(db, 'users', user.uid), {
@@ -122,7 +119,7 @@ export function SovereignProvider({ children }: { children: ReactNode }) {
             )}>
               <div className="flex flex-col items-center gap-6">
                 <NuxusLogo size={80} className="opacity-20 animate-pulse" />
-                <p className="text-[10px] font-black uppercase text-white/20 tracking-[0.6em]">Nuxus Kernel V155.0</p>
+                <p className="text-[10px] font-black uppercase text-white/20 tracking-[0.6em]">MIG Kernel V198.0</p>
               </div>
             </div>
 

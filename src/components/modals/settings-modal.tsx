@@ -47,6 +47,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const { settingsTab, setSettingsTab, setIsLegalOpen } = useAppState();
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const bgInputRef = useRef<HTMLInputElement>(null);
   
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user?.uid]);
   const { data: profile } = useDoc<User>(userRef);
@@ -54,6 +55,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const [isSaving, setIsSaving] = useState(false);
   const [isSubscribing, setIsSubscribing] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [bgPreview, setBgPreview] = useState<string | null>(null);
   
   const [form, setForm] = useState({
     name: '', username: '', bio: '', birthday: '', statusText: '',
@@ -86,6 +88,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         autoRenew: !!profile.autoRenew
       });
       setAvatarPreview(profile.avatarUrl || null);
+      setBgPreview(profile.settings?.chatBackground || null);
     }
   }, [profile, open]);
 
@@ -109,6 +112,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         'settings.bubbleStyle': form.bubbleStyle,
         'settings.messageRadius': form.borderRadius,
         'settings.nameColor': form.nameColor,
+        'settings.chatBackground': bgPreview,
         'settings.privacy.isGhostMode': form.isGhostMode,
         'settings.privacy.isEnergySaving': form.isEnergySaving,
         autoRenew: form.autoRenew
@@ -169,7 +173,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
             </div>
             <div className="flex flex-col">
               <DialogTitle className="text-2xl font-black italic uppercase text-white tracking-tighter">Настройки Ядра</DialogTitle>
-              <DialogDescription className="text-[9px] font-bold uppercase text-primary/60 mt-0.5 tracking-widest italic">V192.0 Prime Ascension</DialogDescription>
+              <DialogDescription className="text-[9px] font-bold uppercase text-primary/60 mt-0.5 tracking-widest italic">V198.0 MIG Stable</DialogDescription>
             </div>
           </div>
         </DialogHeader>
@@ -282,7 +286,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                              const file = e.target.files?.[0];
                              if (file) {
                                 const reader = new FileReader();
-                                reader.onloadend = () => setAvatarPreview(reader.result as string);
+                                reader.onloadend = async () => setAvatarPreview(await compressImage(reader.result as string, 400, 0.7));
                                 reader.readAsDataURL(file);
                              }
                           }} />
@@ -328,6 +332,39 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                        </div>
                        <Slider value={[form.borderRadius]} onValueChange={([v]) => setForm({...form, borderRadius: v})} max={40} min={0} step={2} />
                     </div>
+
+                    <div className="pt-6 border-t border-white/5 space-y-4">
+                       <div className="flex items-center gap-3">
+                          <ImageIcon className="w-4 h-4 text-primary" />
+                          <Label className="text-[9px] font-black uppercase text-primary/60 tracking-widest">Фон чатов</Label>
+                       </div>
+                       
+                       {bgPreview ? (
+                         <div className="relative aspect-video rounded-2xl overflow-hidden border border-white/10 group">
+                           <img src={bgPreview} className="w-full h-full object-cover opacity-60" alt="BG Preview" />
+                           <div className="absolute inset-0 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
+                             <Button size="sm" variant="ghost" onClick={() => bgInputRef.current?.click()} className="bg-white/10 text-white font-black text-[8px] uppercase">Сменить</Button>
+                             <Button size="sm" variant="ghost" onClick={() => setBgPreview(null)} className="bg-red-500/20 text-red-500 font-black text-[8px] uppercase">Удалить</Button>
+                           </div>
+                         </div>
+                       ) : (
+                         <button 
+                           onClick={() => bgInputRef.current?.click()}
+                           className="w-full h-24 rounded-2xl border-2 border-dashed border-white/5 hover:border-primary/40 transition-all flex flex-col items-center justify-center gap-2 bg-black/20"
+                         >
+                            <ImageIcon className="w-6 h-6 text-white/20" />
+                            <span className="text-[9px] font-black uppercase tracking-widest text-white/40">Загрузить фон (HQ)</span>
+                         </button>
+                       )}
+                       <input type="file" ref={bgInputRef} className="hidden" accept="image/*" onChange={(e) => {
+                         const file = e.target.files?.[0];
+                         if (file) {
+                           const reader = new FileReader();
+                           reader.onloadend = async () => setBgPreview(await compressImage(reader.result as string, 1200, 0.6));
+                           reader.readAsDataURL(file);
+                         }
+                       }} />
+                    </div>
                  </div>
               </TabsContent>
 
@@ -350,8 +387,8 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                  <div className="bg-white/5 p-8 rounded-[3rem] border border-white/5 flex flex-col items-center text-center gap-6">
                     <UserAvatar userId={user?.uid} manualAvatarUrl={avatarPreview} className="h-20 w-20 shadow-2xl" />
                     <div className="space-y-2">
-                       <h3 className="text-xl font-black text-white italic uppercase tracking-tighter leading-none">Nuxus Kernel</h3>
-                       <p className="text-[10px] text-white/30 font-bold uppercase tracking-[0.4em]">Node Protocol V192.0 Prime</p>
+                       <h3 className="text-xl font-black text-white italic uppercase tracking-tighter leading-none">MIG Kernel</h3>
+                       <p className="text-[10px] text-white/30 font-bold uppercase tracking-[0.4em]">Node Protocol V198.0 Prime</p>
                     </div>
                     <Button variant="ghost" onClick={() => setIsLegalOpen(true)} className="w-full h-12 rounded-xl bg-white/5 font-black uppercase text-[9px] tracking-widest text-primary gap-3 border border-white/5">
                        <FileText className="w-4 h-4" /> Правовые документы
