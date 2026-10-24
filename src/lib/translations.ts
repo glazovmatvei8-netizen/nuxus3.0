@@ -1,9 +1,9 @@
 export const translations = {
   ru: {
     app: { 
-      name: "Nuxus", 
-      kernel: "Система Nuxus", 
-      signal: "Сообщение",
+      name: "MIG", 
+      kernel: "Ядро MIG", 
+      signal: "Сигнал",
       chats: "Чаты",
       archive: "Архив",
       calls: "Звонки",
@@ -26,7 +26,7 @@ export const translations = {
       connecting: "Подключение..." 
     },
     chat: { 
-      placeholder: "Напишите сообщение...", 
+      placeholder: "Напишите сигнал...", 
       scheduled: "Запланировано", 
       expired: "Просмотрено", 
       reply: "Ответ", 
@@ -38,13 +38,13 @@ export const translations = {
       typing: "печатает" 
     },
     settings: { 
-      title: "Настройки Ядра", 
+      title: "Параметры MIG", 
       tabs: { 
         profile: "Аккаунт", 
         style: "Визуальный", 
         privacy: "Защита", 
         language: "Язык", 
-        prime: "Premium", 
+        prime: "MIG Prime", 
         interface: "Интерфейс",
         data: "Инфо"
       }, 
@@ -66,16 +66,16 @@ export const translations = {
       } 
     },
     prime: {
-      title: "Nuxus Premium",
-      subtitle: "Активируйте максимальный потенциал Ядра",
+      title: "MIG Prime",
+      subtitle: "Активируйте сверхзвуковой потенциал",
       plus: {
-        title: "Nuxus Plus",
+        title: "MIG Plus",
         desc: "Стиль и качество",
         price: "299 STK/мес",
         features: ["HD Сигнал (HQ)", "Золотая звезда", "Цветные имена", "HD Звонки"]
       },
       one: {
-        title: "Nuxus One+",
+        title: "MIG One+",
         desc: "Абсолютный доступ",
         price: "500 STK/мес",
         features: ["Все из Plus", "Режим Призрака", "Кастомные иконки", "Приоритетный узел"]
@@ -88,8 +88,8 @@ export const translations = {
       renewing: "Продление..."
     },
     auth: { 
-      title: "Вход в аккаунт", 
-      subtitle: "Ваш безопасный мессенджер", 
+      title: "Вход в MIG", 
+      subtitle: "Сверхзвуковая связь", 
       login: "Войти", 
       register: "Регистрация", 
       noAccount: "Еще нет аккаунта?", 
@@ -103,8 +103,8 @@ export const translations = {
     },
     explore: {
       title: "Навигатор",
-      subtitle: "Исследование узлов сети Nuxus",
-      description: "Навигатор позволяет находить публичные каналы, открытые сообщества и новых пользователей. Присоединяйтесь к глобальной структуре.",
+      subtitle: "Исследование узлов сети MIG",
+      description: "Навигатор позволяет находить публичные каналы, открытые сообщества и новых пользователей. Присоединяйтесь к глобальной структуре MIG.",
       recommended: "Рекомендуемые узлы",
       categories: "Категории",
       events: "Активные события",
@@ -126,14 +126,14 @@ export const translations = {
       assets: "Мои активы",
       topup: "Пополнение",
       transfer: "Перевод STK",
-      info: "STK (Stellar Credits) — это внутренняя единица Ядра. Курс: 1 STK = 1 RUB. Используется для обмена подарками и артефактами.",
-      disclaimer: "Все операции защищены протоколом QES. © Nuxus Quantum Platforms.",
+      info: "STK (Stellar Credits) — это внутренняя единица Ядра MIG. Курс: 1 STK = 1 RUB. Используется для обмена подарками и артефактами.",
+      disclaimer: "Все операции защищены протоколом QES. © MIG Quantum Platforms.",
       send: "Отправить",
       exchange: "Обмен"
     },
     shield: {
       title: "Щит Aegis",
-      subtitle: "Мониторинг защиты Ядра",
+      subtitle: "Мониторинг защиты MIG",
       status_active: "ЗАЩИТА АКТИВНА",
       diagnostic: "Диагностика QES",
       hardware: "Статус узла",
@@ -145,18 +145,18 @@ export const translations = {
       auto_scroll: "Авто-скролл",
       locked: "Заблокировано"
     },
-    initializing: "Загрузка системы...",
+    initializing: "Запуск MIG...",
     online: "в сети",
     offline: "не в сети",
     confirmDelete: "Вы уверены? Это действие необратимо.",
-    saved: "Изменения сохранены",
+    saved: "Данные синхронизированы",
     error: "Сбой синхронизации"
   },
   en: {
     app: { 
-      name: "Nuxus", 
-      kernel: "Nuxus Core", 
-      signal: "Message",
+      name: "MIG", 
+      kernel: "MIG Core", 
+      signal: "Signal",
       chats: "Chats",
       archive: "Archive",
       calls: "Calls",
@@ -179,7 +179,7 @@ export const translations = {
       connecting: "Connecting..." 
     },
     chat: { 
-      placeholder: "Type a message...", 
+      placeholder: "Type a signal...", 
       scheduled: "Scheduled", 
       expired: "Viewed", 
       reply: "Reply", 
@@ -191,13 +191,13 @@ export const translations = {
       typing: "is typing" 
     },
     settings: { 
-      title: "Settings", 
+      title: "MIG Settings", 
       tabs: { 
         profile: "Account", 
         style: "Style", 
         privacy: "Security", 
         language: "Language", 
-        prime: "Premium", 
+        prime: "MIG Prime", 
         interface: "Interface",
         data: "Info"
       }, 
@@ -219,16 +219,16 @@ export const translations = {
       } 
     },
     prime: {
-      title: "Nuxus Premium",
-      subtitle: "Activate Core maximum potential",
+      title: "MIG Prime",
+      subtitle: "Activate Sonic Potential",
       plus: {
-        title: "Nuxus Plus",
+        title: "MIG Plus",
         desc: "Style & Quality",
         price: "299 STK/mo",
         features: ["HD Signal (No compression)", "Golden Star", "Custom Name Colors", "HD Video Calls"]
       },
       one: {
-        title: "Nuxus One+",
+        title: "MIG One+",
         desc: "Absolute Access",
         price: "500 STK/mo",
         features: ["All Plus features", "Ghost Mode", "Custom App Icons", "Priority Sync"]
@@ -241,11 +241,11 @@ export const translations = {
       renewing: "Renewing..."
     },
     auth: { 
-      title: "Sign In", 
-      subtitle: "Secure messaging starts here", 
+      title: "MIG Login", 
+      subtitle: "Sonic Speed Communication", 
       login: "Log In", 
       register: "Sign Up", 
-      noAccount: "New to Nuxus?", 
+      noAccount: "New to MIG?", 
       hasAccount: "Already have an account?",
       enterEmail: "Email Address",
       enterPhone: "Phone Number",
@@ -256,8 +256,8 @@ export const translations = {
     },
     explore: {
       title: "Explore",
-      subtitle: "Discover Nuxus Network Nodes",
-      description: "Explore find public channels, open communities and new nodes. 1 STK = 1 RUB rate active. Join the global network.",
+      subtitle: "Discover MIG Network Nodes",
+      description: "Explore find public channels, open communities and new nodes. 1 STK = 1 RUB rate active. Join the global MIG network.",
       recommended: "Recommended Nodes",
       categories: "Categories",
       events: "Active Events",
@@ -279,14 +279,14 @@ export const translations = {
       assets: "My Assets",
       topup: "Top Up",
       transfer: "Transfer STK",
-      info: "STK (Stellar Credits) is internal Core unit. Rate: 1 STK = 1 RUB. Not a financial instrument.",
-      disclaimer: "All rights reserved by Nuxus Quantum Platforms.",
+      info: "STK (Stellar Credits) is internal MIG unit. Rate: 1 STK = 1 RUB. Not a financial instrument.",
+      disclaimer: "All rights reserved by MIG Quantum Platforms.",
       send: "Send",
       exchange: "Exchange"
     },
     shield: {
       title: "Aegis Shield",
-      subtitle: "Core Protection Monitoring",
+      subtitle: "MIG Protection Monitoring",
       status_active: "PROTECTION ACTIVE",
       diagnostic: "QES Diagnostic",
       hardware: "Node Status",
@@ -298,11 +298,11 @@ export const translations = {
       auto_scroll: "Auto-Scroll",
       locked: "Locked"
     },
-    initializing: "Initializing...",
+    initializing: "MIG Initializing...",
     online: "online",
     offline: "offline",
     confirmDelete: "Are you sure? This action is irreversible.",
-    saved: "Changes saved",
+    saved: "Sync Complete",
     error: "Sync failed"
   }
 };

@@ -1,4 +1,3 @@
-
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { SovereignProvider } from '@/components/sovereign-provider';
@@ -6,8 +5,8 @@ import { SovereignProvider } from '@/components/sovereign-provider';
 const ICON_URL = 'https://i.postimg.cc/T2xvz0mn/IMG-2541.jpg?v=170';
 
 export const metadata: Metadata = {
-  title: 'Nuxus 2.0 — Суверенное Ядро Связи',
-  description: 'Безопасный мессенджер с квантовым шифрованием QES и абсолютной приватностью. © Nuxus 2024.',
+  title: 'MIG — Сверхзвуковое Ядро Связи',
+  description: 'Безопасный мессенджер со скоростью звука и квантовым шифрованием QES. © MIG 2024.',
   metadataBase: new URL('https://nuxus.fun'),
   icons: {
     icon: ICON_URL,
@@ -39,18 +38,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               const isMobileBrowser = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
               if (!allowed.some(d => h.endsWith(d)) && !isNative && !isMobileBrowser) {
-                document.documentElement.innerHTML = '<body style="background:#000;color:red;display:flex;text-align:center;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;padding:20px;"><div><h1>ACCESS DENIED</h1><p>ILLEGAL NODE CLONE DETECTED</p></div></body>';
+                document.documentElement.innerHTML = '<body style="background:#000;color:cyan;display:flex;text-align:center;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;padding:20px;"><div><h1>ACCESS DENIED</h1><p>ILLEGAL MIG NODE CLONE DETECTED</p></div></body>';
                 return;
               }
 
               // 2. NUCLEAR DEBUGGER TRAP (V187 - Stealth Mode)
               const trap = function() {
                 const s = Date.now();
-                // Ловушка активна только в десктопных браузерах для стабильности мобилок
                 if (!isMobileBrowser && !isNative) {
                   debugger;
                   if (Date.now() - s > 100) {
-                    for(let i=0; i<500; i++) console.log("%cAEGIS_TRAP", "color:red; font-size:20px");
+                    for(let i=0; i<500; i++) console.log("%cMIG_AEGIS_TRAP", "color:cyan; font-size:20px");
                     window.location.href = 'about:blank';
                   }
                 }

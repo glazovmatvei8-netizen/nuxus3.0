@@ -5,11 +5,6 @@ import { getAuth, Auth, indexedDBLocalPersistence, browserLocalPersistence, setP
 import { Firestore, persistentLocalCache, initializeFirestore } from 'firebase/firestore';
 import { firebaseConfig } from '@/firebase/config';
 
-/**
- * NUXUS ENGINE V154 «ULTIMATE SHIELD»
- * ОПТИМИЗИРОВАНО: Глобальный Singleton-паттерн через window для исключения ошибки 'ca9'.
- */
-
 declare global {
   interface Window {
     __NUXUS_APP__: FirebaseApp;
@@ -26,7 +21,6 @@ const ignite = () => {
     const apps = getApps();
     const app = apps.length > 0 ? apps[0] : initializeApp(firebaseConfig);
     
-    // Инициализация Firestore с базовым кэшем для мобильной стабильности
     const db = initializeFirestore(app, {
       localCache: persistentLocalCache({})
     });
@@ -41,9 +35,9 @@ const ignite = () => {
     window.__NUXUS_AUTH__ = auth;
     window.__NUXUS_IGNITED__ = true;
 
-    console.log('%c🛰️ NUXUS KERNEL: TITANIUM SHIELD ACTIVE V154', 'color: #E58E38; font-weight: bold;');
+    console.log('%c🛰️ MIG KERNEL: SONIC SHIELD ACTIVE V193', 'color: #00D4FF; font-weight: bold;');
   } catch (e: any) {
-    console.error("NUXUS KERNEL: IGNITION CRASHED", e);
+    console.error("MIG KERNEL: IGNITION CRASHED", e);
   }
 };
 

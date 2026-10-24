@@ -28,10 +28,6 @@ import {
 } from 'lucide-react';
 import { useTranslations } from '@/hooks/use-translations';
 
-/**
- * NUXUS CHAT MAIN V191.0 «Pure Russian & Shield»
- * UPDATED: Navigation items localized. Aegis monitoring enabled for everyone.
- */
 export default function ChatMain() {
   const { t } = useTranslations();
   const { 
@@ -52,7 +48,7 @@ export default function ChatMain() {
           lastSeen: new Date().toISOString()
         });
       } catch (e) {
-        console.error("Nuxus Presence: Heartbeat failed", e);
+        console.error("MIG Presence: Heartbeat failed", e);
       }
     };
 
@@ -89,11 +85,11 @@ export default function ChatMain() {
   ];
 
   return (
-    <div className="fixed inset-0 flex flex-col w-screen bg-[#121212] overflow-hidden h-[100dvh]">
+    <div className="fixed inset-0 flex flex-col w-screen bg-[#050505] overflow-hidden h-[100dvh]">
       <NotificationListener />
       
       <div className="flex-1 flex overflow-hidden w-full relative h-full z-10">
-        <nav className="hidden md:flex flex-col items-center py-8 w-20 bg-[#0a0a0c] border-r border-white/5 shrink-0 z-[100] gap-8">
+        <nav className="hidden md:flex flex-col items-center py-8 w-20 bg-[#08080a] border-r border-white/5 shrink-0 z-[100] gap-8">
            <div className="p-2.5 rounded-2xl bg-primary/10 border border-primary/20 mb-4 shadow-sm">
               <Activity className="w-6 h-6 text-primary animate-pulse" />
            </div>
@@ -109,7 +105,7 @@ export default function ChatMain() {
                 >
                   <item.icon className={cn("w-6 h-6", activeView === item.id && "fill-current")} />
                   {activeView === item.id && (
-                    <div className="absolute -left-[1px] top-1/4 bottom-1/4 w-[2px] bg-primary rounded-full shadow-[0_0_10px_rgba(229,142,56,0.8)]" />
+                    <div className="absolute -left-[1px] top-1/4 bottom-1/4 w-[2px] bg-primary rounded-full shadow-[0_0_10px_rgba(0,212,255,0.8)]" />
                   )}
                 </button>
               ))}
@@ -133,7 +129,7 @@ export default function ChatMain() {
           </div>
           
           <div className={cn(
-            "flex-1 h-full flex flex-col min-w-0 bg-[#0a0a0c]/50 relative z-20 overflow-hidden", 
+            "flex-1 h-full flex flex-col min-w-0 bg-[#08080a]/50 relative z-20 overflow-hidden", 
             (!currentChatId || ['profile', 'wallet', 'discovery', 'calls', 'ai'].includes(activeView)) ? "hidden md:flex" : "flex"
           )}>
             <div className="h-full w-full overflow-hidden flex flex-col bg-transparent">
@@ -145,7 +141,7 @@ export default function ChatMain() {
                          <MessageSquare className="w-20 h-20 text-primary" />
                       </div>
                    </div>
-                   <h2 className="text-4xl font-black text-white uppercase tracking-tight italic">NUXUS CORE</h2>
+                   <h2 className="text-4xl font-black text-white uppercase tracking-tight italic">MIG KERNEL</h2>
                 </div>
               )}
             </div>
@@ -154,7 +150,7 @@ export default function ChatMain() {
       </div>
 
       {(!currentChatId || activeView !== 'chats') && (
-        <div className="md:hidden nuxus-floating-nav">
+        <div className="md:hidden mig-floating-nav">
           {NAV_ITEMS.map((item) => (
              <NavButton 
                key={item.id}

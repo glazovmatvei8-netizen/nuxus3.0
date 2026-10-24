@@ -7,24 +7,17 @@ import { Download, ShieldCheck, Zap, ArrowLeft, Smartphone, ChevronRight } from 
 import Link from 'next/link';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-/**
- * NUXUS DOWNLOAD HUB V35.4.1
- * UPDATED: Added explicit copyright information and legal notice.
- */
 export default function DownloadPage() {
   const handleDownload = (e: React.MouseEvent) => {
     e.preventDefault();
-    // Прямая ссылка на APK файл
     window.location.href = "https://disk.yandex.ru/d/FeUr1YAAUMuiLA";
   };
 
   return (
     <div className="h-[100dvh] w-full bg-[#020205] text-white relative overflow-hidden flex flex-col">
-      {/* Background Effects */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.1)_0%,transparent_70%)] pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(0,212,255,0.1)_0%,transparent_70%)] pointer-events-none" />
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/5 blur-[120px] rounded-full pointer-events-none" />
       
-      {/* Top Header */}
       <div className="w-full flex justify-between items-center p-8 relative z-[100] shrink-0">
         <Link href="/">
            <button className="h-12 w-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 active:scale-90 transition-all shadow-xl backdrop-blur-xl">
@@ -32,12 +25,11 @@ export default function DownloadPage() {
            </button>
         </Link>
         <div className="flex flex-col items-end pointer-events-none">
-           <span className="text-[8px] font-black uppercase tracking-[0.4em] text-primary">Nuxus Kernel</span>
+           <span className="text-[8px] font-black uppercase tracking-[0.4em] text-primary">MIG Kernel</span>
            <span className="text-[10px] font-bold text-white/20 uppercase">v35.4.1</span>
         </div>
       </div>
 
-      {/* Main Content */}
       <ScrollArea className="flex-1 w-full relative z-10">
         <div className="flex flex-col items-center justify-start gap-12 p-8 pt-4 pb-40 w-full max-w-lg mx-auto text-center">
           
@@ -45,29 +37,28 @@ export default function DownloadPage() {
              <div className="flex justify-center">
                 <NuxusLogo size={160} />
              </div>
-             <h1 className="text-6xl font-black italic tracking-tighter uppercase leading-none text-white drop-shadow-[0_0_30px_rgba(168,85,247,0.3)]">NUXUS</h1>
-             <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60 italic">Ядро следит за вашей безопасностью</p>
+             <h1 className="text-6xl font-black italic tracking-tighter uppercase leading-none text-white drop-shadow-[0_0_30px_rgba(0,212,255,0.3)]">MIG</h1>
+             <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60 italic">Скорость звука — Стандарт Ядра</p>
           </div>
 
           <div className="grid grid-cols-1 gap-4 w-full">
              <FeatureItem icon={ShieldCheck} title="QES Encryption" desc="Сквозное квантовое шифрование сигналов" />
-             <FeatureItem icon={Zap} title="Direct Core Link" desc="Прямая связь с узлами без посредников" />
-             <FeatureItem icon={Smartphone} title="Native UI" desc="100% плавность и поддержка Face ID" />
+             <FeatureItem icon={Zap} title="Sonic Core Link" desc="Мгновенная доставка данных в любую точку" />
+             <FeatureItem icon={Smartphone} title="Premium UI" desc="100% плавность 60 FPS" />
           </div>
 
           <div className="w-full space-y-6 pt-4">
             <Button 
               onClick={handleDownload}
-              className="w-full h-20 bg-gradient-to-r from-[#007AFF] to-[#AF52DE] text-white rounded-[2rem] font-black uppercase italic tracking-[0.2em] text-lg shadow-[0_20px_60px_rgba(0,122,255,0.4)] active:scale-95 transition-all group overflow-hidden border border-white/10 relative z-20"
+              className="w-full h-20 bg-gradient-to-r from-[#00D4FF] to-[#007AFF] text-white rounded-[2rem] font-black uppercase italic tracking-[0.2em] text-lg shadow-[0_20px_60px_rgba(0,212,255,0.4)] active:scale-95 transition-all group overflow-hidden border border-white/10 relative z-20"
             >
               <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 pointer-events-none" />
               <Download className="w-6 h-6 mr-3 animate-bounce" /> Скачать APK
             </Button>
             
-            <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.3em] pointer-events-none">Версия клиента: Pulse 35.4</p>
+            <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.3em] pointer-events-none">Версия клиента: Sonic 35.4</p>
           </div>
 
-          {/* COPYRIGHT FOOTER */}
           <div className="pt-10 space-y-4 opacity-30 pointer-events-none">
              <div className="flex items-center justify-center gap-6">
                 <ShieldCheck className="w-4 h-4" />
@@ -76,10 +67,10 @@ export default function DownloadPage() {
              </div>
              <div className="space-y-1">
                <p className="text-[8px] text-white uppercase font-black tracking-[0.3em]">
-                 © Nuxus 2024. All Rights Reserved.
+                 © MIG 2024. All Rights Reserved.
                </p>
                <p className="text-[7px] text-white uppercase font-bold tracking-widest leading-relaxed max-w-[280px] mx-auto opacity-50">
-                 0+. ООО «Nuxus Quantum Platforms». Протокол QES 25.4. Все права на интеллектуальную собственность принадлежат Nuxus.
+                 0+. ООО «MIG Quantum Platforms». Протокол QES 25.4. Все права принадлежат MIG.
                </p>
              </div>
           </div>

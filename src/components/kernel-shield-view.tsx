@@ -9,10 +9,6 @@ import { cn, triggerHaptic } from '@/lib/utils';
 import { Button } from './ui/button';
 import { useTranslations } from '@/hooks/use-translations';
 
-/**
- * AEGIS LIVE MONITOR V191.0 «Sovereign View»
- * ОПТИМИЗИРОВАНО: Убран ввод команд. Теперь это публичный монитор защиты для всех пользователей.
- */
 export default function KernelShieldView() {
   const { t } = useTranslations();
   const [logs, setLogs] = useState<{t: string, m: string, type: 'sys' | 'sec'}[]>([]);
@@ -25,26 +21,24 @@ export default function KernelShieldView() {
   useEffect(() => {
     const bootLogs = [
       { t: new Date().toLocaleTimeString(), m: "Инициализация Aegis Shield: УСПЕШНО.", type: 'sys' as const },
-      { t: new Date().toLocaleTimeString(), m: "Монитор защиты Nuxus активен.", type: 'sys' as const },
+      { t: new Date().toLocaleTimeString(), m: "Монитор защиты MIG активен.", type: 'sys' as const },
       { t: new Date().toLocaleTimeString(), m: "Все шлюзы QES под наблюдением.", type: 'sys' as const },
     ];
     setLogs(bootLogs);
 
     const interval = setInterval(() => {
       const timestamp = new Date().toLocaleTimeString();
-      const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
-      
       const randomEvent = Math.random();
       if (randomEvent > 0.9) {
         setLogs(prev => [...prev.slice(-50), { 
           t: timestamp, 
-          m: `Проверка целостности домена: OK.`,
+          m: `Проверка целостности MIG: OK.`,
           type: 'sys' as const
         }]);
       } else if (randomEvent < 0.1) {
         setLogs(prev => [...prev.slice(-50), { 
           t: timestamp, 
-          m: `Попытка несанкционированной отладки нейтрализована.`,
+          m: `Попытка несанкционированной отладки MIG нейтрализована.`,
           type: 'sec' as const
         }]);
       }
@@ -83,23 +77,22 @@ export default function KernelShieldView() {
 
       <header className="px-8 pt-16 pb-6 shrink-0 z-10">
         <div className="flex items-center gap-4">
-           <div className="w-14 h-14 rounded-2xl bg-emerald-500/15 border border-emerald-500/20 flex items-center justify-center shadow-[0_0_30_rgba(16,185,129,0.2)]">
-              <Activity className="w-8 h-8 text-emerald-500 animate-pulse" />
+           <div className="w-14 h-14 rounded-2xl bg-primary/15 border border-primary/20 flex items-center justify-center shadow-[0_0_30_rgba(0,212,255,0.2)]">
+              <Activity className="w-8 h-8 text-primary animate-pulse" />
            </div>
            <div>
               <div className="flex items-center gap-2">
                  <h1 className="text-3xl font-black italic uppercase tracking-tighter leading-none">{t('shield.title')}</h1>
                  <span className="px-2 py-0.5 rounded bg-primary text-black text-[8px] font-black uppercase">LIVE</span>
               </div>
-              <p className="text-[10px] font-black uppercase text-primary/60 tracking-[0.4em] mt-1">{t('shield.status_active')}</p>
+              <p className="text-[10px] font-black uppercase text-primary/60 tracking-[0.4em] mt-1">ЯДРО MIG АКТИВНО</p>
            </div>
         </div>
       </header>
 
       <ScrollArea className="flex-1 px-8 pb-40 z-10">
         <div className="space-y-10 py-6">
-          
-          <div className="bg-[#1C1C1E] p-8 rounded-[3rem] border border-white/[0.05] shadow-2xl relative overflow-hidden group">
+          <div className="bg-[#151518] p-8 rounded-[3rem] border border-white/[0.05] shadow-2xl relative overflow-hidden group">
              <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity" />
              <div className="flex items-center justify-between relative z-10">
                 <div className="flex items-center gap-5">
@@ -108,7 +101,7 @@ export default function KernelShieldView() {
                    </div>
                    <div className="flex flex-col">
                       <span className="text-sm font-black uppercase italic text-white tracking-widest">{t('shield.diagnostic')}</span>
-                      <span className="text-[10px] text-white/40 font-bold uppercase mt-1">Проверка шлюза данных</span>
+                      <span className="text-[10px] text-white/40 font-bold uppercase mt-1">Проверка шлюза MIG</span>
                    </div>
                 </div>
                 <div className="flex items-center gap-6">
@@ -143,7 +136,7 @@ export default function KernelShieldView() {
              <div className="flex-1 overflow-y-auto p-5 no-scrollbar">
                 <div className="space-y-2">
                    {logs.map((log, i) => (
-                     <p key={i} className={cn("text-[10px] leading-tight flex gap-2", log.type === 'sec' ? "text-amber-400 font-bold" : "text-emerald-500/80")}>
+                     <p key={i} className={cn("text-[10px] leading-tight flex gap-2", log.type === 'sec' ? "text-amber-400 font-bold" : "text-primary/80")}>
                         <span className="opacity-30">[{log.t}]</span>
                         <span className="opacity-50">></span>
                         <span>{log.m}</span>

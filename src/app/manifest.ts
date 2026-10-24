@@ -1,26 +1,20 @@
-
 import { MetadataRoute } from 'next'
 
-/**
- * КРИТИЧЕСКИЙ ФИКС ДЛЯ СТАТИЧЕСКОГО ЭКСПОРТА (IPA/RU-HOSTING)
- * Принудительно переводит манифест в статический режим и обновляет иконки.
- */
 export const dynamic = 'force-static'
 
 export default function manifest(): MetadataRoute.Manifest {
-  // Новая иконка с cache-buster v118 для принудительного обновления на устройствах
   const APP_ICON_URL = 'https://i.postimg.cc/T2xvz0mn/IMG-2541.jpg?v=118';
   
   return {
-    id: 'chat.nuxus.app',
-    name: 'Nuxus 2.0',
-    short_name: 'Nuxus',
-    description: 'Суверенный мессенджер с поддержкой ИИ и квантовой защитой. © Nuxus Platform.',
+    id: 'chat.mig.app',
+    name: 'MIG 2.0',
+    short_name: 'MIG',
+    description: 'Сверхзвуковой мессенджер с квантовой защитой. © MIG Platform.',
     start_url: '/',
     scope: '/',
     display: 'standalone',
     background_color: '#010103',
-    theme_color: '#010103',
+    theme_color: '#00D4FF',
     lang: 'ru',
     icons: [
       {
