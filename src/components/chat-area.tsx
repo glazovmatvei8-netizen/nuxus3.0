@@ -9,7 +9,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, ChevronLeft, X, Paperclip, Mic, StopCircle, 
   Smile, Trash2, Loader2, Phone, Video, Camera, ShieldCheck, Edit2, Check,
-  Pin, ArrowDown, Search
+  Pin, ArrowDown, Search, Eraser
 } from 'lucide-react';
 import { MessageItem } from './message-item';
 import { ChatInfoModal } from './modals/chat-info-modal';
@@ -27,6 +27,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useTranslations } from '@/hooks/use-translations';
 import { useToast } from '@/hooks/use-toast';
 import { signalService } from '@/services/signal-service';
+import { Input } from '@/components/ui/input';
 
 const ChatInputBar = memo(({ onSendMessage, onUpdateMessage, currentChatId, replyTo, onCancelReply, editingMessage, onCancelEdit }: any) => {
   const { localDrafts, setLocalDrafts } = useAppState();
@@ -107,6 +108,10 @@ const ChatInputBar = memo(({ onSendMessage, onUpdateMessage, currentChatId, repl
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
+    processFiles(files);
+  };
+
+  const processFiles = (files: File[]) => {
     files.forEach(file => {
       const reader = new FileReader();
       reader.onload = (ev) => {
@@ -116,6 +121,27 @@ const ChatInputBar = memo(({ onSendMessage, onUpdateMessage, currentChatId, repl
     });
     setIsPreviewOpen(true);
     if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData.items;
+    const files: File[] = [];
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf("image") !== -1) {
+        const blob = items[i].getAsFile();
+        if (blob) files.push(blob);
+      }
+    }
+    if (files.length > 0) {
+      e.preventDefault();
+      processFiles(files);
+    }
+  };
+
+  const clearInput = () => {
+    triggerHaptic();
+    setMessageInput('');
+    setLocalDrafts(prev => ({ ...prev, [currentChatId]: '' }));
   };
 
   const handleSendFiles = async () => {
@@ -168,17 +194,23 @@ const ChatInputBar = memo(({ onSendMessage, onUpdateMessage, currentChatId, repl
             {!editingMessage && (
               <Button variant="ghost" size="icon" className="h-12 w-12 shrink-0 rounded-2xl bg-white/[0.03] border border-white/5" onClick={() => fileInputRef.current?.click()}><Paperclip className="w-6 h-6 text-white/40" /></Button>
             )}
-            <div className="flex-1 flex items-end bg-white/[0.04] rounded-[1.8rem] border border-white/10 min-h-[48px] px-5 py-2.5 gap-1">
+            <div className="flex-1 flex items-end bg-white/[0.04] rounded-[1.8rem] border border-white/10 min-h-[48px] px-5 py-2.5 gap-1 group/input">
               <Textarea 
                 placeholder={editingMessage ? "Измените сообщение..." : t('chat.placeholder')} 
                 className="bg-transparent border-none focus-visible:ring-0 text-white min-h-[26px] max-h-[160px] py-0 text-[15px] resize-none w-full shadow-none" 
                 value={messageInput} 
+                onPaste={handlePaste}
                 onChange={e => { setMessageInput(e.target.value); if(!editingMessage) setLocalDrafts(prev => ({ ...prev, [currentChatId]: e.target.value })); }} 
               />
+              {messageInput.length > 0 && (
+                <button onClick={clearInput} className="text-white/10 hover:text-red-400 mb-1 p-1 transition-colors">
+                  <Eraser size={14} />
+                </button>
+              )}
               <Popover open={isEmojiPickerOpen} onOpenChange={setIsEmojiPickerOpen}>
                  <PopoverTrigger asChild><Button variant="ghost" size="icon" className="text-white/20 h-8 w-8 shrink-0"><Smile size={20} /></Button></PopoverTrigger>
                  <PopoverContent side="top" className="p-0 border-none bg-transparent w-[320px] mb-6">
-                   <EmojiPicker onEmojiSelect={(e) => setMessageInput(messageInput + e)} onStickerSelect={(url) => { onSendMessage(url, 'sticker'); setIsEmojiPickerOpen(false); }} />
+                   <EmojiPicker onEmojiSelect={(e) => { const newVal = messageInput + e; setMessageInput(newVal); if(!editingMessage) setLocalDrafts(prev => ({ ...prev, [currentChatId]: newVal })); }} onStickerSelect={(url) => { onSendMessage(url, 'sticker'); setIsEmojiPickerOpen(false); }} />
                  </PopoverContent>
               </Popover>
             </div>
@@ -227,6 +259,8 @@ export default function ChatArea() {
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const [msgSearchQuery, setMsgSearchQuery] = useState('');
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const userProfileRef = useMemoFirebase(() => (!db || !firebaseUser) ? null : doc(db, 'users', firebaseUser.uid), [db, firebaseUser?.uid]);
@@ -244,6 +278,16 @@ export default function ChatArea() {
 
   const messagesQuery = useMemoFirebase(() => (!db || !currentChatId) ? null : query(collection(db, 'chats', currentChatId, 'messages'), orderBy('sentAt', 'asc')), [db, currentChatId]);
   const { data: messages } = useCollection<Message>(messagesQuery);
+
+  const filteredMessages = useMemo(() => {
+    if (!messages) return [];
+    if (!msgSearchQuery.trim()) return messages;
+    const s = msgSearchQuery.toLowerCase();
+    return messages.filter(m => {
+      const content = decryptSignal(m.content).toLowerCase();
+      return content.includes(s) || m.senderName?.toLowerCase().includes(s);
+    });
+  }, [messages, msgSearchQuery]);
 
   useEffect(() => {
     if (currentChatId && messages && firebaseUser) {
@@ -299,6 +343,12 @@ export default function ChatArea() {
     toast({ title: "Сигнал откреплен" });
   };
 
+  const toggleSearch = () => {
+    triggerHaptic();
+    setIsSearching(!isSearching);
+    if (isSearching) setMsgSearchQuery('');
+  };
+
   const currentDisplayName = useMemo(() => {
     if (!chat) return '...';
     if (chat.type === 'saved') return 'Архив Данных';
@@ -317,21 +367,40 @@ export default function ChatArea() {
       <header className="h-16 border-b border-white/5 bg-white/[0.02] backdrop-blur-xl flex items-center justify-between px-4 shrink-0 z-30 shadow-2xl">
         <div className="flex items-center gap-4 flex-1 min-w-0">
           <Button variant="ghost" size="icon" className="md:hidden rounded-2xl" onClick={() => { triggerHaptic(); setCurrentChatId(null); }}><ChevronLeft size={24} /></Button>
-          <div className="flex items-center gap-4 cursor-pointer min-w-0 flex-1 group" onClick={() => otherId ? setInspectedUserId(otherId) : setIsChatInfoOpen(true)}>
-            <UserAvatar userId={otherId || (chat?.type === 'saved' ? firebaseUser?.uid : null)} className="h-11 w-11 border border-white/10" manualAvatarUrl={chat?.type !== 'private' && chat?.type !== 'saved' ? chat?.avatarUrl : otherProfile?.avatarUrl} fallbackName={currentDisplayName} showOnlineStatus={chat?.type === 'private'} />
-            <div className="flex flex-col min-w-0">
-              <span className="font-black text-base truncate text-white italic tracking-tighter uppercase">{currentDisplayName}</span>
-              <span className="text-[9px] font-bold text-primary/60 tracking-widest uppercase italic">{chat?.type === 'private' ? t('online') : chat?.type === 'saved' ? 'Ваш Архив' : chat?.username}</span>
+          {!isSearching ? (
+            <div className="flex items-center gap-4 cursor-pointer min-w-0 flex-1 group" onClick={() => otherId ? setInspectedUserId(otherId) : setIsChatInfoOpen(true)}>
+              <UserAvatar userId={otherId || (chat?.type === 'saved' ? firebaseUser?.uid : null)} className="h-11 w-11 border border-white/10" manualAvatarUrl={chat?.type !== 'private' && chat?.type !== 'saved' ? chat?.avatarUrl : otherProfile?.avatarUrl} fallbackName={currentDisplayName} showOnlineStatus={chat?.type === 'private'} />
+              <div className="flex flex-col min-w-0">
+                <span className="font-black text-base truncate text-white italic tracking-tighter uppercase">{currentDisplayName}</span>
+                <span className="text-[9px] font-bold text-primary/60 tracking-widest uppercase italic">{chat?.type === 'private' ? t('online') : chat?.type === 'saved' ? 'Ваш Архив' : chat?.username}</span>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="flex-1 flex items-center gap-3 animate-in slide-in-from-right-4 duration-300">
+              <Search className="w-4 h-4 text-primary" />
+              <Input 
+                autoFocus
+                placeholder="Поиск сообщений..." 
+                className="bg-white/5 border-white/10 h-10 rounded-xl font-bold text-sm"
+                value={msgSearchQuery}
+                onChange={e => setMsgSearchQuery(e.target.value)}
+              />
+              <Button variant="ghost" size="icon" onClick={toggleSearch} className="h-10 w-10 text-white/40"><X size={20} /></Button>
+            </div>
+          )}
         </div>
 
-        <div className="flex items-center gap-2">
-           <div className="bg-white/5 px-3 py-1 rounded-full border border-white/5 flex items-center gap-2">
-              <ShieldCheck className="w-3.5 h-3.5 text-primary" />
-              <span className="text-[8px] font-black uppercase text-white/40 tracking-widest">QES 28.1</span>
-           </div>
-        </div>
+        {!isSearching && (
+          <div className="flex items-center gap-1">
+             <Button variant="ghost" size="icon" onClick={toggleSearch} className="h-10 w-10 text-white/40 hover:text-primary transition-colors rounded-xl">
+               <Search size={20} />
+             </Button>
+             <div className="bg-white/5 px-3 py-1 rounded-full border border-white/5 flex items-center gap-2">
+                <ShieldCheck className="w-3.5 h-3.5 text-primary" />
+                <span className="text-[8px] font-black uppercase text-white/40 tracking-widest">QES 28.1</span>
+             </div>
+          </div>
+        )}
       </header>
 
       {pinnedMessage && (
@@ -350,7 +419,7 @@ export default function ChatArea() {
       <div className="flex-1 relative overflow-hidden z-10">
         <ScrollArea ref={scrollAreaRef} className="h-full w-full" onScrollCapture={handleScroll}>
           <div className="flex flex-col gap-1 px-4 py-6">
-            {messages?.map(msg => (
+            {filteredMessages.length > 0 ? filteredMessages.map(msg => (
               <MessageItem 
                 key={msg.id} 
                 message={msg} 
@@ -361,7 +430,12 @@ export default function ChatArea() {
                 amIPremium={isUserPremium(userProfile)} 
                 viewerProfile={userProfile} 
               />
-            ))}
+            )) : (
+              <div className="flex flex-col items-center justify-center py-20 opacity-20">
+                <Search size={40} className="mb-4 text-white/40" />
+                <p className="text-[10px] font-black uppercase tracking-[0.4em]">Сигналы не найдены</p>
+              </div>
+            )}
           </div>
         </ScrollArea>
 
