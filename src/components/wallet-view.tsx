@@ -14,7 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { 
   Send, ArrowDown, RefreshCcw, 
-  Wallet, Info, FileText, Loader2, Coins, Zap, ShieldCheck, Database, ArrowRightLeft, CreditCard
+  Wallet, Info, FileText, Loader2, Coins, Zap, ShieldCheck, Database, ArrowRightLeft, CreditCard, Activity
 } from 'lucide-react';
 import { cn, triggerHaptic } from '@/lib/utils';
 import type { User, Transaction } from '@/lib/types';
@@ -25,19 +25,18 @@ import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 /**
- * WALLET VIEW V219.0 «QUANTUM LEDGER»
- * REDESIGNED: Cyber-banking interface with Layered Glass and Transaction Stream.
+ * WALLET VIEW V220.0 «QUANTUM LEDGER»
+ * FIXED: Activity is defined. Clipboard protection added.
  */
 export default function WalletView() {
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
-  const { t, currentLang } = useTranslations();
-  const { setIsLegalOpen } = useAppState();
+  const { t } = useTranslations();
   const [mounted, setMounted] = useState(false);
   
   const [isTopUpOpen, setIsTopUpOpen] = useState(false);
-  const [topUpAmount, setTopUpUpAmount] = useState('');
+  const [topUpAmount, setTopUpAmount] = useState('');
   const [isSubmittingRequest, setIsSubmittingRequest] = useState(false);
   
   useEffect(() => {
@@ -73,11 +72,24 @@ export default function WalletView() {
 
       toast({ title: "Сигнал передан", description: "Ожидайте верификации Администратором." });
       setIsTopUpOpen(false);
-      setTopUpUpAmount('');
+      setTopUpAmount('');
     } catch (e) {
       toast({ title: "Сбой", variant: "destructive" });
     } finally {
       setIsSubmittingRequest(false);
+    }
+  };
+
+  const copyWalletId = () => {
+    if (typeof window !== 'undefined' && profile?.username) {
+      try {
+        navigator.clipboard.writeText(profile.username).then(() => {
+          toast({ title: "ID скопирован", description: "Используйте его для переводов внутри сети." });
+        }).catch(() => {
+          // Fallback if Clipboard API fails
+          console.warn("Clipboard access denied by policy.");
+        });
+      } catch (e) {}
     }
   };
 
@@ -90,14 +102,12 @@ export default function WalletView() {
       <ScrollArea className="flex-1">
         <div className="px-6 pt-12 pb-40 space-y-10">
           
-          {/* Header */}
           <div className="text-center space-y-2">
              <h1 className="text-3xl font-black text-white italic tracking-tighter uppercase leading-none">MIG <span className="text-primary">FINANCE</span></h1>
              <p className="text-[10px] font-black uppercase tracking-[0.4em] text-white/20">Quantum Asset Protocol V2.1</p>
           </div>
 
-          {/* Main Balance Card: The "Stellar Plate" */}
-          <div className="relative group">
+          <div className="relative group cursor-pointer" onClick={copyWalletId}>
             <div className="absolute -inset-1 bg-gradient-to-r from-primary/30 to-blue-600/30 rounded-[3rem] blur-xl opacity-25 group-hover:opacity-50 transition duration-1000"></div>
             <div className="relative h-56 w-full bg-[#0d101a] border border-white/10 rounded-[3rem] p-8 overflow-hidden shadow-2xl flex flex-col justify-between">
                <div className="absolute top-0 right-0 w-48 h-48 bg-primary/5 blur-[80px] rounded-full -translate-y-1/2 translate-x-1/2" />
@@ -117,28 +127,29 @@ export default function WalletView() {
                   </div>
                </div>
 
-               <div className="flex items-center gap-3 relative z-10 pt-4 border-t border-white/5">
-                  <div className="flex -space-x-2">
-                     <div className="w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center backdrop-blur-md">
-                        <ArrowDown className="w-4 h-4 text-emerald-400" />
-                     </div>
-                     <div className="w-8 h-8 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center backdrop-blur-md">
-                        <Send className="w-4 h-4 text-primary" />
-                     </div>
+               <div className="flex items-center justify-between relative z-10 pt-4 border-t border-white/5">
+                  <div className="flex items-center gap-3">
+                    <div className="flex -space-x-2">
+                       <div className="w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center backdrop-blur-md">
+                          <ArrowDown className="w-4 h-4 text-emerald-400" />
+                       </div>
+                       <div className="w-8 h-8 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center backdrop-blur-md">
+                          <Send className="w-4 h-4 text-primary" />
+                       </div>
+                    </div>
+                    <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Active Channels: 02</span>
                   </div>
-                  <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Active Channels: 02</span>
+                  <span className="text-[8px] font-black text-primary/40 uppercase bg-primary/5 px-2 py-1 rounded-md border border-primary/10">LEDGER SYNCED</span>
                </div>
             </div>
           </div>
 
-          {/* Action Grid */}
           <div className="grid grid-cols-3 gap-4">
              <FinanceAction icon={Send} label="SEND" onClick={() => toast({ title: "В разработке", description: "Модуль внешних переводов калибруется." })} />
              <FinanceAction icon={ArrowDown} label="TOP UP" active onClick={() => setIsTopUpOpen(true)} />
              <FinanceAction icon={ArrowRightLeft} label="TRADE" onClick={() => toast({ title: "В разработке", description: "Рынок артефактов временно закрыт." })} />
           </div>
 
-          {/* Secure Vault Info */}
           <div className="p-6 bg-white/[0.02] border border-white/5 rounded-[2.5rem] relative overflow-hidden">
              <div className="absolute top-0 right-0 p-4 opacity-5">
                 <ShieldCheck className="w-20 h-20 text-primary" />
@@ -156,7 +167,6 @@ export default function WalletView() {
              </div>
           </div>
 
-          {/* Transaction Stream */}
           <div className="space-y-6">
              <div className="flex items-center justify-between px-2">
                 <div className="flex items-center gap-2">
@@ -204,7 +214,7 @@ export default function WalletView() {
                      type="number" 
                      placeholder="0.00" 
                      value={topUpAmount} 
-                     onChange={e => setTwoFactorInput(e.target.value.replace(/\D/g, ''))} // reuse logic for numbers
+                     onChange={e => setTopUpAmount(e.target.value.replace(/\D/g, ''))}
                      className="h-16 bg-white/5 border-white/10 rounded-2xl text-center text-3xl font-black italic text-white focus:border-primary/50 transition-all pr-12"
                    />
                    <span className="absolute right-5 top-1/2 -translate-y-1/2 text-xs font-black text-white/20 italic">RUB</span>

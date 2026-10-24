@@ -8,25 +8,20 @@ import { doc } from 'firebase/firestore';
 import { UserAvatar } from '@/components/user-avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
-  ChevronRight, Star, Fingerprint, Palette, ShieldCheck, 
-  Share2, Info, RefreshCw, Sparkles, Trophy, Zap, HelpCircle, Calendar, Loader2, MessageCircle, Lock, Cpu, Activity, ShieldAlert
+  ChevronRight, Star, Palette, ShieldCheck, 
+  Share2, Info, RefreshCw, Trophy, Zap, Loader2, Lock, Cpu, Activity, ShieldAlert
 } from 'lucide-react';
 import { useAppState } from '@/lib/app-state';
 import { formatDisplayName, cn, isGlobalAdmin, getReputationInfo, triggerHaptic, formatLastSeen } from '@/lib/utils';
 import type { User } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { AdminPanelModal } from './modals/admin-panel-modal';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { format, parseISO } from 'date-fns';
-import { ru } from 'date-fns/locale';
+import { signOut } from 'firebase/auth';
+import { nuxus } from '@/lib/nuxus-engine';
 
 /**
- * PROFILE VIEW V219.0 «AEGIS TERMINAL»
- * REDESIGNED: Hyper-futuristic layered GUI with Security Score and Kernel Monitoring.
+ * PROFILE VIEW V220.0 «AEGIS TERMINAL»
+ * FIXED: Clipboard safety. Redesigned with deeper layers.
  */
 export default function ProfileView() {
   const { user } = useUser();
@@ -47,10 +42,9 @@ export default function ProfileView() {
   const isAdmin = useMemo(() => isGlobalAdmin(profile), [profile]);
   const rep = useMemo(() => getReputationInfo(profile?.reputation || 0), [profile?.reputation]);
 
-  // Dynamic Security Score Calculation
   const securityScore = useMemo(() => {
     if (!profile) return 0;
-    let score = 65; // Base encryption score
+    let score = 65; 
     if (profile.twoFactorEnabled) score += 20;
     if (profile.isPremium) score += 10;
     if (profile.emailVerified) score += 5;
@@ -65,6 +59,18 @@ export default function ProfileView() {
   const handleRefresh = () => {
     triggerHaptic();
     toast({ title: "Калибровка Ядра..." });
+  };
+
+  const copyNodeId = () => {
+    if (typeof window !== 'undefined' && profile?.username) {
+      try {
+        navigator.clipboard.writeText(profile.username).then(() => {
+          toast({ title: "ID узла скопирован" });
+        }).catch(() => {
+          console.warn("Clipboard access denied.");
+        });
+      } catch (e) {}
+    }
   };
 
   if (!mounted) return <div className="flex-1 bg-[#010103]" />;
@@ -97,7 +103,6 @@ export default function ProfileView() {
       <ScrollArea className="flex-1 relative z-20">
         <div className="px-6 pt-8 pb-40 space-y-8 animate-in fade-in zoom-in-95 duration-1000">
           
-          {/* Layer 1: Identity Matrix */}
           <div className="relative group">
             <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/20 via-primary/40 to-primary/20 rounded-[3rem] blur opacity-30 group-hover:opacity-60 transition duration-1000"></div>
             <div className="relative flex flex-col items-center p-10 bg-[#0a0c12]/80 backdrop-blur-3xl rounded-[3rem] border border-white/10 shadow-2xl">
@@ -128,7 +133,6 @@ export default function ProfileView() {
             </div>
           </div>
 
-          {/* Layer 2: Security & Trust Matrix */}
           <div className="grid grid-cols-2 gap-4">
              <div className="p-6 bg-white/[0.03] backdrop-blur-2xl rounded-[2.5rem] border border-white/5 shadow-xl flex flex-col gap-4">
                 <div className="flex items-center justify-between">
@@ -157,7 +161,6 @@ export default function ProfileView() {
              </div>
           </div>
 
-          {/* Layer 3: System Controls */}
           <div className="space-y-4">
              <div className="flex items-center gap-3 px-3">
                 <Cpu className="w-4 h-4 text-primary" />
@@ -170,11 +173,7 @@ export default function ProfileView() {
                 )}
                 <TerminalItem icon={Lock} label="Криптографические ключи" color="text-primary" onClick={() => { setSettingsTab('privacy'); setIsSettingsOpen(true); }} />
                 <TerminalItem icon={Palette} label="Визуальные фильтры" color="text-primary" onClick={() => { setSettingsTab('style'); setIsSettingsOpen(true); }} />
-                <TerminalItem icon={Share2} label="Синхронизация узла" color="text-primary" onClick={() => {
-                   const url = window.location.origin;
-                   navigator.clipboard.writeText(`${url}/?u=${profile?.username?.replace('@','')}`);
-                   toast({ title: "ID узла скопирован в буфер" });
-                }} />
+                <TerminalItem icon={Share2} label="Синхронизация узла" color="text-primary" onClick={copyNodeId} />
                 <TerminalItem icon={Info} label="Правовой протокол" color="text-primary" onClick={() => setIsLegalOpen(true)} />
              </div>
           </div>

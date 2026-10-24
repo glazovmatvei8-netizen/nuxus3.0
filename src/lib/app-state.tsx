@@ -60,12 +60,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [activeAccountIndex, setActiveAccountIndex] = useState(0);
   const [slotNames, setSlotNames] = useState<string[]>(['Слот 1', 'Слот 2', 'Слот 3', 'Слот 4', 'Слот 5']);
 
-  // URL CLEANUP: Reverted to simple view tracking without chat ID expose
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const path = `/${activeView}`;
-    window.history.pushState({ view: activeView }, '', path);
-  }, [activeView]);
+  // URL CLEANUP: Completely disabled URL manipulation as per Operator's request
+  // No history.pushState here to keep the address bar clean at nuxus.fun
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
