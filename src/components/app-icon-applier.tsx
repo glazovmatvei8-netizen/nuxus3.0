@@ -7,7 +7,8 @@ import { doc } from 'firebase/firestore';
 import type { User } from '@/lib/types';
 
 /**
- * ОБНОВЛЯТОР ИКОНОК V207.0 «LOCAL SYNC»
+ * ОБНОВЛЯТОР ИКОНОК V209.0 «FORCE CACHE BUSTER»
+ * ОПТИМИЗИРОВАНО: Принудительное обновление иконки таба через ?v= параметры.
  */
 export function AppIconApplier() {
   const { user } = useUser();
@@ -26,7 +27,7 @@ export function AppIconApplier() {
   const { data: profile } = useDoc<User>(userRef);
 
   // Локальный путь к иконке
-  const TARGET_ICON = '/icon.png';
+  const DEFAULT_ICON = '/icon.png';
 
   useEffect(() => {
     if (!mounted || typeof document === 'undefined') return;
@@ -34,9 +35,10 @@ export function AppIconApplier() {
     const updateIcons = () => {
       try {
         const customIcon = profile?.settings?.customAppIconUrl;
+        // Добавляем версию v=209 для сброса кеша браузера
         const finalIcon = customIcon 
-          ? (customIcon.includes('?') ? `${customIcon}&v=207` : `${customIcon}?v=207`)
-          : TARGET_ICON;
+          ? (customIcon.includes('?') ? `${customIcon}&v=209` : `${customIcon}?v=209`)
+          : `${DEFAULT_ICON}?v=209`;
 
         const selectors = [
           "link[rel='icon']",
@@ -46,28 +48,38 @@ export function AppIconApplier() {
         ];
 
         selectors.forEach(selector => {
-          const elements = document.querySelectorAll(selector);
+          let element = document.querySelector(selector);
           
-          if (elements.length === 0 && selector === "link[rel='icon']") {
-            const link = document.createElement('link');
-            link.rel = 'icon';
-            link.href = finalIcon;
-            document.head.appendChild(link);
+          if (!element) {
+            element = document.createElement('link');
+            if (selector.includes('icon')) (element as HTMLLinkElement).rel = 'icon';
+            if (selector.includes('apple')) (element as HTMLLinkElement).rel = 'apple-touch-icon';
+            document.head.appendChild(element);
           }
 
-          elements.forEach(el => {
-            if (el.getAttribute('href') !== finalIcon) {
-              el.setAttribute('href', finalIcon);
-            }
-          });
+          if (element.getAttribute('href') !== finalIcon) {
+            element.setAttribute('href', finalIcon);
+            element.setAttribute('type', 'image/png');
+          }
         });
+        
+        // Отдельно форсируем обновление shortcut icon для старых браузеров
+        let shortcut = document.querySelector("link[rel='shortcut icon']");
+        if (!shortcut) {
+            shortcut = document.createElement('link');
+            shortcut.setAttribute('rel', 'shortcut icon');
+            document.head.appendChild(shortcut);
+        }
+        shortcut.setAttribute('href', finalIcon);
+
       } catch (e) {
         console.error("DOM manipulation error in app-icon-applier:", e);
       }
     };
 
     updateIcons();
-    const interval = setInterval(updateIcons, 5000);
+    // Повторяем проверку реже, чтобы не нагружать поток
+    const interval = setInterval(updateIcons, 10000);
     return () => clearInterval(interval);
   }, [profile?.settings?.customAppIconUrl, mounted]);
 

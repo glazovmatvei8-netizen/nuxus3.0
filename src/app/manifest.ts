@@ -3,8 +3,8 @@ import { MetadataRoute } from 'next'
 export const dynamic = 'force-static'
 
 export default function manifest(): MetadataRoute.Manifest {
-  // Локальный путь к иконке в папке public
-  const APP_ICON_URL = '/icon.png';
+  // Локальный путь к иконке с параметром версии для сброса кеша
+  const APP_ICON_URL = '/icon.png?v=209';
   
   return {
     id: 'chat.mig.app',

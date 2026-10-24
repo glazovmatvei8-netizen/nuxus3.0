@@ -10,9 +10,14 @@ export const metadata: Metadata = {
   description: 'Безопасный мессенджер со скоростью звука и квантовой защитой. © MIG 2024.',
   metadataBase: new URL('https://nuxus.fun'),
   icons: {
-    icon: ICON_URL,
-    shortcut: ICON_URL,
-    apple: ICON_URL,
+    icon: [
+      { url: ICON_URL, type: 'image/png' },
+      { url: `${ICON_URL}?v=209`, type: 'image/png' }
+    ],
+    shortcut: [`${ICON_URL}?v=209`],
+    apple: [
+      { url: ICON_URL, sizes: '180x180', type: 'image/png' },
+    ],
   }
 };
 
