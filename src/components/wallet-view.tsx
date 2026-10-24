@@ -20,13 +20,12 @@ import { cn, triggerHaptic } from '@/lib/utils';
 import type { User, Transaction } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslations } from '@/hooks/use-translations';
-import { useAppState } from '@/lib/app-state';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 /**
- * WALLET VIEW V220.0 «QUANTUM LEDGER»
- * FIXED: Activity is defined. Clipboard protection added.
+ * WALLET VIEW V221.0 «INFINITE LEDGER»
+ * UPDATED: Header is now part of the scroll flow.
  */
 export default function WalletView() {
   const { user } = useUser();
@@ -86,7 +85,6 @@ export default function WalletView() {
         navigator.clipboard.writeText(profile.username).then(() => {
           toast({ title: "ID скопирован", description: "Используйте его для переводов внутри сети." });
         }).catch(() => {
-          // Fallback if Clipboard API fails
           console.warn("Clipboard access denied by policy.");
         });
       } catch (e) {}
@@ -99,97 +97,98 @@ export default function WalletView() {
     <div className="flex flex-col h-full bg-[#050608] overflow-hidden relative">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,hsla(var(--primary),0.06),transparent_80%)] pointer-events-none" />
 
-      <ScrollArea className="flex-1">
-        <div className="px-6 pt-12 pb-40 space-y-10">
-          
-          <div className="text-center space-y-2">
+      <ScrollArea className="flex-1 no-scrollbar">
+        <div className="flex flex-col">
+          {/* HEADER IN SCROLL */}
+          <div className="px-6 pt-12 pb-6 text-center shrink-0">
              <h1 className="text-3xl font-black text-white italic tracking-tighter uppercase leading-none">MIG <span className="text-primary">FINANCE</span></h1>
-             <p className="text-[10px] font-black uppercase tracking-[0.4em] text-white/20">Quantum Asset Protocol V2.1</p>
+             <p className="text-[10px] font-black uppercase tracking-[0.4em] text-white/20 mt-2">Quantum Asset Protocol V2.1</p>
           </div>
 
-          <div className="relative group cursor-pointer" onClick={copyWalletId}>
-            <div className="absolute -inset-1 bg-gradient-to-r from-primary/30 to-blue-600/30 rounded-[3rem] blur-xl opacity-25 group-hover:opacity-50 transition duration-1000"></div>
-            <div className="relative h-56 w-full bg-[#0d101a] border border-white/10 rounded-[3rem] p-8 overflow-hidden shadow-2xl flex flex-col justify-between">
-               <div className="absolute top-0 right-0 w-48 h-48 bg-primary/5 blur-[80px] rounded-full -translate-y-1/2 translate-x-1/2" />
-               
-               <div className="flex justify-between items-start relative z-10">
-                  <div className="space-y-1">
-                     <span className="text-[10px] font-black text-primary uppercase tracking-[0.3em] italic">Available Balance</span>
-                     <div className="flex items-baseline gap-2">
-                        <span className="text-5xl font-black text-white italic tracking-tighter tabular-nums">
-                          {isProfileLoading ? '...' : (profile?.balance ?? 0).toFixed(2)}
-                        </span>
-                        <span className="text-xl font-black text-primary/60 italic">STK</span>
-                     </div>
-                  </div>
-                  <div className="p-3 bg-white/5 rounded-2xl border border-white/10 backdrop-blur-md">
-                     <CreditCard className="w-6 h-6 text-primary" />
-                  </div>
-               </div>
-
-               <div className="flex items-center justify-between relative z-10 pt-4 border-t border-white/5">
-                  <div className="flex items-center gap-3">
-                    <div className="flex -space-x-2">
-                       <div className="w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center backdrop-blur-md">
-                          <ArrowDown className="w-4 h-4 text-emerald-400" />
-                       </div>
-                       <div className="w-8 h-8 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center backdrop-blur-md">
-                          <Send className="w-4 h-4 text-primary" />
-                       </div>
+          <div className="px-6 space-y-10 pb-40">
+            <div className="relative group cursor-pointer" onClick={copyWalletId}>
+              <div className="absolute -inset-1 bg-gradient-to-r from-primary/30 to-blue-600/30 rounded-[3rem] blur-xl opacity-25 group-hover:opacity-50 transition duration-1000"></div>
+              <div className="relative h-56 w-full bg-[#0d101a] border border-white/10 rounded-[3rem] p-8 overflow-hidden shadow-2xl flex flex-col justify-between">
+                <div className="absolute top-0 right-0 w-48 h-48 bg-primary/5 blur-[80px] rounded-full -translate-y-1/2 translate-x-1/2" />
+                
+                <div className="flex justify-between items-start relative z-10">
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-black text-primary uppercase tracking-[0.3em] italic">Available Balance</span>
+                      <div className="flex items-baseline gap-2">
+                          <span className="text-5xl font-black text-white italic tracking-tighter tabular-nums">
+                            {isProfileLoading ? '...' : (profile?.balance ?? 0).toFixed(2)}
+                          </span>
+                          <span className="text-xl font-black text-primary/60 italic">STK</span>
+                      </div>
                     </div>
-                    <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Active Channels: 02</span>
+                    <div className="p-3 bg-white/5 rounded-2xl border border-white/10 backdrop-blur-md">
+                      <CreditCard className="w-6 h-6 text-primary" />
+                    </div>
+                </div>
+
+                <div className="flex items-center justify-between relative z-10 pt-4 border-t border-white/5">
+                    <div className="flex items-center gap-3">
+                      <div className="flex -space-x-2">
+                        <div className="w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center backdrop-blur-md">
+                            <ArrowDown className="w-4 h-4 text-emerald-400" />
+                        </div>
+                        <div className="w-8 h-8 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center backdrop-blur-md">
+                            <Send className="w-4 h-4 text-primary" />
+                        </div>
+                      </div>
+                      <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Active Channels: 02</span>
+                    </div>
+                    <span className="text-[8px] font-black text-primary/40 uppercase bg-primary/5 px-2 py-1 rounded-md border border-primary/10">LEDGER SYNCED</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <FinanceAction icon={Send} label="SEND" onClick={() => toast({ title: "В разработке", description: "Модуль внешних переводов калибруется." })} />
+              <FinanceAction icon={ArrowDown} label="TOP UP" active onClick={() => setIsTopUpOpen(true)} />
+              <FinanceAction icon={ArrowRightLeft} label="TRADE" onClick={() => toast({ title: "В разработке", description: "Рынок артефактов временно закрыт." })} />
+            </div>
+
+            <div className="p-6 bg-white/[0.02] border border-white/5 rounded-[2.5rem] relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-4 opacity-5">
+                  <ShieldCheck className="w-20 h-20 text-primary" />
+              </div>
+              <div className="flex items-start gap-4 relative z-10">
+                  <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-lg">
+                    <Database className="w-6 h-6 text-primary" />
                   </div>
-                  <span className="text-[8px] font-black text-primary/40 uppercase bg-primary/5 px-2 py-1 rounded-md border border-primary/10">LEDGER SYNCED</span>
-               </div>
+                  <div className="flex-1 space-y-2 text-left">
+                    <h3 className="text-sm font-black uppercase italic text-white tracking-widest">Quantum Vault Information</h3>
+                    <p className="text-[10px] text-white/50 leading-relaxed font-medium">
+                        Все транзакции STK (Stellar Credits) защищены протоколом QES 28.4. Ваши активы хранятся в изолированном сегменте Ядра.
+                    </p>
+                  </div>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <div className="flex items-center justify-between px-2">
+                  <div className="flex items-center gap-2">
+                    <Activity className="w-4 h-4 text-primary" />
+                    <h3 className="text-[11px] font-black uppercase text-white/40 tracking-[0.4em] italic">Signal Stream</h3>
+                  </div>
+                  <span className="text-[9px] font-black text-primary/40 uppercase">LIVE LEDGER</span>
+              </div>
+              
+              <div className="space-y-3">
+                  {isTxLoading ? (
+                    <div className="py-10 text-center"><Loader2 className="w-6 h-6 animate-spin text-primary/40 mx-auto" /></div>
+                  ) : transactions && transactions.length > 0 ? (
+                    transactions.map(tx => <QuantumTxItem key={tx.id} tx={tx} />)
+                  ) : (
+                    <div className="py-20 text-center opacity-10 space-y-4">
+                      <Zap className="w-12 h-12 mx-auto" />
+                      <p className="text-[10px] font-black uppercase tracking-[0.6em]">No Pulse Detected</p>
+                    </div>
+                  )}
+              </div>
             </div>
           </div>
-
-          <div className="grid grid-cols-3 gap-4">
-             <FinanceAction icon={Send} label="SEND" onClick={() => toast({ title: "В разработке", description: "Модуль внешних переводов калибруется." })} />
-             <FinanceAction icon={ArrowDown} label="TOP UP" active onClick={() => setIsTopUpOpen(true)} />
-             <FinanceAction icon={ArrowRightLeft} label="TRADE" onClick={() => toast({ title: "В разработке", description: "Рынок артефактов временно закрыт." })} />
-          </div>
-
-          <div className="p-6 bg-white/[0.02] border border-white/5 rounded-[2.5rem] relative overflow-hidden">
-             <div className="absolute top-0 right-0 p-4 opacity-5">
-                <ShieldCheck className="w-20 h-20 text-primary" />
-             </div>
-             <div className="flex items-start gap-4 relative z-10">
-                <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-lg">
-                   <Database className="w-6 h-6 text-primary" />
-                </div>
-                <div className="flex-1 space-y-2 text-left">
-                   <h3 className="text-sm font-black uppercase italic text-white tracking-widest">Quantum Vault Information</h3>
-                   <p className="text-[10px] text-white/50 leading-relaxed font-medium">
-                      Все транзакции STK (Stellar Credits) защищены протоколом QES 28.4. Ваши активы хранятся в изолированном сегменте Ядра.
-                   </p>
-                </div>
-             </div>
-          </div>
-
-          <div className="space-y-6">
-             <div className="flex items-center justify-between px-2">
-                <div className="flex items-center gap-2">
-                   <Activity className="w-4 h-4 text-primary" />
-                   <h3 className="text-[11px] font-black uppercase text-white/40 tracking-[0.4em] italic">Signal Stream</h3>
-                </div>
-                <span className="text-[9px] font-black text-primary/40 uppercase">LIVE LEDGER</span>
-             </div>
-             
-             <div className="space-y-3">
-                {isTxLoading ? (
-                  <div className="py-10 text-center"><Loader2 className="w-6 h-6 animate-spin text-primary/40 mx-auto" /></div>
-                ) : transactions && transactions.length > 0 ? (
-                  transactions.map(tx => <QuantumTxItem key={tx.id} tx={tx} />)
-                ) : (
-                  <div className="py-20 text-center opacity-10 space-y-4">
-                     <Zap className="w-12 h-12 mx-auto" />
-                     <p className="text-[10px] font-black uppercase tracking-[0.6em]">No Pulse Detected</p>
-                  </div>
-                )}
-             </div>
-          </div>
-
         </div>
       </ScrollArea>
 
