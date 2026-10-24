@@ -6,7 +6,7 @@ import { format } from 'date-fns';
 import { 
   Check, CheckCheck, Trash2, Reply, Edit2, Share2, ImageIcon, Smile
 } from 'lucide-react';
-import { cn, triggerHaptic, decryptSignal } from '@/lib/utils';
+import { cn, triggerHaptic, decryptSignal, formatDisplayName } from '@/lib/utils';
 import { useAppState } from '@/lib/app-state';
 import { useUser, useFirestore } from '@/firebase/provider';
 import { useDoc } from '@/firebase/firestore/use-doc';
@@ -74,59 +74,70 @@ export const MessageItem = memo(({ message, isMe, onReply, onEdit, chatId }: any
           <div className={cn("flex gap-3 items-end", isMe ? "flex-row-reverse" : "flex-row")}>
             {!isMe && <UserAvatar userId={message.senderId} className="h-8 w-8 rounded-[0.8rem] mb-1" manualAvatarUrl={senderProfile?.avatarUrl} />}
             
-            <div className={cn(
-              "relative px-4 py-3 shadow-xl transition-all duration-300 border",
-              isMe 
-                ? "bg-primary text-white border-primary/20 rounded-[1.8rem] rounded-br-sm sonic-glow" 
-                : "bg-white/[0.04] backdrop-blur-xl text-white/95 border-white/5 rounded-[1.8rem] rounded-bl-sm"
-            )}>
-              {message.replyToId && (
-                <div className="mb-2 p-2 bg-black/20 rounded-2xl border-l-2 border-primary/50 opacity-60 text-[11px] italic truncate max-w-[200px]">
-                  {decryptSignal(message.replyToContent)}
-                </div>
+            <div className="flex flex-col gap-1">
+              {!isMe && (
+                <span 
+                  onClick={() => setInspectedUserId(message.senderId)}
+                  className="text-[10px] font-black text-primary/80 uppercase tracking-widest ml-2 cursor-pointer hover:underline"
+                >
+                  {formatDisplayName(senderProfile?.name, senderProfile?.username)}
+                </span>
               )}
+              
+              <div className={cn(
+                "relative px-4 py-3 shadow-xl transition-all duration-300 border",
+                isMe 
+                  ? "bg-primary text-white border-primary/20 rounded-[1.8rem] rounded-br-sm sonic-glow" 
+                  : "bg-white/[0.04] backdrop-blur-xl text-white/95 border-white/5 rounded-[1.8rem] rounded-bl-sm"
+              )}>
+                {message.replyToId && (
+                  <div className="mb-2 p-2 bg-black/20 rounded-2xl border-l-2 border-primary/50 opacity-60 text-[11px] italic truncate max-w-[200px]">
+                    {decryptSignal(message.replyToContent)}
+                  </div>
+                )}
 
-              {message.contentType === 'sticker' ? (
-                <img src={message.content} className="w-32 h-32 object-contain" alt="Sticker" crossOrigin="anonymous" />
-              ) : message.contentType === 'image' ? (
-                <div className="relative rounded-[1.2rem] overflow-hidden border border-white/10 shadow-2xl group cursor-pointer" onClick={() => window.open(displayContent, '_blank')}>
-                   <img src={displayContent} className="max-w-full max-h-[400px] object-cover transition-transform duration-700 group-hover:scale-105" alt="Signal Media" crossOrigin="anonymous" />
-                   <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <ImageIcon className="w-8 h-8 text-white animate-pulse" />
-                   </div>
+                {message.contentType === 'sticker' ? (
+                  <img src={message.content} className="w-32 h-32 object-contain" alt="Sticker" crossOrigin="anonymous" />
+                ) : message.contentType === 'image' ? (
+                  <div className="relative rounded-[1.2rem] overflow-hidden border border-white/10 shadow-2xl group cursor-pointer" onClick={() => window.open(displayContent, '_blank')}>
+                     <img src={displayContent} className="max-w-full max-h-[400px] object-cover transition-transform duration-700 group-hover:scale-105" alt="Signal Media" crossOrigin="anonymous" />
+                     <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <ImageIcon className="w-8 h-8 text-white animate-pulse" />
+                     </div>
+                  </div>
+                ) : (
+                  <p className="text-[15px] font-bold leading-relaxed tracking-tight break-words">
+                    {displayContent}
+                  </p>
+                )}
+
+                <div className="flex items-center justify-end gap-1.5 mt-1.5 opacity-30">
+                  {message.editedAt && <span className="text-[7px] font-black italic">изм.</span>}
+                  <span className="text-[8px] font-black tabular-nums">{time}</span>
+                  {isMe && (message.isRead ? <CheckCheck size={12} className="text-[#00D4FF]" /> : <Check size={12} />)}
                 </div>
-              ) : (
-                <p className="text-[15px] font-bold leading-relaxed tracking-tight break-words">
-                  {displayContent}
-                </p>
-              )}
 
-              <div className="flex items-center justify-end gap-1.5 mt-1.5 opacity-30">
-                {message.editedAt && <span className="text-[7px] font-black italic">изм.</span>}
-                <span className="text-[8px] font-black tabular-nums">{time}</span>
-                {isMe && (message.isRead ? <CheckCheck size={10} className="text-blue-400" /> : <Check size={10} />)}
+                {activeReactions.length > 0 && (
+                  <div className={cn(
+                    "absolute -bottom-4 flex gap-1 bg-black/40 backdrop-blur-3xl border border-white/10 p-1 rounded-full shadow-2xl",
+                    isMe ? "right-0" : "left-0"
+                  )}>
+                    {activeReactions.map(([emoji, uids]: any) => (
+                      <button 
+                        key={emoji}
+                        onClick={() => handleToggleReaction(emoji)}
+                        className={cn(
+                          "flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black transition-all",
+                          uids.includes(user?.uid) ? "bg-primary/20 text-primary border border-primary/20" : "text-white/40"
+                        )}
+                      >
+                        <span>{emoji}</span>
+                        <span>{uids.length}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
-
-              {activeReactions.length > 0 && (
-                <div className={cn(
-                  "absolute -bottom-4 flex gap-1 bg-black/40 backdrop-blur-3xl border border-white/10 p-1 rounded-full shadow-2xl",
-                  isMe ? "right-0" : "left-0"
-                )}>
-                  {activeReactions.map(([emoji, uids]: any) => (
-                    <button 
-                      key={emoji}
-                      onClick={() => handleToggleReaction(emoji)}
-                      className={cn(
-                        "flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black transition-all",
-                        uids.includes(user?.uid) ? "bg-primary/20 text-primary border border-primary/20" : "text-white/40"
-                      )}
-                    >
-                      <span>{emoji}</span>
-                      <span>{uids.length}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
           </div>
         </ContextMenuTrigger>

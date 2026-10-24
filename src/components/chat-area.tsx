@@ -13,13 +13,11 @@ import {
 import { MessageItem } from './message-item';
 import { ChatInfoModal } from './modals/chat-info-modal';
 import { EmojiPicker } from './emoji-picker';
-import { ImagePreviewModal } from './modals/image-preview-modal';
-import { CreatePollModal } from './modals/create-poll-modal';
 import { useUser, useFirestore } from '@/firebase/provider';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { useMemoFirebase } from '@/firebase/firestore/use-memo-firebase';
-import { collection, query, orderBy, doc, addDoc, updateDoc } from 'firebase/firestore';
+import { collection, query, orderBy, doc, addDoc } from 'firebase/firestore';
 import { formatDisplayName, cn, compressImage, triggerHaptic, decryptSignal } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -27,7 +25,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useTranslations } from '@/hooks/use-translations';
 import { useToast } from '@/hooks/use-toast';
 import { signalService } from '@/services/signal-service';
-import { Input } from '@/components/ui/input';
+import { format, isToday, isYesterday, parseISO } from 'date-fns';
+import { ru } from 'date-fns/locale';
 import { addMinutes } from 'date-fns';
 
 const ChatInputBar = memo(({ onSendMessage, onUpdateMessage, currentChatId, replyTo, onCancelReply, editingMessage, onCancelEdit }: any) => {
@@ -149,6 +148,7 @@ export default function ChatArea() {
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
+  const [showScrollDown, setShowScrollDown] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const chatRef = useMemoFirebase(() => (!db || !currentChatId) ? null : doc(db, 'chats', currentChatId), [db, currentChatId]);
@@ -163,6 +163,21 @@ export default function ChatArea() {
 
   const messagesQuery = useMemoFirebase(() => (!db || !currentChatId) ? null : query(collection(db, 'chats', currentChatId, 'messages'), orderBy('sentAt', 'asc')), [db, currentChatId]);
   const { data: messages } = useCollection<Message>(messagesQuery);
+
+  const groupedMessages = useMemo(() => {
+    if (!messages) return [];
+    const groups: { date: string, messages: Message[] }[] = [];
+    messages.forEach(msg => {
+      const date = msg.sentAt ? format(parseISO(msg.sentAt), 'yyyy-MM-dd') : 'unknown';
+      const lastGroup = groups[groups.length - 1];
+      if (lastGroup && lastGroup.date === date) {
+        lastGroup.messages.push(msg);
+      } else {
+        groups.push({ date, messages: [msg] });
+      }
+    });
+    return groups;
+  }, [messages]);
 
   const handleSendMessage = useCallback(async (content: string, type: Message['contentType'] = 'text', meta: any = null) => {
     if (!content || !currentChatId || !firebaseUser) return;
@@ -194,14 +209,40 @@ export default function ChatArea() {
     return formatDisplayName(chat.name, chat.username);
   }, [chat, otherProfile]);
 
+  const scrollToBottom = () => {
+    if (scrollAreaRef.current) {
+      const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
+      if (scrollContainer) {
+        scrollContainer.scrollTo({ top: scrollContainer.scrollHeight, behavior: 'smooth' });
+      }
+    }
+  };
+
   useEffect(() => {
     if (scrollAreaRef.current) {
       const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
       if (scrollContainer) {
-        scrollContainer.scrollTop = scrollContainer.scrollHeight;
+        const isAtBottom = scrollContainer.scrollHeight - scrollContainer.scrollTop - scrollContainer.clientHeight < 100;
+        if (isAtBottom) {
+          scrollContainer.scrollTop = scrollContainer.scrollHeight;
+        }
       }
     }
   }, [messages?.length]);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.currentTarget;
+    const isUp = target.scrollHeight - target.scrollTop - target.clientHeight > 300;
+    setShowScrollDown(isUp);
+  };
+
+  const formatDateLabel = (dateStr: string) => {
+    if (dateStr === 'unknown') return '';
+    const date = parseISO(dateStr);
+    if (isToday(date)) return 'Сегодня';
+    if (isYesterday(date)) return 'Вчера';
+    return format(date, 'd MMMM yyyy', { locale: ru });
+  };
 
   const chatBackground = myProfile?.settings?.chatBackground;
 
@@ -238,20 +279,39 @@ export default function ChatArea() {
           <div className="absolute inset-0 z-0 bg-[radial-gradient(circle_at_50%_0%,rgba(0,212,255,0.03)_0%,transparent_70%)]" />
         )}
         
-        <ScrollArea ref={scrollAreaRef} className="h-full w-full relative z-10">
+        <ScrollArea ref={scrollAreaRef} className="h-full w-full relative z-10" onScrollCapture={handleScroll}>
           <div className="flex flex-col gap-2 px-6 py-8">
-            {messages?.map(msg => (
-              <MessageItem 
-                key={msg.id} 
-                message={msg} 
-                isMe={msg.senderId === firebaseUser?.uid} 
-                chatId={currentChatId} 
-                onReply={setReplyTo} 
-                onEdit={setEditingMessage}
-              />
+            {groupedMessages.map(group => (
+              <React.Fragment key={group.date}>
+                <div className="flex justify-center my-4 sticky top-4 z-20">
+                   <div className="px-4 py-1.5 bg-black/40 backdrop-blur-xl border border-white/5 rounded-full shadow-xl">
+                      <span className="text-[9px] font-black uppercase text-white/40 tracking-[0.2em]">{formatDateLabel(group.date)}</span>
+                   </div>
+                </div>
+                {group.messages.map(msg => (
+                  <MessageItem 
+                    key={msg.id} 
+                    message={msg} 
+                    isMe={msg.senderId === firebaseUser?.uid} 
+                    chatId={currentChatId} 
+                    onReply={setReplyTo} 
+                    onEdit={setEditingMessage}
+                  />
+                ))}
+              </React.Fragment>
             ))}
           </div>
         </ScrollArea>
+
+        {showScrollDown && (
+          <Button 
+            size="icon" 
+            onClick={scrollToBottom}
+            className="absolute bottom-6 right-6 h-12 w-12 rounded-full bg-primary/80 backdrop-blur-xl text-white shadow-2xl z-30 animate-in fade-in zoom-in duration-300 border border-white/10"
+          >
+            <ArrowDown className="w-6 h-6" />
+          </Button>
+        )}
       </div>
 
       <ChatInputBar
