@@ -143,13 +143,13 @@ export default function ChatSidebar() {
 
   return (
     <div className="flex flex-col h-full bg-transparent overflow-hidden">
-      <header className="px-6 pt-12 pb-6 space-y-8 shrink-0">
+      <header className="px-6 pt-12 pb-4 space-y-6 shrink-0">
         <div className="flex items-center justify-between">
            <div className="flex items-center gap-3">
-              <h1 className="text-5xl font-black text-white italic tracking-tighter uppercase leading-none">MIG</h1>
+              <h1 className="text-4xl font-black text-white italic tracking-tighter uppercase leading-none">MIG</h1>
               <div className="bg-primary/10 border border-primary/20 px-3 py-1 rounded-full flex items-center gap-2">
                  <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                 <span className="text-[10px] font-black text-primary uppercase tracking-widest italic">V204</span>
+                 <span className="text-[10px] font-black text-primary uppercase tracking-widest italic">V205</span>
               </div>
            </div>
            <Button variant="ghost" size="icon" className="h-12 w-12 rounded-[1.2rem] bg-white/[0.03] border border-white/5 text-white hover:bg-primary/20" onClick={() => setIsCreateModalOpen(true)}>
@@ -165,32 +165,34 @@ export default function ChatSidebar() {
         </div>
       </header>
 
-      <StoriesBar />
-
-      <ScrollArea className="flex-1 no-scrollbar mt-4">
-        <div className="pb-32">
-           {isLoading ? (
-             <div className="flex flex-col items-center justify-center py-20 opacity-20">
-                <Loader2 className="w-10 h-10 animate-spin text-primary" />
-             </div>
-           ) : sortedChats.length > 0 ? (
-             sortedChats.map(chat => (
-               <ChatListItem 
-                 key={chat.id} 
-                 chat={chat} 
-                 isActive={currentChatId === chat.id} 
-                 onClick={() => setCurrentChatId(chat.id)}
-                 currentUserId={user?.uid} 
-                 draft={localDrafts[chat.id]}
-                 otherId={chat.type === 'private' && user ? chat.participantIds?.find((id: string) => id !== user.uid) : null} 
-               />
-             ))
-           ) : (
-             <div className="flex flex-col items-center justify-center py-32 opacity-10">
-                <MessageSquare className="w-16 h-16 mb-4" />
-                <p className="text-[10px] font-black uppercase tracking-[0.4em]">Сигналы не обнаружены</p>
-             </div>
-           )}
+      <ScrollArea className="flex-1 no-scrollbar">
+        <div className="flex flex-col">
+          <StoriesBar />
+          
+          <div className="pb-32 mt-2">
+             {isLoading ? (
+               <div className="flex flex-col items-center justify-center py-20 opacity-20">
+                  <Loader2 className="w-10 h-10 animate-spin text-primary" />
+               </div>
+             ) : sortedChats.length > 0 ? (
+               sortedChats.map(chat => (
+                 <ChatListItem 
+                   key={chat.id} 
+                   chat={chat} 
+                   isActive={currentChatId === chat.id} 
+                   onClick={() => setCurrentChatId(chat.id)}
+                   currentUserId={user?.uid} 
+                   draft={localDrafts[chat.id]}
+                   otherId={chat.type === 'private' && user ? chat.participantIds?.find((id: string) => id !== user.uid) : null} 
+                 />
+               ))
+             ) : (
+               <div className="flex flex-col items-center justify-center py-32 opacity-10">
+                  <MessageSquare className="w-16 h-16 mb-4" />
+                  <p className="text-[10px] font-black uppercase tracking-[0.4em]">Сигналы не обнаружены</p>
+               </div>
+             )}
+          </div>
         </div>
       </ScrollArea>
       <CreateChatModal open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen} />
