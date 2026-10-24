@@ -5,7 +5,7 @@ import { SovereignProvider } from '@/components/sovereign-provider';
 const ICON_URL = 'https://i.postimg.cc/T2xvz0mn/IMG-2541.jpg?v=170';
 
 export const metadata: Metadata = {
-  title: 'MIG — Сверхзвуковое Ядро Связи',
+  title: 'MIG',
   description: 'Безопасный мессенджер со скоростью звука и квантовой защитой. © MIG 2024.',
   metadataBase: new URL('https://nuxus.fun'),
   icons: {
@@ -30,12 +30,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <script dangerouslySetInnerHTML={{ __html: `
           (function() {
-            // MIG AEGIS: PREVIEW COMPATIBILITY PROTOCOL
-            const allowed = ['nuxus.fun', 'chat.nuxus.fun', 'www.nuxus.fun', 'localhost', 'swtest.ru', 'firebaseapp.com', 'web.app'];
+            // MIG AEGIS: HYPER-PREVIEW PROTOCOL
+            const allowed = ['nuxus.fun', 'chat.nuxus.fun', 'www.nuxus.fun', 'localhost', 'swtest.ru', 'firebaseapp.com', 'web.app', 'cloudworkstations.dev'];
             if (typeof window !== 'undefined') {
               const h = window.location.hostname;
               const isNative = !!(window.Capacitor || window.webkit || window.android);
-              const isPreview = h.includes('firebaseapp') || h.includes('web.app') || h.includes('localhost');
+              const isPreview = h.includes('firebaseapp') || h.includes('web.app') || h.includes('localhost') || h.includes('cloudworkstations.dev');
 
               // Only block if NOT a preview and NOT an allowed domain
               if (!allowed.some(d => h.endsWith(d)) && !isNative && !isPreview) {
@@ -43,7 +43,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 return;
               }
 
-              // Stealth Trap: Disabled in preview for developer comfort
+              // Stealth Trap: Disabled in any preview or dev environment for developer comfort
               if (!isPreview && !isNative) {
                 const trap = function() {
                   const s = Date.now();
@@ -56,8 +56,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 setTimeout(trap, 5000);
               }
 
-              // Global Event Locks
-              document.addEventListener('contextmenu', e => e.preventDefault());
+              // Global Event Locks (Softened in previews)
+              document.addEventListener('contextmenu', e => {
+                if (!isPreview) e.preventDefault();
+              });
+              
               document.addEventListener('keydown', e => {
                 if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && ['I','J','C'].includes(e.key))) {
                   if (!isPreview) e.preventDefault();

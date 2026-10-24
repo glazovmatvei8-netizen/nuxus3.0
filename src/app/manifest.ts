@@ -7,7 +7,7 @@ export default function manifest(): MetadataRoute.Manifest {
   
   return {
     id: 'chat.mig.app',
-    name: 'MIG 2.0',
+    name: 'MIG',
     short_name: 'MIG',
     description: 'Сверхзвуковой мессенджер с квантовой защитой. © MIG Platform.',
     start_url: '/',
