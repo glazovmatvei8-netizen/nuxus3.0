@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
-  ShieldCheck, Activity, Gauge, Database, Lock, ShieldAlert
+  ShieldCheck, Activity, Gauge, Database, Lock, ShieldAlert, RefreshCcw
 } from 'lucide-react';
 import { cn, triggerHaptic } from '@/lib/utils';
 import { Button } from './ui/button';
@@ -13,9 +13,6 @@ import { useTranslations } from '@/hooks/use-translations';
 export default function KernelShieldView() {
   const { t } = useTranslations();
   const [logs, setLogs] = useState<{t: string, m: string, type: 'sys' | 'sec' | 'net'}[]>([]);
-  const logEndRef = useRef<HTMLDivElement>(null);
-  const [isAutoScroll, setIsAutoScroll] = useState(true);
-  
   const [ping, setPing] = useState<number | null>(null);
   const [isTesting, setIsTesting] = useState(false);
   const [threatsReflected, setThreatsReflected] = useState(142);
@@ -57,12 +54,6 @@ export default function KernelShieldView() {
 
     return () => clearInterval(interval);
   }, []);
-
-  useEffect(() => {
-    if (isAutoScroll && logEndRef.current) {
-      logEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [logs, isAutoScroll]);
 
   const runDiagnostic = async () => {
     setIsTesting(true);
@@ -118,7 +109,7 @@ export default function KernelShieldView() {
                 <div className="flex items-center gap-6">
                    {ping !== null && <span className="text-2xl font-black italic text-primary tabular-nums">{ping}<span className="text-[10px] ml-1">ms</span></span>}
                    <Button onClick={runDiagnostic} disabled={isTesting} className="h-12 px-6 rounded-xl bg-primary text-white font-black uppercase text-[10px] tracking-widest shadow-xl border border-white/10 active:scale-95 transition-all">
-                     {isTesting ? <RefreshCw className="w-4 h-4 animate-spin" /> : t('shield.run')}
+                     {isTesting ? <RefreshCcw className="w-4 h-4 animate-spin" /> : t('shield.run')}
                    </Button>
                 </div>
              </div>
@@ -140,9 +131,9 @@ export default function KernelShieldView() {
                    <ShieldAlert className="w-4 h-4 text-primary" />
                    <span className="text-[10px] font-black uppercase tracking-widest text-white/60">{t('shield.terminal')}</span>
                 </div>
-                <button onClick={() => { triggerHaptic(); setIsAutoScroll(!isAutoScroll); }} className={cn("text-[8px] font-black uppercase px-3 py-1.5 rounded-full border transition-all", isAutoScroll ? "bg-primary text-black border-primary" : "bg-white/5 text-white/40 border-white/10")}>
-                  {isAutoScroll ? t('shield.auto_scroll') : t('shield.locked')}
-                </button>
+                <div className="text-[8px] font-black uppercase px-3 py-1.5 rounded-full border bg-white/5 text-white/40 border-white/10">
+                  {t('shield.locked')}
+                </div>
              </div>
              <div className="flex-1 overflow-y-auto p-5 no-scrollbar bg-black/40">
                 <div className="space-y-2">
@@ -155,7 +146,6 @@ export default function KernelShieldView() {
                         <span className="break-words">{log.m}</span>
                      </p>
                    ))}
-                   <div ref={logEndRef} />
                 </div>
              </div>
           </div>
