@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
@@ -8,7 +9,7 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, ChevronLeft, X, Paperclip, Mic, StopCircle, 
   Smile, Trash2, Loader2, Phone, Video, ShieldCheck, Edit2, Check,
-  Pin, ArrowDown, Search, Eraser, Flame, Clock, Plus, BarChart3, Zap
+  Pin, ArrowDown, Search, Eraser, Flame, Clock, Plus, BarChart3, Zap, ImageIcon
 } from 'lucide-react';
 import { MessageItem } from './message-item';
 import { ChatInfoModal } from './modals/chat-info-modal';
@@ -34,17 +35,12 @@ const ChatInputBar = memo(({ onSendMessage, onUpdateMessage, currentChatId, repl
   const { localDrafts, setLocalDrafts } = useAppState();
   const { t } = useTranslations();
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [messageInput, setMessageInput] = useState('');
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
-  const [isPlusMenuOpen, setIsPlusMenuOpen] = useState(false);
   
   const [ttl, setTtl] = useState<number | null>(null);
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingDuration, setRecordingDuration] = useState(0);
-
-  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     if (editingMessage) {
@@ -72,10 +68,29 @@ const ChatInputBar = memo(({ onSendMessage, onUpdateMessage, currentChatId, repl
     if (!editingMessage) setLocalDrafts(prev => ({ ...prev, [currentChatId]: '' }));
   };
 
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    triggerHaptic();
+    
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64 = reader.result as string;
+      const compressed = await compressImage(base64, 1200, 0.7);
+      onSendMessage(compressed, 'image');
+      toast({ title: "Медиа пакет отправлен" });
+    };
+    reader.readAsDataURL(file);
+    // Сброс инпута для повторного выбора того же файла
+    e.target.value = '';
+  };
+
   return (
     <footer className="p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-[#010103]/60 backdrop-blur-[50px] border-t border-white/5 shrink-0 z-40 relative">
       <div className="flex gap-3 items-end w-full max-w-5xl mx-auto relative">
         
+        <input type="file" ref={fileInputRef} hidden accept="image/*" onChange={handleFileSelect} />
+
         {/* Reply/Edit Indicator */}
         {(replyTo || editingMessage) && (
           <div className="absolute bottom-full left-0 right-0 mb-3 p-4 mig-glass rounded-3xl animate-in slide-in-from-bottom-4">
@@ -92,7 +107,7 @@ const ChatInputBar = memo(({ onSendMessage, onUpdateMessage, currentChatId, repl
           </div>
         )}
 
-        <Button variant="ghost" size="icon" className="h-14 w-14 shrink-0 rounded-2xl bg-white/[0.03] border border-white/5" onClick={() => setIsPlusMenuOpen(true)}>
+        <Button variant="ghost" size="icon" className="h-14 w-14 shrink-0 rounded-2xl bg-white/[0.03] border border-white/5" onClick={() => fileInputRef.current?.click()}>
           <Plus className="w-7 h-7 text-white/20" />
         </Button>
 
@@ -178,6 +193,16 @@ export default function ChatArea() {
     if (chat.type === 'private') return formatDisplayName(otherProfile?.name, otherProfile?.username);
     return formatDisplayName(chat.name, chat.username);
   }, [chat, otherProfile]);
+
+  // Auto-scroll to bottom
+  useEffect(() => {
+    if (scrollAreaRef.current) {
+      const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
+      if (scrollContainer) {
+        scrollContainer.scrollTop = scrollContainer.scrollHeight;
+      }
+    }
+  }, [messages?.length]);
 
   return (
     <div className="flex-1 flex flex-col h-full bg-[#010103] relative overflow-hidden z-20">

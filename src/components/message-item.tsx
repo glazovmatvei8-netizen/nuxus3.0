@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { memo, useMemo, useState, useEffect, useRef } from 'react';
@@ -6,7 +7,7 @@ import { format } from 'date-fns';
 import { 
   Check, CheckCheck, Play, Pause, MoreHorizontal, 
   Copy, Share2, Pin, Trash2, Heart, Smile,
-  Reply, Edit2, Flame, Zap
+  Reply, Edit2, Flame, Zap, ImageIcon
 } from 'lucide-react';
 import { cn, triggerHaptic, decryptSignal, getReputationInfo } from '@/lib/utils';
 import { useAppState } from '@/lib/app-state';
@@ -23,8 +24,8 @@ import {
 import { useToast } from '@/hooks/use-toast';
 
 /**
- * MIG MESSAGE ITEM V194.0 «AERO-BUBBLE»
- * ОПТИМИЗИРОВАНО: Обтекаемые формы и премиальная анимация.
+ * MIG MESSAGE ITEM V196.0 «VISUAL SIGNAL»
+ * ОПТИМИЗИРОВАНО: Корректное отображение HD фото-пакетов.
  */
 export const MessageItem = memo(({ message, isMe, onReply, onEdit, chatId }: any) => {
   const { setInspectedUserId, setForwardingMessage } = useAppState();
@@ -69,6 +70,13 @@ export const MessageItem = memo(({ message, isMe, onReply, onEdit, chatId }: any
 
               {message.contentType === 'sticker' ? (
                 <img src={message.content} className="w-32 h-32 object-contain" alt="Sticker" crossOrigin="anonymous" />
+              ) : message.contentType === 'image' ? (
+                <div className="relative rounded-[1.2rem] overflow-hidden border border-white/10 shadow-2xl group cursor-pointer" onClick={() => window.open(displayContent, '_blank')}>
+                   <img src={displayContent} className="max-w-full max-h-[400px] object-cover transition-transform duration-700 group-hover:scale-105" alt="Signal Media" crossOrigin="anonymous" />
+                   <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <ImageIcon className="w-8 h-8 text-white animate-pulse" />
+                   </div>
+                </div>
               ) : (
                 <p className="text-[15px] font-bold leading-relaxed tracking-tight break-words uppercase">
                   {displayContent}
@@ -91,7 +99,7 @@ export const MessageItem = memo(({ message, isMe, onReply, onEdit, chatId }: any
             ))}
           </div>
           <ContextMenuItem onClick={() => onReply(message)} className="gap-3 py-2.5 rounded-xl font-black text-[10px] uppercase text-white"><Reply size={14} className="text-primary" /> Ответить</ContextMenuItem>
-          {isMe && <ContextMenuItem onClick={() => onEdit(message)} className="gap-3 py-2.5 rounded-xl font-black text-[10px] uppercase text-white"><Edit2 size={14} className="text-primary" /> Изменить</ContextMenuItem>}
+          {isMe && message.contentType === 'text' && <ContextMenuItem onClick={() => onEdit(message)} className="gap-3 py-2.5 rounded-xl font-black text-[10px] uppercase text-white"><Edit2 size={14} className="text-primary" /> Изменить</ContextMenuItem>}
           <ContextMenuItem onClick={() => setForwardingMessage(message)} className="gap-3 py-2.5 rounded-xl font-black text-[10px] uppercase text-white"><Share2 size={14} className="text-primary" /> Переслать</ContextMenuItem>
           <ContextMenuItem onClick={() => deleteDoc(doc(db!, 'chats', chatId, 'messages', message.id))} className="gap-3 py-2.5 rounded-xl font-black text-[10px] uppercase text-red-500"><Trash2 size={14} /> Удалить</ContextMenuItem>
         </ContextMenuContent>
