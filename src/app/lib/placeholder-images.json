@@ -1,22 +1,23 @@
+
 {
   "placeholderImages": [
     {
       "id": "nuxus-prime-core",
-      "description": "Nuxus Prime 3D Hyper-Detailed Core",
+      "description": "MIG Prime 3D Hyper-Detailed Core",
       "imageUrl": "https://images.unsplash.com/photo-1588317769568-a50fd5b6143b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxmdXR1cmlzdGljJTIwZW5lcmd5JTIwY29yZXxlbnwwfHx8fDE3NzIzMDkxOTJ8MA&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "futuristic energy core"
     },
     {
       "id": "nuxus-auth-logo",
-      "description": "MIG Cyber Official Logo V197",
-      "imageUrl": "https://storage.googleapis.com/fetch-studio-images/ed639417-646c-4867-b5cc-74431f0e2ec3.png",
-      "imageHint": "cyberpunk high-tech logo"
+      "description": "MIG Official Logo V208",
+      "imageUrl": "/icon.png",
+      "imageHint": "official logo"
     },
     {
       "id": "nuxus-app-icon",
-      "description": "MIG Final Cyber Icon V197",
-      "imageUrl": "https://storage.googleapis.com/fetch-studio-images/ed639417-646c-4867-b5cc-74431f0e2ec3.png",
-      "imageHint": "high-tech letter M"
+      "description": "MIG Core Icon V208",
+      "imageUrl": "/icon.png",
+      "imageHint": "app icon"
     },
     {
       "id": "nuxus-bg-abstract",
@@ -26,14 +27,14 @@
     },
     {
       "id": "pwa-icon-192",
-      "description": "MIG PWA Icon 192x192 V197",
-      "imageUrl": "https://storage.googleapis.com/fetch-studio-images/ed639417-646c-4867-b5cc-74431f0e2ec3.png",
+      "description": "MIG PWA Icon 192x192 V208",
+      "imageUrl": "/icon.png",
       "imageHint": "app icon"
     },
     {
       "id": "pwa-icon-512",
-      "description": "MIG PWA Icon 512x512 V197",
-      "imageUrl": "https://storage.googleapis.com/fetch-studio-images/ed639417-646c-4867-b5cc-74431f0e2ec3.png",
+      "description": "MIG PWA Icon 512x512 V208",
+      "imageUrl": "/icon.png",
       "imageHint": "app icon"
     }
   ]
