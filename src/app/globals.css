@@ -4,24 +4,24 @@
 
 @layer base {
   :root {
-    /* Новая палитра Cyber Violet */
-    --background: 270 30% 4%;    /* Очень темный фиолетовый антрацит */
+    /* Возврат к Titanium Cyan */
+    --background: 220 30% 2%;    /* Глубокий темно-синий титан */
     --foreground: 0 0% 100%;
-    --card: 270 25% 6%;          
+    --card: 220 25% 4%;          
     --card-foreground: 0 0% 100%;
-    --popover: 270 25% 5%;
+    --popover: 220 25% 3%;
     --popover-foreground: 0 0% 100%;
-    --primary: 270 75% 55%;      /* Cyber Violet (как на скрине) */
-    --primary-foreground: 0 0% 100%;
-    --secondary: 270 20% 10%;
-    --secondary-foreground: 270 10% 80%;
-    --muted: 270 15% 8%;
-    --muted-foreground: 270 10% 60%;
-    --accent: 290 80% 60%;       
-    --accent-foreground: 240 10% 2%;
-    --border: 270 20% 12%;
-    --input: 270 20% 10%;
-    --ring: 270 75% 55%;
+    --primary: 190 100% 50%;      /* MIG Cyan (Голубой) */
+    --primary-foreground: 220 30% 2%;
+    --secondary: 220 20% 8%;
+    --secondary-foreground: 220 10% 80%;
+    --muted: 220 15% 6%;
+    --muted-foreground: 220 10% 60%;
+    --accent: 190 100% 50%;       
+    --accent-foreground: 220 30% 2%;
+    --border: 220 20% 10%;
+    --input: 220 20% 8%;
+    --ring: 190 100% 50%;
     --radius: 2.5rem;
   }
 }
@@ -81,7 +81,7 @@
   width: 90%;
   max-width: 420px;
   height: 76px;
-  background: hsla(270, 30%, 6%, 0.85);
+  background: hsla(220, 30%, 4%, 0.85);
   backdrop-filter: blur(30px);
   border-radius: 3rem;
   border: 1px solid rgba(255,255,255,0.08);

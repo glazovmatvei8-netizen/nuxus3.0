@@ -10,8 +10,8 @@ interface MigLogoProps {
 }
 
 /**
- * MIG LOGO V210.0 «VIOLET GLOW»
- * ОПТИМИЗИРОВАНО: Свечение изменено на фиолетовое согласно новому брендингу.
+ * MIG LOGO V211.0 «CYAN RESTORATION»
+ * ОПТИМИЗИРОВАНО: Свечение возвращено к небесно-голубому (Cyan).
  */
 export function NuxusLogo({ className, size = 120 }: MigLogoProps) {
   // Путь к локальному файлу в папке public
