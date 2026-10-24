@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -92,7 +91,7 @@ export default function KernelShieldView() {
         </div>
       </header>
 
-      <ScrollArea className="flex-1 px-8 pb-40 z-10">
+      <ScrollArea className="flex-1 px-8 pb-64 z-10">
         <div className="space-y-10 py-6">
           <div className="bg-[#151518] p-8 rounded-[3rem] border border-white/[0.05] shadow-2xl relative overflow-hidden group">
              <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity" />

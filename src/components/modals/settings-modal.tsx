@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -16,8 +15,8 @@ import { useMemoFirebase } from '@/firebase/firestore/use-memo-firebase';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   LogOut, Settings2, Camera, ShieldCheck, Loader2, Fingerprint, Palette, 
-  ChevronRight, Globe, Trash2, Mail, Phone, Lock, Image as ImageIcon,
-  Info, HelpCircle, UserCheck, ShieldAlert, RefreshCw, KeyRound, Crown, FileText, Sun, Moon, Type, LayoutGrid, Zap, Calendar, Star, Sparkles, CheckCircle2, MessageCircle
+  Globe, Trash2, Mail, Phone, Lock, Image as ImageIcon,
+  Info, HelpCircle, UserCheck, ShieldAlert, RefreshCw, KeyRound, Crown, FileText, Sun, Moon, Type, LayoutGrid, Zap, Calendar, Star, Sparkles, CheckCircle2, MessageCircle, Sliders
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { signOut } from 'firebase/auth';
@@ -36,6 +35,12 @@ const BUBBLE_STYLES = [
   { id: 'neon', name: 'Neon Pulse', desc: 'Эффект свечения' },
   { id: 'gold', name: 'Royal Gold', desc: 'Элитный градиент' },
   { id: 'ocean', name: 'Deep Ocean', desc: 'Стеклянный блюр' }
+];
+
+const NAV_STYLES = [
+  { id: 'liquid', name: 'Liquid Glass', desc: 'Максимальное размытие' },
+  { id: 'neon', name: 'Neon Power', desc: 'Яркие границы' },
+  { id: 'stealth', name: 'Deep Stealth', desc: 'Абсолютный черный' }
 ];
 
 export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
@@ -61,7 +66,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
     name: '', username: '', bio: '', birthday: '', statusText: '',
     appearance: 'dark' as 'light' | 'dark', theme: 'default',
     nameColor: 'text-orange-500', borderRadius: 24,
-    bubbleStyle: 'default', messageSize: 'medium',
+    bubbleStyle: 'default', navStyle: 'liquid' as any, messageSize: 'medium',
     isGhostMode: false, isEnergySaving: false, twoFactorEnabled: false, twoFactorPin: '', twoFactorPinLength: '6' as '4' | '6',
     autoRenew: false
   });
@@ -79,6 +84,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         nameColor: profile.settings?.nameColor || 'text-orange-500',
         borderRadius: profile.settings?.messageRadius ?? 24,
         bubbleStyle: profile.settings?.bubbleStyle || 'default',
+        navStyle: profile.settings?.navStyle || 'liquid',
         messageSize: profile.settings?.messageSize || 'medium',
         isGhostMode: !!profile.settings?.privacy?.isGhostMode,
         isEnergySaving: !!profile.settings?.privacy?.isEnergySaving,
@@ -110,6 +116,7 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         'settings.statusText': form.statusText.trim(),
         'settings.appearance': form.appearance,
         'settings.bubbleStyle': form.bubbleStyle,
+        'settings.navStyle': form.navStyle,
         'settings.messageRadius': form.borderRadius,
         'settings.nameColor': form.nameColor,
         'settings.chatBackground': bgPreview,
@@ -320,6 +327,27 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
                             )}>
                                <p className="text-[11px] font-black uppercase text-white">{s.name}</p>
                                <p className="text-[8px] font-bold text-muted-foreground uppercase mt-1">{s.desc}</p>
+                            </button>
+                          ))}
+                       </div>
+                    </div>
+
+                    <div className="space-y-4 pt-4 border-t border-white/5">
+                       <div className="flex items-center gap-3">
+                          <Sliders className="w-5 h-5 text-primary" />
+                          <Label className="text-[9px] font-black uppercase text-primary/60 ml-2 tracking-widest">Стиль навигации</Label>
+                       </div>
+                       <div className="grid grid-cols-1 gap-3">
+                          {NAV_STYLES.map(s => (
+                            <button key={s.id} onClick={() => setForm({...form, navStyle: s.id})} className={cn(
+                              "p-4 rounded-2xl border text-left transition-all flex items-center justify-between group",
+                              form.navStyle === s.id ? "bg-primary/10 border-primary shadow-lg" : "bg-black/40 border-white/5"
+                            )}>
+                               <div>
+                                 <p className="text-[11px] font-black uppercase text-white">{s.name}</p>
+                                 <p className="text-[8px] font-bold text-muted-foreground uppercase mt-1">{s.desc}</p>
+                               </div>
+                               {form.navStyle === s.id && <CheckCircle2 className="w-4 h-4 text-primary" />}
                             </button>
                           ))}
                        </div>

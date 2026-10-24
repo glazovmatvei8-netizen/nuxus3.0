@@ -13,6 +13,7 @@ import { useAppState } from '@/lib/app-state';
 import { cn, triggerHaptic } from '@/lib/utils';
 import { useUser, useFirestore } from '@/firebase/provider';
 import { useCollection } from '@/firebase/firestore/use-collection';
+import { useDoc } from '@/firebase/firestore/use-doc';
 import { collection, query, where, limit, doc, updateDoc } from 'firebase/firestore';
 import { CallOverlay } from './modals/call-overlay';
 import { NotificationListener } from './notification-listener';
@@ -20,7 +21,7 @@ import { SettingsModal } from './modals/settings-modal';
 import { GlobalSearchModal } from './modals/global-search-modal';
 import { ForwardModal } from './modals/forward-modal';
 import { UserProfileModal } from './modals/user-profile-modal';
-import type { Call } from '@/lib/types';
+import type { Call, User as UserType } from '@/lib/types';
 import { 
   MessageSquare, Wallet, Globe, LayoutGrid, ShieldCheck, Zap
 } from 'lucide-react';
@@ -35,6 +36,9 @@ export default function ChatMain() {
   } = useAppState();
   const { user } = useUser();
   const db = useFirestore();
+
+  const userProfileRef = useMemo(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user?.uid]);
+  const { data: profile } = useDoc<UserType>(userProfileRef);
 
   useEffect(() => {
     if (!db || !user) return;
@@ -68,6 +72,13 @@ export default function ChatMain() {
     { id: 'wallet', icon: Wallet, label: t('app.wallet') },
     { id: 'profile', icon: LayoutGrid, label: t('app.profile') },
   ];
+
+  const navStyleClass = useMemo(() => {
+    const style = profile?.settings?.navStyle || 'liquid';
+    if (style === 'neon') return 'mig-nav-neon';
+    if (style === 'stealth') return 'mig-nav-stealth';
+    return 'mig-nav-liquid';
+  }, [profile?.settings?.navStyle]);
 
   return (
     <div className="fixed inset-0 flex flex-col w-screen bg-background overflow-hidden h-[100dvh]">
@@ -139,7 +150,7 @@ export default function ChatMain() {
 
       {/* Floating Navigation (Mobile/Tablet) */}
       {(!currentChatId || activeView !== 'chats') && (
-        <div className="lg:hidden mig-floating-nav">
+        <div className={cn("lg:hidden mig-floating-nav", navStyleClass)}>
           {NAV_ITEMS.map((item) => (
              <button 
                key={item.id}

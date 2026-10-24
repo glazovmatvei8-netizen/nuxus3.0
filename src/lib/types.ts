@@ -184,6 +184,7 @@ export interface UserSettings {
   customAppIconUrl?: string;
   customPrimaryColor?: string;
   bubbleStyle?: 'default' | 'neon' | 'gold' | 'ocean';
+  navStyle?: 'default' | 'liquid' | 'neon' | 'stealth';
   fontFamily?: 'jakarta' | 'inter' | 'system';
   messageSize: 'small' | 'medium' | 'large';
   messageRadius?: number;
