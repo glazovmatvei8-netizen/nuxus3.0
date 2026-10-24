@@ -143,6 +143,7 @@ export default function ChatArea() {
   const [showScrollDown, setShowScrollDown] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const initialScrollDone = useRef(false);
+  const prevChatId = useRef<string | null>(null);
 
   const chatRef = useMemoFirebase(() => (!db || !currentChatId) ? null : doc(db, 'chats', currentChatId), [db, currentChatId]);
   const { data: chat } = useDoc<Chat>(chatRef);
@@ -150,6 +151,9 @@ export default function ChatArea() {
   const otherId = useMemo(() => chat?.type === 'private' ? chat.participantIds.find(id => id !== firebaseUser?.uid) : null, [chat, firebaseUser?.uid]);
   const otherProfileRef = useMemoFirebase(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
   const { data: otherProfile } = useDoc<UserType>(otherProfileRef);
+
+  const myProfileRef = useMemoFirebase(() => (!db || !firebaseUser) ? null : doc(db, 'users', firebaseUser.uid), [db, firebaseUser?.uid]);
+  const { data: myProfile } = useDoc<UserType>(myProfileRef);
 
   const messagesQuery = useMemoFirebase(() => (!db || !currentChatId) ? null : query(collection(db, 'chats', currentChatId, 'messages'), orderBy('sentAt', 'asc')), [db, currentChatId]);
   const { data: messages } = useCollection<Message>(messagesQuery);
@@ -179,9 +183,19 @@ export default function ChatArea() {
   }, []);
 
   useEffect(() => {
+    if (currentChatId !== prevChatId.current) {
+      initialScrollDone.current = false;
+      prevChatId.current = currentChatId;
+    }
+  }, [currentChatId]);
+
+  useEffect(() => {
     if (!messages?.length) return;
     if (!initialScrollDone.current) {
-      setTimeout(() => { scrollToBottom('auto'); initialScrollDone.current = true; }, 50);
+      setTimeout(() => { 
+        scrollToBottom('auto'); 
+        initialScrollDone.current = true; 
+      }, 100);
     } else {
       scrollToBottom('smooth');
     }
@@ -223,8 +237,13 @@ export default function ChatArea() {
       </header>
 
       <div className="flex-1 relative overflow-hidden">
-        {otherProfile?.settings?.chatBackground && (
-          <img src={otherProfile.settings.chatBackground} className="absolute inset-0 w-full h-full object-cover opacity-30 z-0" alt="Chat BG" />
+        {/* FIX: Background now loads from current user settings with higher visibility */}
+        {myProfile?.settings?.chatBackground && (
+          <img 
+            src={myProfile.settings.chatBackground} 
+            className="absolute inset-0 w-full h-full object-cover opacity-80 z-0" 
+            alt="Chat BG" 
+          />
         )}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(0,212,255,0.05)_0%,transparent_80%)] z-0" />
         
