@@ -11,7 +11,8 @@ export const translations = {
       wallet: "Кошелек",
       games: "Игры",
       profile: "Аккаунт",
-      explore: "Навигатор"
+      explore: "Навигатор",
+      shield: "Защита"
     },
     sidebar: { 
       all: "Все чаты", 
@@ -111,7 +112,11 @@ export const translations = {
       join: "Присоединиться",
       joining: "Подключение...",
       devMode: "Функционал в разработке",
-      nodeNotFound: "Узел временно не в сети"
+      nodeNotFound: "Узел временно не в сети",
+      cat_trade: "Торговля",
+      cat_comms: "Связь",
+      cat_archive: "Архив",
+      cat_shield: "Защита"
     },
     wallet: {
       title: "Кошелек",
@@ -122,7 +127,23 @@ export const translations = {
       topup: "Пополнение",
       transfer: "Перевод STK",
       info: "STK (Stellar Credits) — это внутренняя единица Ядра. Курс: 1 STK = 1 RUB. Используется для обмена подарками и артефактами.",
-      disclaimer: "Все операции защищены протоколом QES. © Nuxus Quantum Platforms."
+      disclaimer: "Все операции защищены протоколом QES. © Nuxus Quantum Platforms.",
+      send: "Отправить",
+      exchange: "Обмен"
+    },
+    shield: {
+      title: "Щит Aegis",
+      subtitle: "Мониторинг защиты Ядра",
+      status_active: "ЗАЩИТА АКТИВНА",
+      diagnostic: "Диагностика QES",
+      hardware: "Статус узла",
+      enc_core: "Шифрование",
+      mem_node: "Память узла",
+      integrity: "Целостность",
+      terminal: "Логи безопасности",
+      run: "Тест",
+      auto_scroll: "Авто-скролл",
+      locked: "Заблокировано"
     },
     initializing: "Загрузка системы...",
     online: "в сети",
@@ -143,7 +164,8 @@ export const translations = {
       wallet: "Wallet",
       games: "Games",
       profile: "Account",
-      explore: "Explore"
+      explore: "Explore",
+      shield: "Shield"
     },
     sidebar: { 
       all: "All Chats", 
@@ -243,7 +265,11 @@ export const translations = {
       join: "Join",
       joining: "Connecting...",
       devMode: "Feature in development",
-      nodeNotFound: "Node is temporarily offline"
+      nodeNotFound: "Node is temporarily offline",
+      cat_trade: "Trade",
+      cat_comms: "Comms",
+      cat_archive: "Archive",
+      cat_shield: "Security"
     },
     wallet: {
       title: "Wallet",
@@ -254,7 +280,23 @@ export const translations = {
       topup: "Top Up",
       transfer: "Transfer STK",
       info: "STK (Stellar Credits) is internal Core unit. Rate: 1 STK = 1 RUB. Not a financial instrument.",
-      disclaimer: "All rights reserved by Nuxus Quantum Platforms."
+      disclaimer: "All rights reserved by Nuxus Quantum Platforms.",
+      send: "Send",
+      exchange: "Exchange"
+    },
+    shield: {
+      title: "Aegis Shield",
+      subtitle: "Core Protection Monitoring",
+      status_active: "PROTECTION ACTIVE",
+      diagnostic: "QES Diagnostic",
+      hardware: "Node Status",
+      enc_core: "Encryption",
+      mem_node: "Node Memory",
+      integrity: "Integrity",
+      terminal: "Security Logs",
+      run: "Run",
+      auto_scroll: "Auto-Scroll",
+      locked: "Locked"
     },
     initializing: "Initializing...",
     online: "online",

@@ -22,8 +22,8 @@ import { useTranslations } from '@/hooks/use-translations';
 import { useAppState } from '@/lib/app-state';
 
 /**
- * WALLET VIEW V147.0 «INTEGRITY FIX»
- * FIXED: ReferenceError: Label is not defined.
+ * WALLET VIEW V191.0 «Full Russian»
+ * FIXED: All English labels replaced with translations.
  */
 export default function WalletView() {
   const { user } = useUser();
@@ -128,9 +128,9 @@ export default function WalletView() {
           <div className="space-y-4">
              <h3 className="text-[11px] font-black uppercase text-[#8E8E93] tracking-[0.2em] px-2 italic">{t('wallet.actions')}</h3>
              <div className="grid grid-cols-3 gap-4">
-                <ActionBtn icon={Send} label="Отправить" onClick={() => toast({ title: "Скоро", description: "Переводы между узлами в разработке" })} />
-                <ActionBtn icon={ArrowDown} label="Пополнить" onClick={() => setIsTopUpOpen(true)} />
-                <ActionBtn icon={RefreshCcw} label="Обмен" onClick={() => toast({ title: "Скоро", description: "Обмен артефактов в разработке" })} />
+                <ActionBtn icon={Send} label={t('wallet.send')} onClick={() => toast({ title: "Скоро", description: "Переводы между узлами в разработке" })} />
+                <ActionBtn icon={ArrowDown} label={t('wallet.topup')} onClick={() => setIsTopUpOpen(true)} />
+                <ActionBtn icon={RefreshCcw} label={t('wallet.exchange')} onClick={() => toast({ title: "Скоро", description: "Обмен артефактов в разработке" })} />
              </div>
           </div>
 

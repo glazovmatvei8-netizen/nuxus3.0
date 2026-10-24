@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { 
   Search, Orbit, CircleDollarSign, TowerControl, 
-  Loader2, Info, ChevronRight, LayoutGrid, Radio, ShieldCheck, Zap
+  Loader2, Info, LayoutGrid, Radio, ShieldCheck, Zap
 } from 'lucide-react';
 import { useAppState } from '@/lib/app-state';
 import { useUser, useFirestore } from '@/firebase/provider';
@@ -63,10 +63,10 @@ export default function DiscoveryView() {
   ];
 
   const CATEGORIES = [
-    { name: 'Торговля', icon: CircleDollarSign },
-    { name: 'Связь', icon: Radio },
-    { name: 'Архив', icon: LayoutGrid },
-    { name: 'Защита', icon: ShieldCheck }
+    { name: t('explore.cat_trade'), icon: CircleDollarSign },
+    { name: t('explore.cat_comms'), icon: Radio },
+    { name: t('explore.cat_archive'), icon: LayoutGrid },
+    { name: t('explore.cat_shield'), icon: ShieldCheck }
   ];
 
   const filteredNodes = useMemo(() => {
@@ -83,7 +83,7 @@ export default function DiscoveryView() {
 
       <div className="px-6 pt-12 pb-4 shrink-0 text-center relative z-10">
         <h1 className="text-3xl font-black text-white italic tracking-tighter uppercase leading-none">
-          EXPLORE <span className="text-primary">OMEGA</span>
+          {t('explore.title')} <span className="text-primary">OMEGA</span>
         </h1>
         <p className="text-[8px] font-black uppercase tracking-[0.4em] text-white/20 mt-2">{t('explore.subtitle')}</p>
       </div>
@@ -105,12 +105,12 @@ export default function DiscoveryView() {
           <section className="bg-primary/5 border border-primary/10 p-5 rounded-3xl flex gap-4 items-start shadow-xl">
              <Info className="w-5 h-5 text-primary shrink-0 mt-0.5" />
              <p className="text-[10px] font-bold text-white/60 leading-relaxed uppercase tracking-tight">
-               Навигатор Omega позволяет находить скрытые узлы, рынки и специализированные каналы управления Ядром.
+               {t('explore.description')}
              </p>
           </section>
 
           <section className="space-y-4">
-             <h3 className="text-[10px] font-black uppercase text-[#8E8E93] tracking-[0.3em] px-2 italic">Категории</h3>
+             <h3 className="text-[10px] font-black uppercase text-[#8E8E93] tracking-[0.3em] px-2 italic">{t('explore.categories')}</h3>
              <div className="grid grid-cols-2 gap-3">
                 {CATEGORIES.map(cat => (
                   <div key={cat.name} className="p-4 bg-[#1C1C1E] border border-white/[0.03] rounded-2xl flex items-center gap-3 hover:border-primary/20 transition-all cursor-pointer group">
@@ -145,7 +145,7 @@ export default function DiscoveryView() {
           <section className="bg-[#1C1C1E]/40 border border-white/[0.05] p-6 rounded-[2.5rem] space-y-4">
              <div className="flex items-center gap-3">
                 <Zap className="w-5 h-5 text-yellow-500 animate-pulse" />
-                <h3 className="text-[11px] font-black uppercase text-white italic tracking-widest">Активные события</h3>
+                <h3 className="text-[11px] font-black uppercase text-white italic tracking-widest">{t('explore.events')}</h3>
              </div>
              <div className="space-y-3">
                 <div className="flex items-center justify-between p-3 bg-black/20 rounded-xl">

@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useEffect, useMemo } from 'react';
@@ -27,12 +26,14 @@ import {
   MessageSquare, Phone, Wallet, 
   Globe, LayoutGrid, ShieldCheck, Activity
 } from 'lucide-react';
+import { useTranslations } from '@/hooks/use-translations';
 
 /**
- * NUXUS CHAT MAIN V178.0 «SHIELD PULSE»
- * UPDATED: AI replaced with Kernel Shield Hub for testers. Importer stability verified.
+ * NUXUS CHAT MAIN V191.0 «Pure Russian & Shield»
+ * UPDATED: Navigation items localized. Aegis monitoring enabled for everyone.
  */
 export default function ChatMain() {
+  const { t } = useTranslations();
   const { 
     currentChatId, activeCallId, setActiveCallId, 
     activeView, setActiveView, isSettingsOpen, setIsSettingsOpen,
@@ -79,12 +80,12 @@ export default function ChatMain() {
   }, [incomingCalls, activeCallId, setActiveCallId]);
 
   const NAV_ITEMS = [
-    { id: 'discovery', icon: Globe, label: 'EXPLORE' },
-    { id: 'calls', icon: Phone, label: 'CALLS' },
-    { id: 'chats', icon: MessageSquare, label: 'CHATS' },
-    { id: 'ai', icon: ShieldCheck, label: 'SHIELD' },
-    { id: 'wallet', icon: Wallet, label: 'WALLET' },
-    { id: 'profile', icon: LayoutGrid, label: 'NODES' },
+    { id: 'discovery', icon: Globe, label: t('app.explore') },
+    { id: 'calls', icon: Phone, label: t('app.calls') },
+    { id: 'chats', icon: MessageSquare, label: t('app.chats') },
+    { id: 'ai', icon: ShieldCheck, label: t('app.shield') },
+    { id: 'wallet', icon: Wallet, label: t('app.wallet') },
+    { id: 'profile', icon: LayoutGrid, label: t('app.profile') },
   ];
 
   return (

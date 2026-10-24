@@ -3,22 +3,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
-  ShieldCheck, Globe, Lock, Cpu, Zap, 
-  AlertTriangle, Fingerprint, Terminal as TermIcon,
-  Flame, Trophy, CheckCircle2, Loader2, Activity, Gauge, Database, Send
+  ShieldCheck, Activity, Gauge, Database, Lock, ShieldAlert
 } from 'lucide-react';
 import { cn, triggerHaptic } from '@/lib/utils';
 import { Button } from './ui/button';
-import { Input } from './ui/input';
+import { useTranslations } from '@/hooks/use-translations';
 
 /**
- * KERNEL SHIELD HUB V189.0 «OMEGA COMMAND»
- * ОПТИМИЗИРОВАНО: Добавлен интерактивный терминал с поддержкой команд.
+ * AEGIS LIVE MONITOR V191.0 «Sovereign View»
+ * ОПТИМИЗИРОВАНО: Убран ввод команд. Теперь это публичный монитор защиты для всех пользователей.
  */
 export default function KernelShieldView() {
-  const [pulse, setPulse] = useState(0);
-  const [logs, setLogs] = useState<{t: string, m: string, type: 'sys' | 'sec' | 'cmd'}[]>([]);
-  const [terminalInput, setTerminalInput] = useState('');
+  const { t } = useTranslations();
+  const [logs, setLogs] = useState<{t: string, m: string, type: 'sys' | 'sec'}[]>([]);
   const logEndRef = useRef<HTMLDivElement>(null);
   const [isAutoScroll, setIsAutoScroll] = useState(true);
   
@@ -27,25 +24,31 @@ export default function KernelShieldView() {
 
   useEffect(() => {
     const bootLogs = [
-      { t: new Date().toLocaleTimeString(), m: "Omega Ignition Sequence: SUCCESS.", type: 'sys' as const },
-      { t: new Date().toLocaleTimeString(), m: "Command Terminal Interface: READY.", type: 'sys' as const },
-      { t: new Date().toLocaleTimeString(), m: "Type /help to list available commands.", type: 'cmd' as const },
+      { t: new Date().toLocaleTimeString(), m: "Инициализация Aegis Shield: УСПЕШНО.", type: 'sys' as const },
+      { t: new Date().toLocaleTimeString(), m: "Монитор защиты Nuxus активен.", type: 'sys' as const },
+      { t: new Date().toLocaleTimeString(), m: "Все шлюзы QES под наблюдением.", type: 'sys' as const },
     ];
     setLogs(bootLogs);
 
     const interval = setInterval(() => {
-      setPulse(p => (p + 1) % 100);
       const timestamp = new Date().toLocaleTimeString();
       const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
       
-      if (Math.random() > 0.95) {
+      const randomEvent = Math.random();
+      if (randomEvent > 0.9) {
         setLogs(prev => [...prev.slice(-50), { 
           t: timestamp, 
-          m: `Node Pulse Sync: ${isOnline ? 'OPTIMAL' : 'RECONNECTING'}.`,
+          m: `Проверка целостности домена: OK.`,
           type: 'sys' as const
         }]);
+      } else if (randomEvent < 0.1) {
+        setLogs(prev => [...prev.slice(-50), { 
+          t: timestamp, 
+          m: `Попытка несанкционированной отладки нейтрализована.`,
+          type: 'sec' as const
+        }]);
       }
-    }, 3000);
+    }, 4000);
 
     return () => clearInterval(interval);
   }, []);
@@ -55,41 +58,6 @@ export default function KernelShieldView() {
       logEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [logs, isAutoScroll]);
-
-  const handleCommand = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!terminalInput.trim()) return;
-    triggerHaptic();
-
-    const cmd = terminalInput.trim().toLowerCase();
-    const timestamp = new Date().toLocaleTimeString();
-    const newLogs = [...logs, { t: timestamp, m: `> ${terminalInput}`, type: 'cmd' as const }];
-
-    switch(cmd) {
-      case '/help':
-        newLogs.push({ t: timestamp, m: "Commands: /status, /clear, /ping, /id, /aegis", type: 'sys' });
-        break;
-      case '/status':
-        newLogs.push({ t: timestamp, m: "Nodes: 142 Active, QES Integrity: 100%, Victory Status: OMEGA", type: 'sys' });
-        break;
-      case '/clear':
-        setLogs([{ t: timestamp, m: "Console Cleared.", type: 'sys' }]);
-        setTerminalInput('');
-        return;
-      case '/ping':
-        runDiagnostic();
-        newLogs.push({ t: timestamp, m: "Diagnostic request sent to core...", type: 'sec' });
-        break;
-      case '/aegis':
-        newLogs.push({ t: timestamp, m: "Aegis Shield: FULL POWER. No intrusions detected.", type: 'sec' });
-        break;
-      default:
-        newLogs.push({ t: timestamp, m: `Unknown command: ${cmd}`, type: 'sec' });
-    }
-
-    setLogs(newLogs.slice(-50));
-    setTerminalInput('');
-  };
 
   const runDiagnostic = async () => {
     setIsTesting(true);
@@ -104,9 +72,9 @@ export default function KernelShieldView() {
   };
 
   const HARDWARE_STATS = [
-    { name: 'Core Encryption', value: 'AES-256', icon: Lock, color: 'text-primary' },
-    { name: 'Node Memory', value: '14.2 MB', icon: Database, color: 'text-blue-400' },
-    { name: 'QES Integrity', value: '100%', icon: ShieldCheck, color: 'text-emerald-500' }
+    { name: t('shield.enc_core'), value: 'AES-256', icon: Lock, color: 'text-primary' },
+    { name: t('shield.mem_node'), value: '14.2 MB', icon: Database, color: 'text-blue-400' },
+    { name: t('shield.integrity'), value: '100%', icon: ShieldCheck, color: 'text-emerald-500' }
   ];
 
   return (
@@ -115,15 +83,15 @@ export default function KernelShieldView() {
 
       <header className="px-8 pt-16 pb-6 shrink-0 z-10">
         <div className="flex items-center gap-4">
-           <div className="w-14 h-14 rounded-2xl bg-emerald-500/15 border border-emerald-500/20 flex items-center justify-center shadow-[0_0_30px_rgba(16,185,129,0.2)]">
+           <div className="w-14 h-14 rounded-2xl bg-emerald-500/15 border border-emerald-500/20 flex items-center justify-center shadow-[0_0_30_rgba(16,185,129,0.2)]">
               <Activity className="w-8 h-8 text-emerald-500 animate-pulse" />
            </div>
            <div>
               <div className="flex items-center gap-2">
-                 <h1 className="text-3xl font-black italic uppercase tracking-tighter leading-none">Omega Hub</h1>
-                 <span className="px-2 py-0.5 rounded bg-primary text-black text-[8px] font-black uppercase">V189</span>
+                 <h1 className="text-3xl font-black italic uppercase tracking-tighter leading-none">{t('shield.title')}</h1>
+                 <span className="px-2 py-0.5 rounded bg-primary text-black text-[8px] font-black uppercase">LIVE</span>
               </div>
-              <p className="text-[10px] font-black uppercase text-primary/60 tracking-[0.4em] mt-1">Sovereign Control Active</p>
+              <p className="text-[10px] font-black uppercase text-primary/60 tracking-[0.4em] mt-1">{t('shield.status_active')}</p>
            </div>
         </div>
       </header>
@@ -139,14 +107,14 @@ export default function KernelShieldView() {
                       <Gauge className="w-7 h-7 text-primary" />
                    </div>
                    <div className="flex flex-col">
-                      <span className="text-sm font-black uppercase italic text-white tracking-widest">QES Diagnostic</span>
+                      <span className="text-sm font-black uppercase italic text-white tracking-widest">{t('shield.diagnostic')}</span>
                       <span className="text-[10px] text-white/40 font-bold uppercase mt-1">Проверка шлюза данных</span>
                    </div>
                 </div>
                 <div className="flex items-center gap-6">
                    {ping !== null && <span className="text-2xl font-black italic text-primary tabular-nums">{ping}<span className="text-[10px] ml-1">ms</span></span>}
                    <Button onClick={runDiagnostic} disabled={isTesting} className="h-12 px-6 rounded-xl bg-primary text-white font-black uppercase text-[10px] tracking-widest shadow-xl">
-                     {isTesting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Run'}
+                     {isTesting ? '...' : t('shield.run')}
                    </Button>
                 </div>
              </div>
@@ -162,37 +130,28 @@ export default function KernelShieldView() {
             ))}
           </div>
 
-          <div className="bg-black/80 rounded-[2.5rem] border border-white/5 shadow-2xl overflow-hidden flex flex-col h-[400px] font-mono group relative">
+          <div className="bg-black/80 rounded-[2.5rem] border border-white/5 shadow-2xl overflow-hidden flex flex-col h-[450px] font-mono group relative">
              <div className="bg-white/5 px-6 py-3 flex items-center justify-between border-b border-white/5 shrink-0">
                 <div className="flex items-center gap-3">
-                   <TermIcon className="w-4 h-4 text-primary" />
-                   <span className="text-[10px] font-black uppercase tracking-widest text-white/60">Omega Terminal</span>
+                   <ShieldAlert className="w-4 h-4 text-primary" />
+                   <span className="text-[10px] font-black uppercase tracking-widest text-white/60">{t('shield.terminal')}</span>
                 </div>
                 <button onClick={() => { triggerHaptic(); setIsAutoScroll(!isAutoScroll); }} className={cn("text-[8px] font-black uppercase px-3 py-1.5 rounded-full border", isAutoScroll ? "bg-primary text-black" : "text-white/40")}>
-                  {isAutoScroll ? 'Auto-Scroll' : 'Locked'}
+                  {isAutoScroll ? t('shield.auto_scroll') : t('shield.locked')}
                 </button>
              </div>
-             <div className="flex-1 overflow-y-auto p-5 no-scrollbar pb-16">
+             <div className="flex-1 overflow-y-auto p-5 no-scrollbar">
                 <div className="space-y-2">
                    {logs.map((log, i) => (
-                     <p key={i} className={cn("text-[10px] leading-tight flex gap-2", log.type === 'sec' ? "text-amber-400 font-bold" : log.type === 'cmd' ? "text-white" : "text-emerald-500/80")}>
+                     <p key={i} className={cn("text-[10px] leading-tight flex gap-2", log.type === 'sec' ? "text-amber-400 font-bold" : "text-emerald-500/80")}>
                         <span className="opacity-30">[{log.t}]</span>
-                        <span className="opacity-50">{log.type === 'cmd' ? '#' : '>'}</span>
+                        <span className="opacity-50">></span>
                         <span>{log.m}</span>
                      </p>
                    ))}
                    <div ref={logEndRef} />
                 </div>
              </div>
-             <form onSubmit={handleCommand} className="absolute bottom-0 left-0 right-0 p-3 bg-[#0a0a0c] border-t border-white/5 flex gap-2">
-                <Input 
-                  value={terminalInput} 
-                  onChange={e => setTerminalInput(e.target.value)} 
-                  placeholder="Введите команду (например /help)..." 
-                  className="h-10 bg-white/5 border-white/10 rounded-xl font-mono text-[11px] text-primary placeholder:text-white/10"
-                />
-                <Button type="submit" size="icon" className="h-10 w-10 rounded-xl bg-primary text-black"><Send size={16} /></Button>
-             </form>
           </div>
         </div>
       </ScrollArea>
