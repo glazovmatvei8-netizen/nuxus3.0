@@ -17,6 +17,7 @@ import { doc, updateDoc, increment, collection, addDoc } from 'firebase/firestor
 import { addDays } from 'date-fns';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import type { User } from '@/lib/types';
+import versions from '@/app/versions.json';
 
 function SubscriptionGuard({ children }: { children: ReactNode }) {
   const { user } = useUser();
@@ -119,7 +120,7 @@ export function SovereignProvider({ children }: { children: ReactNode }) {
             )}>
               <div className="flex flex-col items-center gap-6">
                 <NuxusLogo size={80} className="opacity-20 animate-pulse" />
-                <p className="text-[10px] font-black uppercase text-white/20 tracking-[0.6em]">MIG Kernel V198.0</p>
+                <p className="text-[10px] font-black uppercase text-white/20 tracking-[0.6em]">MIG Kernel V{versions.latestVersion}</p>
               </div>
             </div>
 
@@ -133,8 +134,8 @@ export function SovereignProvider({ children }: { children: ReactNode }) {
                     </div>
                     <button onClick={() => setShowCookies(false)} className="text-white/20 hover:text-white transition-colors"><X size={18} /></button>
                   </div>
-                  <p className="text-[10px] font-bold text-white/60 leading-relaxed uppercase tracking-tight italic">
-                    Ядро использует зашифрованные куки для идентификации вашего узла и обеспечения стабильности связи.
+                  <p className="text-[10px] font-bold text-white/60 leading-relaxed uppercase tracking-tight italic text-left">
+                    Ядро использует зашифрованные файлы cookie для идентификации вашего узла и обеспечения стабильности связи по протоколу QES.
                   </p>
                   <Button onClick={acceptCookies} className="w-full h-12 bg-primary text-white rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] shadow-xl shadow-primary/20 active:scale-95 transition-all">Принять условия</Button>
                 </div>

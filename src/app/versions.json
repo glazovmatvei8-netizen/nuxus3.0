@@ -1,12 +1,13 @@
+
 {
-  "latestVersion": "3.0.0",
-  "qesVersion": "28.0",
-  "build": "Nuxus-Genesis-3.0-Global",
-  "sizeMb": 68,
+  "latestVersion": "3.1.0",
+  "qesVersion": "28.4",
+  "build": "MIG-Milestone-200-Global",
+  "sizeMb": 72,
   "changelog": [
-    "Architecture: Multi-repository synchronization engine enabled.",
-    "Engine: All services migrated to Nuxus 3.0 infrastructure.",
-    "Security: QES 28.0 signal handshake protocol optimized.",
-    "System: Universal push utility for seamless project migration."
+    "Milestone: Version 200.0 reached. System ready for audit.",
+    "Shield: Enhanced Aegis Live Monitor with more security event types.",
+    "Branding: Full migration to MIG identity completed.",
+    "UX: Natural text case enforced across all communication nodes."
   ]
 }
