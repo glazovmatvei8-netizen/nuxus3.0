@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
@@ -214,7 +213,7 @@ export default function ChatArea() {
           <div className="flex items-center gap-4 cursor-pointer min-w-0 flex-1 group" onClick={() => otherId ? setInspectedUserId(otherId) : setIsChatInfoOpen(true)}>
             <UserAvatar userId={otherId || (chat?.type === 'saved' ? firebaseUser?.uid : null)} className="h-12 w-12 rounded-[1.2rem] border border-white/10" manualAvatarUrl={chat?.type !== 'private' && chat?.type !== 'saved' ? chat?.avatarUrl : otherProfile?.avatarUrl} fallbackName={displayName} showOnlineStatus={chat?.type === 'private'} />
             <div className="flex flex-col min-w-0">
-              <span className="font-black text-lg truncate text-white italic tracking-tighter uppercase leading-none">{displayName}</span>
+              <span className="font-black text-lg truncate text-white italic tracking-tighter leading-none">{displayName}</span>
               <span className="text-[10px] font-black text-primary/60 tracking-widest uppercase italic mt-1">{chat?.type === 'private' ? 'SIGNAL ACTIVE' : chat?.username || 'CLUSTER'}</span>
             </div>
           </div>

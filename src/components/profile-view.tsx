@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -25,8 +24,8 @@ import { format, parseISO } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 /**
- * PROFILE VIEW V183.0 «ASCENSION»
- * ОПТИМИЗИРОВАНО: Добавлен кастомный статус и улучшенная визуализация репутации.
+ * PROFILE VIEW V199.0 «NATURAL CASE»
+ * ОПТИМИЗИРОВАНО: Удален принудительный uppercase для имени пользователя.
  */
 export default function ProfileView() {
   const { user } = useUser();
@@ -117,7 +116,7 @@ export default function ProfileView() {
 
              <div className="flex flex-col items-center gap-4 relative z-10 w-full text-center">
                 <div className="flex items-center justify-center gap-3">
-                   <h2 className="text-[24px] font-black text-white uppercase tracking-[0.05em] leading-none drop-shadow-[0_4px_15px_rgba(255,255,255,0.15)] italic">
+                   <h2 className="text-[24px] font-black text-white tracking-[0.05em] leading-none drop-shadow-[0_4px_15px_rgba(255,255,255,0.15)] italic">
                      {profile?.name ? formatDisplayName(profile.name) : 'NODE ACTIVE'}
                    </h2>
                    {profile?.isPremium && <Star className="w-5 h-5 text-primary fill-primary animate-pulse" />}
@@ -126,7 +125,7 @@ export default function ProfileView() {
                 {profile?.settings?.statusText && (
                    <div className="bg-primary/10 border border-primary/20 px-5 py-2 rounded-2xl max-w-[85%] animate-in zoom-in-95 duration-500 flex items-center gap-3 shadow-lg">
                       <MessageCircle className="w-3.5 h-3.5 text-primary shrink-0" />
-                      <span className="text-[11px] font-black text-white italic uppercase tracking-tight line-clamp-1">{profile.settings.statusText}</span>
+                      <span className="text-[11px] font-black text-white italic tracking-tight line-clamp-1">{profile.settings.statusText}</span>
                    </div>
                 )}
                 

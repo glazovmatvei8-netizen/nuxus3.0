@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { memo, useMemo, useState, useEffect } from 'react';
@@ -97,7 +96,7 @@ export const MessageItem = memo(({ message, isMe, onReply, onEdit, chatId }: any
                    </div>
                 </div>
               ) : (
-                <p className="text-[15px] font-bold leading-relaxed tracking-tight break-words uppercase">
+                <p className="text-[15px] font-bold leading-relaxed tracking-tight break-words">
                   {displayContent}
                 </p>
               )}

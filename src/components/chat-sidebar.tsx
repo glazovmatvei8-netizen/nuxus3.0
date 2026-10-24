@@ -93,7 +93,7 @@ const ChatListItem = memo(({
             <div className="flex-1 min-w-0 flex flex-col gap-0.5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="font-black text-[15px] truncate text-white uppercase tracking-tight italic">
+                  <span className="font-black text-[15px] truncate text-white tracking-tight italic">
                     {displayName}
                   </span>
                   {isPremium && <Zap className="w-3 h-3 text-primary fill-current animate-pulse" />}
@@ -102,7 +102,7 @@ const ChatListItem = memo(({
                   {lastMsg?.sentAt ? format(new Date(lastMsg.sentAt), 'HH:mm') : ''}
                 </span>
               </div>
-              <p className={cn("text-[13px] truncate font-bold tracking-tight uppercase", draft ? "text-primary italic" : "text-white/40")}>
+              <p className={cn("text-[13px] truncate font-bold tracking-tight", draft ? "text-primary italic" : "text-white/40")}>
                 {previewText}
               </p>
             </div>
@@ -149,7 +149,7 @@ export default function ChatSidebar() {
               <h1 className="text-5xl font-black text-white italic tracking-tighter uppercase leading-none">MIG</h1>
               <div className="bg-primary/10 border border-primary/20 px-3 py-1 rounded-full flex items-center gap-2">
                  <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                 <span className="text-[10px] font-black text-primary uppercase tracking-widest italic">V194</span>
+                 <span className="text-[10px] font-black text-primary uppercase tracking-widest italic">V199</span>
               </div>
            </div>
            <Button variant="ghost" size="icon" className="h-12 w-12 rounded-[1.2rem] bg-white/[0.03] border border-white/5 text-white hover:bg-primary/20" onClick={() => setIsCreateModalOpen(true)}>
