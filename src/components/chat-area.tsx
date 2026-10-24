@@ -7,8 +7,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, ChevronLeft, X, Paperclip, Mic, StopCircle, 
-  Smile, Trash2, Loader2, Phone, Video, Camera, ShieldCheck, Edit2, Check,
-  Pin, ArrowDown, Search, Eraser, Flame, Clock, Plus, BarChart3
+  Smile, Trash2, Loader2, Phone, Video, ShieldCheck, Edit2, Check,
+  Pin, ArrowDown, Search, Eraser, Flame, Clock, Plus, BarChart3, Zap
 } from 'lucide-react';
 import { MessageItem } from './message-item';
 import { ChatInfoModal } from './modals/chat-info-modal';
@@ -20,7 +20,7 @@ import { useCollection } from '@/firebase/firestore/use-collection';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { useMemoFirebase } from '@/firebase/firestore/use-memo-firebase';
 import { collection, query, orderBy, doc, addDoc, updateDoc } from 'firebase/firestore';
-import { formatDisplayName, cn, compressImage, triggerHaptic, isUserPremium, decryptSignal } from '@/lib/utils';
+import { formatDisplayName, cn, compressImage, triggerHaptic, decryptSignal } from '@/lib/utils';
 import type { Message, User as UserType, Chat } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -28,7 +28,7 @@ import { useTranslations } from '@/hooks/use-translations';
 import { useToast } from '@/hooks/use-toast';
 import { signalService } from '@/services/signal-service';
 import { Input } from '@/components/ui/input';
-import { addMinutes, addHours } from 'date-fns';
+import { addMinutes } from 'date-fns';
 
 const ChatInputBar = memo(({ onSendMessage, onUpdateMessage, currentChatId, replyTo, onCancelReply, editingMessage, onCancelEdit }: any) => {
   const { localDrafts, setLocalDrafts } = useAppState();
@@ -38,24 +38,13 @@ const ChatInputBar = memo(({ onSendMessage, onUpdateMessage, currentChatId, repl
   const [messageInput, setMessageInput] = useState('');
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   const [isPlusMenuOpen, setIsPlusMenuOpen] = useState(false);
-  const [isPollModalOpen, setIsPollModalOpen] = useState(false);
   
-  const [ttl, setTtl] = useState<number | null>(null); // TTL in minutes
-  const [scheduledDate, setScheduledDate] = useState<string | null>(null);
-
-  const [recordMode, setRecordMode] = useState<'voice' | 'video'>('voice');
+  const [ttl, setTtl] = useState<number | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
 
-  const [pendingFiles, setPendingFiles] = useState<{url: string, type: 'image' | 'video', file: File}[]>([]);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (editingMessage) {
@@ -70,241 +59,85 @@ const ChatInputBar = memo(({ onSendMessage, onUpdateMessage, currentChatId, repl
     triggerHaptic();
     
     let selfDestructAt = null;
-    if (ttl) {
-      selfDestructAt = addMinutes(new Date(), ttl).toISOString();
-    }
+    if (ttl) selfDestructAt = addMinutes(new Date(), ttl).toISOString();
 
     if (editingMessage) {
       onUpdateMessage(editingMessage.id, messageInput);
     } else {
-      onSendMessage(messageInput, 'text', { selfDestructAt, scheduledAt: scheduledDate });
+      onSendMessage(messageInput, 'text', { selfDestructAt });
     }
     
     setMessageInput('');
     setTtl(null);
-    setScheduledDate(null);
-    if (!editingMessage) {
-      setLocalDrafts(prev => ({ ...prev, [currentChatId]: '' }));
-    }
-  };
-
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: recordMode === 'video' });
-      streamRef.current = stream;
-      const recorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = recorder;
-      chunksRef.current = [];
-      recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
-      recorder.onstop = async () => {
-        const blob = new Blob(chunksRef.current, { type: recordMode === 'voice' ? 'audio/ogg' : 'video/webm' });
-        const reader = new FileReader();
-        reader.onloadend = () => onSendMessage(reader.result as string, recordMode === 'voice' ? 'audio' : 'video_note', { duration: recordingDuration });
-        reader.readAsDataURL(blob);
-        stream.getTracks().forEach(track => track.stop());
-        setIsRecording(false);
-        setRecordingDuration(0);
-      };
-      recorder.start();
-      setIsRecording(true);
-      timerRef.current = setInterval(() => setRecordingDuration(prev => prev + 1), 1000);
-    } catch (e) {
-      console.error("Audio recording error:", e);
-      toast({ title: "Нет доступа", variant: "destructive" });
-    }
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') mediaRecorderRef.current.stop();
-    if (timerRef.current) clearInterval(timerRef.current);
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    processFiles(files);
-  };
-
-  const processFiles = (files: File[]) => {
-    files.forEach(file => {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        setPendingFiles(prev => [...prev, { url: ev.target?.result as string, type: file.type.startsWith('video') ? 'video' : 'image', file }]);
-      };
-      reader.readAsDataURL(file);
-    });
-    setIsPreviewOpen(true);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
-
-  const handlePaste = (e: React.ClipboardEvent) => {
-    const items = e.clipboardData.items;
-    const files: File[] = [];
-    for (let i = 0; i < items.length; i++) {
-      if (items[i].type.indexOf("image") !== -1) {
-        const blob = items[i].getAsFile();
-        if (blob) files.push(blob);
-      }
-    }
-    if (files.length > 0) {
-      e.preventDefault();
-      processFiles(files);
-    }
-  };
-
-  const clearInput = () => {
-    triggerHaptic();
-    setMessageInput('');
-    setLocalDrafts(prev => ({ ...prev, [currentChatId]: '' }));
-  };
-
-  const handleSendFiles = async () => {
-    setIsUploading(true);
-    try {
-      for (const item of pendingFiles) {
-        let content = item.url;
-        if (item.type === 'image') content = await compressImage(item.url, 1200, 0.7);
-        await onSendMessage(content, item.type);
-      }
-      setPendingFiles([]);
-      setIsPreviewOpen(false);
-    } finally { setIsUploading(false); }
+    if (!editingMessage) setLocalDrafts(prev => ({ ...prev, [currentChatId]: '' }));
   };
 
   return (
-    <>
-    <footer className="p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] bg-[#030306]/95 backdrop-blur-[40px] border-t border-white/5 shrink-0 z-40 relative">
-      {replyTo && !editingMessage && (
-        <div className="bg-white/5 p-3 rounded-2xl flex items-center justify-between border border-white/5 mb-2 animate-in slide-in-from-bottom-2 mx-auto w-full max-w-5xl">
-          <div className="flex items-center gap-4 min-w-0">
-            <div className="w-1 h-8 bg-primary rounded-full shrink-0" />
-            <div className="flex flex-col min-w-0">
-              <span className="text-[10px] font-black text-primary uppercase tracking-widest">{replyTo.senderName}</span>
-              <span className="text-[12px] text-white/60 truncate italic">{decryptSignal(replyTo.content)}</span>
-            </div>
-          </div>
-          <button className="text-white/20 hover:text-white" onClick={onCancelReply}><X size={16} /></button>
-        </div>
-      )}
-
-      {editingMessage && (
-        <div className="bg-primary/5 p-3 rounded-2xl flex items-center justify-between border border-primary/20 mb-2 animate-in slide-in-from-bottom-2 mx-auto w-full max-w-5xl">
-          <div className="flex items-center gap-4 min-w-0">
-            <div className="w-8 h-8 rounded-xl bg-primary/20 flex items-center justify-center shrink-0">
-               <Edit2 className="w-4 h-4 text-primary" />
-            </div>
-            <div className="flex flex-col min-w-0">
-              <span className="text-[10px] font-black text-primary uppercase tracking-widest">Редактирование</span>
-              <span className="text-[12px] text-white/60 truncate italic">{decryptSignal(editingMessage.content)}</span>
-            </div>
-          </div>
-          <button className="text-white/20 hover:text-white" onClick={onCancelEdit}><X size={16} /></button>
-        </div>
-      )}
-
-      <div className="flex gap-3 items-end w-full max-w-5xl mx-auto">
-        {!isRecording ? (
-          <>
-            <Popover open={isPlusMenuOpen} onOpenChange={setIsPlusMenuOpen}>
-              <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-12 w-12 shrink-0 rounded-2xl bg-white/[0.03] border border-white/5"><Plus className="w-6 h-6 text-white/40" /></Button>
-              </PopoverTrigger>
-              <PopoverContent side="top" align="start" className="w-56 bg-[#121212]/95 backdrop-blur-xl border-white/10 rounded-2xl p-2 shadow-2xl mb-4">
-                 <button onClick={() => { setIsPlusMenuOpen(false); fileInputRef.current?.click(); }} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-all text-white font-black uppercase text-[10px] tracking-widest">
-                    <Paperclip className="w-4 h-4 text-primary" /> Файл / Фото
-                 </button>
-                 <button onClick={() => { setIsPlusMenuOpen(false); setIsPollModalOpen(true); }} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-all text-white font-black uppercase text-[10px] tracking-widest">
-                    <BarChart3 className="w-4 h-4 text-primary" /> Опрос
-                 </button>
-                 <button onClick={() => { setTtl(ttl ? null : 60); setIsPlusMenuOpen(false); }} className={cn("w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-all font-black uppercase text-[10px] tracking-widest", ttl ? "text-primary bg-primary/10" : "text-white")}>
-                    <Flame className="w-4 h-4" /> Исчезающий
-                 </button>
-                 <button onClick={() => { const d = new Date(); d.setHours(d.getHours() + 1); setScheduledDate(scheduledDate ? null : d.toISOString()); setIsPlusMenuOpen(false); }} className={cn("w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-all font-black uppercase text-[10px] tracking-widest", scheduledDate ? "text-primary bg-primary/10" : "text-white")}>
-                    <Clock className="w-4 h-4" /> Отложить
-                 </button>
-              </PopoverContent>
-            </Popover>
-
-            <div className="flex-1 flex flex-col gap-2">
-               <div className="flex-1 flex items-end bg-white/[0.04] rounded-[1.8rem] border border-white/10 min-h-[48px] px-5 py-2.5 gap-1 group/input">
-                 <Textarea 
-                   placeholder={editingMessage ? "Измените сообщение..." : t('chat.placeholder')} 
-                   className="bg-transparent border-none focus-visible:ring-0 text-white min-h-[26px] max-h-[160px] py-0 text-[15px] resize-none w-full shadow-none" 
-                   value={messageInput} 
-                   onPaste={handlePaste}
-                   onChange={e => { setMessageInput(e.target.value); if(!editingMessage) setLocalDrafts(prev => ({ ...prev, [currentChatId]: e.target.value })); }} 
-                 />
-                 {messageInput.length > 0 && (
-                   <button onClick={clearInput} className="text-white/10 hover:text-red-400 mb-1 p-1 transition-colors">
-                     <Eraser size={14} />
-                   </button>
-                 )}
-                 <Popover open={isEmojiPickerOpen} onOpenChange={setIsEmojiPickerOpen}>
-                    <PopoverTrigger asChild><Button variant="ghost" size="icon" className="text-white/20 h-8 w-8 shrink-0"><Smile size={20} /></Button></PopoverTrigger>
-                    <PopoverContent side="top" className="p-0 border-none bg-transparent w-[320px] mb-6">
-                      <EmojiPicker onEmojiSelect={(e) => { const newVal = messageInput + e; setMessageInput(newVal); if(!editingMessage) setLocalDrafts(prev => ({ ...prev, [currentChatId]: newVal })); }} onStickerSelect={(url) => { onSendMessage(url, 'sticker'); setIsEmojiPickerOpen(false); }} />
-                    </PopoverContent>
-                 </Popover>
-               </div>
-               {(ttl || scheduledDate) && (
-                 <div className="flex gap-2 px-4 animate-in slide-in-from-bottom-1 duration-300">
-                    {ttl && <div className="bg-primary/20 px-2 py-0.5 rounded-lg flex items-center gap-2 border border-primary/20"><Flame className="w-3 h-3 text-primary" /><span className="text-[8px] font-black uppercase text-primary">Исчезнет через {ttl} мин</span></div>}
-                    {scheduledDate && <div className="bg-blue-500/20 px-2 py-0.5 rounded-lg flex items-center gap-2 border border-blue-500/20"><Clock className="w-3 h-3 text-blue-400" /><span className="text-[8px] font-black uppercase text-blue-400">Запланировано</span></div>}
-                 </div>
-               )}
-            </div>
-
-            {messageInput.trim() ? (
-              <Button size="icon" className="h-12 w-12 rounded-2xl bg-primary text-white shadow-xl" onClick={handleAction}>
-                {editingMessage ? <Check size={20} /> : <Send size={20} />}
-              </Button>
-            ) : (
-              !editingMessage && (
-                <button onMouseDown={startRecording} onMouseUp={stopRecording} className="h-12 w-12 rounded-2xl flex items-center justify-center bg-white/[0.04] text-white/30 hover:text-primary transition-all">
-                  {recordMode === 'voice' ? <Mic size={24} /> : <Camera size={24} />}
-                </button>
-              )
-            )}
-          </>
-        ) : (
-          <div className="flex-1 flex items-center bg-primary/10 border border-primary/20 rounded-[1.8rem] h-12 px-5 gap-4">
-            <div className="flex items-center gap-3 text-primary animate-pulse">
-               <div className="w-2 h-2 rounded-full bg-primary" />
-               <span className="text-[10px] font-black tracking-widest">SIGNAL REC</span>
-            </div>
-            <span className="text-base font-black flex-1 tabular-nums text-white italic">
-              {Math.floor(recordingDuration / 60).toString().padStart(2, '0')}:{(recordingDuration % 60).toString().padStart(2, '0')}
-            </span>
-            <Button variant="ghost" size="icon" className="h-10 w-10 text-primary animate-pulse" onClick={stopRecording}><StopCircle size={24} fill="currentColor" /></Button>
+    <footer className="p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-[#010103]/60 backdrop-blur-[50px] border-t border-white/5 shrink-0 z-40 relative">
+      <div className="flex gap-3 items-end w-full max-w-5xl mx-auto relative">
+        
+        {/* Reply/Edit Indicator */}
+        {(replyTo || editingMessage) && (
+          <div className="absolute bottom-full left-0 right-0 mb-3 p-4 mig-glass rounded-3xl animate-in slide-in-from-bottom-4">
+             <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3 min-w-0">
+                   <div className="w-1.5 h-10 bg-primary rounded-full" />
+                   <div className="flex flex-col min-w-0">
+                      <span className="text-[10px] font-black text-primary uppercase tracking-widest">{editingMessage ? 'EDITING SIGNAL' : 'REPLYING TO'}</span>
+                      <span className="text-sm text-white/60 truncate italic">{decryptSignal(editingMessage?.content || replyTo?.content)}</span>
+                   </div>
+                </div>
+                <button className="h-8 w-8 rounded-full bg-white/5 flex items-center justify-center text-white/40" onClick={editingMessage ? onCancelEdit : onCancelReply}><X size={16} /></button>
+             </div>
           </div>
         )}
+
+        <Button variant="ghost" size="icon" className="h-14 w-14 shrink-0 rounded-2xl bg-white/[0.03] border border-white/5" onClick={() => setIsPlusMenuOpen(true)}>
+          <Plus className="w-7 h-7 text-white/20" />
+        </Button>
+
+        <div className="flex-1 flex items-end mig-glass rounded-[1.8rem] min-h-[56px] px-5 py-3.5 gap-2 group/input">
+           <Textarea 
+             placeholder={t('chat.placeholder')} 
+             className="bg-transparent border-none focus-visible:ring-0 text-white min-h-[24px] max-h-[200px] py-0 text-[16px] font-bold resize-none w-full shadow-none" 
+             value={messageInput} 
+             onChange={e => { setMessageInput(e.target.value); if(!editingMessage) setLocalDrafts(prev => ({ ...prev, [currentChatId]: e.target.value })); }} 
+           />
+           <Popover open={isEmojiPickerOpen} onOpenChange={setIsEmojiPickerOpen}>
+              <PopoverTrigger asChild><Button variant="ghost" size="icon" className="text-white/20 h-8 w-8 shrink-0 hover:text-primary transition-colors"><Smile size={24} /></Button></PopoverTrigger>
+              <PopoverContent side="top" className="p-0 border-none bg-transparent w-[320px] mb-6">
+                <EmojiPicker onEmojiSelect={(e) => setMessageInput(prev => prev + e)} onStickerSelect={(url) => onSendMessage(url, 'sticker')} />
+              </PopoverContent>
+           </Popover>
+        </div>
+
+        <Button 
+          size="icon" 
+          className={cn(
+            "h-14 w-14 rounded-2xl transition-all shadow-2xl",
+            messageInput.trim() ? "bg-primary text-white sonic-glow" : "bg-white/[0.03] text-white/20"
+          )}
+          onClick={handleAction}
+          disabled={!messageInput.trim()}
+        >
+          {editingMessage ? <Check size={28} /> : <Zap size={28} className={messageInput.trim() ? "fill-current" : ""} />}
+        </Button>
       </div>
-      <input type="file" ref={fileInputRef} hidden multiple accept="image/*,video/*" onChange={handleFileChange} />
     </footer>
-    <ImagePreviewModal open={isPreviewOpen} onOpenChange={setIsPreviewOpen} files={pendingFiles.map(p => ({ url: p.url, type: p.type }))} onRemove={(idx) => setPendingFiles(prev => prev.filter((_, i) => i !== idx))} onSend={handleSendFiles} isUploading={isUploading} />
-    <CreatePollModal open={isPollModalOpen} onOpenChange={setIsPollModalOpen} chatId={currentChatId} />
-    </>
   );
 });
-
 ChatInputBar.displayName = 'ChatInputBar';
 
 export default function ChatArea() {
   const { user: firebaseUser } = useUser();
   const db = useFirestore();
   const { currentChatId, setCurrentChatId, setInspectedUserId } = useAppState();
-  const { t } = useTranslations();
   const { toast } = useToast();
   
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
-  const [showScrollBottom, setShowScrollBottom] = useState(false);
-  const [isSearching, setIsSearching] = useState(false);
-  const [msgSearchQuery, setMsgSearchQuery] = useState('');
   const scrollAreaRef = useRef<HTMLDivElement>(null);
-
-  const userProfileRef = useMemoFirebase(() => (!db || !firebaseUser) ? null : doc(db, 'users', firebaseUser.uid), [db, firebaseUser?.uid]);
-  const { data: userProfile } = useDoc<UserType>(userProfileRef);
 
   const chatRef = useMemoFirebase(() => (!db || !currentChatId) ? null : doc(db, 'chats', currentChatId), [db, currentChatId]);
   const { data: chat } = useDoc<Chat>(chatRef);
@@ -313,162 +146,66 @@ export default function ChatArea() {
   const otherProfileRef = useMemoFirebase(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
   const { data: otherProfile } = useDoc<UserType>(otherProfileRef);
 
-  const pinnedMsgRef = useMemoFirebase(() => (!db || !currentChatId || !chat?.pinnedMessageId) ? null : doc(db, 'chats', currentChatId, 'messages', chat.pinnedMessageId), [db, currentChatId, chat?.pinnedMessageId]);
-  const { data: pinnedMessage } = useDoc<Message>(pinnedMsgRef);
-
   const messagesQuery = useMemoFirebase(() => (!db || !currentChatId) ? null : query(collection(db, 'chats', currentChatId, 'messages'), orderBy('sentAt', 'asc')), [db, currentChatId]);
   const { data: messages } = useCollection<Message>(messagesQuery);
 
-  const filteredMessages = useMemo(() => {
-    if (!messages) return [];
-    const now = new Date().toISOString();
-    return messages.filter(m => {
-      // Hide scheduled messages until time
-      if (m.scheduledAt && m.scheduledAt > now && m.senderId !== firebaseUser?.uid) return false;
-      
-      // Hide expired self-destruct messages
-      if (m.selfDestructAt && m.selfDestructAt < now) return false;
-
-      if (!msgSearchQuery.trim()) return true;
-      const s = msgSearchQuery.toLowerCase();
-      const content = decryptSignal(m.content).toLowerCase();
-      return content.includes(s) || m.senderName?.toLowerCase().includes(s);
-    });
-  }, [messages, msgSearchQuery, firebaseUser?.uid]);
-
-  useEffect(() => {
-    if (currentChatId && messages && firebaseUser) {
-      signalService.acknowledgeSignals(currentChatId, messages, firebaseUser.uid);
-    }
-  }, [currentChatId, messages, firebaseUser?.uid]);
-
   const handleSendMessage = useCallback(async (content: string, type: Message['contentType'] = 'text', meta: any = null) => {
     if (!content || !currentChatId || !firebaseUser) return;
-    
     try {
       if (type === 'text') {
-        await signalService.broadcastSignal(currentChatId, firebaseUser.uid, userProfile?.name || 'User', content, replyTo, meta?.selfDestructAt, meta?.scheduledAt);
+        await signalService.broadcastSignal(currentChatId, firebaseUser.uid, firebaseUser.displayName || 'User', content, replyTo, meta?.selfDestructAt);
       } else {
-        const msgData = { 
-          chatId: currentChatId, senderId: firebaseUser.uid, senderName: userProfile?.name || 'User', 
-          content, contentType: type, sentAt: new Date().toISOString(), isRead: false, metadata: meta,
-          selfDestructAt: meta?.selfDestructAt || null,
-          scheduledAt: meta?.scheduledAt || null
-        };
-        await addDoc(collection(db!, 'chats', currentChatId, 'messages'), msgData);
+        await addDoc(collection(db!, 'chats', currentChatId, 'messages'), { 
+          chatId: currentChatId, senderId: firebaseUser.uid, senderName: firebaseUser.displayName || 'User', 
+          content, contentType: type, sentAt: new Date().toISOString(), isRead: false
+        });
       }
       setReplyTo(null);
-    } catch (e) {
-      console.error("Failed to send message in chat-area:", e);
-      toast({ title: "Сбой шлюза", variant: "destructive" });
-    }
-  }, [currentChatId, firebaseUser?.uid, userProfile, replyTo, db, toast]);
+    } catch (e) { toast({ title: "Signal Error", variant: "destructive" }); }
+  }, [currentChatId, firebaseUser, replyTo, db, toast]);
 
   const handleUpdateMessage = useCallback(async (messageId: string, newContent: string) => {
     if (!currentChatId || !newContent.trim()) return;
     try {
       await signalService.updateSignal(currentChatId, messageId, newContent);
       setEditingMessage(null);
-      toast({ title: "Сообщение изменено" });
-    } catch (e) {
-      toast({ title: "Ошибка обновления", variant: "destructive" });
-    }
+    } catch (e) { toast({ title: "Update Rejected", variant: "destructive" }); }
   }, [currentChatId, toast]);
 
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
-    setShowScrollBottom(scrollHeight - scrollTop - clientHeight > 300);
-  };
-
-  const scrollToBottom = () => {
-    const viewport = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]');
-    if (viewport) viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' });
-  };
-
-  const unpinSignal = async () => {
-    if (!db || !currentChatId) return;
-    triggerHaptic();
-    await updateDoc(doc(db, 'chats', currentChatId), { pinnedMessageId: null });
-    toast({ title: "Сигнал откреплен" });
-  };
-
-  const toggleSearch = () => {
-    triggerHaptic();
-    setIsSearching(!isSearching);
-    if (isSearching) setMsgSearchQuery('');
-  };
-
-  const currentDisplayName = useMemo(() => {
+  const displayName = useMemo(() => {
     if (!chat) return '...';
-    if (chat.type === 'saved') return 'Архив Данных';
+    if (chat.type === 'saved') return 'DATA ARCHIVE';
     if (chat.type === 'private') return formatDisplayName(otherProfile?.name, otherProfile?.username);
     return formatDisplayName(chat.name, chat.username);
   }, [chat, otherProfile]);
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#030306] relative overflow-hidden z-20">
-      {userProfile?.settings?.chatBackground && (
-        <div className="absolute inset-0 z-0 opacity-40">
-           <img src={userProfile.settings.chatBackground} className="w-full h-full object-cover blur-[2px]" alt="BG" />
-        </div>
-      )}
-
-      <header className="h-16 border-b border-white/5 bg-white/[0.02] backdrop-blur-xl flex items-center justify-between px-4 shrink-0 z-30 shadow-2xl">
+    <div className="flex-1 flex flex-col h-full bg-[#010103] relative overflow-hidden z-20">
+      <header className="h-20 border-b border-white/5 bg-black/40 backdrop-blur-3xl flex items-center justify-between px-6 shrink-0 z-30 shadow-2xl">
         <div className="flex items-center gap-4 flex-1 min-w-0">
-          <Button variant="ghost" size="icon" className="md:hidden rounded-2xl" onClick={() => { triggerHaptic(); setCurrentChatId(null); }}><ChevronLeft size={24} /></Button>
-          {!isSearching ? (
-            <div className="flex items-center gap-4 cursor-pointer min-w-0 flex-1 group" onClick={() => otherId ? setInspectedUserId(otherId) : setIsChatInfoOpen(true)}>
-              <UserAvatar userId={otherId || (chat?.type === 'saved' ? firebaseUser?.uid : null)} className="h-11 w-11 border border-white/10" manualAvatarUrl={chat?.type !== 'private' && chat?.type !== 'saved' ? chat?.avatarUrl : otherProfile?.avatarUrl} fallbackName={currentDisplayName} showOnlineStatus={chat?.type === 'private'} />
-              <div className="flex flex-col min-w-0">
-                <span className="font-black text-base truncate text-white italic tracking-tighter uppercase">{currentDisplayName}</span>
-                <span className="text-[9px] font-bold text-primary/60 tracking-widest uppercase italic">{chat?.type === 'private' ? t('online') : chat?.type === 'saved' ? 'Ваш Архив' : chat?.username}</span>
-              </div>
+          <Button variant="ghost" size="icon" className="md:hidden rounded-2xl" onClick={() => setCurrentChatId(null)}><ChevronLeft size={28} /></Button>
+          <div className="flex items-center gap-4 cursor-pointer min-w-0 flex-1 group" onClick={() => otherId ? setInspectedUserId(otherId) : setIsChatInfoOpen(true)}>
+            <UserAvatar userId={otherId || (chat?.type === 'saved' ? firebaseUser?.uid : null)} className="h-12 w-12 rounded-[1.2rem] border border-white/10" manualAvatarUrl={chat?.type !== 'private' && chat?.type !== 'saved' ? chat?.avatarUrl : otherProfile?.avatarUrl} fallbackName={displayName} showOnlineStatus={chat?.type === 'private'} />
+            <div className="flex flex-col min-w-0">
+              <span className="font-black text-lg truncate text-white italic tracking-tighter uppercase leading-none">{displayName}</span>
+              <span className="text-[10px] font-black text-primary/60 tracking-widest uppercase italic mt-1">{chat?.type === 'private' ? 'SIGNAL ACTIVE' : chat?.username || 'CLUSTER'}</span>
             </div>
-          ) : (
-            <div className="flex-1 flex items-center gap-3 animate-in slide-in-from-right-4 duration-300">
-              <Search className="w-4 h-4 text-primary" />
-              <Input 
-                autoFocus
-                placeholder="Поиск сообщений..." 
-                className="bg-white/5 border-white/10 h-10 rounded-xl font-bold text-sm"
-                value={msgSearchQuery}
-                onChange={e => setMsgSearchQuery(e.target.value)}
-              />
-              <Button variant="ghost" size="icon" onClick={toggleSearch} className="h-10 w-10 text-white/40"><X size={20} /></Button>
-            </div>
-          )}
+          </div>
         </div>
 
-        {!isSearching && (
-          <div className="flex items-center gap-1">
-             <Button variant="ghost" size="icon" onClick={toggleSearch} className="h-10 w-10 text-white/40 hover:text-primary transition-colors rounded-xl">
-               <Search size={20} />
-             </Button>
-             <div className="bg-white/5 px-3 py-1 rounded-full border border-white/5 flex items-center gap-2">
-                <ShieldCheck className="w-3.5 h-3.5 text-primary" />
-                <span className="text-[8px] font-black uppercase text-white/40 tracking-widest">QES 28.1</span>
-             </div>
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+           <Button variant="ghost" size="icon" className="h-12 w-12 rounded-2xl bg-white/[0.03] text-white/40"><Search size={22} /></Button>
+           <div className="hidden sm:flex bg-primary/10 px-4 py-1.5 rounded-full border border-primary/20 items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-primary" />
+              <span className="text-[10px] font-black uppercase text-primary tracking-widest">QES 28.4</span>
+           </div>
+        </div>
       </header>
 
-      {pinnedMessage && (
-        <div className="bg-primary/10 border-b border-primary/20 px-4 py-2 flex items-center justify-between gap-4 animate-in slide-in-from-top-2 duration-300 z-20 backdrop-blur-md">
-           <div className="flex items-center gap-3 min-w-0 cursor-pointer flex-1" onClick={() => document.getElementById(pinnedMessage.id)?.scrollIntoView({ behavior: 'smooth' })}>
-              <Pin className="w-3.5 h-3.5 text-primary shrink-0" />
-              <div className="flex flex-col min-w-0">
-                 <span className="text-[10px] font-black text-primary uppercase tracking-widest leading-none">Закреплено</span>
-                 <span className="text-[12px] text-white/80 truncate italic">{decryptSignal(pinnedMessage.content)}</span>
-              </div>
-           </div>
-           <button onClick={unpinSignal} className="text-white/20 hover:text-white transition-colors p-1"><X size={14} /></button>
-        </div>
-      )}
-
-      <div className="flex-1 relative overflow-hidden z-10">
-        <ScrollArea ref={scrollAreaRef} className="h-full w-full" onScrollCapture={handleScroll}>
-          <div className="flex flex-col gap-1 px-4 py-6">
-            {filteredMessages.length > 0 ? filteredMessages.map(msg => (
+      <div className="flex-1 relative overflow-hidden z-10 bg-[radial-gradient(circle_at_50%_0%,rgba(0,212,255,0.03)_0%,transparent_70%)]">
+        <ScrollArea ref={scrollAreaRef} className="h-full w-full">
+          <div className="flex flex-col gap-2 px-6 py-8">
+            {messages?.map(msg => (
               <MessageItem 
                 key={msg.id} 
                 message={msg} 
@@ -476,26 +213,10 @@ export default function ChatArea() {
                 chatId={currentChatId} 
                 onReply={setReplyTo} 
                 onEdit={setEditingMessage}
-                amIPremium={isUserPremium(userProfile)} 
-                viewerProfile={userProfile} 
               />
-            )) : (
-              <div className="flex flex-col items-center justify-center py-20 opacity-20">
-                <Search size={40} className="mb-4 text-white/40" />
-                <p className="text-[10px] font-black uppercase tracking-[0.4em]">Сигналы не найдены</p>
-              </div>
-            )}
+            ))}
           </div>
         </ScrollArea>
-
-        {showScrollBottom && (
-          <button 
-            onClick={scrollToBottom}
-            className="absolute bottom-6 right-6 h-12 w-12 rounded-full bg-primary/20 backdrop-blur-xl border border-primary/40 text-primary flex items-center justify-center shadow-2xl hover:bg-primary hover:text-white transition-all animate-in zoom-in duration-300"
-          >
-             <ArrowDown className="w-6 h-6" />
-          </button>
-        )}
       </div>
 
       <ChatInputBar

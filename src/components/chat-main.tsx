@@ -9,7 +9,6 @@ import ProfileView from './profile-view';
 import WalletView from './wallet-view';
 import DiscoveryView from './discovery-view';
 import KernelShieldView from './kernel-shield-view';
-import { UserAvatar } from './user-avatar'; 
 import { useAppState } from '@/lib/app-state';
 import { cn, triggerHaptic } from '@/lib/utils';
 import { useUser, useFirestore } from '@/firebase/provider';
@@ -24,10 +23,14 @@ import { UserProfileModal } from './modals/user-profile-modal';
 import type { Call } from '@/lib/types';
 import { 
   MessageSquare, Phone, Wallet, 
-  Globe, LayoutGrid, ShieldCheck, Activity
+  Globe, LayoutGrid, ShieldCheck, Zap
 } from 'lucide-react';
 import { useTranslations } from '@/hooks/use-translations';
 
+/**
+ * MIG MAIN UI V194.0 «AERO-FLUID»
+ * ОПТИМИЗИРОВАНО: Премиальный стеклянный интерфейс и плавная навигация.
+ */
 export default function ChatMain() {
   const { t } = useTranslations();
   const { 
@@ -40,20 +43,13 @@ export default function ChatMain() {
 
   useEffect(() => {
     if (!db || !user) return;
-
     const updatePresence = async () => {
-      const userRef = doc(db, 'users', user.uid);
       try {
-        await updateDoc(userRef, {
-          lastSeen: new Date().toISOString()
-        });
-      } catch (e) {
-        console.error("MIG Presence: Heartbeat failed", e);
-      }
+        await updateDoc(doc(db, 'users', user.uid), { lastSeen: new Date().toISOString() });
+      } catch (e) {}
     };
-
     updatePresence();
-    const interval = setInterval(updatePresence, 30000);
+    const interval = setInterval(updatePresence, 45000);
     return () => clearInterval(interval);
   }, [db, user?.uid]);
 
@@ -76,36 +72,36 @@ export default function ChatMain() {
   }, [incomingCalls, activeCallId, setActiveCallId]);
 
   const NAV_ITEMS = [
-    { id: 'discovery', icon: Globe, label: t('app.explore') },
-    { id: 'calls', icon: Phone, label: t('app.calls') },
     { id: 'chats', icon: MessageSquare, label: t('app.chats') },
+    { id: 'discovery', icon: Globe, label: t('app.explore') },
     { id: 'ai', icon: ShieldCheck, label: t('app.shield') },
     { id: 'wallet', icon: Wallet, label: t('app.wallet') },
     { id: 'profile', icon: LayoutGrid, label: t('app.profile') },
   ];
 
   return (
-    <div className="fixed inset-0 flex flex-col w-screen bg-[#050505] overflow-hidden h-[100dvh]">
+    <div className="fixed inset-0 flex flex-col w-screen bg-[#010103] overflow-hidden h-[100dvh]">
       <NotificationListener />
       
-      <div className="flex-1 flex overflow-hidden w-full relative h-full z-10">
-        <nav className="hidden md:flex flex-col items-center py-8 w-20 bg-[#08080a] border-r border-white/5 shrink-0 z-[100] gap-8">
-           <div className="p-2.5 rounded-2xl bg-primary/10 border border-primary/20 mb-4 shadow-sm">
-              <Activity className="w-6 h-6 text-primary animate-pulse" />
+      <div className="flex-1 flex overflow-hidden w-full relative h-full">
+        {/* Desktop Rail Navigation */}
+        <nav className="hidden md:flex flex-col items-center py-10 w-24 bg-black/40 border-r border-white/5 shrink-0 z-[100] gap-10 backdrop-blur-3xl">
+           <div className="p-3 rounded-2xl bg-primary/10 border border-primary/20 sonic-glow animate-pulse">
+              <Zap className="w-6 h-6 text-primary fill-current" />
            </div>
            <div className="flex flex-col gap-6 flex-1 items-center">
               {NAV_ITEMS.map((item) => (
                 <button 
                   key={item.id}
-                  onClick={() => setActiveView(item.id as any)}
+                  onClick={() => { triggerHaptic(); setActiveView(item.id as any); }}
                   className={cn(
-                    "relative group p-3 rounded-2xl transition-all duration-200",
-                    activeView === item.id ? "text-primary bg-white/5" : "text-muted-foreground hover:text-white"
+                    "relative group p-4 rounded-[1.5rem] transition-all duration-300",
+                    activeView === item.id ? "text-primary bg-primary/10 shadow-lg" : "text-white/20 hover:text-white hover:bg-white/5"
                   )}
                 >
                   <item.icon className={cn("w-6 h-6", activeView === item.id && "fill-current")} />
                   {activeView === item.id && (
-                    <div className="absolute -left-[1px] top-1/4 bottom-1/4 w-[2px] bg-primary rounded-full shadow-[0_0_10px_rgba(0,212,255,0.8)]" />
+                    <div className="absolute -left-2 top-1/4 bottom-1/4 w-1 bg-primary rounded-full sonic-glow" />
                   )}
                 </button>
               ))}
@@ -113,54 +109,59 @@ export default function ChatMain() {
         </nav>
 
         <div className="flex-1 flex overflow-hidden h-full relative">
+          {/* Main Sidebar (List) */}
           <div className={cn(
-            "w-full md:w-[400px] lg:w-[440px] h-full flex-shrink-0 z-30 bg-transparent border-r border-white/5 relative overflow-hidden transition-all duration-300", 
+            "w-full md:w-[420px] h-full flex-shrink-0 z-30 bg-transparent border-r border-white/5 relative overflow-hidden transition-all duration-500", 
             (currentChatId && activeView === 'chats') ? "hidden md:block" : "block"
           )}>
             <div className="h-full w-full">
               {activeView === 'chats' && <ChatSidebar />}
-              {activeView === 'contacts' && <ContactsView />}
-              {activeView === 'calls' && <CallsView />}
-              {activeView === 'profile' && <ProfileView />}
-              {activeView === 'wallet' && <WalletView />}
               {activeView === 'discovery' && <DiscoveryView />}
               {activeView === 'ai' && <KernelShieldView />}
+              {activeView === 'wallet' && <WalletView />}
+              {activeView === 'profile' && <ProfileView />}
+              {activeView === 'calls' && <CallsView />}
             </div>
           </div>
           
+          {/* Chat Content View */}
           <div className={cn(
-            "flex-1 h-full flex flex-col min-w-0 bg-[#08080a]/50 relative z-20 overflow-hidden", 
-            (!currentChatId || ['profile', 'wallet', 'discovery', 'calls', 'ai'].includes(activeView)) ? "hidden md:flex" : "flex"
+            "flex-1 h-full flex flex-col min-w-0 bg-black/20 relative z-20 overflow-hidden", 
+            (!currentChatId || ['profile', 'wallet', 'discovery', 'ai'].includes(activeView)) ? "hidden md:flex" : "flex"
           )}>
-            <div className="h-full w-full overflow-hidden flex flex-col bg-transparent">
-              {currentChatId ? <ChatArea /> : (
-                <div className="hidden md:flex flex-1 flex-col items-center justify-center p-16 text-center space-y-12 opacity-30">
-                   <div className="relative">
-                      <div className="absolute -inset-16 bg-primary/10 blur-[60px] rounded-full animate-pulse" />
-                      <div className="w-48 h-48 rounded-[4.5rem] bg-white/[0.02] border border-white/5 flex items-center justify-center shadow-inner relative z-10">
-                         <MessageSquare className="w-20 h-20 text-primary" />
-                      </div>
-                   </div>
-                   <h2 className="text-4xl font-black text-white uppercase tracking-tight italic">MIG KERNEL</h2>
-                </div>
-              )}
-            </div>
+            {currentChatId ? <ChatArea /> : (
+              <div className="hidden md:flex flex-1 flex-col items-center justify-center p-16 text-center space-y-8 opacity-10">
+                 <div className="relative">
+                    <div className="absolute -inset-20 bg-primary/5 blur-[100px] rounded-full" />
+                    <Zap className="w-32 h-32 text-primary relative z-10" />
+                 </div>
+                 <h2 className="text-5xl font-black text-white uppercase tracking-tighter italic">MIG KERNEL</h2>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
+      {/* Mobile Bottom Navigation */}
       {(!currentChatId || activeView !== 'chats') && (
         <div className="md:hidden mig-floating-nav">
           {NAV_ITEMS.map((item) => (
-             <NavButton 
+             <button 
                key={item.id}
-               icon={item.icon} 
-               label={item.label}
-               active={activeView === item.id} 
-               onClick={() => { triggerHaptic(); setActiveView(item.id as any); }} 
-               isProfile={item.id === 'profile'}
-               userId={user?.uid}
-             />
+               onClick={() => { triggerHaptic(); setActiveView(item.id as any); }}
+               className={cn(
+                 "flex flex-col items-center justify-center gap-1 transition-all duration-300 relative flex-1 h-full rounded-full", 
+                 activeView === item.id ? "text-primary scale-110" : "text-white/20"
+               )}
+             >
+               <item.icon className={cn("w-6 h-6", activeView === item.id && "fill-current")} />
+               <span className={cn(
+                 "text-[8px] font-black uppercase tracking-widest",
+                 activeView === item.id ? "opacity-100" : "opacity-0"
+               )}>
+                 {item.label}
+               </span>
+             </button>
           ))}
         </div>
       )}
@@ -171,37 +172,5 @@ export default function ChatMain() {
       <ForwardModal />
       <UserProfileModal />
     </div>
-  );
-}
-
-function NavButton({ icon: Icon, label, active, onClick, isProfile, userId }: any) {
-  return (
-    <button 
-      onClick={onClick} 
-      className={cn(
-        "flex flex-col items-center justify-center gap-1 transition-all duration-300 relative flex-1 min-w-0", 
-        active ? "text-white" : "text-muted-foreground/60"
-      )}
-    >
-      {active && <div className="nav-active-glow" />}
-      <div className="relative">
-        {isProfile ? (
-          <div className={cn(
-            "p-0.5 rounded-full border-2 transition-all duration-300",
-            active ? "border-white shadow-md scale-110" : "border-white/10"
-          )}>
-            <UserAvatar userId={userId} className="h-6 w-6" />
-          </div>
-        ) : (
-          <Icon className={cn("w-5 h-5", active && "fill-current scale-110")} />
-        )}
-      </div>
-      <span className={cn(
-        "text-[7px] font-black uppercase tracking-widest italic transition-colors truncate w-full",
-        active ? "text-primary" : "text-muted-foreground/40"
-      )}>
-        {label}
-      </span>
-    </button>
   );
 }

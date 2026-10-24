@@ -21,7 +21,7 @@
     --border: 240 10% 8%;
     --input: 240 10% 8%;
     --ring: 190 90% 50%;
-    --radius: 3.5rem;
+    --radius: 2.5rem;
   }
 }
 
@@ -40,7 +40,7 @@
   }
 
   html, body {
-    @apply bg-[#050505] text-foreground antialiased selection:bg-primary/40;
+    @apply bg-[#010103] text-foreground antialiased selection:bg-primary/40;
     overscroll-behavior: none !important;
     height: 100dvh;
     width: 100%;
@@ -49,62 +49,47 @@
   }
 }
 
+/* MIG Glassmorphism Effects */
+.mig-glass {
+  @apply bg-white/[0.03] backdrop-blur-3xl border border-white/10 shadow-2xl;
+}
+
+.mig-glass-heavy {
+  @apply bg-black/60 backdrop-blur-[40px] border border-white/5;
+}
+
+/* Aero-Fluid Animations */
+.hover-scale {
+  @apply transition-transform duration-300 active:scale-95 hover:scale-[1.02];
+}
+
+.sonic-glow {
+  box-shadow: 0 0 30px rgba(0, 212, 255, 0.2), inset 0 0 10px rgba(0, 212, 255, 0.05);
+}
+
+/* Floating Navigation Fix */
 .mig-floating-nav {
   position: fixed;
-  bottom: calc(2.5rem + env(safe-area-inset-bottom));
+  bottom: calc(1.5rem + env(safe-area-inset-bottom));
   left: 50%;
   transform: translateX(-50%) translateZ(0);
-  width: 92%;
-  max-width: 480px;
-  height: 84px;
-  background: rgba(15, 15, 18, 0.85);
-  backdrop-filter: blur(25px);
-  border-radius: 4rem;
+  width: 90%;
+  max-width: 420px;
+  height: 76px;
+  background: rgba(15, 15, 18, 0.8);
+  backdrop-filter: blur(30px);
+  border-radius: 3rem;
   border: 1px solid rgba(255,255,255,0.08);
-  box-shadow: 0 20px 40px rgba(0,0,0,0.8);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
   display: flex;
   align-items: center;
   justify-content: space-around;
-  padding: 0 1.5rem;
+  padding: 0 1rem;
   z-index: 1000;
-  contain: layout paint;
-}
-
-.nav-active-glow {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 65px;
-  height: 65px;
-  background: hsla(var(--primary), 0.8);
-  border-radius: 2rem;
-  box-shadow: 0 0 35px hsla(var(--primary), 0.5);
-  z-index: -1;
-}
-
-.icon-glow-bg {
-  background: radial-gradient(circle at center, hsla(var(--primary), 0.25) 0%, transparent 75%);
 }
 
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-
-.energy-saving * {
-  animation: none !important;
-  transition: none !important;
-  backdrop-filter: none !important;
-  box-shadow: none !important;
-}
-
-/* 60 FPS Smoothness */
-.smooth-transition {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.mig-prime-glow {
-  box-shadow: 0 0 40px rgba(var(--primary), 0.15), inset 0 0 20px rgba(var(--primary), 0.05);
-}
 
 @keyframes shimmer {
   0% { transform: translateX(-100%); }

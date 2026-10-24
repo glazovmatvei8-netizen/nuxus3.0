@@ -6,7 +6,7 @@ const ICON_URL = 'https://i.postimg.cc/T2xvz0mn/IMG-2541.jpg?v=170';
 
 export const metadata: Metadata = {
   title: 'MIG — Сверхзвуковое Ядро Связи',
-  description: 'Безопасный мессенджер со скоростью звука и квантовым шифрованием QES. © MIG 2024.',
+  description: 'Безопасный мессенджер со скоростью звука и квантовой защитой. © MIG 2024.',
   metadataBase: new URL('https://nuxus.fun'),
   icons: {
     icon: ICON_URL,
@@ -30,45 +30,39 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <script dangerouslySetInnerHTML={{ __html: `
           (function() {
-            // 1. DOMAIN LOCK & ANTI-CLONE (V187 - Mobile Optimized)
+            // MIG AEGIS: PREVIEW COMPATIBILITY PROTOCOL
             const allowed = ['nuxus.fun', 'chat.nuxus.fun', 'www.nuxus.fun', 'localhost', 'swtest.ru', 'firebaseapp.com', 'web.app'];
             if (typeof window !== 'undefined') {
               const h = window.location.hostname;
               const isNative = !!(window.Capacitor || window.webkit || window.android);
-              const isMobileBrowser = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+              const isPreview = h.includes('firebaseapp') || h.includes('web.app') || h.includes('localhost');
 
-              if (!allowed.some(d => h.endsWith(d)) && !isNative && !isMobileBrowser) {
-                document.documentElement.innerHTML = '<body style="background:#000;color:cyan;display:flex;text-align:center;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;padding:20px;"><div><h1>ACCESS DENIED</h1><p>ILLEGAL MIG NODE CLONE DETECTED</p></div></body>';
+              // Only block if NOT a preview and NOT an allowed domain
+              if (!allowed.some(d => h.endsWith(d)) && !isNative && !isPreview) {
+                document.documentElement.innerHTML = '<body style="background:#000;color:#00D4FF;display:flex;text-align:center;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;padding:20px;"><div><h1>ACCESS DENIED</h1><p>ILLEGAL MIG NODE CLONE DETECTED</p></div></body>';
                 return;
               }
 
-              // 2. NUCLEAR DEBUGGER TRAP (V187 - Stealth Mode)
-              const trap = function() {
-                const s = Date.now();
-                if (!isMobileBrowser && !isNative) {
+              // Stealth Trap: Disabled in preview for developer comfort
+              if (!isPreview && !isNative) {
+                const trap = function() {
+                  const s = Date.now();
                   debugger;
                   if (Date.now() - s > 100) {
-                    for(let i=0; i<500; i++) console.log("%cMIG_AEGIS_TRAP", "color:cyan; font-size:20px");
                     window.location.href = 'about:blank';
                   }
-                }
-                setTimeout(trap, 500);
-              };
-              if (!isNative && !isMobileBrowser) setTimeout(trap, 2000);
+                  setTimeout(trap, 1000);
+                };
+                setTimeout(trap, 5000);
+              }
 
-              // 3. BLOCK INSPECTION
+              // Global Event Locks
               document.addEventListener('contextmenu', e => e.preventDefault());
               document.addEventListener('keydown', e => {
-                if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && ['I','J','C'].includes(e.key)) || (e.ctrlKey && e.key === 'U')) {
-                  e.preventDefault();
-                  return false;
+                if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && ['I','J','C'].includes(e.key))) {
+                  if (!isPreview) e.preventDefault();
                 }
               });
-
-              // 4. FORCE HTTPS
-              if (window.location.protocol === 'http:' && !h.includes('localhost') && !isNative) {
-                window.location.href = 'https:' + window.location.href.substring(5);
-              }
             }
           })();
         ` }} />
