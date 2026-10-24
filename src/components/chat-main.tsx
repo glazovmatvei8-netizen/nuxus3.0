@@ -22,15 +22,10 @@ import { ForwardModal } from './modals/forward-modal';
 import { UserProfileModal } from './modals/user-profile-modal';
 import type { Call } from '@/lib/types';
 import { 
-  MessageSquare, Phone, Wallet, 
-  Globe, LayoutGrid, ShieldCheck, Zap
+  MessageSquare, Wallet, Globe, LayoutGrid, ShieldCheck, Zap
 } from 'lucide-react';
 import { useTranslations } from '@/hooks/use-translations';
 
-/**
- * MIG MAIN UI V204.0 «TITANIUM DEPTH»
- * ОПТИМИЗИРОВАНО: Новая палитра с разделением слоев.
- */
 export default function ChatMain() {
   const { t } = useTranslations();
   const { 
@@ -55,12 +50,7 @@ export default function ChatMain() {
 
   const incomingCallsQuery = useMemo(() => {
     if (!db || !user) return null;
-    return query(
-      collection(db, 'calls'),
-      where('participantIds', 'array-contains', user.uid),
-      where('status', '==', 'calling'),
-      limit(1)
-    );
+    return query(collection(db, 'calls'), where('receiverId', '==', user.uid), where('status', '==', 'calling'), limit(1));
   }, [db, user?.uid]);
 
   const { data: incomingCalls } = useCollection<Call>(incomingCallsQuery);
@@ -80,39 +70,44 @@ export default function ChatMain() {
   ];
 
   return (
-    <div className="fixed inset-0 flex flex-col w-screen bg-background overflow-hidden h-[100dvh]">
+    <div className="fixed inset-0 flex flex-col w-screen bg-[#020205] overflow-hidden h-[100dvh]">
       <NotificationListener />
       
       <div className="flex-1 flex overflow-hidden w-full relative h-full">
-        {/* Desktop Rail Navigation - Самый темный слой */}
-        <nav className="hidden md:flex flex-col items-center py-10 w-24 bg-black/60 border-r border-white/5 shrink-0 z-[100] gap-10 backdrop-blur-3xl">
-           <div className="p-3 rounded-2xl bg-primary/10 border border-primary/20 sonic-glow animate-pulse">
-              <Zap className="w-6 h-6 text-primary fill-current" />
+        {/* Modern Command Rail */}
+        <nav className="hidden lg:flex flex-col items-center py-12 w-28 bg-black/40 border-r border-white/5 shrink-0 z-[100] gap-12 backdrop-blur-[40px]">
+           <div className="p-4 rounded-[1.8rem] bg-primary/15 border border-primary/20 sonic-glow group cursor-pointer transition-all active:scale-90" onClick={() => window.location.reload()}>
+              <Zap className="w-8 h-8 text-primary fill-current group-hover:scale-110 transition-transform duration-500" />
            </div>
-           <div className="flex flex-col gap-6 flex-1 items-center">
+           <div className="flex flex-col gap-8 flex-1 items-center">
               {NAV_ITEMS.map((item) => (
                 <button 
                   key={item.id}
                   onClick={() => { triggerHaptic(); setActiveView(item.id as any); }}
                   className={cn(
-                    "relative group p-4 rounded-[1.5rem] transition-all duration-300",
-                    activeView === item.id ? "text-primary bg-primary/10 shadow-lg" : "text-white/20 hover:text-white hover:bg-white/5"
+                    "relative p-5 rounded-[1.8rem] transition-all duration-500 group",
+                    activeView === item.id 
+                      ? "text-primary bg-primary/10 shadow-[0_0_20px_rgba(var(--primary),0.2)]" 
+                      : "text-white/20 hover:text-white/60 hover:bg-white/[0.04]"
                   )}
                 >
-                  <item.icon className={cn("w-6 h-6", activeView === item.id && "fill-current")} />
+                  <item.icon className={cn("w-7 h-7", activeView === item.id && "fill-current")} />
                   {activeView === item.id && (
-                    <div className="absolute -left-2 top-1/4 bottom-1/4 w-1 bg-primary rounded-full sonic-glow" />
+                    <div className="absolute -left-2 top-1/3 bottom-1/3 w-1 bg-primary rounded-full sonic-glow" />
                   )}
+                  <span className="absolute left-full ml-4 px-3 py-1.5 bg-primary text-black rounded-lg text-[10px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-[200]">
+                    {item.label}
+                  </span>
                 </button>
               ))}
            </div>
         </nav>
 
         <div className="flex-1 flex overflow-hidden h-full relative">
-          {/* Main Sidebar (List) - Средний слой */}
+          {/* Unified Explorer Layer */}
           <div className={cn(
-            "w-full md:w-[420px] h-full flex-shrink-0 z-30 bg-card/30 border-r border-white/5 relative overflow-hidden transition-all duration-500", 
-            (currentChatId && activeView === 'chats') ? "hidden md:block" : "block"
+            "w-full lg:w-[480px] h-full flex-shrink-0 z-30 bg-black/20 border-r border-white/5 relative overflow-hidden transition-all duration-700", 
+            (currentChatId && activeView === 'chats') ? "hidden lg:block" : "block"
           )}>
             <div className="h-full w-full titanium-gradient">
               {activeView === 'chats' && <ChatSidebar />}
@@ -124,39 +119,39 @@ export default function ChatMain() {
             </div>
           </div>
           
-          {/* Chat Content View - Светлый слой */}
+          {/* Signal Stream Layer */}
           <div className={cn(
-            "flex-1 h-full flex flex-col min-w-0 bg-background/50 relative z-20 overflow-hidden", 
-            (!currentChatId || ['profile', 'wallet', 'discovery', 'ai'].includes(activeView)) ? "hidden md:flex" : "flex"
+            "flex-1 h-full flex flex-col min-w-0 bg-[#050508]/40 relative z-20 overflow-hidden", 
+            (!currentChatId || ['profile', 'wallet', 'discovery', 'ai'].includes(activeView)) ? "hidden lg:flex" : "flex"
           )}>
             {currentChatId ? <ChatArea /> : (
-              <div className="hidden md:flex flex-1 flex-col items-center justify-center p-16 text-center space-y-8 opacity-10">
+              <div className="hidden lg:flex flex-1 flex-col items-center justify-center p-20 text-center space-y-10">
                  <div className="relative">
-                    <div className="absolute -inset-20 bg-primary/5 blur-[100px] rounded-full" />
-                    <Zap className="w-32 h-32 text-primary relative z-10" />
+                    <div className="absolute -inset-24 bg-primary/5 blur-[120px] rounded-full animate-pulse" />
+                    <Zap className="w-40 h-40 text-primary relative z-10 opacity-5" />
                  </div>
-                 <h2 className="text-5xl font-black text-white uppercase tracking-tighter italic">MIG KERNEL</h2>
+                 <h2 className="text-6xl font-black text-white/5 uppercase tracking-[0.5em] italic">MIG CORE</h2>
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* Mobile Bottom Navigation */}
+      {/* Floating Navigation (Mobile/Tablet) */}
       {(!currentChatId || activeView !== 'chats') && (
-        <div className="md:hidden mig-floating-nav">
+        <div className="lg:hidden mig-floating-nav">
           {NAV_ITEMS.map((item) => (
              <button 
                key={item.id}
                onClick={() => { triggerHaptic(); setActiveView(item.id as any); }}
                className={cn(
-                 "flex flex-col items-center justify-center gap-1 transition-all duration-300 relative flex-1 h-full rounded-full", 
-                 activeView === item.id ? "text-primary scale-110" : "text-white/20"
+                 "flex flex-col items-center justify-center gap-1 transition-all duration-500 relative flex-1 h-full rounded-full", 
+                 activeView === item.id ? "text-primary scale-125" : "text-white/20"
                )}
              >
                <item.icon className={cn("w-6 h-6", activeView === item.id && "fill-current")} />
                <span className={cn(
-                 "text-[8px] font-black uppercase tracking-widest",
+                 "text-[7px] font-black uppercase tracking-[0.2em] mt-1 transition-opacity",
                  activeView === item.id ? "opacity-100" : "opacity-0"
                )}>
                  {item.label}

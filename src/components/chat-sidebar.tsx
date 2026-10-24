@@ -6,35 +6,30 @@ import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   Plus, Search, Star, MessageSquare, Loader2, 
-  Trash2, Archive, LogOut, ShieldCheck, Edit3,
-  CheckCircle2, BellOff, Edit, Zap
+  Trash2, Archive, ShieldCheck, CheckCircle2, Zap
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CreateChatModal } from './modals/create-chat-modal';
 import { StoriesBar } from './stories-bar';
 import type { User as UserType, Message, Chat } from '@/lib/types';
-import { useFirestore, useUser, useAuth } from '@/firebase/provider';
+import { useFirestore, useUser } from '@/firebase/provider';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { useMemoFirebase } from '@/firebase/firestore/use-memo-firebase';
-import { collection, query, where, doc, limit, orderBy, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, doc, limit, orderBy } from 'firebase/firestore';
 import { formatDisplayName, cn, decryptSignal, isUserPremium, triggerHaptic } from '@/lib/utils';
 import { format } from 'date-fns';
-import { signOut } from 'firebase/auth';
 import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import { Input } from "@/components/ui/input";
-import { useToast } from '@/hooks/use-toast';
 
 const ChatListItem = memo(({ 
   chat, isActive, otherId, onClick, currentUserId, draft
 }: any) => {
   const db = useFirestore();
-  const { toast } = useToast();
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
 
@@ -54,64 +49,68 @@ const ChatListItem = memo(({
 
   const previewText = useMemo(() => {
     if (!mounted) return '...';
-    if (draft) return `Черновик: ${draft}`;
-    if (!lastMsg) return 'Сигнал отсутствует';
-    if (lastMsg.contentType !== 'text') return `[Медиа пакет]`;
+    if (draft) return `Draft: ${draft}`;
+    if (!lastMsg) return 'No signals yet';
+    if (lastMsg.contentType !== 'text') return `[Media Payload]`;
     return decryptSignal(lastMsg.content);
   }, [lastMsg, mounted, draft]);
 
   const displayName = useMemo(() => {
     if (!mounted) return '...';
-    if (chat.type === 'saved') return 'DATA ARCHIVE';
+    if (chat.type === 'saved') return 'Data Archive';
     if (chat.type === 'private') return formatDisplayName(otherProfile?.name, otherProfile?.username);
     return formatDisplayName(chat.name, chat.username);
   }, [chat, otherProfile, mounted]);
 
   return (
-    <div className="px-3 py-0.5">
+    <div className="px-4 py-1.5">
       <ContextMenu>
         <ContextMenuTrigger>
           <div 
-            onClick={onClick}
+            onClick={() => { triggerHaptic(); onClick(); }}
             className={cn(
-              "relative flex items-center gap-4 p-4 rounded-[2rem] transition-all duration-300 cursor-pointer group",
-              isActive ? "bg-primary/10 border border-primary/20 sonic-glow" : "hover:bg-white/[0.04]"
+              "relative flex items-center gap-4 p-5 rounded-[2.2rem] transition-all duration-500 cursor-pointer group overflow-hidden",
+              isActive 
+                ? "bg-white/[0.06] border border-white/10 shadow-[0_20px_40px_rgba(0,0,0,0.4)]" 
+                : "bg-white/[0.01] border border-transparent hover:bg-white/[0.03] hover:border-white/5"
             )}
           >
+            {isActive && <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-primary rounded-full shadow-[0_0_15px_rgba(var(--primary),1)]" />}
+            
             <div className="relative shrink-0">
               <UserAvatar 
                 userId={otherId || (chat.type === 'saved' ? currentUserId : null)} 
-                className="h-14 w-14 rounded-[1.4rem] border border-white/10" 
+                className="h-14 w-14 rounded-[1.4rem]" 
                 manualAvatarUrl={chat.type !== 'private' && chat.type !== 'saved' ? chat.avatarUrl : otherProfile?.avatarUrl} 
                 fallbackName={displayName} 
               />
               {isUnread && (
-                <div className="absolute -top-1 -right-1 w-4 h-4 bg-primary rounded-full border-4 border-[#121212] sonic-glow" />
+                <div className="absolute -top-1 -right-1 w-4 h-4 bg-primary rounded-full border-[3px] border-[#0a0a0f] sonic-glow" />
               )}
             </div>
 
             <div className="flex-1 min-w-0 flex flex-col gap-0.5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="font-black text-[15px] truncate text-white tracking-tight italic">
+                  <span className="font-bold text-[15px] truncate text-white tracking-tight italic">
                     {displayName}
                   </span>
-                  {isPremium && <Zap className="w-3 h-3 text-primary fill-current animate-pulse" />}
+                  {isPremium && <Zap className="w-3 h-3 text-primary fill-current animate-pulse-soft" />}
                 </div>
-                <span className="text-[9px] text-white/20 font-black whitespace-nowrap">
+                <span className="text-[10px] text-white/20 font-bold whitespace-nowrap">
                   {lastMsg?.sentAt ? format(new Date(lastMsg.sentAt), 'HH:mm') : ''}
                 </span>
               </div>
-              <p className={cn("text-[13px] truncate font-bold tracking-tight", draft ? "text-primary italic" : "text-white/40")}>
+              <p className={cn("text-[13px] truncate font-medium tracking-tight", draft ? "text-primary italic" : "text-white/40")}>
                 {previewText}
               </p>
             </div>
           </div>
         </ContextMenuTrigger>
-        <ContextMenuContent className="w-56 mig-glass-heavy rounded-2xl p-2">
-          <ContextMenuItem className="gap-3 py-3 rounded-xl font-black text-[10px] uppercase text-white"><CheckCircle2 className="w-4 h-4 text-primary" /> Прочитано</ContextMenuItem>
-          <ContextMenuItem className="gap-3 py-3 rounded-xl font-black text-[10px] uppercase text-white"><Archive className="w-4 h-4 text-primary" /> В архив</ContextMenuItem>
-          <ContextMenuItem className="gap-3 py-3 rounded-xl font-black text-[10px] uppercase text-red-500"><Trash2 className="w-4 h-4" /> Удалить</ContextMenuItem>
+        <ContextMenuContent className="w-56 mig-glass rounded-2xl p-2 border-white/10 bg-black/80">
+          <ContextMenuItem className="gap-3 py-3 rounded-xl font-bold text-[10px] uppercase text-white"><CheckCircle2 className="w-4 h-4 text-primary" /> Mark Read</ContextMenuItem>
+          <ContextMenuItem className="gap-3 py-3 rounded-xl font-bold text-[10px] uppercase text-white"><Archive className="w-4 h-4 text-primary" /> Archive</ContextMenuItem>
+          <ContextMenuItem className="gap-3 py-3 rounded-xl font-bold text-[10px] uppercase text-red-500"><Trash2 className="w-4 h-4" /> Delete</ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>
     </div>
@@ -143,24 +142,21 @@ export default function ChatSidebar() {
 
   return (
     <div className="flex flex-col h-full bg-transparent overflow-hidden">
-      <header className="px-6 pt-12 pb-4 space-y-6 shrink-0">
+      <header className="px-8 pt-12 pb-6 space-y-8 shrink-0">
         <div className="flex items-center justify-between">
-           <div className="flex items-center gap-3">
+           <div className="flex flex-col gap-1">
               <h1 className="text-4xl font-black text-white italic tracking-tighter uppercase leading-none">MIG</h1>
-              <div className="bg-primary/10 border border-primary/20 px-3 py-1 rounded-full flex items-center gap-2">
-                 <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                 <span className="text-[10px] font-black text-primary uppercase tracking-widest italic">V210</span>
-              </div>
+              <span className="text-[10px] font-black text-primary uppercase tracking-[0.4em] italic opacity-60">Sonic Engine</span>
            </div>
-           <Button variant="ghost" size="icon" className="h-12 w-12 rounded-[1.2rem] bg-white/[0.03] border border-white/5 text-white hover:bg-primary/20" onClick={() => setIsCreateModalOpen(true)}>
+           <Button variant="ghost" size="icon" className="h-12 w-12 rounded-2xl bg-white/[0.04] border border-white/5 text-white hover:bg-primary/20 transition-all" onClick={() => setIsCreateModalOpen(true)}>
              <Plus className="w-6 h-6" strokeWidth={3} />
            </Button>
         </div>
 
         <div className="relative group cursor-pointer" onClick={() => setIsSearchOpen(true)}>
           <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20 group-hover:text-primary transition-colors" />
-          <div className="w-full h-14 bg-white/[0.04] rounded-[1.5rem] border border-white/10 pl-16 flex items-center text-sm font-black uppercase text-white/20 tracking-widest italic shadow-inner">
-            Search Network...
+          <div className="w-full h-14 bg-white/[0.03] rounded-[1.8rem] border border-white/10 pl-16 flex items-center text-[11px] font-black uppercase text-white/30 tracking-[0.2em] italic transition-all group-hover:bg-white/[0.05]">
+            Network Scan...
           </div>
         </div>
       </header>
@@ -169,7 +165,7 @@ export default function ChatSidebar() {
         <div className="flex flex-col">
           <StoriesBar />
           
-          <div className="pb-32 mt-2">
+          <div className="pb-40 mt-4">
              {isLoading ? (
                <div className="flex flex-col items-center justify-center py-20 opacity-20">
                   <Loader2 className="w-10 h-10 animate-spin text-primary" />
@@ -189,7 +185,7 @@ export default function ChatSidebar() {
              ) : (
                <div className="flex flex-col items-center justify-center py-32 opacity-10">
                   <MessageSquare className="w-16 h-16 mb-4" />
-                  <p className="text-[10px] font-black uppercase tracking-[0.4em]">Сигналы не обнаружены</p>
+                  <p className="text-[10px] font-black uppercase tracking-[0.4em]">No active signals</p>
                </div>
              )}
           </div>
