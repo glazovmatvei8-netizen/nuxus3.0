@@ -12,6 +12,7 @@ import type { ChatType } from '@/lib/types';
 import { collection, addDoc } from 'firebase/firestore';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { triggerHaptic } from '@/lib/utils';
+import { NuxusLogo } from '../nuxus-logo';
 
 interface CreateChatModalProps {
   open: boolean;
@@ -19,8 +20,8 @@ interface CreateChatModalProps {
 }
 
 /**
- * CREATE CHAT MODAL V166.0 «CLEAN SLATE»
- * ОПТИМИЗИРОВАНО: Полная очистка от мусора Git.
+ * CREATE CHAT MODAL V210.0 «PURPLE HEADER»
+ * ОПТИМИЗИРОВАНО: Заголовок в стиле предоставленного изображения.
  */
 export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
   const { user } = useUser();
@@ -63,7 +64,7 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
       addDocumentNonBlocking(messagesCol, {
         chatId: docRef.id,
         senderId: 'system',
-        senderName: 'Nuxus Kernel',
+        senderName: 'MIG Kernel',
         content: `${type === 'group' ? 'Группа' : 'Канал'} успешно инициализирована!`,
         contentType: 'service',
         sentAt: new Date().toISOString(),
@@ -82,21 +83,26 @@ export function CreateChatModal({ open, onOpenChange }: CreateChatModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={(val) => { onOpenChange(val); if(!val) setStep('select'); }}>
-      <DialogContent className="max-w-[400px] p-0 overflow-hidden bg-[#0a0a0c]/95 backdrop-blur-[40px] border-white/10 rounded-[3rem] shadow-2xl outline-none">
+      <DialogContent className="max-w-[400px] p-0 overflow-hidden bg-[#0a0a0c] border-white/10 rounded-[2.5rem] shadow-2xl outline-none">
         
-        <DialogClose className="absolute right-6 top-6 z-[100] h-10 w-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-all">
-          <X className="w-5 h-5" />
-        </DialogClose>
+        {/* Интегрированный фиолетовый заголовок как на картинке */}
+        <div className="bg-primary px-6 h-16 flex items-center justify-between shrink-0">
+           <div className="flex items-center gap-3">
+              <NuxusLogo size={32} className="opacity-90" />
+              <span className="text-lg font-black text-white italic tracking-tighter uppercase">MIG</span>
+           </div>
+           <DialogClose className="h-10 w-10 rounded-full hover:bg-white/10 flex items-center justify-center text-white transition-all">
+             <X className="w-6 h-6" />
+           </DialogClose>
+        </div>
 
-        <DialogHeader className="p-8 pb-4 relative z-10">
-          <div className="flex items-center gap-3 mb-2">
-             <div className="bg-primary/20 p-2 rounded-xl border border-primary/20">
-               <MessageSquarePlus className="w-5 h-5 text-primary" />
-             </div>
-             <DialogTitle className="text-2xl font-black text-white italic tracking-tighter uppercase">
-               {step === 'select' ? 'Сообщество' : `Инициализация`}
-             </DialogTitle>
-          </div>
+        <DialogHeader className="px-8 pt-8 pb-4">
+           <DialogTitle className="text-xl font-black text-white italic tracking-tight uppercase">
+             {step === 'select' ? 'Сообщество' : `Инициализация`}
+           </DialogTitle>
+           <DialogDescription className="text-[10px] font-bold text-white/40 uppercase tracking-widest">
+             {step === 'select' ? 'Выберите тип кластера' : 'Настройте параметры узла'}
+           </DialogDescription>
         </DialogHeader>
 
         {step === 'select' ? (

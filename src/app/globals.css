@@ -4,24 +4,24 @@
 
 @layer base {
   :root {
-    /* Новая палитра Titanium Depth */
-    --background: 230 20% 4%;    /* Глубокий титановый полночный */
+    /* Новая палитра Cyber Violet */
+    --background: 270 30% 4%;    /* Очень темный фиолетовый антрацит */
     --foreground: 0 0% 100%;
-    --card: 230 15% 7%;          /* Чуть светлее для списков */
+    --card: 270 25% 6%;          
     --card-foreground: 0 0% 100%;
-    --popover: 230 15% 5%;
+    --popover: 270 25% 5%;
     --popover-foreground: 0 0% 100%;
-    --primary: 190 90% 50%;      /* MIG Cyan */
+    --primary: 270 75% 55%;      /* Cyber Violet (как на скрине) */
     --primary-foreground: 0 0% 100%;
-    --secondary: 230 15% 10%;
-    --secondary-foreground: 230 10% 80%;
-    --muted: 230 10% 8%;
-    --muted-foreground: 230 5% 60%;
-    --accent: 260 80% 60%;       /* Дополнительный фиолетовый акцент */
+    --secondary: 270 20% 10%;
+    --secondary-foreground: 270 10% 80%;
+    --muted: 270 15% 8%;
+    --muted-foreground: 270 10% 60%;
+    --accent: 290 80% 60%;       
     --accent-foreground: 240 10% 2%;
-    --border: 230 15% 12%;
-    --input: 230 15% 10%;
-    --ring: 190 90% 50%;
+    --border: 270 20% 12%;
+    --input: 270 20% 10%;
+    --ring: 270 75% 55%;
     --radius: 2.5rem;
   }
 }
@@ -65,11 +65,11 @@
 }
 
 .sonic-glow {
-  box-shadow: 0 0 30px rgba(0, 212, 255, 0.2), inset 0 0 10px rgba(0, 212, 255, 0.05);
+  box-shadow: 0 0 30px hsla(var(--primary), 0.3), inset 0 0 10px hsla(var(--primary), 0.1);
 }
 
 .titanium-gradient {
-  background: radial-gradient(circle at 50% 0%, hsla(var(--primary), 0.05) 0%, transparent 70%);
+  background: radial-gradient(circle at 50% 0%, hsla(var(--primary), 0.08) 0%, transparent 70%);
 }
 
 /* Floating Navigation Fix */
@@ -81,7 +81,7 @@
   width: 90%;
   max-width: 420px;
   height: 76px;
-  background: rgba(10, 10, 15, 0.85);
+  background: hsla(270, 30%, 6%, 0.85);
   backdrop-filter: blur(30px);
   border-radius: 3rem;
   border: 1px solid rgba(255,255,255,0.08);
@@ -99,4 +99,11 @@
 @keyframes shimmer {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(100%); }
+}
+
+.energy-saving * {
+  animation: none !important;
+  transition: none !important;
+  text-shadow: none !important;
+  box-shadow: none !important;
 }

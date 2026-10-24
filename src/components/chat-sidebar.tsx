@@ -149,7 +149,7 @@ export default function ChatSidebar() {
               <h1 className="text-4xl font-black text-white italic tracking-tighter uppercase leading-none">MIG</h1>
               <div className="bg-primary/10 border border-primary/20 px-3 py-1 rounded-full flex items-center gap-2">
                  <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                 <span className="text-[10px] font-black text-primary uppercase tracking-widest italic">V205</span>
+                 <span className="text-[10px] font-black text-primary uppercase tracking-widest italic">V210</span>
               </div>
            </div>
            <Button variant="ghost" size="icon" className="h-12 w-12 rounded-[1.2rem] bg-white/[0.03] border border-white/5 text-white hover:bg-primary/20" onClick={() => setIsCreateModalOpen(true)}>

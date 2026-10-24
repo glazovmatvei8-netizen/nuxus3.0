@@ -10,8 +10,8 @@ interface MigLogoProps {
 }
 
 /**
- * MIG LOGO V207.0 «LOCAL ASSET»
- * ОПТИМИЗИРОВАНО: Использует локальный файл /icon.png из папки public.
+ * MIG LOGO V210.0 «VIOLET GLOW»
+ * ОПТИМИЗИРОВАНО: Свечение изменено на фиолетовое согласно новому брендингу.
  */
 export function NuxusLogo({ className, size = 120 }: MigLogoProps) {
   // Путь к локальному файлу в папке public
@@ -22,9 +22,9 @@ export function NuxusLogo({ className, size = 120 }: MigLogoProps) {
       className={cn("relative flex items-center justify-center shrink-0", className)} 
       style={{ width: size, height: size }}
     >
-      <div className="absolute inset-0 bg-primary/20 blur-[30px] rounded-full animate-pulse opacity-50" />
+      <div className="absolute inset-0 bg-primary/30 blur-[30px] rounded-full animate-pulse opacity-60" />
       
-      <div className="relative w-full h-full rounded-[28%] overflow-hidden border-2 border-white/10 shadow-2xl shadow-primary/20 bg-black">
+      <div className="relative w-full h-full rounded-[28%] overflow-hidden border-2 border-white/10 shadow-2xl shadow-primary/30 bg-black">
         <Image 
           src={LOGO_URL} 
           alt="MIG Core" 
