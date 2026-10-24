@@ -70,7 +70,7 @@ export default function ChatMain() {
   ];
 
   return (
-    <div className="fixed inset-0 flex flex-col w-screen bg-[#020205] overflow-hidden h-[100dvh]">
+    <div className="fixed inset-0 flex flex-col w-screen bg-background overflow-hidden h-[100dvh]">
       <NotificationListener />
       
       <div className="flex-1 flex overflow-hidden w-full relative h-full">
@@ -144,18 +144,21 @@ export default function ChatMain() {
              <button 
                key={item.id}
                onClick={() => { triggerHaptic(); setActiveView(item.id as any); }}
-               className={cn(
-                 "flex flex-col items-center justify-center gap-1 transition-all duration-500 relative flex-1 h-full rounded-full", 
-                 activeView === item.id ? "text-primary scale-125" : "text-white/20"
-               )}
+               className="flex flex-col items-center justify-center gap-1.5 transition-all duration-500 relative flex-1 h-full rounded-2xl"
              >
-               <item.icon className={cn("w-6 h-6", activeView === item.id && "fill-current")} />
+               <item.icon className={cn(
+                 "w-6 h-6 transition-transform duration-500", 
+                 activeView === item.id ? "text-primary scale-110 fill-current" : "text-white/30"
+               )} />
                <span className={cn(
-                 "text-[7px] font-black uppercase tracking-[0.2em] mt-1 transition-opacity",
-                 activeView === item.id ? "opacity-100" : "opacity-0"
+                 "text-[8px] font-black uppercase tracking-widest transition-all",
+                 activeView === item.id ? "text-primary opacity-100" : "text-white/20 opacity-60"
                )}>
                  {item.label}
                </span>
+               {activeView === item.id && (
+                 <div className="absolute bottom-1 w-6 h-0.5 bg-primary rounded-full shadow-[0_0_10px_rgba(0,212,255,0.8)]" />
+               )}
              </button>
           ))}
         </div>
