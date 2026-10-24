@@ -149,27 +149,28 @@ export default function ChatSidebar() {
 
   return (
     <div className="flex flex-col h-full bg-transparent overflow-hidden">
-      <header className="px-8 pt-12 pb-6 space-y-8 shrink-0">
-        <div className="flex items-center justify-between">
-           <div className="flex flex-col gap-1">
-              <h1 className="text-4xl font-black text-white italic tracking-tighter uppercase leading-none">MIG</h1>
-              <span className="text-[10px] font-black text-primary uppercase tracking-[0.4em] italic opacity-60">Genesis 4.1</span>
-           </div>
-           <Button variant="ghost" size="icon" className="h-12 w-12 rounded-2xl bg-white/[0.04] border border-white/5 text-white hover:bg-primary/20 transition-all" onClick={() => setIsCreateModalOpen(true)}>
-             <Plus className="w-6 h-6" strokeWidth={3} />
-           </Button>
-        </div>
-
-        <div className="relative group cursor-pointer" onClick={() => setIsSearchOpen(true)}>
-          <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20 group-hover:text-primary transition-colors" />
-          <div className="w-full h-14 bg-white/[0.03] rounded-[1.8rem] border border-white/10 pl-16 flex items-center text-[11px] font-black uppercase text-white/30 tracking-[0.2em] italic transition-all group-hover:bg-white/[0.05]">
-            Network Scan...
-          </div>
-        </div>
-      </header>
-
       <ScrollArea className="flex-1 no-scrollbar">
         <div className="flex flex-col">
+          {/* HEADER IS NOW INSIDE SCROLLAREA */}
+          <header className="px-8 pt-12 pb-6 space-y-8 shrink-0">
+            <div className="flex items-center justify-between">
+               <div className="flex flex-col gap-1">
+                  <h1 className="text-4xl font-black text-white italic tracking-tighter uppercase leading-none">MIG</h1>
+                  <span className="text-[10px] font-black text-primary uppercase tracking-[0.4em] italic opacity-60">Genesis 4.1</span>
+               </div>
+               <Button variant="ghost" size="icon" className="h-12 w-12 rounded-2xl bg-white/[0.04] border border-white/5 text-white hover:bg-primary/20 transition-all" onClick={() => setIsCreateModalOpen(true)}>
+                 <Plus className="w-6 h-6" strokeWidth={3} />
+               </Button>
+            </div>
+
+            <div className="relative group cursor-pointer" onClick={() => setIsSearchOpen(true)}>
+              <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20 group-hover:text-primary transition-colors" />
+              <div className="w-full h-14 bg-white/[0.03] rounded-[1.8rem] border border-white/10 pl-16 flex items-center text-[11px] font-black uppercase text-white/30 tracking-[0.2em] italic transition-all group-hover:bg-white/[0.05]">
+                Network Scan...
+              </div>
+            </div>
+          </header>
+
           <StoriesBar />
           
           <div className="pb-40 mt-4">

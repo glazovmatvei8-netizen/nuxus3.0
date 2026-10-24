@@ -10,6 +10,10 @@ import type { User } from '@/lib/types';
 import { differenceInMinutes, parseISO } from 'date-fns';
 import Image from 'next/image';
 
+/**
+ * NEURAL AVATAR SYSTEM V215.0
+ * ОПТИМИЗИРОВАНО: Уникальные градиенты вместо скучных букв.
+ */
 export const UserAvatar = memo(({ userId, className, fallbackName, manualAvatarUrl, showOnlineStatus = false, onClick }: any) => {
   const db = useFirestore();
   const [imgError, setImgError] = useState(false);
@@ -43,6 +47,21 @@ export const UserAvatar = memo(({ userId, className, fallbackName, manualAvatarU
     return text.trim().slice(0, 1).toUpperCase();
   }, [fallbackName, profile?.name]);
 
+  // Генерация уникального градиента на основе userId
+  const neuralGradient = useMemo(() => {
+    if (!userId) return "from-primary/20 to-blue-500/20";
+    const colors = [
+      "from-cyan-500/30 to-blue-600/30",
+      "from-purple-500/30 to-indigo-600/30",
+      "from-emerald-500/30 to-teal-600/30",
+      "from-orange-500/30 to-red-600/30",
+      "from-primary/30 to-primary-foreground/30",
+      "from-pink-500/30 to-rose-600/30"
+    ];
+    const charSum = userId.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
+    return colors[charSum % colors.length];
+  }, [userId]);
+
   return (
     <div onClick={onClick} className={cn("relative inline-flex items-center justify-center shrink-0 rounded-[inherit] cursor-pointer transition-all duration-500 hover:scale-105 active:scale-95", className)}>
       {premium && (
@@ -68,8 +87,13 @@ export const UserAvatar = memo(({ userId, className, fallbackName, manualAvatarU
               />
             </div>
           ) : (
-            <AvatarFallback className="bg-white/[0.02] text-primary font-black uppercase italic text-[24px] tracking-tighter">
-              {initials}
+            <AvatarFallback className={cn(
+              "bg-gradient-to-br text-primary font-black uppercase italic text-[24px] tracking-tighter w-full h-full border border-white/5",
+              neuralGradient
+            )}>
+              <span className="drop-shadow-[0_0_10px_rgba(0,212,255,0.5)]">
+                {initials}
+              </span>
             </AvatarFallback>
           )}
         </Avatar>
