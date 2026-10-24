@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -6,30 +5,31 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   ShieldCheck, Globe, Lock, Cpu, Zap, 
   AlertTriangle, Fingerprint, Terminal as TermIcon,
-  Flame, Trophy, CheckCircle2, Loader2, Activity, Gauge, Database
+  Flame, Trophy, CheckCircle2, Loader2, Activity, Gauge, Database, Send
 } from 'lucide-react';
 import { cn, triggerHaptic } from '@/lib/utils';
 import { Button } from './ui/button';
+import { Input } from './ui/input';
 
 /**
- * KERNEL SHIELD HUB V187.0 «HARDWARE NEXUS»
- * ОПТИМИЗИРОВАНО: Добавлена Hardware телеметрия и исправлена логика логов.
+ * KERNEL SHIELD HUB V189.0 «OMEGA COMMAND»
+ * ОПТИМИЗИРОВАНО: Добавлен интерактивный терминал с поддержкой команд.
  */
 export default function KernelShieldView() {
   const [pulse, setPulse] = useState(0);
-  const [logs, setLogs] = useState<{t: string, m: string, type: 'sys' | 'sec'}[]>([]);
+  const [logs, setLogs] = useState<{t: string, m: string, type: 'sys' | 'sec' | 'cmd'}[]>([]);
+  const [terminalInput, setTerminalInput] = useState('');
   const logEndRef = useRef<HTMLDivElement>(null);
   const [isAutoScroll, setIsAutoScroll] = useState(true);
   
-  // Speed Test State
   const [ping, setPing] = useState<number | null>(null);
   const [isTesting, setIsTesting] = useState(false);
 
   useEffect(() => {
     const bootLogs = [
-      { t: new Date().toLocaleTimeString(), m: "Kernel Ignition Sequence: SUCCESS.", type: 'sys' as const },
-      { t: new Date().toLocaleTimeString(), m: "Hardware Encryption Engine: ACTIVE.", type: 'sys' as const },
-      { t: new Date().toLocaleTimeString(), m: "Zero-Trust Protocol V187: ENGAGED.", type: 'sec' as const },
+      { t: new Date().toLocaleTimeString(), m: "Omega Ignition Sequence: SUCCESS.", type: 'sys' as const },
+      { t: new Date().toLocaleTimeString(), m: "Command Terminal Interface: READY.", type: 'sys' as const },
+      { t: new Date().toLocaleTimeString(), m: "Type /help to list available commands.", type: 'cmd' as const },
     ];
     setLogs(bootLogs);
 
@@ -38,24 +38,13 @@ export default function KernelShieldView() {
       const timestamp = new Date().toLocaleTimeString();
       const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
       
-      setLogs(prev => {
-        const newLogs = [...prev];
-        if (Math.random() > 0.9) {
-          newLogs.push({ 
-            t: timestamp, 
-            m: `Node Pulse Sync: ${isOnline ? 'OPTIMAL' : 'RECONNECTING'}.`,
-            type: 'sys' as const
-          });
-        }
-        if (Math.random() > 0.98) {
-          newLogs.push({
-            t: timestamp,
-            m: "AEGIS: Sub-node authentication challenge bypassed (Mobile Node).",
-            type: 'sec' as const
-          });
-        }
-        return newLogs.slice(-50);
-      });
+      if (Math.random() > 0.95) {
+        setLogs(prev => [...prev.slice(-50), { 
+          t: timestamp, 
+          m: `Node Pulse Sync: ${isOnline ? 'OPTIMAL' : 'RECONNECTING'}.`,
+          type: 'sys' as const
+        }]);
+      }
     }, 3000);
 
     return () => clearInterval(interval);
@@ -66,6 +55,41 @@ export default function KernelShieldView() {
       logEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [logs, isAutoScroll]);
+
+  const handleCommand = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!terminalInput.trim()) return;
+    triggerHaptic();
+
+    const cmd = terminalInput.trim().toLowerCase();
+    const timestamp = new Date().toLocaleTimeString();
+    const newLogs = [...logs, { t: timestamp, m: `> ${terminalInput}`, type: 'cmd' as const }];
+
+    switch(cmd) {
+      case '/help':
+        newLogs.push({ t: timestamp, m: "Commands: /status, /clear, /ping, /id, /aegis", type: 'sys' });
+        break;
+      case '/status':
+        newLogs.push({ t: timestamp, m: "Nodes: 142 Active, QES Integrity: 100%, Victory Status: OMEGA", type: 'sys' });
+        break;
+      case '/clear':
+        setLogs([{ t: timestamp, m: "Console Cleared.", type: 'sys' }]);
+        setTerminalInput('');
+        return;
+      case '/ping':
+        runDiagnostic();
+        newLogs.push({ t: timestamp, m: "Diagnostic request sent to core...", type: 'sec' });
+        break;
+      case '/aegis':
+        newLogs.push({ t: timestamp, m: "Aegis Shield: FULL POWER. No intrusions detected.", type: 'sec' });
+        break;
+      default:
+        newLogs.push({ t: timestamp, m: `Unknown command: ${cmd}`, type: 'sec' });
+    }
+
+    setLogs(newLogs.slice(-50));
+    setTerminalInput('');
+  };
 
   const runDiagnostic = async () => {
     setIsTesting(true);
@@ -96,10 +120,10 @@ export default function KernelShieldView() {
            </div>
            <div>
               <div className="flex items-center gap-2">
-                 <h1 className="text-3xl font-black italic uppercase tracking-tighter leading-none">Victory Hub</h1>
-                 <span className="px-2 py-0.5 rounded bg-primary text-black text-[8px] font-black uppercase">V187</span>
+                 <h1 className="text-3xl font-black italic uppercase tracking-tighter leading-none">Omega Hub</h1>
+                 <span className="px-2 py-0.5 rounded bg-primary text-black text-[8px] font-black uppercase">V189</span>
               </div>
-              <p className="text-[10px] font-black uppercase text-primary/60 tracking-[0.4em] mt-1">Mobile Nexus Integrated</p>
+              <p className="text-[10px] font-black uppercase text-primary/60 tracking-[0.4em] mt-1">Sovereign Control Active</p>
            </div>
         </div>
       </header>
@@ -138,28 +162,37 @@ export default function KernelShieldView() {
             ))}
           </div>
 
-          <div className="bg-black/80 rounded-[2.5rem] border border-white/5 shadow-2xl overflow-hidden flex flex-col h-80 font-mono group">
+          <div className="bg-black/80 rounded-[2.5rem] border border-white/5 shadow-2xl overflow-hidden flex flex-col h-[400px] font-mono group relative">
              <div className="bg-white/5 px-6 py-3 flex items-center justify-between border-b border-white/5 shrink-0">
                 <div className="flex items-center gap-3">
                    <TermIcon className="w-4 h-4 text-primary" />
-                   <span className="text-[10px] font-black uppercase tracking-widest text-white/60">System Console</span>
+                   <span className="text-[10px] font-black uppercase tracking-widest text-white/60">Omega Terminal</span>
                 </div>
                 <button onClick={() => { triggerHaptic(); setIsAutoScroll(!isAutoScroll); }} className={cn("text-[8px] font-black uppercase px-3 py-1.5 rounded-full border", isAutoScroll ? "bg-primary text-black" : "text-white/40")}>
                   {isAutoScroll ? 'Auto-Scroll' : 'Locked'}
                 </button>
              </div>
-             <div className="flex-1 overflow-y-auto p-5 no-scrollbar">
+             <div className="flex-1 overflow-y-auto p-5 no-scrollbar pb-16">
                 <div className="space-y-2">
                    {logs.map((log, i) => (
-                     <p key={i} className={cn("text-[10px] leading-tight flex gap-2", log.type === 'sec' ? "text-amber-400 font-bold" : "text-emerald-500/80")}>
+                     <p key={i} className={cn("text-[10px] leading-tight flex gap-2", log.type === 'sec' ? "text-amber-400 font-bold" : log.type === 'cmd' ? "text-white" : "text-emerald-500/80")}>
                         <span className="opacity-30">[{log.t}]</span>
-                        <span className="opacity-50">{'>'}</span>
+                        <span className="opacity-50">{log.type === 'cmd' ? '#' : '>'}</span>
                         <span>{log.m}</span>
                      </p>
                    ))}
                    <div ref={logEndRef} />
                 </div>
              </div>
+             <form onSubmit={handleCommand} className="absolute bottom-0 left-0 right-0 p-3 bg-[#0a0a0c] border-t border-white/5 flex gap-2">
+                <Input 
+                  value={terminalInput} 
+                  onChange={e => setTerminalInput(e.target.value)} 
+                  placeholder="Введите команду (например /help)..." 
+                  className="h-10 bg-white/5 border-white/10 rounded-xl font-mono text-[11px] text-primary placeholder:text-white/10"
+                />
+                <Button type="submit" size="icon" className="h-10 w-10 rounded-xl bg-primary text-black"><Send size={16} /></Button>
+             </form>
           </div>
         </div>
       </ScrollArea>

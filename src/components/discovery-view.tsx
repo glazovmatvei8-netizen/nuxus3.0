@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { 
   Search, Orbit, CircleDollarSign, TowerControl, 
-  Loader2, Info, ChevronRight
+  Loader2, Info, ChevronRight, LayoutGrid, Radio, ShieldCheck, Zap
 } from 'lucide-react';
 import { useAppState } from '@/lib/app-state';
 import { useUser, useFirestore } from '@/firebase/provider';
@@ -62,6 +62,13 @@ export default function DiscoveryView() {
     { id: 'beacon', icon: TowerControl, color: 'text-primary', title: "Звездный маяк", username: "@star_beacon" }
   ];
 
+  const CATEGORIES = [
+    { name: 'Торговля', icon: CircleDollarSign },
+    { name: 'Связь', icon: Radio },
+    { name: 'Архив', icon: LayoutGrid },
+    { name: 'Защита', icon: ShieldCheck }
+  ];
+
   const filteredNodes = useMemo(() => {
     if (!search) return RECOMMEND_NODES;
     return RECOMMEND_NODES.filter(n => 
@@ -75,8 +82,8 @@ export default function DiscoveryView() {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(229,142,56,0.03)_0%,transparent_70%)] pointer-events-none" />
 
       <div className="px-6 pt-12 pb-4 shrink-0 text-center relative z-10">
-        <h1 className="text-2xl font-black text-primary italic tracking-tighter uppercase leading-none">
-          {t('explore.title')}
+        <h1 className="text-3xl font-black text-white italic tracking-tighter uppercase leading-none">
+          EXPLORE <span className="text-primary">OMEGA</span>
         </h1>
         <p className="text-[8px] font-black uppercase tracking-[0.4em] text-white/20 mt-2">{t('explore.subtitle')}</p>
       </div>
@@ -95,11 +102,23 @@ export default function DiscoveryView() {
 
       <ScrollArea className="flex-1 relative z-10">
         <div className="px-6 pb-40 space-y-10">
-          <section className="bg-primary/5 border border-primary/10 p-5 rounded-3xl flex gap-4 items-start">
+          <section className="bg-primary/5 border border-primary/10 p-5 rounded-3xl flex gap-4 items-start shadow-xl">
              <Info className="w-5 h-5 text-primary shrink-0 mt-0.5" />
              <p className="text-[10px] font-bold text-white/60 leading-relaxed uppercase tracking-tight">
-               {t('explore.description')}
+               Навигатор Omega позволяет находить скрытые узлы, рынки и специализированные каналы управления Ядром.
              </p>
+          </section>
+
+          <section className="space-y-4">
+             <h3 className="text-[10px] font-black uppercase text-[#8E8E93] tracking-[0.3em] px-2 italic">Категории</h3>
+             <div className="grid grid-cols-2 gap-3">
+                {CATEGORIES.map(cat => (
+                  <div key={cat.name} className="p-4 bg-[#1C1C1E] border border-white/[0.03] rounded-2xl flex items-center gap-3 hover:border-primary/20 transition-all cursor-pointer group">
+                     <cat.icon className="w-4 h-4 text-primary group-hover:scale-110 transition-transform" />
+                     <span className="text-[10px] font-black uppercase text-white/60">{cat.name}</span>
+                  </div>
+                ))}
+             </div>
           </section>
 
           <section className="space-y-4">
@@ -121,6 +140,23 @@ export default function DiscoveryView() {
               </div>
               <ScrollBar orientation="horizontal" className="bg-white/5" />
             </ScrollArea>
+          </section>
+
+          <section className="bg-[#1C1C1E]/40 border border-white/[0.05] p-6 rounded-[2.5rem] space-y-4">
+             <div className="flex items-center gap-3">
+                <Zap className="w-5 h-5 text-yellow-500 animate-pulse" />
+                <h3 className="text-[11px] font-black uppercase text-white italic tracking-widest">Активные события</h3>
+             </div>
+             <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 bg-black/20 rounded-xl">
+                   <span className="text-[10px] font-bold text-white/40 uppercase">Aegis Stress Test</span>
+                   <span className="text-[8px] bg-emerald-500/20 text-emerald-400 px-2 rounded-full font-black uppercase">Active</span>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-black/20 rounded-xl">
+                   <span className="text-[10px] font-bold text-white/40 uppercase">Genesis Migration</span>
+                   <span className="text-[8px] bg-blue-500/20 text-blue-400 px-2 rounded-full font-black uppercase">Ended</span>
+                </div>
+             </div>
           </section>
         </div>
       </ScrollArea>

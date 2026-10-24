@@ -1,8 +1,7 @@
-
 'use client';
 
 /**
- * NUXUS KERNEL API SERVICE V142.0 «SIGNAL EDIT PROTOCOL»
+ * NUXUS KERNEL API SERVICE V142.0 «OMEGA PROTOCOL»
  */
 import { 
   collection, doc, addDoc, updateDoc, writeBatch, 
@@ -16,7 +15,7 @@ export const signalService = {
   /**
    * Трансляция текстового сигнала (Отправка сообщения)
    */
-  async broadcastSignal(chatId: string, userId: string, userName: string, text: string, replyTo?: Message | null) {
+  async broadcastSignal(chatId: string, userId: string, userName: string, text: string, replyTo?: Message | null, selfDestructAt?: string | null, scheduledAt?: string | null) {
     if (!nuxus.db || !text.trim()) return;
 
     const encrypted = encryptSignal(text);
@@ -28,7 +27,9 @@ export const signalService = {
       content: encrypted,
       contentType: 'text',
       sentAt: new Date().toISOString(),
-      isRead: false
+      isRead: false,
+      selfDestructAt: selfDestructAt || null,
+      scheduledAt: scheduledAt || null
     };
 
     if (replyTo) {
@@ -40,10 +41,13 @@ export const signalService = {
     try {
       const msgRef = await addDoc(collection(nuxus.db, 'chats', chatId, 'messages'), msgData);
       
-      await updateDoc(doc(nuxus.db, 'chats', chatId), { 
-        lastMessageAt: new Date().toISOString(),
-        isManualUnread: false
-      });
+      // Update chat state only if it's not a future signal
+      if (!scheduledAt) {
+        await updateDoc(doc(nuxus.db, 'chats', chatId), { 
+          lastMessageAt: new Date().toISOString(),
+          isManualUnread: false
+        });
+      }
 
       await updateDoc(doc(nuxus.db, 'users', userId), { 
         reputation: increment(0.2) 

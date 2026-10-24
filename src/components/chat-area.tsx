@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
@@ -9,12 +8,13 @@ import { UserAvatar } from '@/components/user-avatar';
 import { 
   Send, ChevronLeft, X, Paperclip, Mic, StopCircle, 
   Smile, Trash2, Loader2, Phone, Video, Camera, ShieldCheck, Edit2, Check,
-  Pin, ArrowDown, Search, Eraser
+  Pin, ArrowDown, Search, Eraser, Flame, Clock, Plus, BarChart3
 } from 'lucide-react';
 import { MessageItem } from './message-item';
 import { ChatInfoModal } from './modals/chat-info-modal';
 import { EmojiPicker } from './emoji-picker';
 import { ImagePreviewModal } from './modals/image-preview-modal';
+import { CreatePollModal } from './modals/create-poll-modal';
 import { useUser, useFirestore } from '@/firebase/provider';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { useDoc } from '@/firebase/firestore/use-doc';
@@ -28,6 +28,7 @@ import { useTranslations } from '@/hooks/use-translations';
 import { useToast } from '@/hooks/use-toast';
 import { signalService } from '@/services/signal-service';
 import { Input } from '@/components/ui/input';
+import { addMinutes, addHours } from 'date-fns';
 
 const ChatInputBar = memo(({ onSendMessage, onUpdateMessage, currentChatId, replyTo, onCancelReply, editingMessage, onCancelEdit }: any) => {
   const { localDrafts, setLocalDrafts } = useAppState();
@@ -36,7 +37,12 @@ const ChatInputBar = memo(({ onSendMessage, onUpdateMessage, currentChatId, repl
   
   const [messageInput, setMessageInput] = useState('');
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
+  const [isPlusMenuOpen, setIsPlusMenuOpen] = useState(false);
+  const [isPollModalOpen, setIsPollModalOpen] = useState(false);
   
+  const [ttl, setTtl] = useState<number | null>(null); // TTL in minutes
+  const [scheduledDate, setScheduledDate] = useState<string | null>(null);
+
   const [recordMode, setRecordMode] = useState<'voice' | 'video'>('voice');
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
@@ -63,13 +69,20 @@ const ChatInputBar = memo(({ onSendMessage, onUpdateMessage, currentChatId, repl
     if (!messageInput.trim()) return;
     triggerHaptic();
     
+    let selfDestructAt = null;
+    if (ttl) {
+      selfDestructAt = addMinutes(new Date(), ttl).toISOString();
+    }
+
     if (editingMessage) {
       onUpdateMessage(editingMessage.id, messageInput);
     } else {
-      onSendMessage(messageInput, 'text');
+      onSendMessage(messageInput, 'text', { selfDestructAt, scheduledAt: scheduledDate });
     }
     
     setMessageInput('');
+    setTtl(null);
+    setScheduledDate(null);
     if (!editingMessage) {
       setLocalDrafts(prev => ({ ...prev, [currentChatId]: '' }));
     }
@@ -191,29 +204,55 @@ const ChatInputBar = memo(({ onSendMessage, onUpdateMessage, currentChatId, repl
       <div className="flex gap-3 items-end w-full max-w-5xl mx-auto">
         {!isRecording ? (
           <>
-            {!editingMessage && (
-              <Button variant="ghost" size="icon" className="h-12 w-12 shrink-0 rounded-2xl bg-white/[0.03] border border-white/5" onClick={() => fileInputRef.current?.click()}><Paperclip className="w-6 h-6 text-white/40" /></Button>
-            )}
-            <div className="flex-1 flex items-end bg-white/[0.04] rounded-[1.8rem] border border-white/10 min-h-[48px] px-5 py-2.5 gap-1 group/input">
-              <Textarea 
-                placeholder={editingMessage ? "Измените сообщение..." : t('chat.placeholder')} 
-                className="bg-transparent border-none focus-visible:ring-0 text-white min-h-[26px] max-h-[160px] py-0 text-[15px] resize-none w-full shadow-none" 
-                value={messageInput} 
-                onPaste={handlePaste}
-                onChange={e => { setMessageInput(e.target.value); if(!editingMessage) setLocalDrafts(prev => ({ ...prev, [currentChatId]: e.target.value })); }} 
-              />
-              {messageInput.length > 0 && (
-                <button onClick={clearInput} className="text-white/10 hover:text-red-400 mb-1 p-1 transition-colors">
-                  <Eraser size={14} />
-                </button>
-              )}
-              <Popover open={isEmojiPickerOpen} onOpenChange={setIsEmojiPickerOpen}>
-                 <PopoverTrigger asChild><Button variant="ghost" size="icon" className="text-white/20 h-8 w-8 shrink-0"><Smile size={20} /></Button></PopoverTrigger>
-                 <PopoverContent side="top" className="p-0 border-none bg-transparent w-[320px] mb-6">
-                   <EmojiPicker onEmojiSelect={(e) => { const newVal = messageInput + e; setMessageInput(newVal); if(!editingMessage) setLocalDrafts(prev => ({ ...prev, [currentChatId]: newVal })); }} onStickerSelect={(url) => { onSendMessage(url, 'sticker'); setIsEmojiPickerOpen(false); }} />
-                 </PopoverContent>
-              </Popover>
+            <Popover open={isPlusMenuOpen} onOpenChange={setIsPlusMenuOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-12 w-12 shrink-0 rounded-2xl bg-white/[0.03] border border-white/5"><Plus className="w-6 h-6 text-white/40" /></Button>
+              </PopoverTrigger>
+              <PopoverContent side="top" align="start" className="w-56 bg-[#121212]/95 backdrop-blur-xl border-white/10 rounded-2xl p-2 shadow-2xl mb-4">
+                 <button onClick={() => { setIsPlusMenuOpen(false); fileInputRef.current?.click(); }} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-all text-white font-black uppercase text-[10px] tracking-widest">
+                    <Paperclip className="w-4 h-4 text-primary" /> Файл / Фото
+                 </button>
+                 <button onClick={() => { setIsPlusMenuOpen(false); setIsPollModalOpen(true); }} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-all text-white font-black uppercase text-[10px] tracking-widest">
+                    <BarChart3 className="w-4 h-4 text-primary" /> Опрос
+                 </button>
+                 <button onClick={() => { setTtl(ttl ? null : 60); setIsPlusMenuOpen(false); }} className={cn("w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-all font-black uppercase text-[10px] tracking-widest", ttl ? "text-primary bg-primary/10" : "text-white")}>
+                    <Flame className="w-4 h-4" /> Исчезающий
+                 </button>
+                 <button onClick={() => { const d = new Date(); d.setHours(d.getHours() + 1); setScheduledDate(scheduledDate ? null : d.toISOString()); setIsPlusMenuOpen(false); }} className={cn("w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-all font-black uppercase text-[10px] tracking-widest", scheduledDate ? "text-primary bg-primary/10" : "text-white")}>
+                    <Clock className="w-4 h-4" /> Отложить
+                 </button>
+              </PopoverContent>
+            </Popover>
+
+            <div className="flex-1 flex flex-col gap-2">
+               <div className="flex-1 flex items-end bg-white/[0.04] rounded-[1.8rem] border border-white/10 min-h-[48px] px-5 py-2.5 gap-1 group/input">
+                 <Textarea 
+                   placeholder={editingMessage ? "Измените сообщение..." : t('chat.placeholder')} 
+                   className="bg-transparent border-none focus-visible:ring-0 text-white min-h-[26px] max-h-[160px] py-0 text-[15px] resize-none w-full shadow-none" 
+                   value={messageInput} 
+                   onPaste={handlePaste}
+                   onChange={e => { setMessageInput(e.target.value); if(!editingMessage) setLocalDrafts(prev => ({ ...prev, [currentChatId]: e.target.value })); }} 
+                 />
+                 {messageInput.length > 0 && (
+                   <button onClick={clearInput} className="text-white/10 hover:text-red-400 mb-1 p-1 transition-colors">
+                     <Eraser size={14} />
+                   </button>
+                 )}
+                 <Popover open={isEmojiPickerOpen} onOpenChange={setIsEmojiPickerOpen}>
+                    <PopoverTrigger asChild><Button variant="ghost" size="icon" className="text-white/20 h-8 w-8 shrink-0"><Smile size={20} /></Button></PopoverTrigger>
+                    <PopoverContent side="top" className="p-0 border-none bg-transparent w-[320px] mb-6">
+                      <EmojiPicker onEmojiSelect={(e) => { const newVal = messageInput + e; setMessageInput(newVal); if(!editingMessage) setLocalDrafts(prev => ({ ...prev, [currentChatId]: newVal })); }} onStickerSelect={(url) => { onSendMessage(url, 'sticker'); setIsEmojiPickerOpen(false); }} />
+                    </PopoverContent>
+                 </Popover>
+               </div>
+               {(ttl || scheduledDate) && (
+                 <div className="flex gap-2 px-4 animate-in slide-in-from-bottom-1 duration-300">
+                    {ttl && <div className="bg-primary/20 px-2 py-0.5 rounded-lg flex items-center gap-2 border border-primary/20"><Flame className="w-3 h-3 text-primary" /><span className="text-[8px] font-black uppercase text-primary">Исчезнет через {ttl} мин</span></div>}
+                    {scheduledDate && <div className="bg-blue-500/20 px-2 py-0.5 rounded-lg flex items-center gap-2 border border-blue-500/20"><Clock className="w-3 h-3 text-blue-400" /><span className="text-[8px] font-black uppercase text-blue-400">Запланировано</span></div>}
+                 </div>
+               )}
             </div>
+
             {messageInput.trim() ? (
               <Button size="icon" className="h-12 w-12 rounded-2xl bg-primary text-white shadow-xl" onClick={handleAction}>
                 {editingMessage ? <Check size={20} /> : <Send size={20} />}
@@ -242,6 +281,7 @@ const ChatInputBar = memo(({ onSendMessage, onUpdateMessage, currentChatId, repl
       <input type="file" ref={fileInputRef} hidden multiple accept="image/*,video/*" onChange={handleFileChange} />
     </footer>
     <ImagePreviewModal open={isPreviewOpen} onOpenChange={setIsPreviewOpen} files={pendingFiles.map(p => ({ url: p.url, type: p.type }))} onRemove={(idx) => setPendingFiles(prev => prev.filter((_, i) => i !== idx))} onSend={handleSendFiles} isUploading={isUploading} />
+    <CreatePollModal open={isPollModalOpen} onOpenChange={setIsPollModalOpen} chatId={currentChatId} />
     </>
   );
 });
@@ -281,13 +321,20 @@ export default function ChatArea() {
 
   const filteredMessages = useMemo(() => {
     if (!messages) return [];
-    if (!msgSearchQuery.trim()) return messages;
-    const s = msgSearchQuery.toLowerCase();
+    const now = new Date().toISOString();
     return messages.filter(m => {
+      // Hide scheduled messages until time
+      if (m.scheduledAt && m.scheduledAt > now && m.senderId !== firebaseUser?.uid) return false;
+      
+      // Hide expired self-destruct messages
+      if (m.selfDestructAt && m.selfDestructAt < now) return false;
+
+      if (!msgSearchQuery.trim()) return true;
+      const s = msgSearchQuery.toLowerCase();
       const content = decryptSignal(m.content).toLowerCase();
       return content.includes(s) || m.senderName?.toLowerCase().includes(s);
     });
-  }, [messages, msgSearchQuery]);
+  }, [messages, msgSearchQuery, firebaseUser?.uid]);
 
   useEffect(() => {
     if (currentChatId && messages && firebaseUser) {
@@ -300,11 +347,13 @@ export default function ChatArea() {
     
     try {
       if (type === 'text') {
-        await signalService.broadcastSignal(currentChatId, firebaseUser.uid, userProfile?.name || 'User', content, replyTo);
+        await signalService.broadcastSignal(currentChatId, firebaseUser.uid, userProfile?.name || 'User', content, replyTo, meta?.selfDestructAt, meta?.scheduledAt);
       } else {
         const msgData = { 
           chatId: currentChatId, senderId: firebaseUser.uid, senderName: userProfile?.name || 'User', 
-          content, contentType: type, sentAt: new Date().toISOString(), isRead: false, metadata: meta
+          content, contentType: type, sentAt: new Date().toISOString(), isRead: false, metadata: meta,
+          selfDestructAt: meta?.selfDestructAt || null,
+          scheduledAt: meta?.scheduledAt || null
         };
         await addDoc(collection(db!, 'chats', currentChatId, 'messages'), msgData);
       }

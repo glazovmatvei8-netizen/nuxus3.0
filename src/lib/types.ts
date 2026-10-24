@@ -87,6 +87,7 @@ export interface Message {
   isSilent?: boolean;
   isPending?: boolean;
   selfDestructAt?: string | null;
+  scheduledAt?: string | null;
   forwardFrom?: string;
   reactions?: Record<string, string[]>;
   keyboard?: BotKeyboard;
