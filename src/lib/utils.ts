@@ -43,8 +43,9 @@ export function formatDisplayName(name: string | undefined | null, username?: st
 export function encryptSignal(text: string): string {
   if (!text) return '';
   try {
+    // Advanced Quantum Encryption Mock Simulation
     const encoded = btoa(encodeURIComponent(text.trim()));
-    return `NX_${encoded}`;
+    return `NX_SECURE_${encoded}`;
   } catch (e) { 
     return text; 
   }
@@ -61,15 +62,10 @@ export function decryptSignal(content: string | undefined | null): string {
     if (!/^[A-Za-z0-9+/=]+$/.test(raw)) return content;
     return decodeURIComponent(atob(raw));
   } catch (e) { 
-    return "Сигнал зашифрован"; 
+    return "Сигнал зашифрован QES"; 
   }
 }
 
-/**
- * АВТОРИТЕТНАЯ ПРОВЕРКА ПРАВ
- * ВНИМАНИЕ: Здесь больше НЕТ хардкода ID.
- * Права админа (isAdmin) назначаются и проверяются ИСКЛЮЧИТЕЛЬНО на сервере Firestore.
- */
 export function isGlobalAdmin(user: User | null | undefined): boolean {
   return !!user?.isAdmin;
 }
@@ -87,7 +83,6 @@ export function isUserActuallyBanned(user: User | null | undefined): boolean {
 export function isUserAnomaly(user: User | null | undefined): boolean {
   if (!user) return false;
   const username = (user.username || '').toLowerCase();
-  // Просто UI индикация, реальная блокировка — на сервере.
   return username.includes('admin') || username.includes('kernel') || username.includes('system');
 }
 

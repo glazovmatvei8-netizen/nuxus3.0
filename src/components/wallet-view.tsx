@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -13,17 +14,19 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { 
   Send, ArrowDown, RefreshCcw, 
-  Wallet, Info, FileText, Loader2, Coins
+  Wallet, Info, FileText, Loader2, Coins, Zap, ShieldCheck, Database, ArrowRightLeft, CreditCard
 } from 'lucide-react';
 import { cn, triggerHaptic } from '@/lib/utils';
 import type { User, Transaction } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslations } from '@/hooks/use-translations';
 import { useAppState } from '@/lib/app-state';
+import { format } from 'date-fns';
+import { ru } from 'date-fns/locale';
 
 /**
- * WALLET VIEW V201.0 «DEEP SPACE»
- * ОПТИМИЗИРОВАНО: Фон унифицирован до глубокого черного.
+ * WALLET VIEW V219.0 «QUANTUM LEDGER»
+ * REDESIGNED: Cyber-banking interface with Layered Glass and Transaction Stream.
  */
 export default function WalletView() {
   const { user } = useUser();
@@ -46,7 +49,7 @@ export default function WalletView() {
 
   const transactionsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
-    return query(collection(db, 'users', user.uid, 'transactions'), orderBy('createdAt', 'desc'), limit(15));
+    return query(collection(db, 'users', user.uid, 'transactions'), orderBy('createdAt', 'desc'), limit(20));
   }, [db, user?.uid]);
   const { data: transactions, isLoading: isTxLoading } = useCollection<Transaction>(transactionsQuery);
 
@@ -68,7 +71,7 @@ export default function WalletView() {
         createdAt: new Date().toISOString()
       });
 
-      toast({ title: "Запрос отправлен", description: "Ожидайте подтверждения Администратором." });
+      toast({ title: "Сигнал передан", description: "Ожидайте верификации Администратором." });
       setIsTopUpOpen(false);
       setTopUpUpAmount('');
     } catch (e) {
@@ -81,115 +84,145 @@ export default function WalletView() {
   if (!mounted) return <div className="flex-1 bg-[#010103]" />;
 
   return (
-    <div className="flex flex-col h-full bg-[#010103] overflow-hidden relative">
+    <div className="flex flex-col h-full bg-[#050608] overflow-hidden relative">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,hsla(var(--primary),0.06),transparent_80%)] pointer-events-none" />
+
       <ScrollArea className="flex-1">
-        <div className="px-6 pt-16 pb-40 space-y-10">
-          <h1 className="text-3xl font-black text-primary italic tracking-tighter uppercase text-center w-full">{t('wallet.title')}</h1>
-
-          <div className="relative h-48 w-full rounded-[3rem] p-[1.5px] bg-gradient-to-r from-primary/40 via-primary/80 to-primary/40 shadow-[0_20px_60px_rgba(229,142,56,0.3)]">
-             <div className="h-full w-full bg-[#010103] rounded-[3rem] flex flex-col items-center justify-center relative overflow-hidden">
-                <div className="relative z-10 text-center space-y-1">
-                  {isProfileLoading ? (
-                    <Loader2 className="w-8 h-8 text-primary animate-spin mx-auto" />
-                  ) : (
-                    <>
-                      <div className="flex items-baseline justify-center gap-2">
-                        <span className="text-5xl font-black text-white italic tracking-tighter tabular-nums">{(profile?.balance ?? 0).toFixed(2)}</span>
-                        <span className="text-2xl font-black text-primary italic">STK</span>
-                      </div>
-                      <div className="flex flex-col items-center gap-1 mt-2">
-                         <p className="text-[11px] font-bold text-[#8E8E93] uppercase tracking-widest">{t('wallet.balance')}</p>
-                         <div className="bg-primary/10 px-3 py-1 rounded-lg border border-primary/20">
-                            <span className="text-[10px] font-black text-primary uppercase">1 STK = 1 RUB</span>
-                         </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-                <div className="absolute top-[-20%] right-[-10%] w-40 h-40 bg-primary/10 blur-3xl rounded-full" />
-             </div>
-          </div>
-
-          <section className="bg-white/5 border border-white/10 p-6 rounded-[2.2rem] space-y-4">
-             <div className="flex items-center gap-3 text-primary">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
-                  <Info className="w-5 h-5 text-primary" />
-                </div>
-                <span className="text-[11px] font-black uppercase tracking-widest">О Системе STK</span>
-             </div>
-             <p className="text-[10px] font-bold text-white/50 uppercase leading-relaxed tracking-tight italic">
-               {t('wallet.info')}
-             </p>
-             <Button variant="ghost" onClick={() => setIsLegalOpen(true)} className="w-full h-10 bg-white/5 rounded-xl text-[9px] font-black uppercase gap-2 hover:bg-white/10 transition-all">
-                <FileText className="w-3.5 h-3.5" /> {currentLang === 'en' ? "Legal Disclaimer" : "Юридический отказ"}
-             </Button>
-          </section>
-
-          <div className="space-y-4">
-             <h3 className="text-[11px] font-black uppercase text-[#8E8E93] tracking-[0.2em] px-2 italic">{t('wallet.actions')}</h3>
-             <div className="grid grid-cols-3 gap-4">
-                <ActionBtn icon={Send} label={t('wallet.send')} onClick={() => toast({ title: "Скоро", description: "Переводы между узлами в разработке" })} />
-                <ActionBtn icon={ArrowDown} label={t('wallet.topup')} onClick={() => setIsTopUpOpen(true)} />
-                <ActionBtn icon={RefreshCcw} label={t('wallet.exchange')} onClick={() => toast({ title: "Скоро", description: "Обмен артефактов в разработке" })} />
-             </div>
-          </div>
-
-          <div className="space-y-4">
-             <h3 className="text-[11px] font-black uppercase text-[#8E8E93] tracking-[0.2em] px-2 italic">{t('wallet.history')}</h3>
-             <div className="space-y-2">
-               {isTxLoading ? (
-                 <div className="py-10 text-center opacity-20"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>
-               ) : transactions && transactions.length > 0 ? (
-                 transactions.map(tx => <TxItem key={tx.id} tx={tx} />)
-               ) : (
-                 <div className="py-10 text-center opacity-10 space-y-3">
-                    <Wallet className="w-10 h-10 mx-auto" />
-                    <p className="text-[9px] font-black uppercase tracking-widest">История пуста</p>
-                 </div>
-               )}
-             </div>
-          </div>
+        <div className="px-6 pt-12 pb-40 space-y-10">
           
-          <p className="text-[8px] text-center text-white/10 font-bold uppercase tracking-widest px-10">
-             {t('wallet.disclaimer')}
-          </p>
+          {/* Header */}
+          <div className="text-center space-y-2">
+             <h1 className="text-3xl font-black text-white italic tracking-tighter uppercase leading-none">MIG <span className="text-primary">FINANCE</span></h1>
+             <p className="text-[10px] font-black uppercase tracking-[0.4em] text-white/20">Quantum Asset Protocol V2.1</p>
+          </div>
+
+          {/* Main Balance Card: The "Stellar Plate" */}
+          <div className="relative group">
+            <div className="absolute -inset-1 bg-gradient-to-r from-primary/30 to-blue-600/30 rounded-[3rem] blur-xl opacity-25 group-hover:opacity-50 transition duration-1000"></div>
+            <div className="relative h-56 w-full bg-[#0d101a] border border-white/10 rounded-[3rem] p-8 overflow-hidden shadow-2xl flex flex-col justify-between">
+               <div className="absolute top-0 right-0 w-48 h-48 bg-primary/5 blur-[80px] rounded-full -translate-y-1/2 translate-x-1/2" />
+               
+               <div className="flex justify-between items-start relative z-10">
+                  <div className="space-y-1">
+                     <span className="text-[10px] font-black text-primary uppercase tracking-[0.3em] italic">Available Balance</span>
+                     <div className="flex items-baseline gap-2">
+                        <span className="text-5xl font-black text-white italic tracking-tighter tabular-nums">
+                          {isProfileLoading ? '...' : (profile?.balance ?? 0).toFixed(2)}
+                        </span>
+                        <span className="text-xl font-black text-primary/60 italic">STK</span>
+                     </div>
+                  </div>
+                  <div className="p-3 bg-white/5 rounded-2xl border border-white/10 backdrop-blur-md">
+                     <CreditCard className="w-6 h-6 text-primary" />
+                  </div>
+               </div>
+
+               <div className="flex items-center gap-3 relative z-10 pt-4 border-t border-white/5">
+                  <div className="flex -space-x-2">
+                     <div className="w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center backdrop-blur-md">
+                        <ArrowDown className="w-4 h-4 text-emerald-400" />
+                     </div>
+                     <div className="w-8 h-8 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center backdrop-blur-md">
+                        <Send className="w-4 h-4 text-primary" />
+                     </div>
+                  </div>
+                  <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Active Channels: 02</span>
+               </div>
+            </div>
+          </div>
+
+          {/* Action Grid */}
+          <div className="grid grid-cols-3 gap-4">
+             <FinanceAction icon={Send} label="SEND" onClick={() => toast({ title: "В разработке", description: "Модуль внешних переводов калибруется." })} />
+             <FinanceAction icon={ArrowDown} label="TOP UP" active onClick={() => setIsTopUpOpen(true)} />
+             <FinanceAction icon={ArrowRightLeft} label="TRADE" onClick={() => toast({ title: "В разработке", description: "Рынок артефактов временно закрыт." })} />
+          </div>
+
+          {/* Secure Vault Info */}
+          <div className="p-6 bg-white/[0.02] border border-white/5 rounded-[2.5rem] relative overflow-hidden">
+             <div className="absolute top-0 right-0 p-4 opacity-5">
+                <ShieldCheck className="w-20 h-20 text-primary" />
+             </div>
+             <div className="flex items-start gap-4 relative z-10">
+                <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-lg">
+                   <Database className="w-6 h-6 text-primary" />
+                </div>
+                <div className="flex-1 space-y-2 text-left">
+                   <h3 className="text-sm font-black uppercase italic text-white tracking-widest">Quantum Vault Information</h3>
+                   <p className="text-[10px] text-white/50 leading-relaxed font-medium">
+                      Все транзакции STK (Stellar Credits) защищены протоколом QES 28.4. Ваши активы хранятся в изолированном сегменте Ядра.
+                   </p>
+                </div>
+             </div>
+          </div>
+
+          {/* Transaction Stream */}
+          <div className="space-y-6">
+             <div className="flex items-center justify-between px-2">
+                <div className="flex items-center gap-2">
+                   <Activity className="w-4 h-4 text-primary" />
+                   <h3 className="text-[11px] font-black uppercase text-white/40 tracking-[0.4em] italic">Signal Stream</h3>
+                </div>
+                <span className="text-[9px] font-black text-primary/40 uppercase">LIVE LEDGER</span>
+             </div>
+             
+             <div className="space-y-3">
+                {isTxLoading ? (
+                  <div className="py-10 text-center"><Loader2 className="w-6 h-6 animate-spin text-primary/40 mx-auto" /></div>
+                ) : transactions && transactions.length > 0 ? (
+                  transactions.map(tx => <QuantumTxItem key={tx.id} tx={tx} />)
+                ) : (
+                  <div className="py-20 text-center opacity-10 space-y-4">
+                     <Zap className="w-12 h-12 mx-auto" />
+                     <p className="text-[10px] font-black uppercase tracking-[0.6em]">No Pulse Detected</p>
+                  </div>
+                )}
+             </div>
+          </div>
+
         </div>
       </ScrollArea>
 
       <Dialog open={isTopUpOpen} onOpenChange={setIsTopUpOpen}>
-        <DialogContent className="max-w-sm bg-[#0a0a0c] border-white/10 rounded-[2.5rem] p-8 shadow-2xl outline-none">
+        <DialogContent className="max-w-sm bg-[#0a0c12]/95 backdrop-blur-[60px] border-white/10 rounded-[3rem] p-8 shadow-2xl outline-none">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-black uppercase italic text-white flex items-center justify-center gap-3">
-              <Coins className="w-6 h-6 text-primary" /> Пополнение
-            </DialogTitle>
-            <DialogDescription className="text-[10px] font-bold text-white/40 uppercase tracking-widest text-center mt-2">
-              Введите сумму в рублях для конвертации в STK
+            <div className="flex flex-col items-center gap-4 mb-4">
+               <div className="w-16 h-16 rounded-[1.8rem] bg-primary/20 border border-primary/40 flex items-center justify-center shadow-xl">
+                  <Coins className="w-8 h-8 text-primary animate-bounce" />
+               </div>
+               <DialogTitle className="text-2xl font-black uppercase italic text-white tracking-tighter">Пополнение</DialogTitle>
+            </div>
+            <DialogDescription className="text-[10px] font-bold text-white/40 uppercase tracking-widest text-center">
+               Система конвертирует рубли в STK по курсу 1:1
             </DialogDescription>
           </DialogHeader>
           <div className="py-8 space-y-6">
              <div className="space-y-2">
-                <Label className="text-[8px] font-black uppercase text-primary/60 ml-2 tracking-widest">Сумма пополнения (RUB)</Label>
-                <Input 
-                  type="number" 
-                  placeholder="от 10" 
-                  value={topUpAmount} 
-                  onChange={e => setTopUpUpAmount(e.target.value)}
-                  className="h-14 bg-white/5 border-white/10 rounded-2xl text-center text-2xl font-black italic focus:border-primary/50 transition-all"
-                />
+                <Label className="text-[8px] font-black uppercase text-primary/60 ml-2 tracking-widest">Amount to deposit (RUB)</Label>
+                <div className="relative">
+                   <Input 
+                     type="number" 
+                     placeholder="0.00" 
+                     value={topUpAmount} 
+                     onChange={e => setTwoFactorInput(e.target.value.replace(/\D/g, ''))} // reuse logic for numbers
+                     className="h-16 bg-white/5 border-white/10 rounded-2xl text-center text-3xl font-black italic text-white focus:border-primary/50 transition-all pr-12"
+                   />
+                   <span className="absolute right-5 top-1/2 -translate-y-1/2 text-xs font-black text-white/20 italic">RUB</span>
+                </div>
              </div>
-             <div className="bg-primary/5 p-4 rounded-xl border border-primary/10">
-                <p className="text-[9px] text-primary/60 font-bold uppercase text-center leading-relaxed">
-                  Ваш запрос будет передан на ручную обработку Администратору. После подтверждения STK появятся на балансе.
+             <div className="bg-primary/5 p-5 rounded-2xl border border-primary/20 shadow-inner">
+                <p className="text-[10px] text-primary/80 font-bold uppercase text-center leading-relaxed italic">
+                   Запрос будет передан в Aegis Security сегмент для ручного подтверждения.
                 </p>
              </div>
           </div>
           <DialogFooter>
              <Button 
-               disabled={isSubmittingRequest} 
+               disabled={isSubmittingRequest || !topUpAmount} 
                onClick={handleTopUpRequest}
-               className="w-full h-14 bg-primary text-white rounded-2xl font-black uppercase italic tracking-widest shadow-xl active:scale-95 transition-all"
+               className="w-full h-16 bg-primary text-white rounded-[1.8rem] font-black uppercase italic tracking-widest shadow-2xl shadow-primary/30 active:scale-95 transition-all border border-white/10"
              >
-               {isSubmittingRequest ? <Loader2 className="animate-spin w-5 h-5" /> : "Запросить STK"}
+               {isSubmittingRequest ? <Loader2 className="animate-spin w-6 h-6" /> : "Отправить Сигнал"}
              </Button>
           </DialogFooter>
         </DialogContent>
@@ -198,28 +231,48 @@ export default function WalletView() {
   );
 }
 
-function ActionBtn({ icon: Icon, label, onClick }: any) {
+function FinanceAction({ icon: Icon, label, onClick, active }: any) {
   return (
-    <button onClick={() => { triggerHaptic(); onClick(); }} className="flex flex-col items-center gap-3 p-5 bg-[#1C1C1E] border border-white/[0.03] rounded-[2.5rem] transition-all active:scale-95 group shadow-lg hover:border-primary/20">
-      <div className="w-12 h-12 rounded-2xl bg-white/[0.02] border border-white/10 flex items-center justify-center relative overflow-hidden group-hover:bg-primary/10">
-         <Icon className="w-5 h-5 text-primary" />
-      </div>
-      <span className="text-[8px] font-black uppercase text-[#8E8E93] tracking-widest group-hover:text-white transition-colors">{label}</span>
+    <button 
+      onClick={() => { triggerHaptic(); onClick(); }} 
+      className={cn(
+        "flex flex-col items-center gap-3 p-6 rounded-[2.5rem] border transition-all active:scale-90 shadow-xl group",
+        active ? "bg-primary text-white border-primary/20" : "bg-white/5 text-white/30 border-white/5 hover:bg-white/10"
+      )}
+    >
+      <Icon className={cn("w-6 h-6 group-hover:scale-110 transition-transform", active ? "text-white" : "text-primary")} />
+      <span className="text-[9px] font-black uppercase tracking-[0.2em]">{label}</span>
     </button>
   );
 }
 
-function TxItem({ tx }: { tx: Transaction }) {
-  const isPositive = tx.amount > 0;
+function QuantumTxItem({ tx }: { tx: Transaction }) {
+  const isPositive = tx.amount > 0 || tx.type.includes('in') || tx.type.includes('deposit');
+  const timestamp = tx.createdAt ? format(new Date(tx.createdAt), 'HH:mm • dd MMM', { locale: ru }) : 'Unknown';
+
   return (
-    <div className="flex items-center justify-between p-5 bg-[#1C1C1E]/40 rounded-[1.8rem] border border-white/[0.03] shadow-md">
-       <div className="flex flex-col">
-          <span className="text-[12px] font-black text-white italic tracking-tight uppercase">{tx.type}</span>
-          <span className="text-[9px] text-[#8E8E93] font-bold uppercase tracking-widest">{tx.otherPartyName || 'Ядро'}</span>
+    <div className="group relative">
+       <div className="absolute inset-0 bg-primary/5 rounded-2xl blur-lg opacity-0 group-hover:opacity-100 transition-opacity"></div>
+       <div className="relative flex items-center justify-between p-5 bg-[#0e1018] rounded-2xl border border-white/5 group-hover:border-white/10 transition-all shadow-md">
+          <div className="flex items-center gap-4">
+             <div className={cn(
+               "w-10 h-10 rounded-xl flex items-center justify-center border",
+               isPositive ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : "bg-red-500/10 border-red-500/20 text-red-400"
+             )}>
+                {isPositive ? <ArrowDown className="w-5 h-5" /> : <Send className="w-5 h-5" />}
+             </div>
+             <div className="flex flex-col text-left">
+                <span className="text-[13px] font-black text-white italic tracking-tight uppercase leading-none">{tx.type.replace('_', ' ')}</span>
+                <span className="text-[8px] text-white/30 font-bold uppercase tracking-widest mt-1">{timestamp}</span>
+             </div>
+          </div>
+          <div className="text-right flex flex-col items-end">
+             <span className={cn("text-[15px] font-black italic", isPositive ? "text-emerald-400" : "text-red-400")}>
+               {isPositive ? '+' : ''}{tx.amount.toFixed(2)}
+             </span>
+             <span className="text-[7px] text-white/20 font-black uppercase tracking-widest">Signal Verified</span>
+          </div>
        </div>
-       <span className={cn("text-[14px] font-black italic", isPositive ? "text-green-500" : "text-red-500")}>
-         {isPositive ? '+' : ''}{tx.amount} STK
-       </span>
     </div>
   );
 }

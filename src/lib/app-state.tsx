@@ -60,13 +60,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [activeAccountIndex, setActiveAccountIndex] = useState(0);
   const [slotNames, setSlotNames] = useState<string[]>(['Слот 1', 'Слот 2', 'Слот 3', 'Слот 4', 'Слот 5']);
 
-  // HYPER-ROUTING SYNC
+  // URL CLEANUP: Reverted to simple view tracking without chat ID expose
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    
-    const path = activeView === 'chats' && currentChatId ? `/im${currentChatId.slice(0, 7)}` : `/${activeView}`;
-    window.history.pushState({ view: activeView, chat: currentChatId }, '', path);
-  }, [activeView, currentChatId]);
+    const path = `/${activeView}`;
+    window.history.pushState({ view: activeView }, '', path);
+  }, [activeView]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
