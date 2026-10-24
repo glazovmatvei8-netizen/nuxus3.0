@@ -31,11 +31,6 @@ import versions from '@/app/versions.json';
 import { addDays, format, parseISO } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
-const NAME_COLORS = [
-  'text-orange-500', 'text-blue-500', 'text-green-500', 
-  'text-purple-500', 'text-red-500', 'text-pink-500', 'text-cyan-500'
-];
-
 const BUBBLE_STYLES = [
   { id: 'default', name: 'Original', desc: 'Классика Ядра' },
   { id: 'neon', name: 'Neon Pulse', desc: 'Эффект свечения' },
@@ -49,20 +44,19 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const { user } = useUser();
   const { toast } = useToast();
   const { t } = useTranslations();
-  const { settingsTab, setSettingsTab, setIsLegalOpen, setIs2FAVerified } = useAppState();
+  const { settingsTab, setSettingsTab, setIsLegalOpen } = useAppState();
   
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const bgInputRef = useRef<HTMLInputElement>(null);
   
   const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user?.uid]);
-  const { data: profile, isLoading: isProfileLoading } = useDoc<User>(userRef);
+  const { data: profile } = useDoc<User>(userRef);
 
   const [isSaving, setIsSaving] = useState(false);
+  const [isSubscribing, setIsSubscribing] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-  const [bgPreview, setBgPreview] = useState<string | null>(null);
   
   const [form, setForm] = useState({
-    name: '', username: '', bio: '', phone: '', email: '', birthday: '', statusText: '',
+    name: '', username: '', bio: '', birthday: '', statusText: '',
     appearance: 'dark' as 'light' | 'dark', theme: 'default',
     nameColor: 'text-orange-500', borderRadius: 24,
     bubbleStyle: 'default', messageSize: 'medium',
@@ -77,8 +71,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         username: (profile.username || '').replace('@', ''),
         bio: profile.bio || '',
         birthday: profile.birthday || '',
-        phone: profile.phone || '',
-        email: profile.email || '',
         statusText: profile.settings?.statusText || '',
         appearance: profile.settings?.appearance || 'dark',
         theme: profile.settings?.theme || 'default',
@@ -94,7 +86,6 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         autoRenew: !!profile.autoRenew
       });
       setAvatarPreview(profile.avatarUrl || null);
-      setBgPreview(profile.settings?.chatBackground || null);
     }
   }, [profile, open]);
 
@@ -118,18 +109,53 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
         'settings.bubbleStyle': form.bubbleStyle,
         'settings.messageRadius': form.borderRadius,
         'settings.nameColor': form.nameColor,
-        'settings.chatBackground': bgPreview,
         'settings.privacy.isGhostMode': form.isGhostMode,
         'settings.privacy.isEnergySaving': form.isEnergySaving,
+        autoRenew: form.autoRenew
       };
 
       await updateDoc(doc(db, 'users', user.uid), updateData);
       toast({ title: t('saved') });
-      onOpenChange(false);
     } catch (e: any) { 
       toast({ title: t('error'), variant: "destructive" }); 
     } finally { 
       setIsSaving(false); 
+    }
+  };
+
+  const handleSubscribe = async (tier: 'plus' | 'one') => {
+    if (!db || !user || !profile) return;
+    const price = tier === 'plus' ? 299 : 500;
+    
+    if ((profile.balance || 0) < price) {
+      toast({ title: "Недостаточно STK", description: "Пополните кошелек для активации подписки", variant: "destructive" });
+      return;
+    }
+
+    setIsSubscribing(true);
+    triggerHaptic();
+    try {
+      const expiry = addDays(new Date(), 30).toISOString();
+      await updateDoc(doc(db, 'users', user.uid), {
+        balance: increment(-price),
+        isPremium: true,
+        premiumTier: tier,
+        premiumUntil: expiry
+      });
+
+      await addDoc(collection(db, 'users', user.uid, 'transactions'), {
+        amount: -price,
+        type: 'subscription_activation',
+        status: 'completed',
+        otherPartyName: tier === 'plus' ? 'Nuxus Plus' : 'Nuxus One+',
+        createdAt: new Date().toISOString()
+      });
+
+      toast({ title: "Подписка активирована!", description: `Статус Prime активен до ${format(parseISO(expiry), 'dd.MM.yyyy')}` });
+    } catch (e) {
+      toast({ title: "Сбой активации", variant: "destructive" });
+    } finally {
+      setIsSubscribing(false);
     }
   };
 
@@ -143,23 +169,109 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
             </div>
             <div className="flex flex-col">
               <DialogTitle className="text-2xl font-black italic uppercase text-white tracking-tighter">Настройки Ядра</DialogTitle>
-              <DialogDescription className="text-[9px] font-bold uppercase text-primary/60 mt-0.5 tracking-widest italic">V187 Mobile Hybrid</DialogDescription>
+              <DialogDescription className="text-[9px] font-bold uppercase text-primary/60 mt-0.5 tracking-widest italic">V192.0 Prime Ascension</DialogDescription>
             </div>
           </div>
         </DialogHeader>
         
         <Tabs value={settingsTab} onValueChange={setSettingsTab} className="flex-1 flex flex-col min-h-0">
           <div className="px-6 mt-4">
-            <TabsList className="grid grid-cols-4 bg-white/5 p-1 rounded-xl border border-white/5 shadow-inner">
-              <TabsTrigger value="profile" className="text-[8px] font-black uppercase tracking-tight h-8">Профиль</TabsTrigger>
-              <TabsTrigger value="privacy" className="text-[8px] font-black uppercase tracking-tight h-8">Защита</TabsTrigger>
-              <TabsTrigger value="style" className="text-[8px] font-black uppercase tracking-tight h-8">Стиль</TabsTrigger>
-              <TabsTrigger value="data" className="text-[8px] font-black uppercase tracking-tight h-8">Инфо</TabsTrigger>
+            <TabsList className="grid grid-cols-5 bg-white/5 p-1 rounded-xl border border-white/5 shadow-inner">
+              <TabsTrigger value="profile" className="text-[7px] font-black uppercase tracking-tight h-8">Аккаунт</TabsTrigger>
+              <TabsTrigger value="prime" className="text-[7px] font-black uppercase tracking-tight h-8 text-primary">Prime</TabsTrigger>
+              <TabsTrigger value="privacy" className="text-[7px] font-black uppercase tracking-tight h-8">Защита</TabsTrigger>
+              <TabsTrigger value="style" className="text-[7px] font-black uppercase tracking-tight h-8">Стиль</TabsTrigger>
+              <TabsTrigger value="data" className="text-[7px] font-black uppercase tracking-tight h-8">Инфо</TabsTrigger>
             </TabsList>
           </div>
 
           <ScrollArea className="flex-1">
             <div className="p-6 pb-20 space-y-8"> 
+
+              <TabsContent value="prime" className="space-y-6 m-0 animate-in fade-in duration-500">
+                 <div className="text-center space-y-2 mb-4">
+                    <h3 className="text-xl font-black uppercase italic text-white">{t('prime.title')}</h3>
+                    <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">{t('prime.subtitle')}</p>
+                 </div>
+
+                 <div className="grid grid-cols-1 gap-4">
+                    <div className={cn(
+                      "p-6 rounded-[2.5rem] border transition-all relative overflow-hidden group",
+                      profile?.premiumTier === 'plus' ? "bg-primary/10 border-primary shadow-xl" : "bg-white/5 border-white/10"
+                    )}>
+                       {profile?.premiumTier === 'plus' && <div className="absolute top-4 right-6 bg-primary text-black px-3 py-1 rounded-full text-[8px] font-black uppercase">Активен</div>}
+                       <div className="flex justify-between items-start relative z-10">
+                          <div className="space-y-1">
+                             <h4 className="text-lg font-black uppercase italic text-white">{t('prime.plus.title')}</h4>
+                             <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">{t('prime.plus.desc')}</p>
+                          </div>
+                          <span className="text-sm font-black text-primary italic">{t('prime.plus.price')}</span>
+                       </div>
+                       <ul className="mt-6 space-y-2 relative z-10">
+                          {t('prime.plus.features').map((f: string, i: number) => (
+                            <li key={i} className="flex items-center gap-2 text-[10px] font-bold text-white/60 uppercase">
+                               <CheckCircle2 className="w-3.5 h-3.5 text-primary" /> {f}
+                            </li>
+                          ))}
+                       </ul>
+                       <Button 
+                         onClick={() => handleSubscribe('plus')} 
+                         disabled={isSubscribing || profile?.premiumTier === 'plus' || profile?.premiumTier === 'one'}
+                         className="w-full h-12 mt-6 rounded-2xl bg-primary text-white font-black uppercase text-[10px] tracking-widest shadow-lg"
+                       >
+                         {profile?.premiumTier === 'plus' ? t('prime.active') : profile?.premiumTier === 'one' ? 'Уже One+' : t('prime.buy')}
+                       </Button>
+                    </div>
+
+                    <div className={cn(
+                      "p-6 rounded-[2.5rem] border transition-all relative overflow-hidden group",
+                      profile?.premiumTier === 'one' ? "bg-accent/10 border-accent shadow-xl" : "bg-white/5 border-white/10"
+                    )}>
+                       <div className="absolute inset-0 bg-gradient-to-br from-accent/5 to-transparent pointer-events-none" />
+                       {profile?.premiumTier === 'one' && <div className="absolute top-4 right-6 bg-accent text-black px-3 py-1 rounded-full text-[8px] font-black uppercase">Активен</div>}
+                       <div className="flex justify-between items-start relative z-10">
+                          <div className="space-y-1">
+                             <h4 className="text-lg font-black uppercase italic text-white flex items-center gap-2">
+                                {t('prime.one.title')} <Sparkles className="w-4 h-4 text-accent animate-pulse" />
+                             </h4>
+                             <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">{t('prime.one.desc')}</p>
+                          </div>
+                          <span className="text-sm font-black text-accent italic">{t('prime.one.price')}</span>
+                       </div>
+                       <ul className="mt-6 space-y-2 relative z-10">
+                          {t('prime.one.features').map((f: string, i: number) => (
+                            <li key={i} className="flex items-center gap-2 text-[10px] font-bold text-white/60 uppercase">
+                               <CheckCircle2 className="w-3.5 h-3.5 text-accent" /> {f}
+                            </li>
+                          ))}
+                       </ul>
+                       <Button 
+                         onClick={() => handleSubscribe('one')} 
+                         disabled={isSubscribing || profile?.premiumTier === 'one'}
+                         className="w-full h-12 mt-6 rounded-2xl bg-accent text-black font-black uppercase text-[10px] tracking-widest shadow-lg shadow-accent/20"
+                       >
+                         {profile?.premiumTier === 'one' ? t('prime.active') : t('prime.buy')}
+                       </Button>
+                    </div>
+                 </div>
+
+                 {(profile?.premiumTier === 'plus' || profile?.premiumTier === 'one') && (
+                    <div className="bg-white/5 p-5 rounded-[2rem] border border-white/5 space-y-4">
+                       <div className="flex items-center justify-between">
+                          <div className="flex flex-col">
+                             <span className="text-[10px] font-black text-white uppercase italic">{t('prime.autoRenew')}</span>
+                             <span className="text-[8px] text-white/30 font-bold uppercase tracking-widest">{t('prime.autoRenewDesc')}</span>
+                          </div>
+                          <Switch checked={form.autoRenew} onCheckedChange={(v) => setForm({...form, autoRenew: v})} />
+                       </div>
+                       <div className="pt-2 flex items-center justify-between opacity-60">
+                          <span className="text-[9px] font-bold text-white uppercase">{t('prime.activeUntil')}</span>
+                          <span className="text-[9px] font-black text-primary uppercase italic">{profile.premiumUntil ? format(parseISO(profile.premiumUntil), 'dd MMMM yyyy', { locale: ru }) : '...'}</span>
+                       </div>
+                    </div>
+                 )}
+              </TabsContent>
+
               <TabsContent value="profile" className="space-y-6 m-0 animate-in fade-in duration-300">
                  <div className="bg-white/5 p-6 rounded-[2.5rem] border border-white/5 space-y-4">
                     <div className="flex flex-col items-center mb-4">
@@ -236,10 +348,10 @@ export function SettingsModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
               <TabsContent value="data" className="space-y-6 m-0 animate-in fade-in duration-300">
                  <div className="bg-white/5 p-8 rounded-[3rem] border border-white/5 flex flex-col items-center text-center gap-6">
-                    <NuxusLogo size={80} className="shadow-2xl" />
+                    <UserAvatar userId={user?.uid} manualAvatarUrl={avatarPreview} className="h-20 w-20 shadow-2xl" />
                     <div className="space-y-2">
                        <h3 className="text-xl font-black text-white italic uppercase tracking-tighter leading-none">Nuxus Kernel</h3>
-                       <p className="text-[10px] text-white/30 font-bold uppercase tracking-[0.4em]">Node Protocol V187.0</p>
+                       <p className="text-[10px] text-white/30 font-bold uppercase tracking-[0.4em]">Node Protocol V192.0 Prime</p>
                     </div>
                     <Button variant="ghost" onClick={() => setIsLegalOpen(true)} className="w-full h-12 rounded-xl bg-white/5 font-black uppercase text-[9px] tracking-widest text-primary gap-3 border border-white/5">
                        <FileText className="w-4 h-4" /> Правовые документы

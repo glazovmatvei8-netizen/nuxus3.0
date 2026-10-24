@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -11,9 +12,9 @@ import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/user-avatar';
 import { 
   PhoneOff, Mic, MicOff, 
-  Phone, UserPlus, Video, VideoOff, Loader2, ShieldCheck
+  Phone, UserPlus, Video, VideoOff, Loader2, ShieldCheck, Zap
 } from 'lucide-react';
-import { cn, triggerHaptic } from '@/lib/utils';
+import { cn, triggerHaptic, isUserPremium } from '@/lib/utils';
 import type { Call, User as UserType } from '@/lib/types';
 import { AddMemberModal } from './add-member-modal';
 import { useMemoFirebase } from '@/firebase/firestore/use-memo-firebase';
@@ -27,8 +28,8 @@ const servers = {
 };
 
 /**
- * CALL OVERLAY V166.0 «CLEAN INTEGRITY»
- * FIXED: Removed all merge conflict markers.
+ * CALL OVERLAY V192.0 «PRIME HD»
+ * UPDATED: Added HD constraints and Noise Suppression for Premium nodes.
  */
 export function CallOverlay() {
   const { user } = useUser();
@@ -49,6 +50,9 @@ export function CallOverlay() {
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   const ringtoneRef = useRef<HTMLAudioElement | null>(null);
+
+  const userRef = useMemoFirebase(() => (!db || !user) ? null : doc(db, 'users', user.uid), [db, user?.uid]);
+  const { data: myProfile } = useDoc<UserType>(userRef);
 
   useEffect(() => {
     if (!db || !activeCallId || !user) return;
@@ -110,10 +114,22 @@ export function CallOverlay() {
       pc.current = new RTCPeerConnection(servers);
       remoteStream.current = new MediaStream();
 
-      localStream.current = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-        video: callData.type === 'video'
-      });
+      // HD CONSTRAINTS FOR PREMIUM
+      const hasPrime = isUserPremium(myProfile);
+      const constraints = {
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        },
+        video: callData.type === 'video' ? {
+          width: hasPrime ? { min: 1280, ideal: 1920 } : { ideal: 640 },
+          height: hasPrime ? { min: 720, ideal: 1080 } : { ideal: 480 },
+          frameRate: { ideal: hasPrime ? 60 : 30 }
+        } : false
+      };
+
+      localStream.current = await navigator.mediaDevices.getUserMedia(constraints);
 
       localStream.current.getTracks().forEach((track) => {
         pc.current?.addTrack(track, localStream.current!);
@@ -243,16 +259,6 @@ export function CallOverlay() {
     }
   };
 
-  const toggleVideo = () => {
-    if (localStream.current) {
-      const videoTrack = localStream.current.getVideoTracks()[0];
-      if (videoTrack) {
-        videoTrack.enabled = !videoTrack.enabled;
-        setIsVideoOff(!videoTrack.enabled);
-      }
-    }
-  };
-
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (callData?.status === 'active') {
@@ -262,8 +268,8 @@ export function CallOverlay() {
   }, [callData?.status]);
 
   const otherId = callData?.callerId === user?.uid ? callData?.receiverId : callData?.callerId;
-  const userRef = useMemoFirebase(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
-  const { data: otherUser } = useDoc<UserType>(userRef);
+  const otherUserRef = useMemoFirebase(() => (!db || !otherId) ? null : doc(db, 'users', otherId), [db, otherId]);
+  const { data: otherUser } = useDoc<UserType>(otherUserRef);
 
   if (!activeCallId || !callData) return null;
 
@@ -284,11 +290,20 @@ export function CallOverlay() {
       
       <div className="relative z-10 flex-1 flex flex-col items-center justify-between py-20 px-8">
         <div className="flex flex-col items-center gap-4">
-           <div className="bg-white/5 backdrop-blur-3xl border border-white/10 px-6 py-2 rounded-full flex items-center gap-3 shadow-2xl">
+           <div className={cn(
+             "bg-white/5 backdrop-blur-3xl border px-6 py-2 rounded-full flex items-center gap-3 shadow-2xl transition-all",
+             isUserPremium(myProfile) ? "border-primary/40 bg-primary/5" : "border-white/10"
+           )}>
              <div className={cn("w-2 h-2 rounded-full shadow-lg", callData.status === 'active' ? "bg-green-500 animate-pulse" : "bg-blue-500 animate-pulse")} />
              <span className="text-[11px] font-black text-white uppercase tracking-[0.3em] tabular-nums">
                {callData.status === 'active' ? (isConnecting ? 'Подключение...' : durationStr) : 'Входящий вызов'}
              </span>
+             {isUserPremium(myProfile) && (
+               <div className="flex items-center gap-2 ml-4 pl-4 border-l border-white/10">
+                  <Zap className="w-3.5 h-3.5 text-primary animate-pulse" />
+                  <span className="text-[8px] font-black text-primary uppercase">PRIME HD</span>
+               </div>
+             )}
            </div>
         </div>
 

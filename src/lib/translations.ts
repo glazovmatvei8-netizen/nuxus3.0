@@ -72,7 +72,7 @@ export const translations = {
         title: "Nuxus Plus",
         desc: "Стиль и качество",
         price: "299 STK/мес",
-        features: ["HQ Сигнал (без сжатия)", "Золотая звезда", "Цветные имена"]
+        features: ["HD Сигнал (HQ)", "Золотая звезда", "Цветные имена", "HD Звонки"]
       },
       one: {
         title: "Nuxus One+",
@@ -225,7 +225,7 @@ export const translations = {
         title: "Nuxus Plus",
         desc: "Style & Quality",
         price: "299 STK/mo",
-        features: ["HQ Signal (No compression)", "Golden Star", "Custom Name Colors"]
+        features: ["HD Signal (No compression)", "Golden Star", "Custom Name Colors", "HD Video Calls"]
       },
       one: {
         title: "Nuxus One+",
